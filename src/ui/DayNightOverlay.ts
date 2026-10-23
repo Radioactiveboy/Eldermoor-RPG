@@ -2,6 +2,14 @@ import Phaser from 'phaser';
 import type { Ambient } from '../systems/TimeOfDay';
 
 const GLOW_KEY = 'light-glow';
+
+export interface ScreenLight {
+  x: number;
+  y: number;
+  /** In world pixels; scaled by the camera zoom. */
+  radius: number;
+  alpha: number;
+}
 const GLOW_SIZE = 256;
 /** Radius of the player's lantern light, in world pixels. */
 const LANTERN_RADIUS = 210;
@@ -38,10 +46,16 @@ export class DayNightOverlay {
 
   /**
    * @param ambient current light colour and darkness
-   * @param lanternScreen the player's position on screen, in pixels
+   * @param lanternScreen the player's position on screen, in pixels (or null for no lantern)
    * @param zoom the world camera's zoom, so the light scales with the world
+   * @param lights other light sources, already in screen pixels
    */
-  update(ambient: Ambient, lanternScreen: Phaser.Types.Math.Vector2Like, zoom: number): void {
+  update(
+    ambient: Ambient,
+    lanternScreen: Phaser.Types.Math.Vector2Like | null,
+    zoom: number,
+    lights: ScreenLight[] = [],
+  ): void {
     const layer = this.layer;
     // Full daylight: skip the work, the layer would be pure white anyway.
     if (ambient.color === 0xffffff && ambient.darkness === 0) {
@@ -50,10 +64,14 @@ export class DayNightOverlay {
     }
     layer.setVisible(true);
     layer.fill(ambient.color);
-    if (ambient.darkness > 0.02) {
+    if (ambient.darkness > 0.02 && lanternScreen) {
       const size = (LANTERN_RADIUS * 2 * zoom) / GLOW_SIZE;
       this.glow.setScale(size).setAlpha(Math.min(1, ambient.darkness * 1.1));
       layer.draw(this.glow, lanternScreen.x, lanternScreen.y);
+    }
+    for (const light of lights) {
+      this.glow.setScale((light.radius * 2 * zoom) / GLOW_SIZE).setAlpha(light.alpha);
+      layer.draw(this.glow, light.x, light.y);
     }
   }
 

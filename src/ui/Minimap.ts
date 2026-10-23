@@ -15,10 +15,12 @@ const TERRAIN_COLOR: Record<Terrain, number> = {
   [Terrain.Stone]: 0x9a9ca3,
   [Terrain.Water]: 0x2f6fae,
   [Terrain.Sand]: 0xd8c38a,
+  [Terrain.Floor]: 0x7a5636,
 };
 const PROP_COLOR: Partial<Record<Prop, number>> = {
   [Prop.Tree]: 0x1f4d22,
   [Prop.Rock]: 0x6b6d73,
+  [Prop.Blocked]: 0x6a4a2e,
 };
 
 /**
@@ -52,6 +54,14 @@ export class Minimap {
 
   get height(): number {
     return (this.mapH + PAD * 2) * this.scale;
+  }
+
+  setVisible(visible: boolean): void {
+    [this.frame, this.image, this.overlay].forEach((o) => o.setVisible(visible));
+  }
+
+  destroy(): void {
+    [this.frame, this.image, this.overlay].forEach((o) => o.destroy());
   }
 
   /** Shrink the minimap for small screens. Call before setPosition. */

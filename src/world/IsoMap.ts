@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
+import { MODEL_ART, WALL_HEIGHT } from '../art/interior';
 import { DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
 import { TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen } from '../iso/IsoMath';
-import { MapData, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
+import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
 
 const TERRAIN_TEXTURE: Record<Terrain, string> = {
   [Terrain.Grass]: 'tile-grass',
@@ -10,6 +11,7 @@ const TERRAIN_TEXTURE: Record<Terrain, string> = {
   [Terrain.Stone]: 'tile-stone',
   [Terrain.Water]: 'tile-water',
   [Terrain.Sand]: 'tile-sand',
+  [Terrain.Floor]: 'tile-floor',
 };
 
 /** Stable pseudo-random number per tile, so variants don't change between loads. */
@@ -23,6 +25,8 @@ function tileHash(tx: number, ty: number, salt = 0): number {
 export class IsoMap {
   readonly data: MapData;
   private readonly scene: Phaser.Scene;
+  /** Tiles taken by things that can move, like NPCs. */
+  private readonly occupied = new Set<number>();
 
   constructor(scene: Phaser.Scene, data: MapData) {
     this.scene = scene;
@@ -44,7 +48,14 @@ export class IsoMap {
 
   isWalkable(tx: number, ty: number): boolean {
     if (!this.inBounds(tx, ty)) return false;
+    if (this.occupied.has(ty * this.data.width + tx)) return false;
     return TERRAIN_WALKABLE[this.data.terrain[ty][tx]] && this.data.props[ty][tx] === Prop.None;
+  }
+
+  setOccupied(tx: number, ty: number, occupied: boolean): void {
+    const i = ty * this.data.width + tx;
+    if (occupied) this.occupied.add(i);
+    else this.occupied.delete(i);
   }
 
   /** Pixel bounds of the whole map, for camera limits. */
@@ -52,7 +63,9 @@ export class IsoMap {
     const left = gridToScreen(0, this.data.height).x;
     const right = gridToScreen(this.data.width, 0).x;
     const bottom = gridToScreen(this.data.width, this.data.height).y;
-    return new Phaser.Geom.Rectangle(left, -64, right - left, bottom + 64);
+    // Leave room above the map for walls and tall things on the back row.
+    const top = this.data.walls ? WALL_HEIGHT + 30 : 64;
+    return new Phaser.Geom.Rectangle(left, -top, right - left, bottom + top);
   }
 
   private render(): void {
@@ -78,9 +91,9 @@ export class IsoMap {
         ground.batchDraw(stamp, center.x - bounds.x, center.y - bounds.y);
 
         const prop = props[ty][tx];
-        if (prop !== Prop.None) {
+        if (prop === Prop.Tree || prop === Prop.Rock) {
           this.placeProp(prop, tx, ty);
-        } else if (t === Terrain.Grass && tileHash(tx, ty, 2) < 0.22) {
+        } else if (prop === Prop.None && t === Terrain.Grass && tileHash(tx, ty, 2) < 0.22) {
           // Flowers, tufts and pebbles are painted flat into the ground layer.
           const key = DECOR_KEYS[Math.floor(tileHash(tx, ty, 3) * DECOR_KEYS.length)];
           stamp.setTexture(key).clearTint().setOrigin(0.5, 1);
@@ -90,9 +103,45 @@ export class IsoMap {
         }
       }
     }
+    // Rugs and mats lie flat on the floor, so they're painted into it too.
+    for (const obj of this.data.objects ?? []) {
+      if (!obj.flat) continue;
+      const art = MODEL_ART[obj.key];
+      const p = gridToScreen(obj.tx, obj.ty);
+      stamp.setTexture(art.key).clearTint().setFlipX(!!obj.flipX);
+      stamp.setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY);
+      ground.batchDraw(stamp, p.x - bounds.x, p.y - bounds.y);
+    }
     ground.endDraw();
     ground.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     stamp.destroy();
+
+    this.renderWalls();
+    for (const obj of this.data.objects ?? []) if (!obj.flat) this.placeObject(obj);
+  }
+
+  /** The two back walls of an indoor room, behind everything else. */
+  private renderWalls(): void {
+    const walls = this.data.walls;
+    if (!walls) return;
+    const put = (key: string, gx: number, gy: number, depth: number) => {
+      const art = MODEL_ART[key];
+      const p = gridToScreen(gx, gy);
+      this.scene.add.image(p.x, p.y, art.key).setOrigin(art.originX, art.originY).setDepth(depth);
+    };
+    walls.back.forEach((key, gx) => put(key, gx, 0, 0.8));
+    walls.side.forEach((key, gy) => put(key, 0, gy, 0.8));
+    put('wall-corner', 0, 0, 0.9);
+  }
+
+  private placeObject(obj: MapObject): void {
+    const art = MODEL_ART[obj.key];
+    const p = gridToScreen(obj.tx, obj.ty);
+    // Sort by the middle of the footprint, so you can walk in front of and behind it.
+    const depth = depthAt(obj.tx + obj.w / 2, obj.ty + obj.h / 2);
+    const sprite = this.scene.add.sprite(p.x, p.y, art.key, obj.anim ? 0 : undefined);
+    sprite.setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY).setFlipX(!!obj.flipX).setDepth(depth);
+    if (obj.anim) sprite.play(obj.anim);
   }
 
   private placeProp(prop: Prop, tx: number, ty: number): void {

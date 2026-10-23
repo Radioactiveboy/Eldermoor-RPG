@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { MapData, Prop, Terrain } from './MapData';
+import { MapData, placeObject, Prop, Terrain } from './MapData';
 
 /**
  * Placeholder procedural map: a village square, a lake, a winding road and
@@ -60,7 +60,35 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }
   }
 
-  return { width, height, terrain, props, spawn: { x: cx + 0.5, y: cy + 0.5 } };
+  const data: MapData = { width, height, terrain, props, spawn: { x: cx + 0.5, y: cy + 0.5 } };
+  addCottage(data, cx - 7, cy - 1);
+  return data;
+}
+
+/**
+ * The player's home, just west of the square. The door is on its east side;
+ * stepping onto the tile in front of it goes inside.
+ */
+function addCottage(data: MapData, x0: number, y0: number): void {
+  // Clear a yard around it and lay a little path from the door to the square.
+  for (let y = y0 - 1; y <= y0 + 4; y++) {
+    for (let x = x0 - 1; x <= x0 + 4; x++) if (data.props[y]?.[x] !== undefined) data.props[y][x] = Prop.None;
+  }
+  for (let x = x0 + 3; x < x0 + 5; x++) setIf(data.terrain, x, y0 + 1, Terrain.Dirt);
+  placeObject(data, {
+    key: 'bld-cottage',
+    tx: x0,
+    ty: y0,
+    w: 3,
+    h: 3,
+    // The house itself, plus the bench and water barrel by the door.
+    blocks: [
+      [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [0, 2], [1, 2], [2, 2],
+      [3, 0], [3, 2],
+    ],
+  });
+  (data.doors ??= []).push({ tx: x0 + 3, ty: y0 + 1, to: 'home', entry: 'door' });
+  (data.entries ??= {}).cottage = { x: x0 + 4.5, y: y0 + 1.5 };
 }
 
 function setIf(grid: Terrain[][], x: number, y: number, t: Terrain): void {
