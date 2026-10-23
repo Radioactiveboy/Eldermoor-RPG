@@ -3,6 +3,7 @@ import { BootScene } from './scenes/BootScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
+import { InventoryScene } from './scenes/InventoryScene';
 import { JournalScene } from './scenes/JournalScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { PauseScene } from './scenes/PauseScene';
@@ -24,6 +25,6 @@ function startGame(): void {
       height: window.innerHeight,
     },
     // Later scenes draw on top of earlier ones.
-    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, JournalScene, PauseScene, SettingsScene],
+    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, JournalScene, InventoryScene, PauseScene, SettingsScene],
   });
 }

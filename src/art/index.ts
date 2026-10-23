@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { generateCharacter } from './character';
+import { generateFarm } from './farm';
 import { generateInterior } from './interior';
+import { generateItemIcons } from './items';
 import { generateNpcs } from './npc';
 import { generateProps } from './props';
 import { generateTiles } from './tiles';
@@ -16,4 +18,6 @@ export function generateArt(scene: Phaser.Scene): void {
   generateCharacter(scene);
   generateNpcs(scene);
   generateInterior(scene);
+  generateFarm(scene);
+  generateItemIcons(scene);
 }

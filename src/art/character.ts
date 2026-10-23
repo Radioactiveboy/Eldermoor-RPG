@@ -28,7 +28,8 @@ export type DrawnDir = (typeof DIRECTIONS)[number]['name'];
 
 const IDLE_FRAMES = 2;
 const WALK_FRAMES = 4;
-const COLS = IDLE_FRAMES + WALK_FRAMES;
+const SIT_FRAMES = 2;
+const COLS = IDLE_FRAMES + WALK_FRAMES + SIT_FRAMES;
 
 interface Pose {
   /** -1..1 leg swing: positive puts the left leg forward. */
@@ -37,6 +38,8 @@ interface Pose {
   bob: number;
   /** Cloak hem pushed back while moving. */
   flutter: number;
+  /** Seated (or crouching): knees bent forward, body lowered. */
+  sit?: boolean;
 }
 
 const IDLE: Pose[] = [
@@ -48,6 +51,10 @@ const WALK: Pose[] = [
   { stride: 0, bob: 0, flutter: 2 },
   { stride: -1, bob: 1, flutter: 1 },
   { stride: 0, bob: 0, flutter: 2 },
+];
+const SIT: Pose[] = [
+  { stride: 0, bob: 3, flutter: 0, sit: true },
+  { stride: 0, bob: 4, flutter: 0, sit: true },
 ];
 
 type Draw = { z: number; paint: () => void };
@@ -65,8 +72,26 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
   const parts: Draw[] = [];
   const front = cos > 0.2;
 
+  // Seated: thighs reach forward from the hips, shins drop to the ground.
+  if (pose.sit) {
+    for (const side of [-1, 1]) {
+      const L = side * 2.5;
+      parts.push({
+        z: Z(L, 3) - 0.5,
+        paint: () => {
+          const hip = oy + 35;
+          for (let d = 0; d <= 3; d++) c.shadedRect(Math.round(X(L, d) - 1.5), hip, 3, 3, P.trouser, P.trouserDark);
+          const x = Math.round(X(L, 3.5) - 1.5);
+          c.shadedRect(x, hip + 2, 3, feet - hip - 4, P.trouser, P.trouserDark);
+          const toe = Math.round(sin * 1.5);
+          c.shadedRect(Math.min(x, x + toe), feet - 3, 3 + Math.abs(toe), 3, P.leather, P.leatherDark, P.leatherLight);
+        },
+      });
+    }
+  }
+
   // Legs and boots. The trailing leg lifts a little.
-  for (const side of [-1, 1]) {
+  for (const side of pose.sit ? [] : [-1, 1]) {
     const L = side * 2.5;
     const swing = pose.stride * side;
     const D = swing * 2.5;
@@ -182,13 +207,14 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
 }
 
 /**
- * Builds the 'player' sprite sheet (rows = directions, cols = 2 idle + 4 walk
- * frames) and registers 'player-idle-<dir>' / 'player-walk-<dir>' animations.
+ * Builds the 'player' sprite sheet (rows = directions, cols = 2 idle + 4 walk +
+ * 2 sitting frames) and registers 'player-idle-<dir>', 'player-walk-<dir>',
+ * 'player-sit-<dir>' and 'player-work-<dir>' animations.
  */
 export function generateCharacter(scene: Phaser.Scene): void {
   const sheet = new PixelCanvas(FRAME_W * COLS, FRAME_H * DIRECTIONS.length);
   DIRECTIONS.forEach((dir, row) => {
-    const poses = [...IDLE, ...WALK];
+    const poses = [...IDLE, ...WALK, ...SIT];
     poses.forEach((pose, col) => {
       // Draw each frame alone so the outline pass can't bleed between frames.
       const frame = new PixelCanvas(FRAME_W, FRAME_H);
@@ -210,5 +236,9 @@ export function generateCharacter(scene: Phaser.Scene): void {
       Array.from({ length: n }, (_, k) => ({ key: 'player', frame: first + from + k }));
     scene.anims.create({ key: `player-idle-${dir.name}`, frames: frames(0, IDLE_FRAMES), frameRate: 2, repeat: -1 });
     scene.anims.create({ key: `player-walk-${dir.name}`, frames: frames(IDLE_FRAMES, WALK_FRAMES), frameRate: 9, repeat: -1 });
+    // Sitting breathes slowly; crouching to work (picking, gathering) bobs quickly.
+    const sitFrames = frames(IDLE_FRAMES + WALK_FRAMES, SIT_FRAMES);
+    scene.anims.create({ key: `player-sit-${dir.name}`, frames: sitFrames, frameRate: 1.5, repeat: -1 });
+    scene.anims.create({ key: `player-work-${dir.name}`, frames: sitFrames, frameRate: 6, repeat: -1 });
   });
 }

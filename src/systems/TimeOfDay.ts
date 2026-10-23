@@ -29,6 +29,11 @@ export class TimeOfDay {
     return Phaser.Math.Wrap(this.totalHours, 0, 24);
   }
 
+  /** Hours since the start of day 1, for timing things that last across days. */
+  get elapsedHours(): number {
+    return this.totalHours;
+  }
+
   get day(): number {
     return Math.floor(this.totalHours / 24) + 1;
   }

@@ -17,17 +17,24 @@ npm run build    # type-check + production build into dist/
 
 ## Controls
 
+The HUD doesn't list controls; they're under **Controls** in the pause menu.
+
 - **WASD / arrow keys**: move (screen-relative, so "up" goes up the screen)
 - **Click / tap**: walk to a tile (A* pathfinding around trees, rocks and water).
-  Clicking a person walks over to them and starts talking
-- **E** (or **Enter**, or tapping the bubble): talk to someone nearby
+  Clicking a person or thing walks over to it and uses it
+- **E** (or **Enter**, or tapping the prompt): do what the prompt over something
+  nearby says: talk, go through a door, sit on a bench or stool, pick crops,
+  shake a tree. Moving or pressing E again gets up from a seat; moving cancels
+  picking
 - **During a conversation**: click / Space / Enter / E to skip the typing or carry on;
   pick a reply with the mouse, the number keys, or up/down then Enter
 - **J** or the **book** button: open the journal (arrow keys or click to turn pages)
+- **I** or the **satchel** button: the satchel (inventory). **C**: equipment.
+  Tab switches between them; select an item to eat, wear or take it off
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
 - **Hold T**: fast-forward the clock (60x) to watch the day/night cycle
-- **Esc** or the **II** button: pause menu (resume, settings, back to main menu)
+- **Esc** or the **II** button: pause menu (resume, controls, settings, back to main menu)
 - **Enter** on the title screen: start a new game (you wake up at home)
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 
@@ -39,18 +46,21 @@ src/
   config.ts               Tile size, map size/seed, player speed, zoom limits
   iso/IsoMath.ts          Grid <-> isometric screen conversion, depth sorting
   world/MapData.ts        Terrain + prop types, walkability table
-  world/MapGenerator.ts   Seeded placeholder map (village square, lake, road, forest, the family cottage)
-  world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, the door out
+  world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
+  world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?"
   systems/Pathfinding.ts  8-direction A* on the tile grid
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
+  systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
+  systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   entities/Player.ts      Movement, collision, click-to-move path following
   entities/Npc.ts         People you can talk to, and which conversation they have
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
-                          furniture and buildings (IsoModel.ts draws 3D-ish iso objects)
+                          furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
+                          the garden (farm.ts: soil, crops, fences) and item icons (items.ts)
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
   settings/Settings.ts    Volume settings, saved in the browser
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
@@ -61,8 +71,9 @@ src/
   scenes/GameScene.ts     World, camera, input, doors between areas, talking
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
+  scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
   scenes/UIScene.ts       HUD overlay, separate from the world camera
-  ui/StatusBars.ts        Health and stamina bars
+  ui/StatusBars.ts        Slim health and stamina bars
   ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day
   ui/Minimap.ts           Isometric minimap with player and camera view
   ui/DayNightOverlay.ts   Tints the world by time of day; lantern, hearth and candle light
@@ -93,8 +104,16 @@ src/
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;
   hand-made maps (e.g. from the Tiled editor) can plug in later. A map can have
   furniture and buildings (`objects`), back walls for rooms, `doors` that lead
-  to another area, light sources and NPCs. Stepping on a door tile swaps the
-  area (`home` and `world` so far).
+  to another area, light sources, NPCs, seats and crops. Using a door (E by it)
+  swaps the area (`home` and `world` so far).
+- **Interactions** are built in `GameScene.interactionsNear`: each nearby NPC,
+  door, seat, ripe crop or tree offers an `Interaction` (a label, a range and
+  what to do). The nearest one in range gets the HUD's "E" prompt. Slower
+  actions (picking, shaking) run as a `Channel` with a progress bar; moving
+  cancels them. To add a new kind of thing to use, add another case there.
+- **Items** are defined in `ITEMS` (`systems/Inventory.ts`) with an icon from
+  `art/items.ts`. `Inventory.add(id, n)` puts them in the satchel and the HUD
+  shows "+n Name" over the hero.
 - **Conversations and quests are data.** A conversation is a set of nodes in
   `src/dialogue/`; replies point at the next node, and `action` names (like
   `start-medicine-quest`) are carried out in `GameScene.runDialogueAction`.
@@ -104,4 +123,5 @@ src/
 ## Good next steps
 
 The village herbalist (the next step of "Medicine for Mother"), more villagers,
-combat and stats, inventory, save/load.
+combat (equipment already totals defence and attack), cooking with the garden's
+crops, showing worn gear on the hero's sprite, save/load.

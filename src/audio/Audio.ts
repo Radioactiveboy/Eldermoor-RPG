@@ -346,6 +346,29 @@ class AudioEngine {
     this.thump(0.4);
   }
 
+  /** Leaves and stalks rustling: picking crops, shaking a tree. */
+  rustle(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    for (let i = 0; i < 4; i++) this.noise(t + i * 0.22 + Math.random() * 0.08, 0.18, 'bandpass', 2400, 4200, 1.2, 0.18);
+  }
+
+  /** Something going into the satchel: a soft pluck and a little rising note. */
+  pickup(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.pluckNote(79, t, 0.12);
+    this.pluckNote(86, t + 0.08, 0.1);
+  }
+
+  /** A bite of food. */
+  crunch(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.noise(t, 0.08, 'highpass', 1500, 900, 0.7, 0.3);
+    this.noise(t + 0.16, 0.07, 'highpass', 1400, 800, 0.7, 0.22);
+  }
+
   /** A single pop from the fire. */
   crackle(): void {
     if (!this.unlocked) return;

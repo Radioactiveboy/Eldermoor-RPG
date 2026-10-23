@@ -4,13 +4,17 @@ import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, SPRINT_MULT
 import { Npc, TALK_RANGE } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
+import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
+import { Inventory, ItemId, itemDef } from '../systems/Inventory';
 import { findPath, GridPoint } from '../systems/Pathfinding';
 import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { buildHomeMap } from '../world/HomeMap';
 import { IsoMap } from '../world/IsoMap';
-import { AreaId, Door } from '../world/MapData';
+import { AreaId, CropPatch, Door, Prop, Seat } from '../world/MapData';
+import { cropKey } from '../art/farm';
+import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
 import type { DialogueSceneData } from './DialogueScene';
 
@@ -30,6 +34,51 @@ export interface GameSceneData {
 /** Things the HUD can show the player as a speech-like hint. */
 export type HintListener = (text: string) => void;
 
+/**
+ * Something the player can do where they stand: talk to someone, use a door,
+ * sit down, pick crops, shake a tree. The nearest one in range gets an
+ * "E  <label>" prompt over it; E, Enter, or tapping the prompt does it.
+ */
+export interface Interaction {
+  /** Identifies it across frames, e.g. "crop:24,22". */
+  key: string;
+  label: string;
+  /** Where it is, in grid space, for the range check. */
+  gx: number;
+  gy: number;
+  range: number;
+  /** World pixel the prompt floats above. */
+  promptX: number;
+  promptY: number;
+  /** The tile that clicking on selects it. */
+  tile: GridPoint;
+  /** Walk onto its tile (doors) rather than next to it. */
+  walkOnto?: boolean;
+  run: () => void;
+}
+
+/** Something that takes a few seconds (picking, shaking a tree). Moving cancels it. */
+export interface Channel {
+  label: string;
+  seconds: number;
+  elapsed: number;
+  onDone: () => void;
+  onCancel?: () => void;
+}
+
+/** Things to muse on while sitting down for a moment. */
+const SITTING_THOUGHTS: Record<string, string[]> = {
+  bench: [
+    'The garden could do with weeding again.',
+    'Smoke curls up from the chimney and drifts over the trees.',
+    'A blackbird is singing somewhere in the hedge.',
+  ],
+  stool: [
+    'The fire pops and settles. It is warm in here, at least.',
+    'The old table is covered in knife marks and candle wax.',
+  ],
+};
+
 export class GameScene extends Phaser.Scene {
   map!: IsoMap;
   player!: Player;
@@ -37,20 +86,24 @@ export class GameScene extends Phaser.Scene {
   clock!: TimeOfDay;
   area: AreaId = 'home';
   npcs: Npc[] = [];
-  /** The NPC close enough to talk to right now, if any. */
-  talkTarget?: Npc;
-  /** True while a conversation, the journal or a door transition has the controls. */
+  /** What the player would do by pressing E right now, if anything. */
+  focus?: Interaction;
+  /** A few-seconds action in progress, for the HUD's progress bar. */
+  channel?: Channel;
+  /** True while a conversation, a menu or a door transition has the controls. */
   busy = false;
   /** The HUD sets this to show short messages. */
   onHint?: HintListener;
   private keys!: MoveKeys;
   private hover!: Phaser.GameObjects.Image;
   private marker!: Phaser.GameObjects.Image;
-  /** Walking over to someone after they were clicked; talk on arrival. */
-  private walkingTo?: Npc;
-  /** Ignore doors until the player has stepped off the one they arrived by. */
-  private doorArmed = false;
+  /** Walking over to something after it was clicked; use it on arrival. */
+  private walkingTo?: Interaction;
+  /** The seat the player is sitting on, if any. */
+  private seat?: Seat;
+  private sitTimer = 0;
   private crackleTimer = 0;
+  private cropTimer = 0;
 
   constructor() {
     super('Game');
@@ -65,6 +118,8 @@ export class GameScene extends Phaser.Scene {
           'and her hands were cold as river stones. I should sit with her today.',
       );
       QuestLog.dayProvider = () => this.clock.day;
+      Inventory.reset();
+      Farm.reset();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
       const hourParam = new URLSearchParams(window.location.search).get('hour');
       if (hourParam !== null && !Number.isNaN(Number(hourParam))) this.clock.setHour(Number(hourParam));
@@ -72,13 +127,15 @@ export class GameScene extends Phaser.Scene {
     this.area = data.area ?? 'home';
     this.busy = false;
     this.walkingTo = undefined;
-    this.talkTarget = undefined;
-    this.doorArmed = false;
+    this.focus = undefined;
+    this.channel = undefined;
+    this.seat = undefined;
 
     this.map = new IsoMap(this, this.area === 'home' ? buildHomeMap() : generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED));
     const start = (data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn;
     this.player = new Player(this, this.map, start.x, start.y);
     this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy));
+    this.syncCrops();
 
     this.hover = this.add.image(0, 0, 'tile-highlight').setDepth(1).setAlpha(0.6).setVisible(false);
     this.marker = this.add.image(0, 0, 'tile-highlight').setDepth(1).setTint(0x9cf09c).setVisible(false);
@@ -98,14 +155,26 @@ export class GameScene extends Phaser.Scene {
     const dt = Math.min(deltaMs / 1000, 0.1);
     const wantsSprint = !this.busy && this.keys.sprint.isDown && this.stats.canSprint();
     const input = this.busy ? { x: 0, y: 0 } : this.readKeyboard();
-    if (input.x !== 0 || input.y !== 0) this.walkingTo = undefined;
+    const moving = input.x !== 0 || input.y !== 0;
+    if (moving) {
+      this.walkingTo = undefined;
+      if (this.seat) this.standUp();
+      if (this.channel) this.cancelChannel();
+    }
+    this.updateChannel(dt);
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : 1);
     this.stats.update(dt, wantsSprint && moved);
     this.clock.timeScale = !this.busy && this.keys.fastForward.isDown ? FAST_FORWARD : 1;
     this.clock.update(dt);
     this.updateHover();
-    this.updateTalkTarget();
-    this.checkDoors();
+    this.updateFocus();
+    this.updateSitting(dt);
+
+    this.cropTimer -= dt;
+    if (this.cropTimer <= 0) {
+      this.syncCrops();
+      this.cropTimer = 1;
+    }
 
     if (this.map.data.indoor) {
       this.crackleTimer -= dt;
@@ -116,18 +185,45 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Talk to whoever is in range (the E key, or tapping the prompt). */
+  /** Do whatever is prompted (the E key, or tapping the prompt). */
   interact(): void {
-    if (this.busy || !this.talkTarget) return;
-    this.startConversation(this.talkTarget);
+    if (this.busy || this.channel || !this.focus) return;
+    this.focus.run();
   }
 
   openJournal(): void {
-    if (this.busy || !this.scene.isActive()) return;
-    this.busy = true;
-    this.player.setPath([]);
+    if (!this.takeControls()) return;
     this.scene.launch('Journal');
     this.scene.get('Journal').events.once('journal-closed', () => this.release());
+  }
+
+  /** The satchel (inventory) or equipment screen: I and C, or the HUD's satchel button. */
+  openInventory(tab: InventoryTab = 'satchel'): void {
+    if (!this.takeControls()) return;
+    this.scene.launch('Inventory', { tab });
+    this.scene.get('Inventory').events.once('inventory-closed', () => this.release());
+  }
+
+  /** Eat a piece of food from the satchel. */
+  eat(index: number): boolean {
+    const stack = Inventory.bag[index];
+    const eat = stack && itemDef(stack.id).eat;
+    if (!eat) return false;
+    Inventory.takeOne(index);
+    if (eat.health) this.stats.heal(eat.health);
+    if (eat.stamina) this.stats.restoreStamina(eat.stamina);
+    GameAudio.crunch();
+    return true;
+  }
+
+  /** Stops whatever the player is doing so a menu can open. */
+  private takeControls(): boolean {
+    if (this.busy || !this.scene.isActive()) return false;
+    if (this.channel) this.cancelChannel();
+    this.busy = true;
+    this.walkingTo = undefined;
+    this.player.setPath([]);
+    return true;
   }
 
   /** Freezes the world and shows the pause menu (Esc, or the HUD's pause button). */
@@ -145,6 +241,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startConversation(npc: Npc): void {
+    if (this.seat) this.standUp();
     this.busy = true;
     this.walkingTo = undefined;
     this.player.setPath([]);
@@ -173,41 +270,272 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private updateTalkTarget(): void {
-    let best: Npc | undefined;
-    let bestDist = TALK_RANGE;
-    for (const npc of this.npcs) {
-      const d = npc.distanceTo(this.player.gx, this.player.gy);
-      if (d <= bestDist) {
-        best = npc;
+  // ------------------------------------------------------------ interactions
+
+  /** Everything the player could use from around (gx, gy). */
+  private interactionsNear(gx: number, gy: number): Interaction[] {
+    const list: Interaction[] = [];
+    if (this.seat) {
+      // Sitting: the only thing to do is get up.
+      const head = this.player.sprite;
+      list.push({
+        key: 'stand', label: 'Stand up', gx: this.player.gx, gy: this.player.gy, range: Infinity,
+        promptX: head.x, promptY: head.y - 44, tile: { x: -1, y: -1 }, run: () => this.standUp(),
+      });
+      return list;
+    }
+    for (const npc of this.npcs) list.push(this.npcInteraction(npc));
+    for (const door of this.map.data.doors ?? []) list.push(this.doorInteraction(door));
+    for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
+    for (const crop of this.map.data.crops ?? []) {
+      if (Math.abs(crop.tx + 0.5 - gx) < 2 && Math.abs(crop.ty + 0.5 - gy) < 2) {
+        const i = this.cropInteraction(crop);
+        if (i) list.push(i);
+      }
+    }
+    const tx = Math.floor(gx);
+    const ty = Math.floor(gy);
+    for (let y = ty - 2; y <= ty + 2; y++) {
+      for (let x = tx - 2; x <= tx + 2; x++) {
+        const tree = this.treeInteraction(x, y);
+        if (tree) list.push(tree);
+      }
+    }
+    return list;
+  }
+
+  /** What clicking on a tile would use, if anything. */
+  private interactionAt(tile: GridPoint): Interaction | undefined {
+    const npc = this.npcs.find((n) => n.tileX === tile.x && n.tileY === tile.y);
+    if (npc) return this.npcInteraction(npc);
+    const near = this.interactionsNear(tile.x + 0.5, tile.y + 0.5);
+    return near.find((i) => i.tile.x === tile.x && i.tile.y === tile.y);
+  }
+
+  private inRange(i: Interaction): boolean {
+    return Math.hypot(this.player.gx - i.gx, this.player.gy - i.gy) <= i.range;
+  }
+
+  private npcInteraction(npc: Npc): Interaction {
+    const head = npc.promptPoint;
+    return {
+      key: `npc:${npc.id}`, label: 'Talk', gx: npc.gx, gy: npc.gy, range: TALK_RANGE,
+      promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
+      run: () => this.startConversation(npc),
+    };
+  }
+
+  private doorInteraction(door: Door): Interaction {
+    // Both doors so far are in a wall along the tile's -x edge.
+    const p = gridToScreen(door.tx, door.ty + 0.5);
+    return {
+      key: `door:${door.tx},${door.ty}`, label: door.to === 'home' ? 'Go inside' : 'Go outside',
+      gx: door.tx + 0.5, gy: door.ty + 0.5, range: 1.3, promptX: p.x, promptY: p.y - 58,
+      tile: { x: door.tx, y: door.ty }, walkOnto: true, run: () => this.useDoor(door),
+    };
+  }
+
+  private seatInteraction(seat: Seat): Interaction {
+    const p = gridToScreen(seat.gx, seat.gy);
+    return {
+      key: `seat:${seat.gx},${seat.gy}`, label: 'Sit', gx: seat.gx, gy: seat.gy, range: 1.3,
+      promptX: p.x, promptY: p.y - 26, tile: { x: Math.floor(seat.gx), y: Math.floor(seat.gy) },
+      run: () => this.sitOn(seat),
+    };
+  }
+
+  private cropInteraction(crop: CropPatch): Interaction | undefined {
+    if (!Farm.isRipe(crop.tx, crop.ty, this.clock.elapsedHours)) return undefined;
+    const p = gridToScreen(crop.tx + 0.5, crop.ty + 0.5);
+    return {
+      key: `crop:${crop.tx},${crop.ty}`, label: CROPS[crop.kind].verb, gx: crop.tx + 0.5, gy: crop.ty + 0.5,
+      range: 1.2, promptX: p.x, promptY: p.y - 24, tile: { x: crop.tx, y: crop.ty },
+      run: () => this.pickCrop(crop),
+    };
+  }
+
+  private treeInteraction(tx: number, ty: number): Interaction | undefined {
+    if (!this.map.inBounds(tx, ty) || this.map.data.props[ty][tx] !== Prop.Tree) return undefined;
+    const tree = this.map.trees.get(ty * this.map.width + tx);
+    // Each tree only gives something once a day.
+    if (!tree || Farm.wasShakenToday(tx, ty, this.clock.day)) return undefined;
+    const p = gridToScreen(tx + 0.5, ty + 0.5);
+    return {
+      key: `tree:${tx},${ty}`, label: 'Shake the tree', gx: tx + 0.5, gy: ty + 0.5, range: 1.45,
+      promptX: p.x, promptY: p.y - 40, tile: { x: tx, y: ty },
+      run: () => this.shakeTree(tx, ty, tree.image, tree.pine),
+    };
+  }
+
+  /** The nearest thing in range becomes the prompt; a clicked target is used on arrival. */
+  private updateFocus(): void {
+    if (this.busy || this.channel) {
+      this.focus = undefined;
+      return;
+    }
+    let best: Interaction | undefined;
+    let bestDist = Infinity;
+    for (const i of this.interactionsNear(this.player.gx, this.player.gy)) {
+      const d = Math.hypot(this.player.gx - i.gx, this.player.gy - i.gy);
+      if (d <= i.range && d < bestDist) {
+        best = i;
         bestDist = d;
       }
     }
-    this.talkTarget = best;
-    if (this.walkingTo && best === this.walkingTo && !this.busy) {
-      this.startConversation(best);
-    } else if (this.walkingTo && !this.player.hasPath) {
+    this.focus = best;
+    const target = this.walkingTo;
+    if (!target) return;
+    // NPCs are greeted as soon as they're in reach; other things once the walk is over.
+    const arrived = target.walkOnto
+      ? this.player.tileX === target.tile.x && this.player.tileY === target.tile.y
+      : this.inRange(target) && (target.key.startsWith('npc:') || !this.player.hasPath);
+    if (arrived) {
+      this.walkingTo = undefined;
+      this.player.setPath([]);
+      target.run();
+    } else if (!this.player.hasPath) {
       this.walkingTo = undefined;
     }
   }
 
-  private checkDoors(): void {
-    const door = this.map.data.doors?.find((d) => d.tx === this.player.tileX && d.ty === this.player.tileY);
-    if (!door) {
-      this.doorArmed = true;
+  // ------------------------------------------------------------ actions
+
+  private startChannel(channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
+    this.walkingTo = undefined;
+    this.channel = { ...channel, elapsed: 0 };
+    this.player.setWorking(true, towards);
+  }
+
+  private updateChannel(dt: number): void {
+    const c = this.channel;
+    if (!c || this.busy) return;
+    c.elapsed += dt;
+    if (c.elapsed < c.seconds) return;
+    this.channel = undefined;
+    this.player.setWorking(false);
+    c.onDone();
+  }
+
+  private cancelChannel(): void {
+    const c = this.channel;
+    if (!c) return;
+    this.channel = undefined;
+    this.player.setWorking(false);
+    c.onCancel?.();
+  }
+
+  private pickCrop(crop: CropPatch): void {
+    const item = CROPS[crop.kind].item;
+    if (!Inventory.canAdd(item)) {
+      this.onHint?.('My satchel is full. I should eat something, or leave it for later.');
       return;
     }
-    if (!this.doorArmed || this.busy) return;
-    this.useDoor(door);
+    GameAudio.rustle();
+    this.startChannel(
+      {
+        label: 'Picking',
+        seconds: PICK_SECONDS,
+        onDone: () => {
+          Farm.pick(crop.tx, crop.ty, this.clock.elapsedHours);
+          this.syncCrops();
+          this.give(item, crop.kind === 'cabbage' ? 1 : 2);
+        },
+      },
+      { x: crop.tx + 0.5, y: crop.ty + 0.5 },
+    );
+  }
+
+  private shakeTree(tx: number, ty: number, image: Phaser.GameObjects.Image, pine: boolean): void {
+    // The tree sways (pivoting at its base) while leaves drift down.
+    const sway = this.tweens.add({ targets: image, angle: { from: -3, to: 3 }, duration: 110, yoyo: true, repeat: -1 });
+    const leaves = this.time.addEvent({ delay: 140, loop: true, callback: () => this.dropLeaf(image, pine) });
+    const stop = () => {
+      sway.stop();
+      leaves.remove();
+      this.tweens.add({ targets: image, angle: 0, duration: 200 });
+    };
+    GameAudio.rustle();
+    this.startChannel(
+      {
+        label: 'Shaking',
+        seconds: 1.4,
+        onCancel: stop,
+        onDone: () => {
+          stop();
+          Farm.shake(tx, ty, this.clock.day);
+          const roll = Math.random();
+          const found: ItemId | undefined = pine ? (roll < 0.7 ? 'pinecone' : undefined) : roll < 0.55 ? 'apple' : roll < 0.8 ? 'stick' : undefined;
+          if (found) this.give(found, 1);
+          else this.onHint?.(pine ? 'Only a shower of needles.' : 'Just a few leaves. Nothing worth keeping.');
+        },
+      },
+      { x: tx + 0.5, y: ty + 0.5 },
+    );
+  }
+
+  /** A leaf (or needle) falling from somewhere in a tree's canopy. */
+  private dropLeaf(tree: Phaser.GameObjects.Image, pine: boolean): void {
+    const x = tree.x + (Math.random() - 0.5) * tree.width * 0.7;
+    const y = tree.y - tree.height * (0.45 + Math.random() * 0.4);
+    const colors = pine ? [0x24503a, 0x37704a] : [0x5c9e48, 0x8cc456, 0x3e7a3e];
+    const leaf = this.add.rectangle(x, y, 2, 2, colors[Math.floor(Math.random() * colors.length)]).setDepth(tree.depth + 1);
+    this.tweens.add({
+      targets: leaf,
+      y: tree.y - 2 + Math.random() * 6,
+      x: x + (Math.random() - 0.5) * 24,
+      angle: 180,
+      alpha: { from: 1, to: 0.2 },
+      duration: 700 + Math.random() * 500,
+      ease: 'Sine.easeIn',
+      onComplete: () => leaf.destroy(),
+    });
+  }
+
+  /** Adds items to the satchel, or says why not. The HUD shows what was gained. */
+  private give(id: ItemId, count: number): void {
+    if (Inventory.add(id, count)) GameAudio.pickup();
+    else if (Inventory.add(id, 1)) GameAudio.pickup();
+    else this.onHint?.('My satchel is full.');
+  }
+
+  private sitOn(seat: Seat): void {
+    this.walkingTo = undefined;
+    this.seat = seat;
+    this.sitTimer = 0;
+    this.player.sitAt(seat.gx, seat.gy, { x: seat.faceX, y: seat.faceY });
+  }
+
+  private standUp(): void {
+    const seat = this.seat;
+    if (!seat) return;
+    this.seat = undefined;
+    this.player.standAt(seat.standX, seat.standY);
+  }
+
+  /** Sitting for a little while brings on a passing thought. */
+  private updateSitting(dt: number): void {
+    if (!this.seat || this.busy) return;
+    const before = this.sitTimer;
+    this.sitTimer += dt;
+    if (before < 3 && this.sitTimer >= 3) {
+      const thoughts = SITTING_THOUGHTS[this.seat.name] ?? [];
+      if (thoughts.length > 0) this.onHint?.(thoughts[Math.floor(Math.random() * thoughts.length)]);
+    }
+  }
+
+  /** Show each crop as ripe or freshly picked; picked ones grow back over time. */
+  private syncCrops(): void {
+    for (const crop of this.map.data.crops ?? []) {
+      const img = this.map.crops.get(crop.ty * this.map.width + crop.tx);
+      const key = cropKey(crop.kind, Farm.isRipe(crop.tx, crop.ty, this.clock.elapsedHours));
+      if (img && img.texture.key !== key) img.setTexture(key);
+    }
   }
 
   private useDoor(door: Door): void {
     if (this.area === 'home' && !QuestLog.has('mother-medicine')) {
       // Don't let the story start without its first scene.
-      this.doorArmed = false;
       this.onHint?.("I shouldn't go anywhere before I've spoken with Mother.");
-      const back = this.map.data.entries?.door;
-      if (back) this.player.setPath([{ x: Math.floor(back.x), y: Math.floor(back.y) }]);
       return;
     }
     this.busy = true;
@@ -257,6 +585,8 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-E', () => this.interact());
     kb.on('keydown-ENTER', () => this.interact());
     kb.on('keydown-J', () => this.openJournal());
+    kb.on('keydown-I', () => this.openInventory('satchel'));
+    kb.on('keydown-C', () => this.openInventory('equipment'));
 
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       if (this.busy) return;
@@ -268,17 +598,25 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.busy) return;
       const tile = this.pointerTile(pointer);
-      // Clicking someone walks over to them and starts a conversation.
-      const npc = this.npcs.find((n) => n.tileX === tile.x && n.tileY === tile.y);
-      if (npc) {
-        if (npc.distanceTo(this.player.gx, this.player.gy) <= TALK_RANGE) {
-          this.startConversation(npc);
+      if (this.channel) this.cancelChannel();
+      // Clicking a person or thing walks over to it and uses it.
+      const target = this.interactionAt(tile);
+      if (this.seat) {
+        if (target?.key === 'stand') return;
+        this.standUp();
+      }
+      if (target) {
+        if (this.inRange(target) && !target.walkOnto) {
+          this.walkingTo = undefined;
+          this.player.setPath([]);
+          target.run();
           return;
         }
-        const path = this.pathNextTo(npc);
+        const path = target.walkOnto ? this.pathTo(target.tile) : this.pathNextTo(target.tile);
         if (path) {
-          this.walkingTo = npc;
+          this.walkingTo = target;
           this.player.setPath(path);
+          if (path.length === 0) this.updateFocus();
         }
         return;
       }
@@ -304,11 +642,11 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  /** Shortest path to any free tile beside an NPC. */
-  private pathNextTo(npc: Npc): GridPoint[] | null {
+  /** Shortest path to any free tile beside a tile (an NPC, a crop, a tree). Straight neighbours first. */
+  private pathNextTo(tile: GridPoint): GridPoint[] | null {
     let best: GridPoint[] | null = null;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-      const path = this.pathTo({ x: npc.tileX + dx, y: npc.tileY + dy });
+      const path = this.pathTo({ x: tile.x + dx, y: tile.y + dy });
       if (path && (!best || path.length < best.length)) best = path;
     }
     return best;
@@ -342,10 +680,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const c = gridToScreen(tile.x + 0.5, tile.y + 0.5);
-    const npc = this.npcs.some((n) => n.tileX === tile.x && n.tileY === tile.y);
+    const usable = !!this.interactionAt(tile);
     this.hover
       .setPosition(c.x, c.y)
-      .setTint(npc ? 0xffe08a : this.map.isWalkable(tile.x, tile.y) ? 0xffffff : 0xff6b6b)
+      .setTint(usable ? 0xffe08a : this.map.isWalkable(tile.x, tile.y) ? 0xffffff : 0xff6b6b)
       .setVisible(true);
   }
 }
