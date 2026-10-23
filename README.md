@@ -2,7 +2,12 @@
 
 A minimal isometric RPG framework built with **Phaser 3 + TypeScript + Vite**.
 
-## Run it
+## Play it
+
+The latest version on `main` is published automatically to
+https://radioactiveboy.github.io/Eldermoor-RPG/
+
+## Run it locally
 
 ```bash
 npm install
