@@ -9,7 +9,7 @@ export const MAP_SEED = 'eldermoor';
 export const PLAYER_SPEED = 4; // tiles per second
 export const PLAYER_RADIUS = 0.25; // in tiles, used for collision
 
-export const CAMERA_ZOOM = { min: 0.5, max: 2.5, default: 1.25 };
+export const CAMERA_ZOOM = { min: 0.5, max: 3, default: 2 };
 
 export const SPRINT_MULTIPLIER = 1.6; // hold Shift to sprint
 export const STAMINA = { max: 100, drainPerSecond: 28, regenPerSecond: 18, regenDelay: 0.8, sprintMinimum: 15 };

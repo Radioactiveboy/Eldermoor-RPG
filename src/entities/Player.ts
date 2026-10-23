@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FEET_Y, FRAME_H, DrawnDir } from '../art/character';
 import { PLAYER_RADIUS, PLAYER_SPEED } from '../config';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { IsoMap } from '../world/IsoMap';
@@ -11,18 +12,19 @@ import { GridPoint } from '../systems/Pathfinding';
 export class Player {
   gx: number;
   gy: number;
-  readonly sprite: Phaser.GameObjects.Image;
+  readonly sprite: Phaser.GameObjects.Sprite;
   private readonly shadow: Phaser.GameObjects.Image;
   private readonly map: IsoMap;
   private path: GridPoint[] = [];
-  private bobTime = 0;
+  /** Facing as one of 8 screen directions: 0 = south, 2 = east, 4 = north, 6 = west. */
+  private facing = 0;
 
   constructor(scene: Phaser.Scene, map: IsoMap, gx: number, gy: number) {
     this.map = map;
     this.gx = gx;
     this.gy = gy;
     this.shadow = scene.add.image(0, 0, 'shadow');
-    this.sprite = scene.add.image(0, 0, 'player').setOrigin(0.5, 0.95);
+    this.sprite = scene.add.sprite(0, 0, 'player', 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
     this.sync(false);
   }
 
@@ -57,9 +59,9 @@ export class Player {
       const step = PLAYER_SPEED * speedMultiplier * dt;
       this.tryMove(dir.x * step, 0);
       this.tryMove(0, dir.y * step);
-      if (dir.x - dir.y !== 0) this.sprite.setFlipX(dir.x - dir.y < 0);
+      this.face(dir);
     }
-    this.sync(moving, dt);
+    this.sync(moving);
     return moving;
   }
 
@@ -94,12 +96,25 @@ export class Player {
     this.gy = ny;
   }
 
-  private sync(moving: boolean, dt = 0): void {
+  /** Turn to face a grid-space direction, using its on-screen angle. */
+  private face(dir: Vec2): void {
+    const screen = gridToScreen(dir.x, dir.y);
+    // atan2(x, y) is 0 straight down the screen and grows through east towards north.
+    const angle = Math.atan2(screen.x, screen.y);
+    this.facing = (Math.round(angle / (Math.PI / 4)) + 8) % 8;
+  }
+
+  private sync(moving: boolean): void {
+    // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored.
+    const names: DrawnDir[] = ['s', 'se', 'e', 'ne', 'n'];
+    const mirrored = this.facing > 4;
+    const drawn = names[mirrored ? 8 - this.facing : this.facing];
+    this.sprite.setFlipX(mirrored);
+    this.sprite.play(`player-${moving ? 'walk' : 'idle'}-${drawn}`, true);
+
     const p = gridToScreen(this.gx, this.gy);
-    this.bobTime = moving ? this.bobTime + dt * 12 : 0;
-    const bob = moving ? Math.abs(Math.sin(this.bobTime)) * 3 : 0;
     this.shadow.setPosition(p.x, p.y);
-    this.sprite.setPosition(p.x, p.y - bob);
+    this.sprite.setPosition(p.x, p.y);
     const d = depthAt(this.gx, this.gy);
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
