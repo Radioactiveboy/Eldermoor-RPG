@@ -1,0 +1,71 @@
+/**
+ * The Eldermoor palette. Every piece of generated art picks its colours from
+ * here so the world reads as one place: warm earthy greens and browns, a deep
+ * plum-black outline instead of pure black, and gold for anything magical or
+ * important. UI code is welcome to reuse these too.
+ */
+export const PALETTE = {
+  outline: 0x1d1620,
+  ink: 0x2b2130,
+
+  // Foliage
+  leafDeep: 0x1e3b2a,
+  leafDark: 0x2b5534,
+  leaf: 0x3e7a3e,
+  leafLight: 0x5c9e48,
+  leafGlow: 0x8cc456,
+  pineDark: 0x173328,
+  pine: 0x24503a,
+  pineLight: 0x37704a,
+
+  // Ground
+  grassDark: 0x3d6b33,
+  grass: 0x4c8038,
+  grassLight: 0x619a43,
+  grassTip: 0x7fb653,
+  dirtDark: 0x6b4a2e,
+  dirt: 0x8a6239,
+  dirtLight: 0xa57b4b,
+  sandDark: 0xb89a62,
+  sand: 0xd4b77c,
+  sandLight: 0xe8d29b,
+  stoneDark: 0x5a5866,
+  stone: 0x7c7a86,
+  stoneLight: 0x9d9ba6,
+  mortar: 0x46434f,
+  moss: 0x5f7d3c,
+  waterDeep: 0x1f4a7a,
+  water: 0x2a6496,
+  waterLight: 0x4a8cbf,
+  foam: 0xa9d6e5,
+
+  // Wood and leather
+  barkDark: 0x3b2618,
+  bark: 0x5c3b23,
+  barkLight: 0x7d5434,
+  leatherDark: 0x4a2c1b,
+  leather: 0x6e4228,
+  leatherLight: 0x8f5c38,
+
+  // Cloth and skin
+  cloakDark: 0x22402f,
+  cloak: 0x2f5a3e,
+  cloakLight: 0x437a52,
+  linen: 0xd8c8a4,
+  linenDark: 0xb09e7c,
+  trouser: 0x3f3440,
+  trouserDark: 0x2e2530,
+  skin: 0xf0c49a,
+  skinShade: 0xcf9873,
+  hair: 0x6b3b22,
+  eye: 0x241a24,
+
+  // Accents
+  gold: 0xe6b54a,
+  goldLight: 0xf7dc84,
+  flowerRed: 0xc8434a,
+  flowerYellow: 0xf0d050,
+  flowerBlue: 0x6f8fe0,
+  flowerWhite: 0xeee8dc,
+  mushroom: 0xb83a32,
+} as const;

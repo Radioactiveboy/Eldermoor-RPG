@@ -33,7 +33,8 @@ src/
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?"
   systems/Pathfinding.ts  8-direction A* on the tile grid
   entities/Player.ts      Movement, collision, click-to-move path following
-  scenes/BootScene.ts     Generates placeholder art (no asset files needed yet)
+  art/                    Palette and pixel-art generators: tiles, props, the hero
+  scenes/BootScene.ts     Generates the art, then starts the game
   scenes/GameScene.ts     World, camera, input
   scenes/UIScene.ts       HUD overlay, separate from the world camera
 ```
@@ -46,13 +47,17 @@ src/
 - **Depth sorting** uses `gx + gy`, so anything lower on screen draws in front.
   Ground tiles are baked into one render texture for performance; trees, rocks
   and characters are individual sprites so they can overlap correctly.
-- **Placeholder art** is drawn in `BootScene` under texture keys like
-  `tile-grass`, `prop-tree`, `player`. Load real sprites under the same keys and
-  everything else keeps working.
+- **Pixel art is generated in code** (`src/art/`) from one shared palette
+  (`palette.ts`), so there are no image files to manage. The hero is built from
+  simple body parts rotated to face 8 directions, with idle and walk animations
+  (`player-idle-<dir>`, `player-walk-<dir>`). Tiles come in several variants and
+  the ground is sprinkled with flowers, grass tufts and pebbles. To use
+  hand-drawn art instead, load it in `BootScene` under the same texture keys
+  (`tile-grass`, `prop-tree`, `player`, ...).
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;
   hand-made maps (e.g. from the Tiled editor) can plug in later.
 
 ## Good next steps
 
 NPCs and dialogue, combat and stats, inventory, multiple maps with transitions,
-real sprite sheets with 8-direction walk animations, save/load.
+more characters and creatures in the same style, save/load.

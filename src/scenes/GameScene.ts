@@ -41,7 +41,8 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const b = this.map.getWorldBounds();
     cam.setBounds(b.x, b.y, b.width, b.height);
-    cam.setZoom(CAMERA_ZOOM.default);
+    // Pixel art looks best zoomed in, but phones need to see more of the map.
+    cam.setZoom(Phaser.Math.Clamp(this.scale.width / 640, 1, CAMERA_ZOOM.default));
     cam.startFollow(this.player.sprite, true, 0.12, 0.12);
     cam.setBackgroundColor('#0e0f14');
     cam.roundPixels = true;
