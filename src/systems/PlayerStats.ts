@@ -43,6 +43,11 @@ export class PlayerStats {
     this.health = Phaser.Math.Clamp(this.health - amount, 0, this.maxHealth);
   }
 
+  restoreStamina(amount: number): void {
+    this.stamina = Phaser.Math.Clamp(this.stamina + amount, 0, this.maxStamina);
+    if (this.stamina >= STAMINA.sprintMinimum) this.exhausted = false;
+  }
+
   heal(amount: number): void {
     this.health = Phaser.Math.Clamp(this.health + amount, 0, this.maxHealth);
   }

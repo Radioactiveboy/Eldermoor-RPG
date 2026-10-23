@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_HEIGHT, TILE_WIDTH } from '../config';
+import { soilTile } from './farm';
 import { floorTile } from './interior';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
@@ -177,6 +178,7 @@ export function generateTiles(scene: Phaser.Scene): void {
     ['tile-water', water],
     ['tile-sand', sand],
     ['tile-floor', (seed) => floorTile(seed, TILE_WIDTH, TILE_HEIGHT)],
+    ['tile-soil', soilTile],
   ];
   for (const [key, make] of kinds) {
     for (let v = 0; v < TILE_VARIANTS; v++) make(v + 1).toTexture(scene, tileKey(key, v));

@@ -37,6 +37,12 @@ export function buildHomeMap(): MapData {
       { gx: 0.6, gy: 0.6, z: 26, radius: 90, flicker: 0.35 },
     ],
     npcs: [{ id: 'mother', gx: 2.5, gy: 1.6 }],
+    // The stools around the table, each facing it.
+    seats: [
+      { name: 'stool', gx: 2.5, gy: 3.5, faceX: 1, faceY: 0, standX: 2.5, standY: 4.5 },
+      { name: 'stool', gx: 5.5, gy: 3.5, faceX: -1, faceY: 0, standX: 5.5, standY: 4.5 },
+      { name: 'stool', gx: 4.5, gy: 4.5, faceX: 0, faceY: -1, standX: 4.5, standY: 5.5 },
+    ],
   };
 
   const add = (key: string, tx: number, ty: number, w = 1, h = 1, extra: Partial<Parameters<typeof placeObject>[1]> = {}) =>

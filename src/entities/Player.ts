@@ -18,6 +18,8 @@ export class Player {
   private path: GridPoint[] = [];
   /** Facing as one of 8 screen directions: 0 = south, 2 = east, 4 = north, 6 = west. */
   private facing = 0;
+  /** Sitting on a seat, or crouched working (picking crops). Either way the player stays put. */
+  pose: 'stand' | 'sit' | 'work' = 'stand';
 
   constructor(scene: Phaser.Scene, map: IsoMap, gx: number, gy: number) {
     this.map = map;
@@ -51,6 +53,10 @@ export class Player {
    * @returns whether the player moved this frame
    */
   update(dt: number, input: Vec2, speedMultiplier = 1): boolean {
+    if (this.pose !== 'stand') {
+      this.sync(false);
+      return false;
+    }
     let dir = input;
     if (input.x !== 0 || input.y !== 0) {
       this.path = [];
@@ -67,6 +73,32 @@ export class Player {
     }
     this.sync(moving);
     return moving;
+  }
+
+  /** Sit down at a spot (which may be on a blocked tile, like a bench), facing a grid direction. */
+  sitAt(gx: number, gy: number, face: Vec2): void {
+    this.path = [];
+    this.gx = gx;
+    this.gy = gy;
+    this.face(face);
+    this.pose = 'sit';
+    this.sync(false);
+  }
+
+  /** Get up and step to a free spot. */
+  standAt(gx: number, gy: number): void {
+    this.gx = gx;
+    this.gy = gy;
+    this.pose = 'stand';
+    this.sync(false);
+  }
+
+  /** Crouch to work at something (or stand back up), facing it. */
+  setWorking(working: boolean, towards?: Vec2): void {
+    this.path = [];
+    if (towards) this.face({ x: towards.x - this.gx, y: towards.y - this.gy });
+    this.pose = working ? 'work' : 'stand';
+    this.sync(false);
   }
 
   /** Direction towards the next waypoint, shortened so this frame's step of `maxStep` tiles can't overshoot it. */
@@ -115,12 +147,14 @@ export class Player {
     const mirrored = this.facing > 4;
     const drawn = names[mirrored ? 8 - this.facing : this.facing];
     this.sprite.setFlipX(mirrored);
-    this.sprite.play(`player-${moving ? 'walk' : 'idle'}-${drawn}`, true);
+    const anim = this.pose === 'stand' ? (moving ? 'walk' : 'idle') : this.pose;
+    this.sprite.play(`player-${anim}-${drawn}`, true);
 
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x, p.y);
-    const d = depthAt(this.gx, this.gy);
+    // Seated, draw in front of the seat even when sitting right on its tile.
+    const d = depthAt(this.gx, this.gy) + (this.pose === 'sit' ? 2 : 0);
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
   }

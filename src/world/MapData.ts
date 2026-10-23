@@ -1,3 +1,5 @@
+import type { CropKind } from '../systems/Farm';
+
 export enum Terrain {
   Grass,
   Dirt,
@@ -5,6 +7,8 @@ export enum Terrain {
   Water,
   Sand,
   Floor,
+  /** Tilled garden soil. */
+  Soil,
 }
 
 export enum Prop {
@@ -39,7 +43,7 @@ export interface MapObject {
   blocks?: Array<[number, number]>;
 }
 
-/** Stepping onto this tile takes the player to another area. */
+/** A door the player can use (press E nearby) to go to another area. */
 export interface Door {
   tx: number;
   ty: number;
@@ -57,6 +61,25 @@ export interface LightSource {
   radius: number;
   /** 0 = steady, 1 = flickers like fire. */
   flicker: number;
+}
+
+/** A tile of vegetables that can be picked (see systems/Farm.ts). */
+export interface CropPatch {
+  tx: number;
+  ty: number;
+  kind: CropKind;
+}
+
+/** Somewhere to sit: a bench or stool. The player sits at (gx, gy) facing (faceX, faceY). */
+export interface Seat {
+  gx: number;
+  gy: number;
+  faceX: number;
+  faceY: number;
+  /** Where to stand when getting up. */
+  standX: number;
+  standY: number;
+  name: string;
 }
 
 export interface NpcSpawn {
@@ -79,6 +102,8 @@ export interface MapData {
   entries?: Record<string, { x: number; y: number }>;
   lights?: LightSource[];
   npcs?: NpcSpawn[];
+  crops?: CropPatch[];
+  seats?: Seat[];
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
 }
@@ -90,6 +115,7 @@ export const TERRAIN_WALKABLE: Record<Terrain, boolean> = {
   [Terrain.Water]: false,
   [Terrain.Sand]: true,
   [Terrain.Floor]: true,
+  [Terrain.Soil]: true,
 };
 
 /** Marks every tile an object covers as blocked (or just the ones it lists). */

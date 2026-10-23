@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
+import { FENCE, fenceKey } from '../art/farm';
+import type { CropKind } from '../systems/Farm';
 import { MapData, placeObject, Prop, Terrain } from './MapData';
 
 /**
- * Placeholder procedural map: a village square, a lake, a winding road and
- * scattered forest. Swap this out for hand-made maps (e.g. Tiled JSON) later;
+ * Placeholder procedural map: the family cottage and its vegetable garden, a
+ * lake, a winding road and scattered forest. Swap this out for hand-made maps (e.g. Tiled JSON) later;
  * anything that produces a MapData works with the rest of the game.
  */
 export function generateMap(width: number, height: number, seed: string): MapData {
@@ -30,23 +32,22 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }
   }
 
-  // Winding dirt road from the south-west edge to the village square.
+  // The family cottage sits just west of the middle, with its garden beside it.
+  const home = { x: cx - 7, y: cy - 1 };
+
+  // Winding dirt road from the south-west edge up to the cottage yard.
+  const roadEnd = { x: home.x + 3, y: home.y + 3 };
   let rx = 0;
   let ry = height - 6;
-  while (rx < cx || ry > cy) {
+  while (rx < roadEnd.x || ry > roadEnd.y) {
     for (let oy = 0; oy <= 1; oy++) {
       for (let ox = 0; ox <= 1; ox++) setIf(terrain, rx + ox, ry + oy, Terrain.Dirt);
     }
-    if (rx < cx && (ry <= cy || rnd.frac() < 0.55)) rx++;
+    if (rx < roadEnd.x && (ry <= roadEnd.y || rnd.frac() < 0.55)) rx++;
     else ry--;
   }
 
-  // Stone village square around the spawn point.
-  for (let y = cy - 3; y <= cy + 3; y++) {
-    for (let x = cx - 3; x <= cx + 3; x++) setIf(terrain, x, y, Terrain.Stone);
-  }
-
-  // Forest: denser near the edges, never on roads, water or the square.
+  // Forest: denser near the edges, never on roads, water or around the cottage.
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (terrain[y][x] !== Terrain.Grass) continue;
@@ -60,14 +61,15 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }
   }
 
-  const data: MapData = { width, height, terrain, props, spawn: { x: cx + 0.5, y: cy + 0.5 } };
-  addCottage(data, cx - 7, cy - 1);
+  const data: MapData = { width, height, terrain, props, spawn: { x: home.x + 4.5, y: home.y + 1.5 } };
+  addCottage(data, home.x, home.y);
+  addGarden(data, home.x + 5, home.y - 2);
   return data;
 }
 
 /**
- * The player's home, just west of the square. The door is on its east side;
- * stepping onto the tile in front of it goes inside.
+ * The player's home. The door is on its east side; standing on the tile in
+ * front of it and pressing E goes inside. The bench by the door can be sat on.
  */
 function addCottage(data: MapData, x0: number, y0: number): void {
   // Clear a yard around it and lay a little path from the door to the square.
@@ -89,6 +91,49 @@ function addCottage(data: MapData, x0: number, y0: number): void {
   });
   (data.doors ??= []).push({ tx: x0 + 3, ty: y0 + 1, to: 'home', entry: 'door' });
   (data.entries ??= {}).cottage = { x: x0 + 4.5, y: y0 + 1.5 };
+  (data.seats ??= []).push({ name: 'bench', gx: x0 + 3.32, gy: y0 + 0.6, faceX: 1, faceY: 0, standX: x0 + 4.5, standY: y0 + 0.5 });
+  // A dirt track from the door along the yard to the garden gates.
+  for (let y = y0; y <= y0 + 3; y++) setIf(data.terrain, x0 + 4, y, Terrain.Dirt);
+}
+
+/**
+ * The vegetable garden: a fenced square of tilled soil with three rows of
+ * crops (carrots, cabbages, turnips) and two paths between them, each with a
+ * gate on the side facing the cottage.
+ */
+function addGarden(data: MapData, x0: number, y0: number): void {
+  const size = 7;
+  const x1 = x0 + size - 1;
+  const y1 = y0 + size - 1;
+  const rows: Array<[number, CropKind]> = [[y0 + 1, 'carrot'], [y0 + 3, 'cabbage'], [y0 + 5, 'turnip']];
+  const gates = new Set([`${x0},${y0 + 2}`, `${x0},${y0 + 4}`]);
+  for (let y = y0 - 1; y <= y1 + 1; y++) {
+    for (let x = x0 - 1; x <= x1 + 1; x++) if (data.props[y]?.[x] !== undefined) data.props[y][x] = Prop.None;
+  }
+  for (let y = y0 + 1; y < y1; y++) {
+    for (let x = x0 + 1; x < x1; x++) setIf(data.terrain, x, y, Terrain.Soil);
+  }
+  for (const [y, kind] of rows) {
+    for (let x = x0 + 1; x < x1; x++) {
+      (data.crops ??= []).push({ tx: x, ty: y, kind });
+      data.props[y][x] = Prop.Blocked;
+    }
+  }
+  // Packed-earth paths between the rows, out through the gates.
+  for (const y of [y0 + 2, y0 + 4]) for (let x = x0; x < x1; x++) setIf(data.terrain, x, y, Terrain.Dirt);
+
+  // The fence: each piece joins up with the fence pieces beside it.
+  const isFence = (x: number, y: number) =>
+    (x === x0 || x === x1 || y === y0 || y === y1) && x >= x0 && x <= x1 && y >= y0 && y <= y1 && !gates.has(`${x},${y}`);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (!isFence(x, y)) continue;
+      const mask =
+        (isFence(x, y - 1) ? FENCE.N : 0) | (isFence(x, y + 1) ? FENCE.S : 0) |
+        (isFence(x - 1, y) ? FENCE.W : 0) | (isFence(x + 1, y) ? FENCE.E : 0);
+      placeObject(data, { key: fenceKey(mask), tx: x, ty: y, w: 1, h: 1 });
+    }
+  }
 }
 
 function setIf(grid: Terrain[][], x: number, y: number, t: Terrain): void {

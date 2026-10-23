@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { MODEL_ART, WALL_HEIGHT } from '../art/interior';
+import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
 import { DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
 import { TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen } from '../iso/IsoMath';
@@ -12,6 +13,7 @@ const TERRAIN_TEXTURE: Record<Terrain, string> = {
   [Terrain.Water]: 'tile-water',
   [Terrain.Sand]: 'tile-sand',
   [Terrain.Floor]: 'tile-floor',
+  [Terrain.Soil]: 'tile-soil',
 };
 
 /** Stable pseudo-random number per tile, so variants don't change between loads. */
@@ -27,6 +29,10 @@ export class IsoMap {
   private readonly scene: Phaser.Scene;
   /** Tiles taken by things that can move, like NPCs. */
   private readonly occupied = new Set<number>();
+  /** Tree sprites by tile index, so they can sway when shaken. */
+  readonly trees = new Map<number, { image: Phaser.GameObjects.Image; pine: boolean }>();
+  /** Crop sprites by tile index (see MapData.crops). */
+  readonly crops = new Map<number, Phaser.GameObjects.Image>();
 
   constructor(scene: Phaser.Scene, data: MapData) {
     this.scene = scene;
@@ -118,6 +124,12 @@ export class IsoMap {
 
     this.renderWalls();
     for (const obj of this.data.objects ?? []) if (!obj.flat) this.placeObject(obj);
+    for (const crop of this.data.crops ?? []) {
+      const c = gridToScreen(crop.tx + 0.5, crop.ty + 0.5);
+      const img = this.scene.add.image(c.x, c.y, cropKey(crop.kind, true));
+      img.setOrigin(0.5, CROP_ORIGIN_Y / CROP_H).setDepth(depthAt(crop.tx + 0.5, crop.ty + 0.5));
+      this.crops.set(crop.ty * width + crop.tx, img);
+    }
   }
 
   /** The two back walls of an indoor room, behind everything else. */
@@ -149,7 +161,8 @@ export class IsoMap {
     const depth = depthAt(tx + 0.5, ty + 0.5);
     const isTree = prop === Prop.Tree;
     const options = isTree ? TREE_ART : ROCK_ART;
-    const art = options[Math.floor(tileHash(tx, ty, 6) * options.length)];
+    const index = Math.floor(tileHash(tx, ty, 6) * options.length);
+    const art = options[index];
     if (isTree) {
       // Shadows sit just above the ground so they never cover a character.
       this.scene.add.image(center.x, center.y + 2, 'shadow-large').setDepth(0.5);
@@ -158,5 +171,6 @@ export class IsoMap {
     img.setOrigin(0.5, art.originY).setDepth(depth);
     // Mirror half the props so the forest doesn't look stamped.
     img.setFlipX(tileHash(tx, ty, 7) < 0.5);
+    if (isTree) this.trees.set(ty * this.data.width + tx, { image: img, pine: art.key.includes('pine') });
   }
 }

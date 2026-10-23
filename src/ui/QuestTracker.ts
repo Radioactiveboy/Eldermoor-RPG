@@ -13,7 +13,6 @@ export class QuestTracker {
   private readonly frame: Phaser.GameObjects.Graphics;
   private readonly title: Phaser.GameObjects.Text;
   private readonly step: Phaser.GameObjects.Text;
-  private readonly key: Phaser.GameObjects.Text;
   private readonly scene: Phaser.Scene;
   private x = 0;
   private y = 0;
@@ -30,7 +29,6 @@ export class QuestTracker {
       fontStyle: 'bold',
     });
     this.step = scene.add.text(0, 0, '', { fontFamily: UI_FONT, fontSize: '13px', color: UI_COLORS.text, lineSpacing: 2 });
-    this.key = scene.add.text(0, 0, 'J: journal', { fontFamily: UI_FONT, fontSize: '11px', color: UI_COLORS.textMuted });
     // Tapping the tracker opens the journal too.
     this.title.setInteractive({ useHandCursor: true }).on('pointerup', onClick);
     this.step.setInteractive({ useHandCursor: true }).on('pointerup', onClick);
@@ -62,7 +60,6 @@ export class QuestTracker {
     this.shownText = text;
 
     this.title.setText(title).setPosition(this.x + PAD, this.y + PAD - 2);
-    this.key.setPosition(this.x + this.maxWidth - PAD - this.key.width, this.y + PAD);
     this.step.setText(`◆ ${step}`).setPosition(this.x + PAD, this.y + PAD + 18);
     this.frame.clear();
     drawPanel(this.frame, this.x, this.y, this.maxWidth, this.height);
