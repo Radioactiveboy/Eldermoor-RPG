@@ -20,6 +20,8 @@ npm run build    # type-check + production build into dist/
 - **WASD / arrow keys**: move (screen-relative, so "up" goes up the screen)
 - **Click / tap**: walk to a tile (A* pathfinding around trees, rocks and water)
 - **Mouse wheel**: zoom
+- **Esc**: pause menu (resume, settings, back to main menu)
+- **Enter** on the title screen: start
 
 ## Project layout
 
@@ -33,7 +35,13 @@ src/
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?"
   systems/Pathfinding.ts  8-direction A* on the tile grid
   entities/Player.ts      Movement, collision, click-to-move path following
+  audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
+  settings/Settings.ts    Volume settings, saved in the browser
+  ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
   scenes/BootScene.ts     Generates placeholder art (no asset files needed yet)
+  scenes/MainMenuScene.ts Title screen over the drifting world map
+  scenes/PauseScene.ts    Esc menu during play
+  scenes/SettingsScene.ts Volume sliders + fullscreen, opened from either menu
   scenes/GameScene.ts     World, camera, input
   scenes/UIScene.ts       HUD overlay, separate from the world camera
 ```
@@ -49,6 +57,11 @@ src/
 - **Placeholder art** is drawn in `BootScene` under texture keys like
   `tile-grass`, `prop-tree`, `player`. Load real sprites under the same keys and
   everything else keeps working.
+- **Music is code, not files.** `audio/Audio.ts` defines each track as a tempo,
+  a chord progression and an arpeggio pattern, played by simple synth voices
+  (harp pluck, pad, drone, flute). There is a calm `menu` track and a livelier
+  `world` track; add more by adding entries to `TRACKS`. Recorded music can
+  replace it later without changing the scenes.
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;
   hand-made maps (e.g. from the Tiled editor) can plug in later.
 

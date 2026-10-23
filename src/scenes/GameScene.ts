@@ -55,6 +55,11 @@ export class GameScene extends Phaser.Scene {
       w: K.W, a: K.A, s: K.S, d: K.D,
     }) as MoveKeys;
 
+    kb.on('keydown-ESC', () => {
+      this.scene.pause();
+      this.scene.launch('Pause');
+    });
+
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       const cam = this.cameras.main;
       cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), CAMERA_ZOOM.min, CAMERA_ZOOM.max));

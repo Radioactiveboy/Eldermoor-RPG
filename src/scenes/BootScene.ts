@@ -23,8 +23,7 @@ export class BootScene extends Phaser.Scene {
     this.makePlayer();
     this.makeShadow();
 
-    this.scene.start('Game');
-    this.scene.launch('UI');
+    this.scene.start('MainMenu');
   }
 
   private diamond(): Phaser.Geom.Point[] {
