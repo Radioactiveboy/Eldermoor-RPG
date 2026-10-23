@@ -1,16 +1,23 @@
 import Phaser from 'phaser';
-import { CAMERA_ZOOM, MAP_HEIGHT, MAP_SEED, MAP_WIDTH } from '../config';
+import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, SPRINT_MULTIPLIER } from '../config';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { findPath } from '../systems/Pathfinding';
+import { PlayerStats } from '../systems/PlayerStats';
+import { TimeOfDay } from '../systems/TimeOfDay';
 import { IsoMap } from '../world/IsoMap';
 import { generateMap } from '../world/MapGenerator';
 
-type MoveKeys = Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
+type MoveKeys = Record<
+  'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'fastForward',
+  Phaser.Input.Keyboard.Key
+>;
 
 export class GameScene extends Phaser.Scene {
   map!: IsoMap;
   player!: Player;
+  stats!: PlayerStats;
+  clock!: TimeOfDay;
   private keys!: MoveKeys;
   private hover!: Phaser.GameObjects.Image;
   private marker!: Phaser.GameObjects.Image;
@@ -23,6 +30,11 @@ export class GameScene extends Phaser.Scene {
     this.map = new IsoMap(this, generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED));
     const spawn = this.map.data.spawn;
     this.player = new Player(this, this.map, spawn.x, spawn.y);
+    this.stats = new PlayerStats();
+    this.clock = new TimeOfDay();
+    // Handy for testing: open the game with ?hour=21 to start at 9pm.
+    const hourParam = new URLSearchParams(window.location.search).get('hour');
+    if (hourParam !== null && !Number.isNaN(Number(hourParam))) this.clock.setHour(Number(hourParam));
 
     this.hover = this.add.image(0, 0, 'tile-highlight').setDepth(1).setAlpha(0.6).setVisible(false);
     this.marker = this.add.image(0, 0, 'tile-highlight').setDepth(1).setTint(0x9cf09c).setVisible(false);
@@ -33,7 +45,11 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number): void {
     const dt = Math.min(deltaMs / 1000, 0.1);
-    this.player.update(dt, this.readKeyboard());
+    const wantsSprint = this.keys.sprint.isDown && this.stats.canSprint();
+    const moved = this.player.update(dt, this.readKeyboard(), wantsSprint ? SPRINT_MULTIPLIER : 1);
+    this.stats.update(dt, wantsSprint && moved);
+    this.clock.timeScale = this.keys.fastForward.isDown ? FAST_FORWARD : 1;
+    this.clock.update(dt);
     this.updateHover();
   }
 
@@ -48,18 +64,23 @@ export class GameScene extends Phaser.Scene {
     cam.roundPixels = true;
   }
 
+  /** Freezes the world and shows the pause menu (Esc, or the HUD's pause button). */
+  openPauseMenu(): void {
+    if (!this.scene.isActive()) return;
+    this.scene.pause();
+    this.scene.launch('Pause');
+  }
+
   private setupInput(): void {
     const kb = this.input.keyboard!;
     const K = Phaser.Input.Keyboard.KeyCodes;
     this.keys = kb.addKeys({
       up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT,
       w: K.W, a: K.A, s: K.S, d: K.D,
+      sprint: K.SHIFT, fastForward: K.T,
     }) as MoveKeys;
 
-    kb.on('keydown-ESC', () => {
-      this.scene.pause();
-      this.scene.launch('Pause');
-    });
+    kb.on('keydown-ESC', () => this.openPauseMenu());
 
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       const cam = this.cameras.main;

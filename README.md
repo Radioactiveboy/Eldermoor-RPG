@@ -19,9 +19,12 @@ npm run build    # type-check + production build into dist/
 
 - **WASD / arrow keys**: move (screen-relative, so "up" goes up the screen)
 - **Click / tap**: walk to a tile (A* pathfinding around trees, rocks and water)
+- **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
-- **Esc**: pause menu (resume, settings, back to main menu)
+- **Hold T**: fast-forward the clock (60x) to watch the day/night cycle
+- **Esc** or the **II** button: pause menu (resume, settings, back to main menu)
 - **Enter** on the title screen: start
+- Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 
 ## Project layout
 
@@ -34,6 +37,8 @@ src/
   world/MapGenerator.ts   Seeded placeholder map (village square, lake, road, forest)
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?"
   systems/Pathfinding.ts  8-direction A* on the tile grid
+  systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
+  systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   entities/Player.ts      Movement, collision, click-to-move path following
   art/                    Palette and pixel-art generators: tiles, props, the hero
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
@@ -45,6 +50,10 @@ src/
   scenes/SettingsScene.ts Volume sliders + fullscreen, opened from either menu
   scenes/GameScene.ts     World, camera, input
   scenes/UIScene.ts       HUD overlay, separate from the world camera
+  ui/StatusBars.ts        Health and stamina bars
+  ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day
+  ui/Minimap.ts           Isometric minimap with player and camera view
+  ui/DayNightOverlay.ts   Tints the world by time of day, lantern light at night
 ```
 
 ## Key ideas

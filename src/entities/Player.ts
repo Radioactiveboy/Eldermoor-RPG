@@ -43,8 +43,10 @@ export class Player {
 
   /**
    * @param input direction in grid space (already normalised), or zero vector for none
+   * @param speedMultiplier e.g. above 1 while sprinting
+   * @returns whether the player moved this frame
    */
-  update(dt: number, input: Vec2): void {
+  update(dt: number, input: Vec2, speedMultiplier = 1): boolean {
     let dir = input;
     if (input.x !== 0 || input.y !== 0) {
       this.path = [];
@@ -54,12 +56,13 @@ export class Player {
 
     const moving = dir.x !== 0 || dir.y !== 0;
     if (moving) {
-      const step = PLAYER_SPEED * dt;
+      const step = PLAYER_SPEED * speedMultiplier * dt;
       this.tryMove(dir.x * step, 0);
       this.tryMove(0, dir.y * step);
       this.face(dir);
     }
     this.sync(moving);
+    return moving;
   }
 
   private steerAlongPath(): Vec2 {
