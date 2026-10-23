@@ -35,10 +35,11 @@ src/
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?"
   systems/Pathfinding.ts  8-direction A* on the tile grid
   entities/Player.ts      Movement, collision, click-to-move path following
+  art/                    Palette and pixel-art generators: tiles, props, the hero
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
   settings/Settings.ts    Volume settings, saved in the browser
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
-  scenes/BootScene.ts     Generates placeholder art (no asset files needed yet)
+  scenes/BootScene.ts     Generates the art, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
   scenes/SettingsScene.ts Volume sliders + fullscreen, opened from either menu
@@ -54,9 +55,13 @@ src/
 - **Depth sorting** uses `gx + gy`, so anything lower on screen draws in front.
   Ground tiles are baked into one render texture for performance; trees, rocks
   and characters are individual sprites so they can overlap correctly.
-- **Placeholder art** is drawn in `BootScene` under texture keys like
-  `tile-grass`, `prop-tree`, `player`. Load real sprites under the same keys and
-  everything else keeps working.
+- **Pixel art is generated in code** (`src/art/`) from one shared palette
+  (`palette.ts`), so there are no image files to manage. The hero is built from
+  simple body parts rotated to face 8 directions, with idle and walk animations
+  (`player-idle-<dir>`, `player-walk-<dir>`). Tiles come in several variants and
+  the ground is sprinkled with flowers, grass tufts and pebbles. To use
+  hand-drawn art instead, load it in `BootScene` under the same texture keys
+  (`tile-grass`, `prop-tree`, `player`, ...).
 - **Music is code, not files.** `audio/Audio.ts` defines each track as a tempo,
   a chord progression and an arpeggio pattern, played by simple synth voices
   (harp pluck, pad, drone, flute). There is a calm `menu` track and a livelier
@@ -68,4 +73,4 @@ src/
 ## Good next steps
 
 NPCs and dialogue, combat and stats, inventory, multiple maps with transitions,
-real sprite sheets with 8-direction walk animations, save/load.
+more characters and creatures in the same style, save/load.
