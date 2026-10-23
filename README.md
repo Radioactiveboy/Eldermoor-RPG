@@ -22,6 +22,8 @@ npm run build    # type-check + production build into dist/
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
 - **Hold T**: fast-forward the clock (60x) to watch the day/night cycle
+- **Esc** or the **II** button: pause menu (resume, settings, back to main menu)
+- **Enter** on the title screen: start
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 
 ## Project layout
@@ -39,7 +41,13 @@ src/
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   entities/Player.ts      Movement, collision, click-to-move path following
   art/                    Palette and pixel-art generators: tiles, props, the hero
-  scenes/BootScene.ts     Generates the art, then starts the game
+  audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
+  settings/Settings.ts    Volume settings, saved in the browser
+  ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
+  scenes/BootScene.ts     Generates the art, then opens the main menu
+  scenes/MainMenuScene.ts Title screen over the drifting world map
+  scenes/PauseScene.ts    Esc menu during play
+  scenes/SettingsScene.ts Volume sliders + fullscreen, opened from either menu
   scenes/GameScene.ts     World, camera, input
   scenes/UIScene.ts       HUD overlay, separate from the world camera
   ui/StatusBars.ts        Health and stamina bars
@@ -63,6 +71,11 @@ src/
   the ground is sprinkled with flowers, grass tufts and pebbles. To use
   hand-drawn art instead, load it in `BootScene` under the same texture keys
   (`tile-grass`, `prop-tree`, `player`, ...).
+- **Music is code, not files.** `audio/Audio.ts` defines each track as a tempo,
+  a chord progression and an arpeggio pattern, played by simple synth voices
+  (harp pluck, pad, drone, flute). There is a calm `menu` track and a livelier
+  `world` track; add more by adding entries to `TRACKS`. Recorded music can
+  replace it later without changing the scenes.
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;
   hand-made maps (e.g. from the Tiled editor) can plug in later.
 

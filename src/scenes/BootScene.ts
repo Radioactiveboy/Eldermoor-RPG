@@ -14,7 +14,6 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     generateArt(this);
 
-    this.scene.start('Game');
-    this.scene.launch('UI');
+    this.scene.start('MainMenu');
   }
 }

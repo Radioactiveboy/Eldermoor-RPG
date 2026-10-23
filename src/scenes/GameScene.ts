@@ -64,6 +64,13 @@ export class GameScene extends Phaser.Scene {
     cam.roundPixels = true;
   }
 
+  /** Freezes the world and shows the pause menu (Esc, or the HUD's pause button). */
+  openPauseMenu(): void {
+    if (!this.scene.isActive()) return;
+    this.scene.pause();
+    this.scene.launch('Pause');
+  }
+
   private setupInput(): void {
     const kb = this.input.keyboard!;
     const K = Phaser.Input.Keyboard.KeyCodes;
@@ -72,6 +79,8 @@ export class GameScene extends Phaser.Scene {
       w: K.W, a: K.A, s: K.S, d: K.D,
       sprint: K.SHIFT, fastForward: K.T,
     }) as MoveKeys;
+
+    kb.on('keydown-ESC', () => this.openPauseMenu());
 
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       const cam = this.cameras.main;
