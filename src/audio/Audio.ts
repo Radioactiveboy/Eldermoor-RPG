@@ -9,7 +9,7 @@ import { Settings, SettingsData } from '../settings/Settings';
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world';
+export type TrackName = 'menu' | 'world' | 'home';
 
 interface TrackDef {
   bpm: number;
@@ -57,6 +57,21 @@ const TRACKS: Record<TrackName, TrackDef> = {
     scale: [62, 64, 65, 67, 69, 71, 72],
     melodyChance: 0.2,
     padCutoff: 700,
+  },
+  // Slow and low by the fire: a little sadder, for Mother's sickbed.
+  home: {
+    bpm: 56,
+    chords: [
+      [45, 48, 52], // Am
+      [41, 45, 48], // F
+      [43, 47, 50], // G
+      [40, 44, 47], // E
+    ],
+    barsPerChord: 2,
+    arp: [0, -1, 2, -1, 4, -1, 2, -1],
+    scale: [57, 59, 60, 62, 64, 65, 67, 69],
+    melodyChance: 0.25,
+    padCutoff: 600,
   },
 };
 
@@ -206,6 +221,7 @@ class AudioEngine {
   private musicBus!: GainNode;
   private sfxBus!: GainNode;
   private reverb!: ConvolverNode;
+  private noiseBuffer!: AudioBuffer;
   private track?: Track;
   private wanted?: TrackName;
   private playing?: TrackName;
@@ -255,6 +271,136 @@ class AudioEngine {
     this.blip(1320, 1320, 0.03, 0.06);
   }
 
+  /**
+   * One syllable of "voice" while dialogue types out: a short vowel-ish blip
+   * around the speaker's pitch, varied a little so it sounds like mumbling speech.
+   */
+  voice(pitch: number, spread: number, wave: OscillatorType): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const f = pitch * (1 + (Math.random() * 2 - 1) * spread);
+    const o = ctx.createOscillator();
+    o.type = wave;
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.linearRampToValueAtTime(f * (Math.random() < 0.5 ? 0.92 : 1.06), t + 0.07);
+    // A formant-ish band-pass makes it sound more like a voice than a beep.
+    const formant = ctx.createBiquadFilter();
+    formant.type = 'bandpass';
+    formant.frequency.value = 700 + Math.random() * 900;
+    formant.Q.value = 1.2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.5, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    o.connect(formant).connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.1);
+  }
+
+  /** Paper swishing past: a page of the journal turning. */
+  pageTurn(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.noise(t, 0.32, 'bandpass', 900, 3800, 0.9, 0.5);
+    this.noise(t + 0.2, 0.12, 'highpass', 2500, 2500, 0.7, 0.25); // the page settling
+  }
+
+  /** The journal's heavy cover thumping open or shut. */
+  bookOpen(): void {
+    this.thump(0);
+    if (this.unlocked) this.noise(this.ctx!.currentTime + 0.05, 0.25, 'bandpass', 1200, 2600, 0.8, 0.3);
+  }
+
+  bookClose(): void {
+    if (this.unlocked) this.noise(this.ctx!.currentTime, 0.12, 'bandpass', 2600, 1200, 0.8, 0.25);
+    this.thump(0.1);
+  }
+
+  /** Bright rising arpeggio for a new quest or a finished step. */
+  questChime(): void {
+    if (!this.unlocked) return;
+    [74, 77, 81, 86].forEach((n, i) => this.pluckNote(n, this.ctx!.currentTime + i * 0.09, 0.16));
+  }
+
+  /** Wooden door: a creak then a soft knock as it shuts. */
+  door(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(140, t);
+    o.frequency.linearRampToValueAtTime(230, t + 0.35);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 900;
+    f.Q.value = 6;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.08, t + 0.08);
+    g.gain.linearRampToValueAtTime(0, t + 0.4);
+    o.connect(f).connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.45);
+    this.thump(0.4);
+  }
+
+  /** A single pop from the fire. */
+  crackle(): void {
+    if (!this.unlocked) return;
+    this.noise(this.ctx!.currentTime, 0.03 + Math.random() * 0.03, 'highpass', 1800, 1800, 0.5, 0.05 + Math.random() * 0.08);
+  }
+
+  private thump(delay: number): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + delay;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(55, t + 0.15);
+    g.gain.setValueAtTime(0.45, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.22);
+  }
+
+  /** Filtered white noise with a swell-and-fade envelope; the filter sweeps from one frequency to another. */
+  private noise(t: number, length: number, type: BiquadFilterType, from: number, to: number, q: number, peak: number): void {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    const f = ctx.createBiquadFilter();
+    f.type = type;
+    f.Q.value = q;
+    f.frequency.setValueAtTime(from, t);
+    f.frequency.exponentialRampToValueAtTime(to, t + length);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + length * 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + length);
+    src.connect(f).connect(g).connect(this.sfxBus);
+    src.start(t, Math.random() * 1.5);
+    src.stop(t + length + 0.02);
+  }
+
+  private pluckNote(midi: number, t: number, peak: number): void {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.value = freq(midi);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.95);
+  }
+
   private blip(from: number, to: number, length: number, peak: number): void {
     if (!this.unlocked) return;
     const ctx = this.ctx!;
@@ -296,6 +442,10 @@ class AudioEngine {
     const wet = ctx.createGain();
     wet.gain.value = 0.45;
     this.reverb.connect(wet).connect(this.musicBus);
+
+    this.noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const data = this.noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
 
     this.applyVolumes(Settings.get());
   }

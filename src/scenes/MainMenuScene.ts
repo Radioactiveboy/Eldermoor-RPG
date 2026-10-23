@@ -136,11 +136,11 @@ export class MainMenuScene extends Phaser.Scene {
   private startGame(): void {
     if (this.leaving || !this.input.enabled) return;
     this.leaving = true;
-    GameAudio.playMusic('world');
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.uiCam.fadeOut(700, 0, 0, 0);
     this.uiCam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start('Game');
+      // A new game begins at home, inside the cottage.
+      this.scene.start('Game', { newGame: true, area: 'home' });
       this.scene.launch('UI');
     });
   }

@@ -36,6 +36,10 @@ export class Player {
     return Math.floor(this.gy);
   }
 
+  get hasPath(): boolean {
+    return this.path.length > 0;
+  }
+
   /** Follow a tile path (from click-to-move). Keyboard input cancels it. */
   setPath(path: GridPoint[]): void {
     this.path = path;
@@ -51,7 +55,7 @@ export class Player {
     if (input.x !== 0 || input.y !== 0) {
       this.path = [];
     } else if (this.path.length > 0) {
-      dir = this.steerAlongPath();
+      dir = this.steerAlongPath(PLAYER_SPEED * speedMultiplier * dt);
     }
 
     const moving = dir.x !== 0 || dir.y !== 0;
@@ -65,7 +69,8 @@ export class Player {
     return moving;
   }
 
-  private steerAlongPath(): Vec2 {
+  /** Direction towards the next waypoint, shortened so this frame's step of `maxStep` tiles can't overshoot it. */
+  private steerAlongPath(maxStep: number): Vec2 {
     const next = this.path[0];
     const tx = next.x + 0.5;
     const ty = next.y + 0.5;
@@ -74,10 +79,10 @@ export class Player {
     const dist = Math.hypot(dx, dy);
     if (dist < 0.08) {
       this.path.shift();
-      return this.path.length > 0 ? this.steerAlongPath() : { x: 0, y: 0 };
+      return this.path.length > 0 ? this.steerAlongPath(maxStep) : { x: 0, y: 0 };
     }
-    // Don't overshoot the waypoint on low frame rates.
-    const scale = Math.min(1, dist / 0.08) / dist;
+    // Don't overshoot the waypoint, which at low frame rates would make the player jitter around it forever.
+    const scale = Math.min(1, dist / Math.max(maxStep, 1e-6)) / dist;
     return { x: dx * scale, y: dy * scale };
   }
 
