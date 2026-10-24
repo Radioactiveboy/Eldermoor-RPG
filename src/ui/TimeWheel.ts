@@ -34,6 +34,10 @@ export class TimeWheel {
       .setOrigin(0.5, 0.5);
   }
 
+  setVisible(visible: boolean): void {
+    [this.disc, this.frame, this.label].forEach((o) => o.setVisible(visible));
+  }
+
   /** Place the dial with its top-left corner at (x, y). */
   setPosition(x: number, y: number): void {
     const cx = x + this.width / 2;

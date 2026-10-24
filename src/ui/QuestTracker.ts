@@ -34,6 +34,10 @@ export class QuestTracker {
     this.step.setInteractive({ useHandCursor: true }).on('pointerup', onClick);
   }
 
+  setVisible(visible: boolean): void {
+    [this.frame, this.title, this.step].forEach((o) => o.setVisible(visible));
+  }
+
   get height(): number {
     return this.step.y + this.step.height + PAD - this.y;
   }

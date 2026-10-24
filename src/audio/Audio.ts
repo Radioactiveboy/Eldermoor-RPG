@@ -9,7 +9,7 @@ import { Settings, SettingsData } from '../settings/Settings';
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'home';
+export type TrackName = 'menu' | 'world' | 'home' | 'battle';
 
 interface TrackDef {
   bpm: number;
@@ -72,6 +72,21 @@ const TRACKS: Record<TrackName, TrackDef> = {
     scale: [57, 59, 60, 62, 64, 65, 67, 69],
     melodyChance: 0.25,
     padCutoff: 600,
+  },
+  // A fight: quicker, darker and restless, rocking between D minor and its neighbours.
+  battle: {
+    bpm: 118,
+    chords: [
+      [38, 45, 50], // Dm (low)
+      [38, 45, 50],
+      [39, 46, 51], // Eb, a tense half-step up
+      [37, 44, 49], // C# diminished-ish, pulling back home
+    ],
+    barsPerChord: 1,
+    arp: [0, 0, 3, 0, 4, 0, 3, 5],
+    scale: [62, 63, 65, 67, 69, 70, 73, 74],
+    melodyChance: 0.15,
+    padCutoff: 500,
   },
 };
 
@@ -373,6 +388,98 @@ class AudioEngine {
   crackle(): void {
     if (!this.unlocked) return;
     this.noise(this.ctx!.currentTime, 0.03 + Math.random() * 0.03, 'highpass', 1800, 1800, 0.5, 0.05 + Math.random() * 0.08);
+  }
+
+  /** A low, rattling snarl. */
+  growl(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(70, t);
+    o.frequency.linearRampToValueAtTime(95, t + 0.5);
+    o.frequency.linearRampToValueAtTime(60, t + 0.9);
+    // A fast wobble on the volume gives the throat-rattle.
+    const rattle = ctx.createOscillator();
+    rattle.frequency.value = 23;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.09;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 520;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.16, t + 0.15);
+    g.gain.linearRampToValueAtTime(0, t + 0.95);
+    rattle.connect(depth).connect(g.gain);
+    o.connect(f).connect(g).connect(this.sfxBus);
+    o.start(t);
+    rattle.start(t);
+    o.stop(t + 1);
+    rattle.stop(t + 1);
+  }
+
+  /** Something swung quickly through the air. */
+  swing(heavy = false): void {
+    if (!this.unlocked) return;
+    this.noise(this.ctx!.currentTime, heavy ? 0.32 : 0.2, 'bandpass', heavy ? 500 : 900, heavy ? 2200 : 3200, 1.5, heavy ? 0.5 : 0.35);
+  }
+
+  /** A blow landing: a dull thud with a crack on top. Louder for critical hits. */
+  hit(crit = false): void {
+    if (!this.unlocked) return;
+    this.thump(0);
+    this.noise(this.ctx!.currentTime, 0.09, 'lowpass', 1800, 300, 0.8, crit ? 0.8 : 0.45);
+    if (crit) this.thump(0.06);
+  }
+
+  /** Jaws snapping shut. */
+  bite(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.noise(t, 0.05, 'highpass', 2200, 1400, 0.9, 0.45);
+    this.noise(t + 0.07, 0.05, 'highpass', 2000, 1200, 0.9, 0.35);
+  }
+
+  /** A wolf's yelp of pain: a sharp falling cry. */
+  yelp(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(1300, t);
+    o.frequency.exponentialRampToValueAtTime(520, t + 0.22);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.22, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.3);
+  }
+
+  /** A die clattering across a table. */
+  dice(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    for (let i = 0; i < 5; i++) this.noise(t + i * 0.07 + Math.random() * 0.03, 0.03, 'highpass', 3000, 2400, 0.6, 0.18 - i * 0.025);
+  }
+
+  /** Bright fanfare for winning a fight. */
+  victory(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    [62, 66, 69, 74].forEach((n, i) => this.pluckNote(n, t + i * 0.12, 0.18));
+    this.pluckNote(78, t + 0.5, 0.2);
+  }
+
+  /** Slow falling notes for being beaten. */
+  defeat(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    [69, 65, 62, 57].forEach((n, i) => this.pluckNote(n, t + i * 0.3, 0.16));
   }
 
   private thump(delay: number): void {

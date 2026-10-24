@@ -86,6 +86,13 @@ export const ITEMS = {
     category: 'Material',
     stack: 30,
   },
+  'wolf-pelt': {
+    name: 'Wolf Pelt',
+    description: 'Thick grey fur, still smelling of the forest. Someone in the village might pay for this.',
+    icon: 'item-pelt',
+    category: 'Material',
+    stack: 10,
+  },
   'walking-staff': {
     name: 'Walking Staff',
     description: 'An old ash staff that has leaned by the door for years. Good for long walks.',

@@ -64,6 +64,8 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   const data: MapData = { width, height, terrain, props, spawn: { x: home.x + 4.5, y: home.y + 1.5 } };
   addCottage(data, home.x, home.y);
   addGarden(data, home.x + 5, home.y - 2);
+  // A lone wolf nosing about south of the cottage, in sight of the door.
+  (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });
   return data;
 }
 

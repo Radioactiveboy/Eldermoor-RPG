@@ -156,6 +156,17 @@ const charm = () =>
     c.set(7, 10, P.flowerWhite);
   });
 
+const pelt = () =>
+  icon((c) => {
+    // A rolled-up grey hide tied with a cord, the tail hanging from one end.
+    c.ellipse(8, 8, 6.5, 4.5, 0x7a7480, 0x4b4652, 0xa29ca6);
+    c.ellipse(4, 8, 2.2, 3.6, 0x4b4652, 0x4b4652);
+    c.ellipse(4, 8, 1.2, 2.2, 0xcfc6bb, 0xcfc6bb);
+    c.rect(9, 4, 1, 9, P.leather);
+    for (let i = 0; i < 4; i++) c.set(14 - i * 0.2, 11 + i, i > 2 ? 0x4b4652 : 0x7a7480);
+    c.set(12, 6, 0xcfc6bb);
+  });
+
 export function generateItemIcons(scene: Phaser.Scene): void {
   const icons: Array<[string, () => PixelCanvas]> = [
     ['item-carrot', carrot],
@@ -170,6 +181,7 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-tunic', tunic],
     ['item-boots', boots],
     ['item-charm', charm],
+    ['item-pelt', pelt],
   ];
   for (const [key, make] of icons) make().toTexture(scene, key);
 }

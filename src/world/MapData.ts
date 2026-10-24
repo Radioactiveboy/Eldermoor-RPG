@@ -1,3 +1,4 @@
+import type { FoeKind } from '../systems/Combat';
 import type { CropKind } from '../systems/Farm';
 
 export enum Terrain {
@@ -88,6 +89,15 @@ export interface NpcSpawn {
   gy: number;
 }
 
+/** A wild animal that roams near where it starts (see entities/Creature.ts). */
+export interface CreatureSpawn {
+  /** Remembered once it's beaten, so it stays gone. */
+  id: string;
+  kind: FoeKind;
+  gx: number;
+  gy: number;
+}
+
 export interface MapData {
   width: number;
   height: number;
@@ -104,6 +114,7 @@ export interface MapData {
   npcs?: NpcSpawn[];
   crops?: CropPatch[];
   seats?: Seat[];
+  creatures?: CreatureSpawn[];
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
 }
