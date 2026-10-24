@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FENCE, fenceKey } from '../art/farm';
 import type { CropKind } from '../systems/Farm';
+import { fenceShapes } from './Collision';
 import { MapData, placeObject, Prop, Terrain } from './MapData';
 
 /**
@@ -39,7 +40,10 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   const roadEnd = { x: home.x + 3, y: home.y + 3 };
   let rx = 0;
   let ry = height - 6;
+  // The middle of the road (it's two tiles wide), step by step, for travellers to follow.
+  const road: Array<{ x: number; y: number }> = [];
   while (rx < roadEnd.x || ry > roadEnd.y) {
+    road.push({ x: rx + 1, y: ry + 1 });
     for (let oy = 0; oy <= 1; oy++) {
       for (let ox = 0; ox <= 1; ox++) setIf(terrain, rx + ox, ry + oy, Terrain.Dirt);
     }
@@ -61,11 +65,20 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }
   }
 
-  const data: MapData = { width, height, terrain, props, spawn: { x: home.x + 4.5, y: home.y + 1.5 } };
+  const data: MapData = { width, height, terrain, props, road, spawn: { x: home.x + 4.5, y: home.y + 1.5 } };
   addCottage(data, home.x, home.y);
   addGarden(data, home.x + 5, home.y - 2);
   // A lone wolf nosing about south of the cottage, in sight of the door.
   (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });
+  // Folk travelling the road, spread out along it (see entities/Npc.ts).
+  data.npcs = [
+    ['pedlar', 0.22],
+    ['pilgrim', 0.5],
+    ['drover', 0.74],
+  ].map(([id, along]) => {
+    const p = road[Math.floor(road.length * (along as number))];
+    return { id: id as string, gx: p.x, gy: p.y };
+  });
   return data;
 }
 
@@ -92,6 +105,8 @@ function addCottage(data: MapData, x0: number, y0: number): void {
     ],
   });
   (data.doors ??= []).push({ tx: x0 + 3, ty: y0 + 1, to: 'home', entry: 'door' });
+  // The top of the chimney (see the cottage in art/interior.ts), where the hearth's smoke comes out.
+  (data.chimneys ??= []).push({ gx: x0 + 0.78, gy: y0 + 0.68, z: 134 });
   (data.entries ??= {}).cottage = { x: x0 + 4.5, y: y0 + 1.5 };
   (data.seats ??= []).push({ name: 'bench', gx: x0 + 3.32, gy: y0 + 0.6, faceX: 1, faceY: 0, standX: x0 + 4.5, standY: y0 + 0.5 });
   // A dirt track from the door along the yard to the garden gates.
@@ -133,7 +148,7 @@ function addGarden(data: MapData, x0: number, y0: number): void {
       const mask =
         (isFence(x, y - 1) ? FENCE.N : 0) | (isFence(x, y + 1) ? FENCE.S : 0) |
         (isFence(x - 1, y) ? FENCE.W : 0) | (isFence(x + 1, y) ? FENCE.E : 0);
-      placeObject(data, { key: fenceKey(mask), tx: x, ty: y, w: 1, h: 1 });
+      placeObject(data, { key: fenceKey(mask), tx: x, ty: y, w: 1, h: 1, shapes: fenceShapes(mask) });
     }
   }
 }

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, SPRINT_MULTIPLIER } from '../config';
+import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SPRINT_MULTIPLIER } from '../config';
 import { Creature } from '../entities/Creature';
 import { Npc, TALK_RANGE } from '../entities/Npc';
 import { Player } from '../entities/Player';
@@ -12,6 +12,7 @@ import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { buildHomeMap } from '../world/HomeMap';
+import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
 import { AreaId, CropPatch, Door, Prop, Seat } from '../world/MapData';
 import { cropKey } from '../art/farm';
@@ -99,6 +100,8 @@ export class GameScene extends Phaser.Scene {
   creatures: Creature[] = [];
   /** True during a fight: the clock stops and health doesn't regenerate. */
   inCombat = false;
+  /** Birds, rippling water and the like, outdoors only. */
+  ambience?: Ambience;
   /** What the player would do by pressing E right now, if anything. */
   focus?: Interaction;
   /** A few-seconds action in progress, for the HUD's progress bar. */
@@ -156,6 +159,7 @@ export class GameScene extends Phaser.Scene {
     this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy));
     this.creatures = this.spawnCreatures();
     this.syncCrops();
+    this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
 
     this.hover = this.add.image(0, 0, 'tile-highlight').setDepth(1).setAlpha(0.6).setVisible(false);
     this.marker = this.add.image(0, 0, 'tile-highlight').setDepth(1).setTint(0x9cf09c).setVisible(false);
@@ -186,6 +190,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.updateChannel(dt);
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : 1);
+    for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
+    this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     // Time stands still while fighting, turn by turn.
     if (!this.inCombat) {
       this.stats.update(dt, wantsSprint && moved);
@@ -501,9 +507,11 @@ export class GameScene extends Phaser.Scene {
     let bestDist = Infinity;
     for (const i of this.interactionsNear(this.player.gx, this.player.gy)) {
       const d = Math.hypot(this.player.gx - i.gx, this.player.gy - i.gy);
-      if (d <= i.range && d < bestDist) {
+      // People come first: someone standing by a tree is more likely to be wanted than the tree.
+      const rank = i.key.startsWith('npc:') ? d - 1 : d;
+      if (d <= i.range && rank < bestDist) {
         best = i;
-        bestDist = d;
+        bestDist = rank;
       }
     }
     this.focus = best;
@@ -745,9 +753,9 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       this.walkingTo = undefined;
-      const path = this.pathTo(tile);
-      if (!path) return;
-      this.player.setPath(path);
+      const route = this.routeTo(this.pointerPoint(pointer));
+      if (!route) return;
+      this.player.setPath(route.path, route.end);
       const c = gridToScreen(tile.x + 0.5, tile.y + 0.5);
       this.marker.setPosition(c.x, c.y).setVisible(true);
       this.tweens.killTweensOf(this.marker);
@@ -756,14 +764,80 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Tile path from the player to a tile. Diagonal steps may squeeze between
+   * two blocked tiles when there's room for the player in between (two tree
+   * trunks, say), since collisions follow each thing's real outline.
+   */
   private pathTo(tile: GridPoint): GridPoint[] | null {
-    return findPath(
-      { x: this.player.tileX, y: this.player.tileY },
+    const start = this.startTile();
+    const clear = PLAYER_RADIUS + 0.03;
+    const path = findPath(
+      start,
       tile,
       this.map.width,
       this.map.height,
       (x, y) => this.map.isWalkable(x, y),
+      5000,
+      (x, y, dx, dy) => this.map.segmentClear({ x: x + 0.5, y: y + 0.5 }, { x: x + dx + 0.5, y: y + dy + 0.5 }, clear),
     );
+    if (!path) return null;
+    // Starting beside a fence or trunk: step onto the open tile next to it first.
+    return start.x === this.player.tileX && start.y === this.player.tileY ? path : [start, ...path];
+  }
+
+  /**
+   * Where pathfinding starts: the player's tile, or, if they've squeezed onto
+   * part of a tile with a fence or tree on it, the nearest open tile they can
+   * step straight onto.
+   */
+  private startTile(): GridPoint {
+    const { gx, gy, tileX, tileY } = this.player;
+    if (this.map.isWalkable(tileX, tileY)) return { x: tileX, y: tileY };
+    let best: GridPoint | undefined;
+    let bestDist = Infinity;
+    for (let y = tileY - 1; y <= tileY + 1; y++) {
+      for (let x = tileX - 1; x <= tileX + 1; x++) {
+        if (!this.map.isWalkable(x, y)) continue;
+        const d = Math.hypot(x + 0.5 - gx, y + 0.5 - gy);
+        if (d < bestDist && this.map.segmentClear({ x: gx, y: gy }, { x: x + 0.5, y: y + 0.5 }, PLAYER_RADIUS)) {
+          best = { x, y };
+          bestDist = d;
+        }
+      }
+    }
+    return best ?? { x: tileX, y: tileY };
+  }
+
+  /**
+   * A route to the exact spot that was clicked. The spot may be in the open
+   * part of a tile with a tree or a fence on it, which pathfinding (working in
+   * whole tiles) can't go to, so the route goes to the open tile beside it and
+   * then straight to the spot.
+   */
+  private routeTo(point: Vec2): { path: GridPoint[]; end?: Vec2 } | null {
+    const tile = { x: Math.floor(point.x), y: Math.floor(point.y) };
+    const open = !this.map.blocked(point.x, point.y, PLAYER_RADIUS, false);
+    if (this.map.isWalkable(tile.x, tile.y)) {
+      const path = this.pathTo(tile);
+      // A spot too close to a wall to stand on: settle for the middle of its tile.
+      return path && { path, end: open ? point : undefined };
+    }
+    if (!open) return null;
+    const besides: GridPoint[] = [];
+    for (let y = tile.y - 1; y <= tile.y + 1; y++) {
+      for (let x = tile.x - 1; x <= tile.x + 1; x++) {
+        if (this.map.isWalkable(x, y) && this.map.segmentClear({ x: x + 0.5, y: y + 0.5 }, point, PLAYER_RADIUS)) {
+          besides.push({ x, y });
+        }
+      }
+    }
+    besides.sort((a, b) => Math.hypot(a.x + 0.5 - point.x, a.y + 0.5 - point.y) - Math.hypot(b.x + 0.5 - point.x, b.y + 0.5 - point.y));
+    for (const t of besides) {
+      const path = this.pathTo(t);
+      if (path) return { path, end: point };
+    }
+    return null;
   }
 
   /** Shortest path to any free tile beside a tile (an NPC, a crop, a tree). Straight neighbours first. */
@@ -792,9 +866,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private pointerTile(pointer: Phaser.Input.Pointer): { x: number; y: number } {
-    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const g = screenToGrid(world.x, world.y);
+    const g = this.pointerPoint(pointer);
     return { x: Math.floor(g.x), y: Math.floor(g.y) };
+  }
+
+  /** The exact grid point under the pointer. */
+  private pointerPoint(pointer: Phaser.Input.Pointer): Vec2 {
+    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    return screenToGrid(world.x, world.y);
   }
 
   private updateHover(): void {

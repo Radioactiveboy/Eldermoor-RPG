@@ -179,12 +179,15 @@ export class UIScene extends Phaser.Scene {
   private roomLights(toScreen: (x: number, y: number) => { x: number; y: number }): ScreenLight[] {
     const lights = this.world.map.data.lights ?? [];
     const t = this.time.now / 1000;
-    return lights.map((l, i) => {
+    const fires = lights.map((l, i) => {
       const p = gridToScreen(l.gx, l.gy);
       // Two out-of-step waves make a flicker that never visibly repeats.
       const wobble = (Math.sin(t * 9.3 + i * 2) * 0.6 + Math.sin(t * 23.7 + i) * 0.4) * l.flicker;
       return { ...toScreen(p.x, p.y - l.z), radius: l.radius * (1 + wobble * 0.04), alpha: 0.85 + wobble * 0.12 };
     });
+    // Fireflies, outdoors at night.
+    const glows = (this.world.ambience?.lights() ?? []).map((l) => ({ ...toScreen(l.x, l.y), radius: l.radius, alpha: l.alpha }));
+    return [...fires, ...glows];
   }
 
   /** "E  Talk" (or "E  Sit", "E  Go inside"...) bubble over whatever the player can use. */

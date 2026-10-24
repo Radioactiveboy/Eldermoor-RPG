@@ -482,6 +482,36 @@ class AudioEngine {
     [69, 65, 62, 57].forEach((n, i) => this.pluckNote(n, t + i * 0.3, 0.16));
   }
 
+  /** A songbird somewhere nearby: a few quick, high, falling whistles. */
+  chirp(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t0 = ctx.currentTime;
+    const base = 2600 + Math.random() * 1400;
+    const notes = 2 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < notes; i++) {
+      const t = t0 + i * (0.09 + Math.random() * 0.05);
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(base * (1 + Math.random() * 0.15), t);
+      o.frequency.exponentialRampToValueAtTime(base * 0.7, t + 0.06);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.035, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+      o.connect(g).connect(this.sfxBus);
+      o.start(t);
+      o.stop(t + 0.08);
+    }
+  }
+
+  /** Little wings beating as birds take off. */
+  flutter(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    for (let i = 0; i < 5; i++) this.noise(t + i * 0.045, 0.04, 'bandpass', 900, 1400, 1.5, 0.06);
+  }
+
   private thump(delay: number): void {
     if (!this.unlocked) return;
     const ctx = this.ctx!;

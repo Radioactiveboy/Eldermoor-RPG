@@ -4,6 +4,8 @@ export interface GridPoint {
 }
 
 type WalkableFn = (x: number, y: number) => boolean;
+/** May a diagonal step from (x, y) by (dx, dy) squeeze past whatever is beside it? */
+type CornerFn = (x: number, y: number, dx: number, dy: number) => boolean;
 
 const DIRS: Array<[number, number, number]> = [
   [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
@@ -12,7 +14,8 @@ const DIRS: Array<[number, number, number]> = [
 
 /**
  * 8-directional A* on a tile grid. Diagonal moves are not allowed to cut
- * past blocked corners. Returns the tile path excluding the start, or null.
+ * past blocked corners, unless `canCut` says there's room to squeeze through
+ * (say, between two tree trunks). Returns the tile path excluding the start, or null.
  */
 export function findPath(
   start: GridPoint,
@@ -21,6 +24,7 @@ export function findPath(
   height: number,
   walkable: WalkableFn,
   maxNodes = 5000,
+  canCut?: CornerFn,
 ): GridPoint[] | null {
   if (!walkable(goal.x, goal.y)) return null;
   const key = (x: number, y: number) => y * width + x;
@@ -50,7 +54,9 @@ export function findPath(
       const ny = cur.y + dy;
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
       if (!walkable(nx, ny)) continue;
-      if (dx !== 0 && dy !== 0 && (!walkable(cur.x + dx, cur.y) || !walkable(cur.x, cur.y + dy))) continue;
+      if (dx !== 0 && dy !== 0 && (!walkable(cur.x + dx, cur.y) || !walkable(cur.x, cur.y + dy))) {
+        if (!canCut?.(cur.x, cur.y, dx, dy)) continue;
+      }
       const nk = key(nx, ny);
       if (closed.has(nk)) continue;
       const ng = (g.get(ck) ?? 0) + cost;

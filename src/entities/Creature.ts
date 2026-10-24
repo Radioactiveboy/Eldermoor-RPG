@@ -3,7 +3,7 @@ import { WOLF_FEET_Y, WOLF_FRAME, WOLF_H } from '../art/creatures';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import type { FoeKind } from '../systems/Combat';
 import { findPath, GridPoint } from '../systems/Pathfinding';
-import type { IsoMap } from '../world/IsoMap';
+import type { Body, IsoMap } from '../world/IsoMap';
 
 /** How close (in tiles) the player can get before a beast notices them. */
 export const NOTICE_RANGE = 3.5;
@@ -12,6 +12,8 @@ const LEASH = 4;
 const ROAM_SPEED = 1.5;
 /** After the player runs from a fight, the beast leaves them alone for this long (seconds). */
 const CALM_SECONDS = 15;
+/** Collision radius in tiles: the player and travellers bump into it. */
+const RADIUS = 0.35;
 
 /**
  * What it's doing: nosing about, trotting somewhere, snarling at the player,
@@ -24,7 +26,7 @@ type State = 'sniff' | 'look' | 'roam' | 'alert' | 'fight' | 'gone';
  * somewhere new, and when the player comes close it snarls and starts a fight
  * (see GameScene.startCombat). Lives in grid space like the player.
  */
-export class Creature {
+export class Creature implements Body {
   readonly id: string;
   readonly kind: FoeKind;
   gx: number;
@@ -32,6 +34,7 @@ export class Creature {
   readonly sprite: Phaser.GameObjects.Sprite;
   /** Screen-pixel nudge for the sprite, for lunges and flinches. */
   readonly offset = { x: 0, y: 0 };
+  readonly radius = RADIUS;
   private readonly shadow: Phaser.GameObjects.Image;
   private readonly scene: Phaser.Scene;
   private readonly map: IsoMap;
@@ -54,6 +57,7 @@ export class Creature {
     this.sprite.play({ key: 'wolf-sniff', startFrame: Math.floor(Math.random() * 4) });
     this.sprite.setFlipX(Math.random() < 0.5);
     this.timer = 1 + Math.random() * 3;
+    map.bodies.add(this);
     this.sync();
   }
 
@@ -122,6 +126,7 @@ export class Creature {
   /** Lie still. The body stays where it fell until the player leaves the area. */
   die(): void {
     this.state = 'gone';
+    this.map.bodies.delete(this);
     this.sprite.stop().setFrame(WOLF_FRAME.dead);
     this.shadow.setVisible(false);
     this.sprite.setDepth(depthAt(this.gx, this.gy) - 1);
@@ -130,6 +135,7 @@ export class Creature {
   /** Bolt away from (gx, gy) and vanish into the trees. */
   flee(fromX: number, fromY: number): Promise<void> {
     this.state = 'gone';
+    this.map.bodies.delete(this);
     const dx = this.gx - fromX;
     const dy = this.gy - fromY;
     const len = Math.hypot(dx, dy) || 1;
@@ -226,6 +232,11 @@ export class Creature {
     const dy = next.y + 0.5 - this.gy;
     const dist = Math.hypot(dx, dy);
     const step = ROAM_SPEED * dt;
+    // Someone in the way: stop and sniff, then pick somewhere else.
+    if (this.map.blocked(this.gx + (dx / dist) * step, this.gy + (dy / dist) * step, RADIUS, true, this)) {
+      this.path = [];
+      return;
+    }
     if (dist <= step) {
       this.gx = next.x + 0.5;
       this.gy = next.y + 0.5;
@@ -243,7 +254,7 @@ export class Creature {
     this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
     // A body lying on the ground keeps the depth it fell at (see die()).
     if (this.state === 'gone') return;
-    const d = depthAt(this.gx, this.gy);
+    const d = this.map.characterDepth(this.gx, this.gy);
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
   }
