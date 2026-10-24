@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { DialogueScene } from './scenes/DialogueScene';
@@ -15,7 +16,7 @@ Promise.race([document.fonts.load('40px Cinzel'), new Promise((resolve) => setTi
   .then(startGame);
 
 function startGame(): void {
-  new Phaser.Game({
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
     backgroundColor: '#0e0f14',
@@ -27,4 +28,6 @@ function startGame(): void {
     // Later scenes draw on top of earlier ones.
     scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, JournalScene, InventoryScene, PauseScene, SettingsScene],
   });
+  // Handy for poking at the game from the browser console while developing.
+  if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
 }

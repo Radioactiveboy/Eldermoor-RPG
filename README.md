@@ -20,8 +20,8 @@ npm run build    # type-check + production build into dist/
 The HUD doesn't list controls; they're under **Controls** in the pause menu.
 
 - **WASD / arrow keys**: move (screen-relative, so "up" goes up the screen)
-- **Click / tap**: walk to a tile (A* pathfinding around trees, rocks and water).
-  Clicking a person or thing walks over to it and uses it
+- **Click / tap**: walk to that spot (A* pathfinding around trees, rocks and water,
+  smoothed into straight lines). Clicking a person or thing walks over to it and uses it
 - **E** (or **Enter**, or tapping the prompt): do what the prompt over something
   nearby says: talk, go through a door, sit on a bench or stool, pick crops,
   shake a tree. Moving or pressing E again gets up from a seat; moving cancels
@@ -48,19 +48,24 @@ src/
   world/MapData.ts        Terrain + prop types, walkability table
   world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
-  world/IsoMap.ts         Renders a MapData and answers "can I walk here?"
+  world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
+  world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
+  world/Ambience.ts       Living world: water glints and foam, birds, bats, sparrows, butterflies,
+                          fireflies, cloud shadows, chimney smoke, falling leaves
   systems/Pathfinding.ts  8-direction A* on the tile grid
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   entities/Player.ts      Movement, collision, click-to-move path following
-  entities/Npc.ts         People you can talk to, and which conversation they have
+  entities/Npc.ts         People you can talk to, which conversation they have, and travellers
+                          who wander up and down the road
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
-                          the garden (farm.ts: soil, crops, fences) and item icons (items.ts)
+                          the garden (farm.ts: soil, crops, fences), item icons (items.ts),
+                          travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
   settings/Settings.ts    Volume settings, saved in the browser
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
