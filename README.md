@@ -31,12 +31,16 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **J** or the **book** button: open the journal (arrow keys or click to turn pages)
 - **I** or the **satchel** button: the satchel (inventory). **C**: equipment.
   Tab switches between them; select an item to eat, wear or take it off
+- **In a fight**: pick an action with the mouse, the number keys, or arrows then Enter;
+  Esc goes back from a sub-menu (choosing a target or an item)
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
 - **Hold T**: fast-forward the clock (60x) to watch the day/night cycle
 - **Esc** or the **II** button: pause menu (resume, controls, settings, back to main menu)
 - **Enter** on the title screen: start a new game (you wake up at home)
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
+- Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
+  testing fights against several enemies)
 
 ## Project layout
 
@@ -57,15 +61,18 @@ src/
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
+  systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, fleeing,
+                          how beasts choose their moves, and the beasts' stats (FOES)
   entities/Player.ts      Movement, collision, click-to-move path following
   entities/Npc.ts         People you can talk to, which conversation they have, and travellers
                           who wander up and down the road
+  entities/Creature.ts    Wild animals: wander and sniff near their den, start a fight when you come close
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), item icons (items.ts),
-                          travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
+                          the grey wolf (creatures.ts), travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
   settings/Settings.ts    Volume settings, saved in the browser
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
@@ -77,6 +84,7 @@ src/
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
+  scenes/CombatScene.ts   Turn-based fights over the world: turn order, action menu, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera
   ui/StatusBars.ts        Slim health and stamina bars
   ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day
@@ -125,8 +133,24 @@ src/
   Quests are listed in `QUESTS` in `systems/Quests.ts`; their steps appear one
   at a time in the HUD tracker and the journal.
 
+- **Combat is turn-based, like a tabletop game.** When a beast notices you
+  (`entities/Creature.ts`), it and any of its pack nearby attack, and
+  `CombatScene` takes over. Everyone rolls initiative (d20 + quickness) and acts
+  in that order, shown along the top of the screen. An attack rolls d20 + to-hit
+  against the target's armour class; a hit rolls damage dice, a natural 20 is a
+  critical hit (double dice) and a natural 1 always misses. Your armour is
+  10 + the Defence of what you wear; your to-hit and damage come from your
+  weapon's Attack (fists roll d4, a weapon d6). On your turn you choose to
+  **Attack**, make a **Heavy blow** (-2 to hit but double damage, costs stamina),
+  **Defend** (+4 armour until your next turn, recovers stamina), **Use an item**
+  (eat food, or take up a weapon from the satchel) or **Flee** (d20 + quickness
+  against 10, +2 per extra enemy). Wolves gang up (+2 to hit in a pack) and may
+  bolt when badly hurt. Lose and you wake up at home. The clock stops during a
+  fight. New beasts go in `FOES` (`systems/Combat.ts`) with art in `art/` and a
+  spawn in the map's `creatures` list.
+
 ## Good next steps
 
 The village herbalist (the next step of "Medicine for Mother"), more villagers,
-combat (equipment already totals defence and attack), cooking with the garden's
+more beasts and weapons, a reward for the wolf pelt, cooking with the garden's
 crops, showing worn gear on the hero's sprite, save/load.

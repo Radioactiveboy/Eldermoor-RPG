@@ -44,6 +44,8 @@ export class UIScene extends Phaser.Scene {
   private progressLabel!: Phaser.GameObjects.Text;
   /** The map the minimap was baked from, so it can be rebuilt when the player changes area. */
   private minimapOf?: IsoMap;
+  /** In a fight the combat screen needs the room: only the health and stamina bars stay. */
+  private combatMode = false;
 
   constructor() {
     super('UI');
@@ -70,6 +72,7 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
     this.prompt = undefined;
     this.promptLabel = '';
+    this.combatMode = false;
 
     this.world.onHint = (text) => this.toasts.thought(text);
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
@@ -152,6 +155,16 @@ export class UIScene extends Phaser.Scene {
     this.tracker.update();
     this.updatePrompt(toScreen);
     this.updateProgress(toScreen);
+    if (this.combatMode !== game.inCombat) this.setCombatMode(game.inCombat);
+  }
+
+  private setCombatMode(on: boolean): void {
+    this.combatMode = on;
+    const show = !on;
+    this.wheel.setVisible(show);
+    this.tracker.setVisible(show);
+    this.minimap?.setVisible(show && !this.world.map.data.indoor);
+    for (const button of [this.pauseButton, this.journalButton, this.satchelButton]) button.setVisible(show);
   }
 
   /** The daylight let in by the windows, warmed and dimmed, so the fire does most of the lighting. */

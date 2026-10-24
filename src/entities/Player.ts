@@ -23,6 +23,8 @@ export class Player {
   private facing = 0;
   /** Sitting on a seat, or crouched working (picking crops). Either way the player stays put. */
   pose: 'stand' | 'sit' | 'work' = 'stand';
+  /** Screen-pixel nudge for the sprite, for lunges and flinches in a fight. */
+  readonly offset = { x: 0, y: 0 };
 
   constructor(scene: Phaser.Scene, map: IsoMap, gx: number, gy: number) {
     this.map = map;
@@ -115,6 +117,12 @@ export class Player {
     this.route = [];
     if (towards) this.face({ x: towards.x - this.gx, y: towards.y - this.gy });
     this.pose = working ? 'work' : 'stand';
+    this.sync(false);
+  }
+
+  /** Turn to look at a point in grid space. */
+  faceTowards(gx: number, gy: number): void {
+    if (gx !== this.gx || gy !== this.gy) this.face({ x: gx - this.gx, y: gy - this.gy });
     this.sync(false);
   }
 
@@ -211,7 +219,7 @@ export class Player {
 
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
-    this.sprite.setPosition(p.x, p.y);
+    this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
     // Seated, draw in front of the seat even when sitting right on its tile.
     const d = this.map.characterDepth(this.gx, this.gy) + (this.pose === 'sit' ? 2 : 0);
     this.shadow.setDepth(d - 0.5);

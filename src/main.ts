@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
+import { CombatScene } from './scenes/CombatScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
@@ -26,7 +27,7 @@ function startGame(): void {
       height: window.innerHeight,
     },
     // Later scenes draw on top of earlier ones.
-    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, JournalScene, InventoryScene, PauseScene, SettingsScene],
+    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, CombatScene, JournalScene, InventoryScene, PauseScene, SettingsScene],
   });
   // Handy for poking at the game from the browser console while developing.
   if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;

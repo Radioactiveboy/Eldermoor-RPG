@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SPRINT_MULTIPLIER } from '../config';
+import { Creature } from '../entities/Creature';
 import { Npc, TALK_RANGE } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
@@ -18,6 +19,7 @@ import { cropKey } from '../art/farm';
 import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
 import type { DialogueSceneData } from './DialogueScene';
+import type { CombatResult, CombatSceneData } from './CombatScene';
 
 type MoveKeys = Record<
   'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'fastForward',
@@ -30,6 +32,8 @@ export interface GameSceneData {
   area?: AreaId;
   /** Named arrival point in the area (see MapData.entries); defaults to its spawn. */
   entry?: string;
+  /** Coming round at home after being beaten in a fight. */
+  knockedOut?: boolean;
 }
 
 /** Things the HUD can show the player as a speech-like hint. */
@@ -68,6 +72,11 @@ export interface Channel {
 }
 
 /** Things to muse on while sitting down for a moment. */
+/** Other beasts this close (in tiles) to the one that starts a fight join in. */
+const PACK_RANGE = 7;
+/** Seconds after arriving in an area before beasts can notice the player, so there's time to see them first. */
+const ARRIVAL_GRACE = 2.5;
+
 const SITTING_THOUGHTS: Record<string, string[]> = {
   bench: [
     'The garden could do with weeding again.',
@@ -87,6 +96,10 @@ export class GameScene extends Phaser.Scene {
   clock!: TimeOfDay;
   area: AreaId = 'home';
   npcs: Npc[] = [];
+  /** Wild animals roaming the area. */
+  creatures: Creature[] = [];
+  /** True during a fight: the clock stops and health doesn't regenerate. */
+  inCombat = false;
   /** Birds, rippling water and the like, outdoors only. */
   ambience?: Ambience;
   /** What the player would do by pressing E right now, if anything. */
@@ -107,6 +120,9 @@ export class GameScene extends Phaser.Scene {
   private sitTimer = 0;
   private crackleTimer = 0;
   private cropTimer = 0;
+  /** Beasts beaten or chased off for good, by spawn id. */
+  private defeatedFoes = new Set<string>();
+  private arrivalGrace = 0;
 
   constructor() {
     super('Game');
@@ -123,6 +139,7 @@ export class GameScene extends Phaser.Scene {
       QuestLog.dayProvider = () => this.clock.day;
       Inventory.reset();
       Farm.reset();
+      this.defeatedFoes.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
       const hourParam = new URLSearchParams(window.location.search).get('hour');
       if (hourParam !== null && !Number.isNaN(Number(hourParam))) this.clock.setHour(Number(hourParam));
@@ -133,11 +150,14 @@ export class GameScene extends Phaser.Scene {
     this.focus = undefined;
     this.channel = undefined;
     this.seat = undefined;
+    this.inCombat = false;
+    this.arrivalGrace = ARRIVAL_GRACE;
 
     this.map = new IsoMap(this, this.area === 'home' ? buildHomeMap() : generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED));
     const start = (data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn;
     this.player = new Player(this, this.map, start.x, start.y);
     this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy));
+    this.creatures = this.spawnCreatures();
     this.syncCrops();
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
 
@@ -149,6 +169,9 @@ export class GameScene extends Phaser.Scene {
     GameAudio.playMusic(this.area === 'home' ? 'home' : 'world');
     this.cameras.main.fadeIn(450, 0, 0, 0);
 
+    if (data.knockedOut) {
+      this.time.delayedCall(1200, () => this.onHint?.('I came to on the cottage floor, aching all over. That wolf is still out there.'));
+    }
     if (data.newGame) {
       this.time.delayedCall(1200, () => this.onHint?.('Mother is resting by the hearth. She wants to speak with you.'));
     }
@@ -169,9 +192,13 @@ export class GameScene extends Phaser.Scene {
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : 1);
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
-    this.stats.update(dt, wantsSprint && moved);
-    this.clock.timeScale = !this.busy && this.keys.fastForward.isDown ? FAST_FORWARD : 1;
-    this.clock.update(dt);
+    // Time stands still while fighting, turn by turn.
+    if (!this.inCombat) {
+      this.stats.update(dt, wantsSprint && moved);
+      this.clock.timeScale = !this.busy && this.keys.fastForward.isDown ? FAST_FORWARD : 1;
+      this.clock.update(dt);
+    }
+    this.updateCreatures(dt);
     this.updateHover();
     this.updateFocus();
     this.updateSitting(dt);
@@ -274,6 +301,103 @@ export class GameScene extends Phaser.Scene {
       default:
         console.warn(`Unknown dialogue action: ${action}`);
     }
+  }
+
+  // ------------------------------------------------------------ combat
+
+  private spawnCreatures(): Creature[] {
+    const spawns = (this.map.data.creatures ?? []).filter((s) => !this.defeatedFoes.has(s.id));
+    // Handy for testing fights against a pack: open the game with ?wolves=3.
+    const pack = Number(new URLSearchParams(window.location.search).get('wolves') ?? 1);
+    const lead = spawns[0];
+    if (lead && pack > 1) {
+      const spots = [[1.5, 1], [-1, 1.5], [2, -1.5], [-2, -1], [0, 2.5]];
+      for (let i = 0; i < Math.min(pack - 1, spots.length); i++) {
+        const gx = lead.gx + spots[i][0];
+        const gy = lead.gy + spots[i][1];
+        const id = `${lead.id}-pack-${i}`;
+        if (!this.defeatedFoes.has(id) && this.map.isWalkable(Math.floor(gx), Math.floor(gy))) spawns.push({ ...lead, id, gx, gy });
+      }
+    }
+    return spawns.map((s) => new Creature(this, this.map, s.id, s.kind, s.gx, s.gy));
+  }
+
+  private updateCreatures(dt: number): void {
+    this.arrivalGrace = Math.max(0, this.arrivalGrace - dt);
+    for (const creature of this.creatures) {
+      const watching = !this.busy && this.arrivalGrace <= 0 && this.scene.isActive();
+      if (creature.update(dt, watching ? { x: this.player.gx, y: this.player.gy } : undefined)) this.startCombat(creature);
+    }
+  }
+
+  /** A beast has spotted the player: it and any of its pack close by attack. */
+  startCombat(first: Creature): void {
+    if (this.busy || this.inCombat) {
+      first.disengage();
+      return;
+    }
+    if (this.seat) this.standUp();
+    if (this.channel) this.cancelChannel();
+    this.busy = true;
+    this.inCombat = true;
+    this.walkingTo = undefined;
+    this.player.setPath([]);
+    const foes = this.creatures.filter((c) => c === first || (c.active && c.distanceTo(first.gx, first.gy) < PACK_RANGE));
+    foes.forEach((c) => c.engage());
+    GameAudio.growl();
+    GameAudio.playMusic('battle');
+    const data: CombatSceneData = { foes };
+    this.scene.launch('Combat', data);
+    this.scene.get('Combat').events.once('combat-ended', (result: CombatResult) => this.endCombat(result, foes));
+  }
+
+  /** Point the camera at the middle of a fight (grid positions). */
+  frameFight(points: Vec2[]): void {
+    const cam = this.cameras.main;
+    cam.stopFollow();
+    const gx = points.reduce((n, p) => n + p.x, 0) / points.length;
+    const gy = points.reduce((n, p) => n + p.y, 0) / points.length;
+    const p = gridToScreen(gx, gy);
+    cam.pan(p.x, p.y - 20, 500, 'Sine.easeInOut');
+  }
+
+  private endCombat(result: CombatResult, foes: Creature[]): void {
+    this.inCombat = false;
+    for (const id of [...result.slain, ...result.fled]) this.defeatedFoes.add(id);
+    this.fitCamera();
+    if (result.outcome === 'defeat') {
+      this.knockedOut();
+      return;
+    }
+    GameAudio.playMusic(this.area === 'home' ? 'home' : 'world');
+    if (result.outcome === 'escaped') {
+      foes.forEach((c) => c.disengage());
+      this.onHint?.("I got away. Best keep my distance from it for now.");
+    } else {
+      if (result.slain.length > 0) this.give('wolf-pelt', result.slain.length);
+      this.onHint?.(
+        result.slain.length > 0
+          ? 'It lies still now. The pelt might be worth something in the village.'
+          : 'It ran off into the trees. I doubt it will come back.',
+      );
+      if (foes.some((c) => c.id === 'cottage-wolf')) {
+        QuestLog.writeDiary(
+          'A grey wolf was nosing around the cottage when I stepped out. It went for me, and I had to fight it off. ' +
+            'My hands are still shaking. I must not tell Mother; she has enough to worry about.',
+        );
+      }
+    }
+    this.release();
+  }
+
+  /** Beaten: black out, and come round at home with a little health. */
+  private knockedOut(): void {
+    this.stats.heal(this.stats.maxHealth * 0.35);
+    this.stats.restoreStamina(this.stats.maxStamina);
+    this.cameras.main.fadeOut(1200, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.restart({ area: 'home', knockedOut: true } satisfies GameSceneData);
+    });
   }
 
   // ------------------------------------------------------------ interactions

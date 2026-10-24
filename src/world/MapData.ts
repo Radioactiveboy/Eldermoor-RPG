@@ -1,3 +1,4 @@
+import type { FoeKind } from '../systems/Combat';
 import type { CropKind } from '../systems/Farm';
 import type { Shape } from './Collision';
 
@@ -94,6 +95,15 @@ export interface NpcSpawn {
   gy: number;
 }
 
+/** A wild animal that roams near where it starts (see entities/Creature.ts). */
+export interface CreatureSpawn {
+  /** Remembered once it's beaten, so it stays gone. */
+  id: string;
+  kind: FoeKind;
+  gx: number;
+  gy: number;
+}
+
 export interface MapData {
   width: number;
   height: number;
@@ -110,6 +120,7 @@ export interface MapData {
   npcs?: NpcSpawn[];
   crops?: CropPatch[];
   seats?: Seat[];
+  creatures?: CreatureSpawn[];
   /** Chimney tops that smoke: grid position and height in pixels. */
   chimneys?: Array<{ gx: number; gy: number; z: number }>;
   /** Road tiles in order from one end to the other, for travellers to wander along. */
