@@ -1,4 +1,5 @@
 import type { CropKind } from '../systems/Farm';
+import type { Shape } from './Collision';
 
 export enum Terrain {
   Grass,
@@ -41,6 +42,11 @@ export interface MapObject {
   anim?: string;
   /** Tiles it blocks, if not its whole footprint (relative to tx, ty). */
   blocks?: Array<[number, number]>;
+  /**
+   * Its outline for collisions (relative to tx, ty), if it's slimmer than the
+   * tiles it blocks, like a fence. Each shape must lie inside one tile.
+   */
+  shapes?: Shape[];
 }
 
 /** A door the player can use (press E nearby) to go to another area. */
@@ -104,6 +110,10 @@ export interface MapData {
   npcs?: NpcSpawn[];
   crops?: CropPatch[];
   seats?: Seat[];
+  /** Chimney tops that smoke: grid position and height in pixels. */
+  chimneys?: Array<{ gx: number; gy: number; z: number }>;
+  /** Road tiles in order from one end to the other, for travellers to wander along. */
+  road?: Array<{ x: number; y: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
 }
