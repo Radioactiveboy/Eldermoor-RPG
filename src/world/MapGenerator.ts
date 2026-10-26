@@ -20,11 +20,12 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     props.push(new Array(width).fill(Prop.None));
   }
 
-  const cx = Math.floor(width / 2);
-  const cy = Math.floor(height / 2);
+  // The family cottage sits west of the middle, in the southern half, with its garden beside it.
+  // North of it there's room for Farmer Iran's smallholding and, further up, the hill with the cave.
+  const home = { x: Math.floor(width / 2) - 8, y: height - 24 };
 
   // Lake in the north-east, with a sandy shore.
-  const lake = { x: width * 0.72, y: height * 0.25, r: Math.min(width, height) * 0.14 };
+  const lake = { x: width * 0.74, y: height * 0.36, r: Math.min(width, height) * 0.14 };
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const wobble = Math.sin(x * 0.7) * 0.9 + Math.cos(y * 0.6) * 0.9;
@@ -34,35 +35,43 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }
   }
 
-  // The family cottage sits just west of the middle, with its garden beside it.
-  const home = { x: cx - 7, y: cy - 1 };
+  joinDiagonals(terrain, Terrain.Water, Terrain.Sand);
 
-  // Winding dirt road from the south-west edge up to the cottage yard.
-  const roadEnd = { x: home.x + 3, y: home.y + 3 };
-  let rx = 0;
-  let ry = height - 6;
-  // The middle of the road (it's two tiles wide), step by step, for travellers to follow.
-  const road: Array<{ x: number; y: number }> = [];
-  while (rx < roadEnd.x || ry > roadEnd.y) {
-    road.push({ x: rx + 1, y: ry + 1 });
-    for (let oy = 0; oy <= 1; oy++) {
-      for (let ox = 0; ox <= 1; ox++) setIf(terrain, rx + ox, ry + oy, Terrain.Dirt);
-    }
-    if (rx < roadEnd.x && (ry <= roadEnd.y || rnd.frac() < 0.55)) rx++;
-    else ry--;
+  // A winding dirt road in from the west edge, bending across the meadow up to the cottage yard.
+  // Its line wanders a little each way and it's wider in places, worn in by carts rather than laid out.
+  const roadEnd = { x: home.x + 4, y: home.y + 3 };
+  const bends: Vec[] = [{ x: -3, y: height - 6.5 }];
+  const legs = 4;
+  for (let i = 1; i < legs; i++) {
+    const t = i / legs;
+    bends.push({
+      x: Phaser.Math.Linear(0, roadEnd.x, t) + rnd.realInRange(-1.5, 1.5),
+      y: Phaser.Math.Linear(height - 6.5, roadEnd.y + 0.5, t * t) + rnd.realInRange(-1.8, 1.8),
+    });
   }
+  bends.push({ x: roadEnd.x - 1.5, y: roadEnd.y + 0.5 }, { x: roadEnd.x + 0.5, y: roadEnd.y - 0.5 });
+  const line = smoothLine(bends);
+  // The middle of the road, a step at a time, for travellers to follow (from the west edge in).
+  const road = spaced(line.filter((p) => p.x >= 0.6), 1);
+  paintPath(terrain, line, (t) => 1.2 + 0.3 * Math.sin(t * 9.1 + 1.3) + 0.15 * Math.sin(t * 23.7));
 
   // Forest: denser near the edges, never on roads, water or around the cottage.
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (terrain[y][x] !== Terrain.Grass) continue;
       const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
-      const nearSpawn = Phaser.Math.Distance.Between(x, y, cx, cy) < 6;
-      if (nearSpawn) continue;
+      const nearHome = Phaser.Math.Distance.Between(x, y, home.x + 5, home.y + 1) < 7;
+      if (nearHome) continue;
       const treeChance = edge < 3 ? 0.65 : 0.08;
       const roll = rnd.frac();
       if (roll < treeChance) props[y][x] = Prop.Tree;
       else if (roll < treeChance + 0.015) props[y][x] = Prop.Rock;
+    }
+  }
+  // Nothing grows on the road, nor right at its edge.
+  for (const p of line) {
+    for (let y = Math.floor(p.y - 2); y <= p.y + 2; y++) {
+      for (let x = Math.floor(p.x - 2); x <= p.x + 2; x++) if (props[y]?.[x] === Prop.Tree || props[y]?.[x] === Prop.Rock) props[y][x] = Prop.None;
     }
   }
 
@@ -70,8 +79,9 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   addRoadToMarket(data);
   addCottage(data, home.x, home.y);
   addGarden(data, home.x + 5, home.y - 2);
-  addCave(data, home.x + 4, home.y - 1);
-  addHenFarm(data, home.x - 5, home.y - 16);
+  addCave(data, { x: home.x + 4, y: home.y - 1 }, home.x + 7, 4);
+  addHenFarm(data, home.x - 4, home.y - 23);
+  joinDiagonals(terrain, Terrain.Dirt, Terrain.Grass);
   // A lone wolf nosing about south of the cottage, in sight of the door.
   (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });
   // Folk travelling the road, spread out along it (see entities/Npc.ts).
@@ -86,6 +96,71 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }),
   );
   return data;
+}
+
+type Vec = { x: number; y: number };
+
+/** A smooth curve through the points (Catmull-Rom), as closely spaced points along it. */
+function smoothLine(points: Vec[]): Vec[] {
+  const out: Vec[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+    const steps = Math.ceil(Math.hypot(p2.x - p1.x, p2.y - p1.y) * 4);
+    for (let s = 0; s < steps; s++) {
+      const t = s / steps;
+      out.push({
+        x: Phaser.Math.Interpolation.CatmullRom([p0.x, p1.x, p2.x, p3.x], (1 + t) / 3),
+        y: Phaser.Math.Interpolation.CatmullRom([p0.y, p1.y, p2.y, p3.y], (1 + t) / 3),
+      });
+    }
+  }
+  out.push(points[points.length - 1]);
+  return out;
+}
+
+/** Points along a line roughly `step` tiles apart. */
+function spaced(line: Vec[], step: number): Vec[] {
+  const out: Vec[] = [line[0]];
+  for (const p of line) {
+    const last = out[out.length - 1];
+    if (Math.hypot(p.x - last.x, p.y - last.y) >= step) out.push({ x: p.x, y: p.y });
+  }
+  return out;
+}
+
+/**
+ * Where two patches of `kind` (dirt, water) only touch at a corner, turns one
+ * of the `between` tiles that separate them into it too, so a path or the
+ * shore never pinches down to a point.
+ */
+function joinDiagonals(terrain: Terrain[][], kind: Terrain, between: Terrain): void {
+  const dirt = (x: number, y: number) => terrain[y][x] === kind;
+  for (let y = 0; y < terrain.length - 1; y++) {
+    for (let x = 0; x < terrain[0].length - 1; x++) {
+      const across = (dirt(x, y) && dirt(x + 1, y + 1)) || (dirt(x + 1, y) && dirt(x, y + 1));
+      const grass = [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].filter(([gx, gy]) => terrain[gy][gx] === between);
+      if (across && grass.length === 2) terrain[grass[0][1]][grass[0][0]] = kind;
+    }
+  }
+}
+
+/**
+ * Wears a path into the grass along a line: every tile whose centre lies
+ * within `radius(t)` of it turns to dirt, t running 0..1 along the line, so
+ * the path can widen and narrow as it goes.
+ */
+function paintPath(terrain: Terrain[][], line: Vec[], radius: (t: number) => number): void {
+  line.forEach((p, i) => {
+    const r = radius(i / Math.max(1, line.length - 1));
+    for (let y = Math.floor(p.y - r - 1); y <= p.y + r + 1; y++) {
+      for (let x = Math.floor(p.x - r - 1); x <= p.x + r + 1; x++) {
+        if ((x + 0.5 - p.x) ** 2 + (y + 0.5 - p.y) ** 2 <= r * r && terrain[y]?.[x] === Terrain.Grass) terrain[y][x] = Terrain.Dirt;
+      }
+    }
+  });
 }
 
 /**
@@ -105,12 +180,20 @@ function addRoadToMarket(data: MapData): void {
   }
   const arrive = road[3];
   (data.entries ??= {}).market = { x: arrive.x, y: arrive.y };
-  // The signpost stands on the first patch of grass beside the road, a few steps in.
+  // The signpost stands on the grass just north of the road, a few steps in.
   const at = road[5];
-  for (const [dx, dy] of [[0, -2], [-1, -2], [1, -2], [0, 1], [1, 1]]) {
-    const tx = Math.floor(at.x) + dx;
-    const ty = Math.floor(at.y) + dy;
-    if (data.terrain[ty]?.[tx] !== Terrain.Grass) continue;
+  const fromRoad = (x: number, y: number) => Math.min(...road.map((p) => Math.hypot(p.x - x, p.y - y)));
+  const spots: Array<{ tx: number; ty: number; score: number }> = [];
+  for (let ty = Math.floor(at.y) - 4; ty <= at.y + 4; ty++) {
+    for (let tx = Math.floor(at.x) - 4; tx <= at.x + 4; tx++) {
+      if (data.terrain[ty]?.[tx] !== Terrain.Grass) continue;
+      const d = fromRoad(tx + 0.5, ty + 0.5);
+      if (d < 2 || d > 3) continue;
+      spots.push({ tx, ty, score: Math.hypot(tx + 0.5 - at.x, ty + 0.5 - (at.y - 2.5)) });
+    }
+  }
+  spots.sort((a, b) => a.score - b.score);
+  for (const { tx, ty } of spots.slice(0, 1)) {
     for (let y = ty - 1; y <= ty + 1; y++) for (let x = tx - 1; x <= tx + 1; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
     placeObject(data, { key: 'mkt-signpost', tx, ty, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
     (data.sights ??= []).push({
@@ -120,7 +203,6 @@ function addRoadToMarket(data: MapData): void {
         lines: ['←  West: Adowvale Market', '→  East: Adowvale Hollow', '↑  North: the hill caves'],
       },
     });
-    break;
   }
 }
 
@@ -157,27 +239,30 @@ function addCottage(data: MapData, x0: number, y0: number): void {
 
 /**
  * The wolves' cave, in the hill at the north edge of the map: a sheep track
- * runs up to it from the cottage yard (starting at `from`, just north of the
- * door), and the cave mouth opens towards it. See CaveMap.ts for inside.
+ * winds up to it from the cottage yard (starting at `from`, just north of the
+ * door), past Farmer Iran's, and the cave mouth opens towards it. (hx, hy) is
+ * the hill's back corner. See CaveMap.ts for inside.
  */
-function addCave(data: MapData, fromX: number, fromY: number): void {
+function addCave(data: MapData, from: Vec, hx: number, hy: number): void {
   // The hill's 3x3 footprint; its mouth is over the front tile (2, 2), which stays open.
-  const hx = fromX - 2;
-  const hy = 3;
   const door = { x: hx + 2, y: hy + 2 };
-  // The track wanders a little on its way north.
-  const track: Array<{ x: number; y: number }> = [];
-  let last = fromX;
-  for (let y = fromY; y > door.y; y--) {
-    const x = y > fromY - 4 || y < door.y + 3 ? door.x : door.x + Math.round(Math.sin(y * 0.45) * 1.2);
-    // Step sideways on the same row, so the track never breaks at a corner.
-    for (let sx = Math.min(x, last); sx <= Math.max(x, last); sx++) track.push({ x: sx, y });
-    last = x;
+  // The track leaves the yard heading north, wanders to and fro, and comes straight at the mouth.
+  const rnd = new Phaser.Math.RandomDataGenerator(['sheep-track']);
+  const bends: Vec[] = [{ x: from.x + 0.5, y: from.y + 1.5 }, { x: from.x + 0.5, y: from.y - 2 }];
+  const legs = 5;
+  for (let i = 1; i < legs; i++) {
+    const t = i / legs;
+    const y = Phaser.Math.Linear(from.y - 3, door.y + 4, t);
+    bends.push({ x: Phaser.Math.Linear(from.x + 0.5, door.x + 0.5, t) + (i % 2 ? 1 : -1) * rnd.realInRange(1, 2), y });
   }
-  for (const t of track) {
-    for (let y = t.y - 1; y <= t.y + 1; y++) for (let x = t.x - 1; x <= t.x + 1; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
-    setIf(data.terrain, t.x, t.y, Terrain.Dirt);
+  bends.push({ x: door.x + 0.5, y: door.y + 2.5 }, { x: door.x + 0.5, y: door.y + 0.5 });
+  const line = smoothLine(bends);
+  for (const p of line) {
+    for (let y = Math.floor(p.y - 1.5); y <= p.y + 1.5; y++) {
+      for (let x = Math.floor(p.x - 1.5); x <= p.x + 1.5; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
+    }
   }
+  paintPath(data.terrain, line, (t) => 0.62 + 0.18 * Math.sin(t * 17.3) + 0.1 * Math.sin(t * 41.9 + 2));
   // Clear the hillside and the ground in front of the mouth.
   for (let y = hy - 1; y <= hy + 4; y++) {
     for (let x = hx - 1; x <= hx + 4; x++) {
@@ -185,6 +270,8 @@ function addCave(data: MapData, fromX: number, fromY: number): void {
       if (data.props[y]?.[x] !== undefined && (front || y >= hy)) data.props[y][x] = Prop.None;
     }
   }
+  // The hill itself stands on grass, the track stopping at its mouth.
+  for (let y = hy; y < hy + 3; y++) for (let x = hx; x < hx + 3; x++) data.terrain[y][x] = Terrain.Grass;
   const blocks: Array<[number, number]> = [];
   for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (x !== 2 || y !== 2) blocks.push([x, y]);
   placeObject(data, { key: 'cave-entrance', tx: hx, ty: hy, w: 3, h: 3, blocks });
@@ -240,8 +327,14 @@ function addHenFarm(data: MapData, x0: number, y0: number): void {
   for (let y = y0 - 2; y <= py1 + 1; y++) {
     for (let x = px0 - 1; x <= px1 + 2; x++) if (data.props[y]?.[x] !== undefined) data.props[y][x] = Prop.None;
   }
+  // Each path heads east and meets the track wherever it first comes to it, sagging a little on the way.
   const toTrack = (x: number, y: number) => {
-    for (; x < data.width && data.terrain[y][x] !== Terrain.Dirt; x++) setIf(data.terrain, x, y, Terrain.Dirt);
+    let end = x + 1;
+    while (end < data.width && data.terrain[y][end] !== Terrain.Dirt) end++;
+    const sag = rnd.realInRange(-0.8, 0.8);
+    const line = smoothLine([{ x: x + 0.5, y: y + 0.5 }, { x: (x + end) / 2 + 0.5, y: y + 0.5 + sag }, { x: end + 0.5, y: y + 0.5 }]);
+    paintPath(data.terrain, line, (t) => 0.6 + 0.12 * Math.sin(t * 13 + x));
+    setIf(data.terrain, x, y, Terrain.Dirt);
   };
   const door = { x: x0 + 2, y: y0 + 1 };
   toTrack(door.x, door.y);

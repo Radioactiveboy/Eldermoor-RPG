@@ -19,13 +19,6 @@ function inDiamond(x: number, y: number): boolean {
   return x >= hw - half && x < hw + half;
 }
 
-/** Grid-space position (u, v in 0..1) of a pixel in a tile. */
-function uv(x: number, y: number): { u: number; v: number } {
-  const sx = (x + 0.5 - TILE_WIDTH / 2) / (TILE_WIDTH / 2);
-  const sy = (y + 0.5 - TILE_HEIGHT / 2) / (TILE_HEIGHT / 2);
-  return { u: (sx + sy) / 2 + 0.5, v: (sy - sx) / 2 + 0.5 };
-}
-
 /**
  * Light glinting on the water: short streaks that brighten, stretch and fade
  * at their own pace, drifting slowly across the tile. One frame per row.
@@ -52,28 +45,6 @@ function shimmer(): PixelCanvas {
         if (!inDiamond(x, y - f * TILE_HEIGHT)) continue;
         c.set(x, y, life > 0.8 && i === Math.floor(len / 2) ? P.foam : P.waterLight, life > 0.5 ? 200 : 110);
       }
-    }
-  }
-  return c;
-}
-
-/** Foam along the edges of a water tile that meet land. Bits: 1 = -y, 2 = +y, 4 = -x, 8 = +x. */
-function foam(edges: number): PixelCanvas {
-  const c = new PixelCanvas(TILE_WIDTH, TILE_HEIGHT);
-  const rnd = seededRandom(edges * 13 + 5);
-  for (let y = 0; y < TILE_HEIGHT; y++) {
-    for (let x = 0; x < TILE_WIDTH; x++) {
-      if (!inDiamond(x, y)) continue;
-      const { u, v } = uv(x, y);
-      const d = Math.min(
-        edges & 1 ? v : 9,
-        edges & 2 ? 1 - v : 9,
-        edges & 4 ? u : 9,
-        edges & 8 ? 1 - u : 9,
-      );
-      const wobble = 0.03 * Math.sin((u + v) * 19);
-      if (d < 0.08 + wobble) c.set(x, y, rnd() < 0.2 ? P.waterLight : P.foam, 220);
-      else if (d < 0.16 + wobble && rnd() < 0.35) c.set(x, y, P.foam, 140);
     }
   }
   return c;
@@ -211,7 +182,6 @@ export function generateCritters(scene: Phaser.Scene): void {
     frameRate: 5,
     repeat: -1,
   });
-  for (let edges = 1; edges < 16; edges++) foam(edges).toTexture(scene, `water-foam-${edges}`);
 
   strip(scene, 'ripple', ripple(), 5);
   scene.anims.create({ key: 'ripple', frames: scene.anims.generateFrameNumbers('ripple', {}), frameRate: 6 });

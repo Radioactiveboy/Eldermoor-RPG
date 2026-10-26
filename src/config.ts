@@ -2,8 +2,8 @@
 export const TILE_WIDTH = 64;
 export const TILE_HEIGHT = 32;
 
-export const MAP_WIDTH = 48;
-export const MAP_HEIGHT = 48;
+export const MAP_WIDTH = 52;
+export const MAP_HEIGHT = 60;
 export const MAP_SEED = 'eldermoor';
 
 /** The hero's name, used by folk who know him. */
