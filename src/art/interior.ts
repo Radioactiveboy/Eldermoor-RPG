@@ -312,10 +312,9 @@ function barrel(cx: number, cy: number, m: IsoModel, h = 26): IsoModel {
 
 function barrels(): IsoModel {
   const m = new IsoModel();
-  barrel(0.35, 0.35, m);
-  barrel(0.55, 0.85, m, 22);
-  // A grain sack slumped against them.
-  m.cylinder(0.2, 1.0, 0, 0.18, 14, (u) => (u < 0.4 ? P.linen : P.linenDark), P.linen);
+  // Both kept inside the tile, so neither sticks out in front of what stands next to them.
+  barrel(0.3, 0.3, m);
+  barrel(0.7, 0.72, m, 22);
   return m;
 }
 
