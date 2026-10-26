@@ -147,6 +147,20 @@ export interface NpcSpawn {
   id: string;
   gx: number;
   gy: number;
+  /** A trader who keeps market hours: packs up and walks home in the evening, back in the morning. */
+  commute?: Commute;
+}
+
+/** How a stallholder gets between their stall and their front door (see systems/MarketHours.ts). */
+export interface Commute {
+  /** Their stall, which is covered over while they're away. */
+  stall: MapObject;
+  /** Where they step out from behind the counter. */
+  exit: { x: number; y: number };
+  /** Their front door, where they go in for the night. */
+  home: { x: number; y: number };
+  /** Hours after the others they open and close (negative for earlier). */
+  late: number;
 }
 
 /** A wild animal that roams near where it starts (see entities/Creature.ts). */

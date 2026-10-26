@@ -9,6 +9,7 @@ import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
 import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
 import { Inventory, ItemId, itemDef } from '../systems/Inventory';
+import { marketOpen } from '../systems/MarketHours';
 import { findPath, GridPoint } from '../systems/Pathfinding';
 import { rollLoot } from '../systems/Loot';
 import { PlayerStats } from '../systems/PlayerStats';
@@ -112,6 +113,19 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
     'Somewhere a cart rattles over the cobbles. Two women are arguing about the price of eggs.',
     'Clang, clang, clang. The smith is at it again.',
   ],
+  // The same bench after the traders have gone home.
+  'market-bench-closed': [
+    'The stalls are covered over for the night. The square is quiet without the traders.',
+    'A militiaman yawns by the well and leans on his spear.',
+    'Lamplight pools on the trodden earth. Somewhere a shutter bangs in the wind.',
+  ],
+};
+
+/** What the militia call out about the market's hours. */
+const MILITIA_CALLS = {
+  closing: "Market's closing! Stalls are shut till morning, folks. Off home with you.",
+  closed: "Market's shut for the night, friend. The traders have all gone home. Come back in the morning.",
+  opening: "Morning! Market's open!",
 };
 
 /** What the hero thinks on waking, by the hour. */
@@ -175,6 +189,8 @@ export class GameScene extends Phaser.Scene {
   private exitArmed = true;
   /** The last tile the player stood on that isn't a road exit: where turning back walks them to. */
   private lastOffExit: GridPoint = { x: 0, y: 0 };
+  /** Whether the market was open last frame, so the militia can call out when it shuts or opens. */
+  private marketWasOpen = true;
 
   constructor() {
     super('Game');
@@ -227,7 +243,8 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.map, start.x, start.y);
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
-    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy));
+    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour));
+    this.marketWasOpen = marketOpen(this.clock.hour);
     this.creatures = this.spawnCreatures();
     this.syncCrops();
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
@@ -253,8 +270,15 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(1200, () => this.onHint?.('Mother is resting by the hearth. She wants to speak with you.'));
     }
     if (this.area !== 'home') QuestLog.complete('mother-medicine', 'leave');
+    if (this.area === 'market' && !this.marketWasOpen) {
+      // Turning up after hours: the militia say so.
+      this.time.delayedCall(1400, () => this.militiaCall(MILITIA_CALLS.closed));
+    }
     if (this.area === 'market' && !this.visited.has('market')) {
-      this.time.delayedCall(1000, () => this.onHint?.('The market at last. Fresh bread, woodsmoke, and the clang of the smithy.'));
+      const firstSight = this.marketWasOpen
+        ? 'The market at last. Fresh bread, woodsmoke, and the clang of the smithy.'
+        : 'The market at last, but the stalls are all covered over for the night.';
+      this.time.delayedCall(1000, () => this.onHint?.(firstSight));
       QuestLog.writeDiary(
         'Followed the old road all the way to the market. The square was busier than I remembered, with the militia ' +
           'marching about in their tin hats. Someone here must know where to find moonpetal.',
@@ -293,7 +317,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.updateChannel(dt);
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : 1);
-    for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
+    for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
+    this.updateMarketHours();
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
     // Time stands still while fighting, turn by turn.
@@ -321,6 +346,21 @@ export class GameScene extends Phaser.Scene {
         this.crackleTimer = 0.15 + Math.random() * 1.2;
       }
     }
+  }
+
+  /** In the market, the militia call out as the stalls shut in the evening and open in the morning. */
+  private updateMarketHours(): void {
+    if (this.area !== 'market') return;
+    const open = marketOpen(this.clock.hour);
+    if (open !== this.marketWasOpen) this.militiaCall(open ? MILITIA_CALLS.opening : MILITIA_CALLS.closing);
+    this.marketWasOpen = open;
+  }
+
+  /** The militiaman nearest the player calls something out. */
+  private militiaCall(text: string): void {
+    const guards = this.npcs.filter((n) => n.id.startsWith('guard-'));
+    const nearest = guards.sort((a, b) => a.distanceTo(this.player.gx, this.player.gy) - b.distanceTo(this.player.gx, this.player.gy))[0];
+    nearest?.say(text, 6);
   }
 
   /** Do whatever is prompted (the E key, or tapping the prompt). */
@@ -615,7 +655,7 @@ export class GameScene extends Phaser.Scene {
       });
       return list;
     }
-    for (const npc of this.npcs) list.push(this.npcInteraction(npc));
+    for (const npc of this.npcs) if (npc.present) list.push(this.npcInteraction(npc));
     for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
     for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
     for (const sight of this.map.data.sights ?? []) {
@@ -643,7 +683,7 @@ export class GameScene extends Phaser.Scene {
 
   /** What clicking on a tile would use, if anything. */
   private interactionAt(tile: GridPoint): Interaction | undefined {
-    const npc = this.npcs.find((n) => n.tileX === tile.x && n.tileY === tile.y);
+    const npc = this.npcs.find((n) => n.present && n.tileX === tile.x && n.tileY === tile.y);
     if (npc) return this.npcInteraction(npc);
     const near = this.interactionsNear(tile.x + 0.5, tile.y + 0.5);
     return near.find((i) => i.tile.x === tile.x && i.tile.y === tile.y);
@@ -948,7 +988,8 @@ export class GameScene extends Phaser.Scene {
     const before = this.sitTimer;
     this.sitTimer += dt;
     if (before < 3 && this.sitTimer >= 3) {
-      const thoughts = SITTING_THOUGHTS[this.seat.name] ?? [];
+      const closed = this.area === 'market' && !marketOpen(this.clock.hour);
+      const thoughts = SITTING_THOUGHTS[closed ? `${this.seat.name}-closed` : this.seat.name] ?? [];
       if (thoughts.length > 0) this.onHint?.(thoughts[Math.floor(Math.random() * thoughts.length)]);
     }
   }

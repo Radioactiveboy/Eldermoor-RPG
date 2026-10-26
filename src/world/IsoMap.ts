@@ -59,6 +59,8 @@ export class IsoMap {
   readonly trees = new Map<number, { image: Phaser.GameObjects.Image; pine: boolean }>();
   /** Crop sprites by tile index (see MapData.crops). */
   readonly crops = new Map<number, Phaser.GameObjects.Image>();
+  /** Sprites of the standing objects, so their art can be changed (a stall covered over at night). */
+  private readonly objectSprites = new Map<MapObject, Phaser.GameObjects.Sprite>();
   /** People and animals walking about; characters bump into them. */
   readonly bodies = new Set<Body>();
   /** Collision outlines on each tile, in grid space. Undefined means open ground. */
@@ -407,6 +409,15 @@ export class IsoMap {
     const sprite = this.scene.add.sprite(p.x, p.y, art.key, obj.anim ? 0 : undefined);
     sprite.setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY).setFlipX(!!obj.flipX).setDepth(depth);
     if (obj.anim) sprite.play(obj.anim);
+    this.objectSprites.set(obj, sprite);
+  }
+
+  /** Show a placed object with different art of the same footprint, e.g. 'mkt-stall-baker-closed'. */
+  setObjectArt(obj: MapObject, key: string): void {
+    const sprite = this.objectSprites.get(obj);
+    const art = MODEL_ART[key];
+    if (!sprite || !art || sprite.texture.key === art.key) return;
+    sprite.setTexture(art.key).setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY);
   }
 
   private placeProp(prop: Prop, tx: number, ty: number): void {

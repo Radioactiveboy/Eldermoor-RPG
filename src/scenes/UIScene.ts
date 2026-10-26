@@ -8,6 +8,7 @@ import { Ambient } from '../systems/TimeOfDay';
 import { DayNightOverlay, ScreenLight } from '../ui/DayNightOverlay';
 import { Minimap } from '../ui/Minimap';
 import { QuestTracker } from '../ui/QuestTracker';
+import { SpeechBubbles } from '../ui/SpeechBubbles';
 import { StatusBars } from '../ui/StatusBars';
 import { TimeWheel } from '../ui/TimeWheel';
 import { Toasts } from '../ui/Toasts';
@@ -41,6 +42,7 @@ export class UIScene extends Phaser.Scene {
   private satchelButton!: Phaser.GameObjects.Container;
   private tracker!: QuestTracker;
   private toasts!: Toasts;
+  private bubbles!: SpeechBubbles;
   /** The "E  Talk" style prompt over whatever the player can use; rebuilt when its label changes. */
   private prompt?: Phaser.GameObjects.Container;
   private promptLabel = '';
@@ -70,6 +72,7 @@ export class UIScene extends Phaser.Scene {
     this.satchelButton = this.makeIconButton((g) => this.drawSatchelIcon(g), () => this.world.openInventory());
     this.tracker = new QuestTracker(this, () => this.world.openJournal());
     this.toasts = new Toasts(this);
+    this.bubbles = new SpeechBubbles(this);
     this.progress = this.add.graphics().setVisible(false);
     this.progressLabel = this.add
       .text(0, 0, '', { fontFamily: UI_FONT, fontSize: '13px', color: UI_COLORS.text, stroke: '#000000', strokeThickness: 3 })
@@ -98,6 +101,7 @@ export class UIScene extends Phaser.Scene {
       offSave();
       this.world.onHint = undefined;
       this.world.onSign = undefined;
+      this.bubbles.destroy();
       this.minimap?.destroy();
       this.minimap = undefined;
       this.minimapOf = undefined;
@@ -189,6 +193,7 @@ export class UIScene extends Phaser.Scene {
     this.wheel.update(game.clock);
     this.minimap!.update(sprite, cam.worldView, outdoor.color);
     this.tracker.update();
+    this.bubbles.update(game.npcs, toScreen, !game.inCombat);
     this.updatePrompt(toScreen);
     this.updateProgress(toScreen);
     if (this.combatMode !== game.inCombat) this.setCombatMode(game.inCombat);
