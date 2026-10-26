@@ -6,6 +6,9 @@ export const MAP_WIDTH = 48;
 export const MAP_HEIGHT = 48;
 export const MAP_SEED = 'eldermoor';
 
+/** The hero's name, used by folk who know him. */
+export const HERO_NAME = 'Arthus';
+
 export const PLAYER_SPEED = 4; // tiles per second
 export const PLAYER_RADIUS = 0.25; // in tiles, used for collision
 

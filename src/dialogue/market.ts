@@ -1,3 +1,4 @@
+import { HERO_NAME } from '../config';
 import type { DialogueScript } from './Dialogue';
 
 /**
@@ -14,14 +15,14 @@ export const BAKER: DialogueScript = {
     greet: {
       speaker: 'baker',
       lines: [
-        "Morning, love! You're from the cottage out by the lake, aren't you? I'd know your mother's face anywhere. Look at you, all grown.",
+        `Morning, love! Why, it's little ${HERO_NAME}, from the cottage out by the lake! I'd know your mother's face anywhere. Look at you, all grown.`,
         "Hilde. I bake for half the village and gossip for the other half. What can I do you for?",
       ],
       next: 'ask',
     },
     again: {
       speaker: 'baker',
-      lines: ['Back again? Something sweet this time, I hope.'],
+      lines: [`Back again, ${HERO_NAME}? Something sweet this time, I hope.`],
       next: 'ask',
     },
     ask: {
@@ -52,7 +53,7 @@ export const BAKER: DialogueScript = {
     },
     bye: {
       speaker: 'baker',
-      lines: ['Mind how you go, and give your mother my love.'],
+      lines: [`Mind how you go, ${HERO_NAME}, and give your mother my love.`],
     },
     closing: {
       speaker: 'baker',
