@@ -118,6 +118,7 @@ src/
   ui/StatusBars.ts        Slim health and stamina bars, the hero's level and an XP bar
   ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day
   ui/Minimap.ts           Isometric minimap with player and camera view
+  ui/LocationLabel.ts     Current area name (and nearby landmark) under the minimap
   ui/DayNightOverlay.ts   Tints the world by time of day; lantern, hearth and candle light
   ui/QuestTracker.ts      HUD reminder of the current quest step
   ui/Toasts.ts            "New quest" banners and the hero's passing thoughts
