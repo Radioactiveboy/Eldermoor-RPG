@@ -5,8 +5,10 @@ import { Prop, Terrain } from '../world/MapData';
 import type { IsoMap } from '../world/IsoMap';
 import { drawPanel } from './theme';
 
-/** Minimap pixels per world pixel: each 64x32 tile becomes a 4x2 diamond. */
+/** Minimap pixels per world pixel: each 64x32 tile becomes a 4x2 diamond, unless the map is too big for that. */
 const SCALE = 4 / TILE_WIDTH;
+/** Widest the minimap gets, in pixels: Adowvale Hollow's width. Bigger maps get smaller tiles. */
+const MAX_W = 224;
 const PAD = 10;
 
 const TERRAIN_COLOR: Record<Terrain, number> = {
@@ -39,10 +41,14 @@ export class Minimap {
   private readonly mapW: number;
   private readonly mapH: number;
   private scale = 1;
+  /** Minimap pixels per world pixel, for this map. */
+  private readonly px: number;
 
   constructor(scene: Phaser.Scene, map: IsoMap) {
     this.origin = new Phaser.Math.Vector2(gridToScreen(0, map.height).x, 0);
-    this.mapW = (map.width + map.height) * (TILE_WIDTH / 2) * SCALE;
+    const worldW = (map.width + map.height) * (TILE_WIDTH / 2);
+    this.px = Math.min(SCALE, MAX_W / worldW);
+    this.mapW = worldW * this.px;
     this.mapH = this.mapW / 2;
     this.bake(scene, map);
     this.frame = scene.add.graphics();
@@ -94,10 +100,10 @@ export class Minimap {
     const g = this.overlay.clear();
     const bounds = new Phaser.Geom.Rectangle(0, 0, this.mapW, this.mapH);
     const cam = new Phaser.Geom.Rectangle(
-      (view.x - this.origin.x) * SCALE,
-      (view.y - this.origin.y) * SCALE,
-      view.width * SCALE,
-      view.height * SCALE,
+      (view.x - this.origin.x) * this.px,
+      (view.y - this.origin.y) * this.px,
+      view.width * this.px,
+      view.height * this.px,
     );
     const visible = Phaser.Geom.Rectangle.Intersection(bounds, cam);
     if (visible.width > 0 && visible.height > 0) {
@@ -105,8 +111,8 @@ export class Minimap {
       g.strokeRectShape(visible);
     }
 
-    const px = (playerWorld.x! - this.origin.x) * SCALE;
-    const py = (playerWorld.y! - this.origin.y) * SCALE;
+    const px = (playerWorld.x! - this.origin.x) * this.px;
+    const py = (playerWorld.y! - this.origin.y) * this.px;
     g.fillStyle(0x000000, 1);
     g.fillCircle(px, py, 4);
     g.fillStyle(0xffd34d, 1);
@@ -116,13 +122,13 @@ export class Minimap {
   private bake(scene: Phaser.Scene, map: IsoMap): void {
     if (scene.textures.exists('minimap')) scene.textures.remove('minimap');
     const g = scene.make.graphics({}, false);
-    const hw = (TILE_WIDTH / 2) * SCALE + 0.3; // slight overlap hides seams between tiles
+    const hw = (TILE_WIDTH / 2) * this.px + 0.3; // slight overlap hides seams between tiles
     const hh = hw / 2;
     for (let ty = 0; ty < map.height; ty++) {
       for (let tx = 0; tx < map.width; tx++) {
         const p = gridToScreen(tx + 0.5, ty + 0.5);
-        const cx = (p.x - this.origin.x) * SCALE;
-        const cy = (p.y - this.origin.y) * SCALE;
+        const cx = (p.x - this.origin.x) * this.px;
+        const cy = (p.y - this.origin.y) * this.px;
         const color = PROP_COLOR[map.data.props[ty][tx]] ?? TERRAIN_COLOR[map.data.terrain[ty][tx]];
         g.fillStyle(color, 1);
         g.fillPoints(

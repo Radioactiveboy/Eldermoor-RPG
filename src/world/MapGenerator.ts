@@ -98,10 +98,10 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   return data;
 }
 
-type Vec = { x: number; y: number };
+export type Vec = { x: number; y: number };
 
 /** A smooth curve through the points (Catmull-Rom), as closely spaced points along it. */
-function smoothLine(points: Vec[]): Vec[] {
+export function smoothLine(points: Vec[]): Vec[] {
   const out: Vec[] = [];
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = points[Math.max(0, i - 1)];
@@ -122,7 +122,7 @@ function smoothLine(points: Vec[]): Vec[] {
 }
 
 /** Points along a line roughly `step` tiles apart. */
-function spaced(line: Vec[], step: number): Vec[] {
+export function spaced(line: Vec[], step: number): Vec[] {
   const out: Vec[] = [line[0]];
   for (const p of line) {
     const last = out[out.length - 1];
@@ -136,7 +136,7 @@ function spaced(line: Vec[], step: number): Vec[] {
  * of the `between` tiles that separate them into it too, so a path or the
  * shore never pinches down to a point.
  */
-function joinDiagonals(terrain: Terrain[][], kind: Terrain, between: Terrain): void {
+export function joinDiagonals(terrain: Terrain[][], kind: Terrain, between: Terrain): void {
   const dirt = (x: number, y: number) => terrain[y][x] === kind;
   for (let y = 0; y < terrain.length - 1; y++) {
     for (let x = 0; x < terrain[0].length - 1; x++) {
@@ -152,7 +152,7 @@ function joinDiagonals(terrain: Terrain[][], kind: Terrain, between: Terrain): v
  * within `radius(t)` of it turns to dirt, t running 0..1 along the line, so
  * the path can widen and narrow as it goes.
  */
-function paintPath(terrain: Terrain[][], line: Vec[], radius: (t: number) => number): void {
+export function paintPath(terrain: Terrain[][], line: Vec[], radius: (t: number) => number): void {
   line.forEach((p, i) => {
     const r = radius(i / Math.max(1, line.length - 1));
     for (let y = Math.floor(p.y - r - 1); y <= p.y + r + 1; y++) {
@@ -164,7 +164,7 @@ function paintPath(terrain: Terrain[][], line: Vec[], radius: (t: number) => num
 }
 
 /**
- * The road runs off the west edge of the map towards the market (see
+ * The road runs off the west edge of the map towards Adowvale and its market (see
  * MarketMap.ts): walking off the end of it goes there. A signpost beside the
  * road points the way.
  */
@@ -174,7 +174,7 @@ function addRoadToMarket(data: MapData): void {
     if (data.terrain[y][0] === Terrain.Dirt) {
       (data.doors ??= []).push({
         tx: 0, ty: y, to: 'market', entry: 'road', auto: true,
-        ask: 'Do you want to make the trek to Adowvale Market?',
+        ask: 'Do you want to make the trek to Adowvale?',
       });
     }
   }
@@ -200,7 +200,7 @@ function addRoadToMarket(data: MapData): void {
       id: 'signpost-road', gx: tx + 0.5, gy: ty + 0.5, label: 'Read the sign', z: 58,
       sign: {
         heading: 'Signpost',
-        lines: ['←  West: Adowvale Market', '→  East: Adowvale Hollow', '↑  North: the hill caves'],
+        lines: ['←  West: Adowvale village and market', '→  East: Adowvale Hollow', '↑  North: the hill caves'],
       },
     });
   }
@@ -367,7 +367,7 @@ function addHenFarm(data: MapData, x0: number, y0: number): void {
 }
 
 /** A rectangle of split-rail fence; each piece joins up with the pieces beside it. Gates are left open. */
-function addFence(data: MapData, x0: number, y0: number, x1: number, y1: number, gates: Set<string>): void {
+export function addFence(data: MapData, x0: number, y0: number, x1: number, y1: number, gates: Set<string>): void {
   const isFence = (x: number, y: number) =>
     (x === x0 || x === x1 || y === y0 || y === y1) && x >= x0 && x <= x1 && y >= y0 && y <= y1 && !gates.has(`${x},${y}`);
   for (let y = y0; y <= y1; y++) {

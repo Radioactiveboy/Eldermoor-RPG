@@ -894,7 +894,204 @@ const iran: Painter = (c, fr) => {
   finish(c);
 };
 
-const PAINTERS: Record<string, Painter> = { mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran };
+/** One of Lord Morten's toll guards: a black nasal helm, a broken nose, a sour look, Morten's crimson over mail. */
+const tollguard: Painter = (c, fr) => {
+  const skin = ramp(0xd8a482);
+  const steel = ramp(0x4e4a56);
+  const iron = ramp(0x7a7a86);
+  const tabard = ramp(0x8a1c26);
+  const mail = (x: number, y: number, v: number) => tone(iron, v + ((x + (y % 2)) % 2 ? -0.18 : 0.06), x, y);
+  for (let y = 70; y < S; y++) {
+    const half = 18 + Math.pow(Math.min(1, (y - 70) / 10), 0.55) * 30;
+    for (let x = Math.floor(CX - half); x < Math.ceil(CX + half); x++) c.set(x, y, mail(x, y, lightness((x - CX) / (half + 4), -0.4 + (y - 70) / 40)));
+  }
+  // Crimson tabard with a black chevron.
+  for (let y = 80; y < S; y++) {
+    for (let x = CX - 21; x < CX + 21; x++) {
+      const chevron = Math.abs(y - 84 - Math.abs(x + 0.5 - CX) * 0.45) < 2.2;
+      c.set(x, y, chevron ? 0x262028 : tone(tabard, lightness((x - CX) / 30, (y - 86) / 30, 0.02), x, y));
+    }
+  }
+  for (let x = CX - 21; x < CX + 21; x++) c.set(x, 80, 0x262028);
+  // Mail coif round the face.
+  for (let y = 30; y < 82; y++) {
+    for (let x = CX - 25; x < CX + 25; x++) {
+      const nx = (x + 0.5 - CX) / 25;
+      const ny = (y + 0.5 - 54) / 28;
+      if (nx * nx + ny * ny > 1) continue;
+      c.set(x, y, mail(x, y, lightness(nx * 0.9, ny * 0.9) - 0.1));
+    }
+  }
+  const shape = { skin, width: 16.5, jaw: 8.5, top: 31, chin: 70, shadowAbove: 40 };
+  face(c, shape);
+  // Dark stubble along the jaw.
+  for (let y = EYE_Y + 9; y <= 70; y++) {
+    const w = faceHalf(shape, y) ?? 0;
+    for (let x = Math.round(CX - w); x < Math.round(CX + w); x++) {
+      if (BAYER[(y & 3) * 4 + (x & 3)] < 0.5 && Math.abs(x - CX) > 5 - (y - EYE_Y - 9) * 0.6) c.set(x, y, skin[1]);
+    }
+  }
+  eyes(c, { iris: 0x4a3a2a, blink: fr.blink, skin, look: -1 });
+  brows(c, 0x2e2420, 'stern', 3);
+  nose(c, skin, 1);
+  // Broken once, set crooked.
+  c.set(CX + 1, EYE_Y + 4, skin[1]);
+  c.set(CX + 2, EYE_Y + 5, skin[3]);
+  // A pale scar through the left brow.
+  for (let i = 0; i < 6; i++) c.set(CX - 11 + Math.round(i * 0.4), EYE_Y - 7 + i, skin[4]);
+  mouth(c, { skin, lip: 0x9a5048, open: fr.open, curve: -1, half: 4 });
+  // A drooping black moustache.
+  for (let x = CX - 6; x <= CX + 6; x++) {
+    const droop = Math.abs(x - CX) > 4 ? 1 : 0;
+    c.set(x, EYE_Y + 13 + droop, 0x2a2024);
+    if (Math.abs(x - CX) < 5) c.set(x, EYE_Y + 12, 0x3a2e2a);
+  }
+  // The helm: a tall cone of blackened steel with a nose guard and a brow band.
+  for (let y = 8; y < 41; y++) {
+    const t = (y - 8) / 32;
+    const half = 3 + Math.pow(t, 0.6) * 21;
+    for (let x = Math.floor(CX - half); x < Math.ceil(CX + half); x++) {
+      const nx = (x + 0.5 - CX) / (half + 1);
+      c.set(x, y, tone(steel, lightness(nx, t - 0.6, 0.05) + (Math.abs(x + 0.5 - CX + 6) < 1.2 && y > 14 ? 0.35 : 0), x, y));
+    }
+  }
+  for (let x = CX - 24; x <= CX + 24; x++) {
+    c.set(x, 37, steel[3]);
+    c.set(x, 38, steel[2]);
+    c.set(x, 39, steel[1]);
+    c.set(x, 40, steel[0]);
+    if ((x - CX) % 5 === 0) c.set(x, 38, iron[4]);
+  }
+  for (let y = 40; y < EYE_Y + 7; y++) {
+    c.set(CX - 1, y, steel[3]);
+    c.set(CX, y, steel[2]);
+    c.set(CX + 1, y, steel[1]);
+  }
+  finish(c);
+};
+
+/** Odo the carter: round and ruddy, a bushy brown moustache, a flat cap and a russet coat with a spotted neckerchief. */
+const carter: Painter = (c, fr) => {
+  const skin = ramp(0xe0a07c);
+  const hair = ramp(0x6a4a30);
+  const coat = ramp(0x8a4a2a);
+  const cap = ramp(0x5a5a3e);
+  const kerchief = ramp(0x2e5a7a);
+  blob(c, CX, 46, 24, 18, hair, -0.05, strands((x, y) => x * 0.7 + y * 0.2, undefined, 31));
+  neck(c, skin, 9, 64);
+  shoulders(c, coat, 73, 8);
+  // Neckerchief knotted at the throat, with white spots.
+  for (let y = 70; y < 82; y++) {
+    const half = 14 - (y - 70) * 0.8;
+    for (let x = Math.round(CX - half); x < Math.round(CX + half); x++) {
+      const spot = (x + y * 2) % 7 === 0;
+      c.set(x, y, spot ? 0xe8e0d0 : tone(kerchief, lightness((x - CX) / 16, (y - 74) / 14), x, y));
+    }
+  }
+  blob(c, CX + 1, 82, 3.5, 2.8, kerchief, 0.1);
+  for (let y = 84; y < S; y++) {
+    c.set(CX - 6 + Math.round((y - 84) * 0.3), y, coat[0]);
+    c.set(CX + 6 - Math.round((y - 84) * 0.3), y, coat[0]);
+  }
+  ears(c, skin, 18.5);
+  const shape = { skin, width: 18.5, jaw: 10, top: 28, chin: 70, shadowAbove: 36 };
+  face(c, shape);
+  eyes(c, { iris: 0x4a6a8a, blink: fr.blink, skin });
+  brows(c, 0x5a3c26, 'heavy', 3);
+  nose(c, skin, 2);
+  blush(c, 0xd0504a, 0.9);
+  wrinkles(c, skin);
+  mouth(c, { skin, lip: 0xa0504a, open: fr.open, curve: 1, half: 4, y: EYE_Y + 17 });
+  // A great bushy moustache.
+  const tash = strands((x) => x * 1.3, undefined, 33);
+  for (let y = EYE_Y + 11; y <= EYE_Y + 16; y++) {
+    for (let x = CX - 11; x <= CX + 11; x++) {
+      const dx = Math.abs(x + 0.5 - CX);
+      const top = EYE_Y + 11 + Math.max(0, dx - 6) * 0.35;
+      const bottom = EYE_Y + 14 + Math.max(0, dx - 4) * 0.25 - (dx < 2 ? 1 : 0);
+      if (y < top || y > bottom) continue;
+      c.set(x, y, tone(hair, lightness((x - CX) / 14, (y - EYE_Y - 13) / 4, 0.05) + tash(x, y), x, y));
+    }
+  }
+  // Flat cap with a short peak.
+  blob(c, CX - 1, 27, 24, 10, cap, 0.05, (x, y) => ((x * 2 + y) % 6 === 0 ? -0.08 : 0), (_x, y) => y < 35);
+  for (let y = 31; y <= 37; y++) {
+    for (let x = CX - 22; x <= CX + 20; x++) {
+      const nx = (x + 0.5 - CX) / 22;
+      const ny = (y + 0.5 - 34) / 3.6;
+      if (nx * nx + ny * ny > 1) continue;
+      c.set(x, y, ny > 0.3 ? cap[0] : tone(cap, lightness(nx, -0.4, 0.04), x, y));
+    }
+  }
+  c.set(CX - 1, 18, cap[3]);
+  finish(c);
+};
+
+/** Ness the herb-gatherer: weathered and kind, grey-streaked hair under a sage-green hood, a sprig of herbs at her ear. */
+const herbwife: Painter = (c, fr) => {
+  const skin = ramp(0xd8a888);
+  const hair = ramp(0x6a625e);
+  const cloak = ramp(0x6a7a52);
+  const dress = ramp(0x7a5a46);
+  shoulders(c, cloak, 72, 12);
+  // Hood up, a little back from the face, showing her hair.
+  for (let y = 12; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - CX;
+      let half: number;
+      if (y < 46) {
+        const ny = (y + 0.5 - 46) / 32;
+        half = 28 * Math.sqrt(Math.max(0, 1 - ny * ny));
+      } else half = 28 + (y - 46) * 0.3;
+      if (Math.abs(dx) > half) continue;
+      const fold = y > 56 ? Math.sin(dx * 0.4) * 0.07 : 0;
+      c.set(x, y, tone(cloak, lightness(dx / 32, (y - 44) / 46, 0.04) + fold, x, y));
+    }
+  }
+  blob(c, CX, 50, 22, 26, ramp(cloak[0]), -0.3);
+  const hairTex = strands((x, y) => (x - CX) * 0.9 + (y - 30) * Math.sign(x - CX) * 0.4, 30, 35);
+  blob(c, CX, 46, 21, 22, hair, 0, (x, y) => hairTex(x, y) + (hash(x, y * 2) > 0.8 ? 0.25 : 0));
+  neck(c, skin, 7, 64);
+  // The dress showing at the neck, and the cloak's clasp.
+  for (let y = 74; y < S; y++) {
+    const half = 7 + (y - 74) * 0.45;
+    for (let x = Math.round(CX - half); x < Math.round(CX + half); x++) c.set(x, y, tone(dress, lightness((x - CX) / 16, 0), x, y));
+  }
+  blob(c, CX, 76, 2.6, 2.2, ramp(P.ironLight), 0.1);
+  ears(c, skin, 16);
+  face(c, { skin, width: 16, jaw: 6.5, top: 30, chin: 69 });
+  eyes(c, { iris: 0x6a7a3a, blink: fr.blink, skin, lashes: true, look: 1 });
+  brows(c, 0x5a524e, 'arched');
+  nose(c, skin);
+  wrinkles(c, skin, true);
+  blush(c, 0xc0706a, 0.4);
+  mouth(c, { skin, lip: 0xa86460, open: fr.open, curve: 1, half: 4 });
+  // Hair parted in the middle, falling either side of the face.
+  for (let y = 26; y < 62; y++) {
+    for (let x = CX - 21; x <= CX + 21; x++) {
+      const dx = Math.abs(x + 0.5 - CX);
+      const line = 33 + Math.pow(dx / 14, 2) * 7;
+      const side = dx > 15.5 && y < 61 - (dx - 15) * 1.5;
+      if (y > line && !side) continue;
+      const nx = (x + 0.5 - CX) / 22;
+      if (nx * nx + ((y + 0.5 - 46) / 22) ** 2 > 1) continue;
+      c.set(x, y, tone(hair, lightness(nx * 0.8, (y - 46) / 30) + hairTex(x, y) + (hash(x * 3, y) > 0.82 ? 0.3 : 0), x, y));
+    }
+  }
+  // A sprig of rosemary and a pale flower tucked by her ear.
+  for (let i = 0; i < 10; i++) {
+    const x = CX + 19 + Math.round(i * 0.3);
+    const y = 50 - i;
+    c.set(x, y, P.leafDark);
+    if (i % 2) c.set(x + 1, y, P.leafLight);
+    else c.set(x - 1, y, P.leaf);
+  }
+  blob(c, CX + 22, 39, 2.2, 2, ramp(0xe8e4f0), 0.1);
+  c.set(CX + 22, 39, P.goldLight);
+  finish(c);
+};
+
+const PAINTERS: Record<string, Painter> = { mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */
 export function generatePortraits(scene: Phaser.Scene): void {

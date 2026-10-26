@@ -5,6 +5,7 @@ import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
 import { DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
 import { BlendLayer, blendTileKey, EDGE_VARIANTS, TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
+import { BakedLayer } from './BakedLayer';
 import { circle, circleHits, FULL_TILE, isBehind, offsetShape, Shape } from './Collision';
 import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
 
@@ -240,36 +241,30 @@ export class IsoMap {
   private render(): void {
     const { width, height, terrain, props } = this.data;
 
-    // Bake all ground tiles into one texture: one draw call instead of thousands.
+    // Bake all ground tiles into the ground layer: a few draw calls instead of thousands.
     // Outdoors it also takes in the outskirts past the map's edge.
     const bounds = this.getWorldBounds();
     if (!this.data.indoor) Phaser.Geom.Rectangle.Inflate(bounds, OUTSKIRTS_MARGIN, OUTSKIRTS_MARGIN);
-    const ground = this.scene.add.renderTexture(bounds.x, bounds.y, bounds.width, bounds.height);
-    ground.setOrigin(0, 0).setDepth(0);
-    const stamp = this.scene.make.image({ key: 'tile-grass' }, false);
+    const ground = new BakedLayer(this.scene, bounds);
+    const decor = this.data.decor ?? 0.22;
 
-    ground.beginDraw();
     for (let ty = 0; ty < height; ty++) {
       for (let tx = 0; tx < width; tx++) {
         const center = gridToScreen(tx + 0.5, ty + 0.5);
         const t = terrain[ty][tx];
-        stamp.setTexture(this.groundKey(tx, ty));
         // Subtle per-tile brightness variation so large areas don't look flat.
         const shade = 0xec + Math.floor(tileHash(tx, ty, 1) * 0x14);
-        stamp.setTint(Phaser.Display.Color.GetColor(shade, shade, shade));
-        stamp.setOrigin(0.5);
-        ground.batchDraw(stamp, center.x - bounds.x, center.y - bounds.y);
+        ground.draw(this.groundKey(tx, ty), center.x, center.y, { tint: Phaser.Display.Color.GetColor(shade, shade, shade) });
 
         const prop = props[ty][tx];
         if (prop === Prop.Tree || prop === Prop.Rock) {
           this.placeProp(prop, tx, ty);
-        } else if (prop === Prop.None && t === Terrain.Grass && tileHash(tx, ty, 2) < 0.22) {
+        } else if (prop === Prop.None && t === Terrain.Grass && tileHash(tx, ty, 2) < decor) {
           // Flowers, tufts and pebbles are painted flat into the ground layer.
           const key = DECOR_KEYS[Math.floor(tileHash(tx, ty, 3) * DECOR_KEYS.length)];
-          stamp.setTexture(key).clearTint().setOrigin(0.5, 1);
           const ox = (tileHash(tx, ty, 4) - 0.5) * 24;
           const oy = (tileHash(tx, ty, 5) - 0.5) * 10 + 4;
-          ground.batchDraw(stamp, center.x - bounds.x + ox, center.y - bounds.y + oy);
+          ground.draw(key, center.x + ox, center.y + oy, { originY: 1 });
         }
       }
     }
@@ -278,14 +273,10 @@ export class IsoMap {
       if (!obj.flat) continue;
       const art = MODEL_ART[obj.key];
       const p = gridToScreen(obj.tx, obj.ty);
-      stamp.setTexture(art.key).clearTint().setFlipX(!!obj.flipX);
-      stamp.setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY);
-      ground.batchDraw(stamp, p.x - bounds.x, p.y - bounds.y);
+      ground.draw(art.key, p.x, p.y, { flipX: !!obj.flipX, originX: obj.flipX ? 1 - art.originX : art.originX, originY: art.originY });
     }
-    ground.endDraw();
-    ground.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    if (!this.data.indoor) this.renderOutskirts(ground, bounds, stamp);
-    stamp.destroy();
+    if (!this.data.indoor) this.renderOutskirts(ground, bounds);
+    ground.bake(0);
 
     this.renderWalls();
     for (const obj of this.data.objects ?? []) if (!obj.flat) this.placeObject(obj);
@@ -362,7 +353,7 @@ export class IsoMap {
    * can walk there. Trees behind the map are baked into the ground; trees in
    * front of it go in one layer drawn over everything on the map.
    */
-  private renderOutskirts(ground: Phaser.GameObjects.RenderTexture, canvas: Phaser.Geom.Rectangle, stamp: Phaser.GameObjects.Image): void {
+  private renderOutskirts(ground: BakedLayer, canvas: Phaser.Geom.Rectangle): void {
     const { width, height, props } = this.data;
     const fog = Phaser.Display.Color.IntegerToColor(OUTSKIRTS_FOG);
     // Multiply-tint towards the fog the further out a tile is (f: 0 at the edge, 1 deep in the mist).
@@ -388,7 +379,6 @@ export class IsoMap {
     const minY = Math.floor(Math.min(...corners.map((c) => c.y))) - 1;
     const maxY = Math.ceil(Math.max(...corners.map((c) => c.y))) + 1;
 
-    ground.beginDraw();
     for (let ty = minY; ty <= maxY; ty++) {
       for (let tx = minX; tx <= maxX; tx++) {
         if (this.inBounds(tx, ty)) continue;
@@ -402,8 +392,7 @@ export class IsoMap {
 
         if (center.y < canvas.bottom + 16) {
           const shade = 0xec + Math.floor(tileHash(tx, ty, 1) * 0x14);
-          stamp.setTexture(this.groundKey(tx, ty)).setTint(tint(f, shade)).setOrigin(0.5);
-          ground.batchDraw(stamp, center.x - canvas.x, center.y - canvas.y);
+          ground.draw(this.groundKey(tx, ty), center.x, center.y, { tint: tint(f, shade) });
         }
 
         // Thick forest, thickening further out, but never on the road or in the water.
@@ -417,16 +406,13 @@ export class IsoMap {
     }
 
     const byDepth = (a: Tree, b: Tree) => a.tx + a.ty - (b.tx + b.ty);
-    const draw = (layer: Phaser.GameObjects.RenderTexture, trees: Tree[], ox: number, oy: number) => {
+    const draw = (layer: BakedLayer, trees: Tree[]) => {
       for (const tree of trees.sort(byDepth)) {
-        stamp.setTexture('shadow-large').setTint(tree.tint).setFlipX(false).setOrigin(0.5);
-        layer.batchDraw(stamp, tree.x - ox, tree.y - 2 - oy);
-        stamp.setTexture(tree.art.key).setFlipX(tree.flip).setOrigin(0.5, tree.art.originY);
-        layer.batchDraw(stamp, tree.x - ox, tree.y - oy);
+        layer.draw('shadow-large', tree.x, tree.y - 2, { tint: tree.tint });
+        layer.draw(tree.art.key, tree.x, tree.y, { tint: tree.tint, flipX: tree.flip, originY: tree.art.originY });
       }
     };
-    draw(ground, back, canvas.x, canvas.y);
-    ground.endDraw();
+    draw(ground, back);
 
     if (front.length === 0) return;
     // The front layer only needs to be as big as the trees in it.
@@ -442,15 +428,11 @@ export class IsoMap {
     }
     box.x = Math.floor(Math.max(box.x, canvas.left));
     box.y = Math.floor(box.y);
-    right = Math.min(right, canvas.right);
-    bottom = Math.min(bottom, canvas.bottom);
-    const layer = this.scene.add.renderTexture(box.x, box.y, Math.ceil(right - box.x), Math.ceil(bottom - box.y));
-    layer.setOrigin(0, 0).setDepth(depthAt(width, height) + 1);
-    layer.beginDraw();
-    draw(layer, front, box.x, box.y);
-    layer.endDraw();
-    layer.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    stamp.setFlipX(false);
+    box.width = Math.ceil(Math.min(right, canvas.right) - box.x);
+    box.height = Math.ceil(Math.min(bottom, canvas.bottom) - box.y);
+    const layer = new BakedLayer(this.scene, box);
+    draw(layer, front);
+    layer.bake(depthAt(width, height) + 1);
   }
 
   /** The two back walls of an indoor room, behind everything else. */
@@ -485,6 +467,31 @@ export class IsoMap {
     const art = MODEL_ART[key];
     if (!sprite || !art || sprite.texture.key === art.key) return;
     sprite.setTexture(art.key).setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY);
+  }
+
+  /**
+   * Changes what a placed object looks like and what it blocks, e.g. the toll
+   * gate swinging open: its art, the tiles pathfinding avoids (`blocks`, relative
+   * to its corner) and its collision outline.
+   */
+  reshapeObject(obj: MapObject, key: string, shapes: Shape[], blocks: Array<[number, number]>): void {
+    this.setObjectArt(obj, key);
+    obj.shapes = shapes;
+    obj.blocks = blocks;
+    const width = this.width;
+    for (let y = 0; y < obj.h; y++) {
+      for (let x = 0; x < obj.w; x++) {
+        const blocked = blocks.some(([bx, by]) => bx === x && by === y);
+        this.data.props[obj.ty + y][obj.tx + x] = blocked ? Prop.Blocked : Prop.None;
+        this.shapes[(obj.ty + y) * width + obj.tx + x] = [];
+      }
+    }
+    const placed = shapes.map((s) => offsetShape(s, obj.tx, obj.ty));
+    for (const s of placed) {
+      const c = s.kind === 'circle' ? s : { x: (s.x0 + s.x1) / 2, y: (s.y0 + s.y1) / 2 };
+      this.shapes[Math.floor(c.y) * width + Math.floor(c.x)]!.push(s);
+    }
+    this.slim.set(obj.ty * width + obj.tx, { depth: depthAt(obj.tx + obj.w / 2, obj.ty + obj.h / 2), shapes: placed });
   }
 
   private placeProp(prop: Prop, tx: number, ty: number): void {

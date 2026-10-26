@@ -64,7 +64,7 @@ export const QUESTS: Record<string, QuestDef> = {
       "He can't leave the farm with wolves about, so he gave me ten coins to buy a sack from Hilde's bakehouse stall at the market.",
     objectives: [
       { id: 'talk', text: 'Speak with Farmer Iran' },
-      { id: 'buy', text: "Buy a sack of chicken feed at Hilde's stall in Adowvale Market" },
+      { id: 'buy', text: "Buy a sack of chicken feed at Hilde's stall in Adowvale's market square" },
       { id: 'return', text: 'Bring the feed back to Farmer Iran' },
     ],
     xp: 80,

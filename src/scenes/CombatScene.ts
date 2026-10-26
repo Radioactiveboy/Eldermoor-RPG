@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { WOLF_FRAME } from '../art/creatures';
+import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
 import { HERO_NAME } from '../config';
 import type { Creature } from '../entities/Creature';
 import { Vec2 } from '../iso/IsoMath';
@@ -12,6 +12,7 @@ import {
   DEFEND_AC_BONUS,
   DEFEND_STAMINA,
   diceText,
+  FoeKind,
   FOES,
   HEAVY_STAMINA,
   HEAVY_TO_HIT,
@@ -61,7 +62,34 @@ const NARROW = 760;
 const CHIP_W = 72;
 const CHIP_H = 92;
 const LOG_LINES = 3;
-const PACK_NAMES = ['Grey Wolf', 'Scarred Wolf', 'Lean Wolf', 'Old Wolf', 'Young Wolf', 'Black Wolf'];
+/** Names to tell several of a kind apart in one fight. */
+const PACK_NAMES: Partial<Record<FoeKind, string[]>> = {
+  wolf: ['Grey Wolf', 'Scarred Wolf', 'Lean Wolf', 'Old Wolf', 'Young Wolf', 'Black Wolf'],
+};
+
+/** How each kind of beast's fight reads: how it starts, the banner, and how it runs off. */
+const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }> = {
+  wolf: {
+    start: 'The wolf lowers its head and snarls, circling you. It means to fight!',
+    banner: 'A wolf attacks!',
+    flee: 'yelps, tucks its tail and bolts for the trees!',
+  },
+  deer: {
+    start: 'You close in on the red deer. It wheels round to face you and lowers its antlers!',
+    banner: 'The hunt is on!',
+    flee: 'wheels away and bounds off across the plain!',
+  },
+  hare: {
+    start: 'You pounce at the hare. It freezes, ears flat, ready to bolt!',
+    banner: 'The hunt is on!',
+    flee: 'jinks away through the long grass and is gone!',
+  },
+  boar: {
+    start: 'The boar squeals, lowers its tusks and charges!',
+    banner: 'A boar charges!',
+    flee: 'squeals and crashes off into the thicket!',
+  },
+};
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
@@ -118,7 +146,8 @@ export class CombatScene extends Phaser.Scene {
     const defs: CombatantDef[] = [this.hero.c];
     data.foes.forEach((creature, i) => {
       const foe = FOES[creature.kind];
-      const name = data.foes.length === 1 ? foe.name : PACK_NAMES[i % PACK_NAMES.length];
+      const names = PACK_NAMES[creature.kind];
+      const name = data.foes.length === 1 || !names ? foe.name : names[i % names.length];
       defs.push({ ...foe, id: creature.id, name, side: 'foes', hp: foe.maxHp });
     });
     this.battle = new Battle(defs);
@@ -129,7 +158,7 @@ export class CombatScene extends Phaser.Scene {
       sprite: creature.sprite,
       offset: creature.offset,
       pos: () => ({ x: creature.gx, y: creature.gy }),
-      height: 26,
+      height: CREATURE_ART[creature.kind].feetY - 3,
       creature,
     }));
     this.actors = [this.hero, ...this.foes];
@@ -171,7 +200,7 @@ export class CombatScene extends Phaser.Scene {
         ? this.world.map.data.underground
           ? 'Eyes shine in the lantern light. Wolves pad out of the dark, hackles raised. You are surrounded!'
           : 'Wolves slink out of the grass, hackles raised. You are surrounded!'
-        : 'The wolf lowers its head and snarls, circling you. It means to fight!',
+        : FOE_TEXT[first.creature!.kind].start,
     );
     // The beasts close in, and the camera settles on the fight.
     const spots: Vec2[] = [];
@@ -179,7 +208,7 @@ export class CombatScene extends Phaser.Scene {
     await Promise.all(this.foes.map((f, i) => f.creature!.moveTo(spots[i].x, spots[i].y, 650)));
     this.world.player.faceTowards(first.pos().x, first.pos().y);
     this.world.frameFight(this.actors.map((a) => a.pos()));
-    this.banner(this.foes.length > 1 ? 'Wolves attack!' : 'A wolf attacks!');
+    this.banner(this.foes.length > 1 ? 'Wolves attack!' : FOE_TEXT[first.creature!.kind].banner);
     await this.wait(900);
 
     if (!Inventory.equipped.mainHand) {
@@ -288,7 +317,7 @@ export class CombatScene extends Phaser.Scene {
     } else if (action.type === 'flee') {
       foe.c.fled = true;
       GameAudio.yelp();
-      this.log(`The ${foe.c.name} yelps, tucks its tail and bolts for the trees!`);
+      this.log(`The ${foe.c.name} ${FOE_TEXT[foe.creature!.kind].flee}`);
       const from = this.hero.pos();
       await foe.creature!.flee(from.x, from.y);
     }
@@ -373,13 +402,13 @@ export class CombatScene extends Phaser.Scene {
 
     await this.rollDie(attacker, r.roll, signed(r.total - r.roll));
     if (attacker.creature) {
-      attacker.creature.setFrame(WOLF_FRAME.bite);
+      attacker.creature.setFrame(CREATURE_FRAME.bite);
       GameAudio.bite();
     } else {
       GameAudio.swing(heavy);
     }
     await this.lunge(attacker, target, heavy);
-    if (attacker.creature && attacker.c.hp > 0) attacker.creature.setFrame(WOLF_FRAME.snarl);
+    if (attacker.creature && attacker.c.hp > 0) attacker.creature.setFrame(CREATURE_FRAME.snarl);
 
     const who = attacker === this.hero ? 'You' : `The ${attacker.c.name}`;
     const whom = target === this.hero ? 'you' : `the ${target.c.name}`;
@@ -395,9 +424,9 @@ export class CombatScene extends Phaser.Scene {
       this.float(target, r.crit ? `Critical! -${r.damage}` : `-${r.damage}`, r.crit ? '#ffd76a' : '#ff6b5a', r.crit);
       if (target.creature && !r.killed) {
         GameAudio.yelp();
-        target.creature.setFrame(WOLF_FRAME.hurt);
+        target.creature.setFrame(CREATURE_FRAME.hurt);
         this.time.delayedCall(350, () => {
-          if (target.c.hp > 0 && !target.c.fled) target.creature!.setFrame(WOLF_FRAME.snarl);
+          if (target.c.hp > 0 && !target.c.fled) target.creature!.setFrame(CREATURE_FRAME.snarl);
         });
       }
       const how = r.crit ? 'A natural 20, a critical hit!' : 'Hit!';
@@ -431,7 +460,10 @@ export class CombatScene extends Phaser.Scene {
     this.hintText.setText('');
     const slain = this.foes.filter((f) => f.c.hp <= 0).map((f) => f.c.id);
     const fled = this.foes.filter((f) => f.c.fled).map((f) => f.c.id);
-    if (outcome === 'victory') {
+    if (outcome === 'victory' && slain.length === 0) {
+      // Everything ran off (game that bolted, a wolf that lost its nerve).
+      this.banner(this.foes.length > 1 ? 'They got away!' : 'It got away!', true);
+    } else if (outcome === 'victory') {
       GameAudio.victory();
       this.banner('Victory!', true);
     } else if (outcome === 'defeat') {
@@ -635,7 +667,7 @@ export class CombatScene extends Phaser.Scene {
       bg.fillRoundedRect(0, 0, CHIP_W, CHIP_H, 8);
       bg.lineStyle(active ? 3 : 1.5, c.side === 'party' ? 0x8fbf6a : THEME.gold, active ? 1 : 0.5);
       bg.strokeRoundedRect(0, 0, CHIP_W, CHIP_H, 8);
-      const portrait = c.side === 'party' ? this.add.image(CHIP_W / 2, 54, 'player', 0) : this.add.image(CHIP_W / 2, 50, 'creature-wolf', 0);
+      const portrait = c.side === 'party' ? this.add.image(CHIP_W / 2, 54, 'player', 0) : this.add.image(CHIP_W / 2, 50, this.actorOf(c).creature!.sprite.texture.key, 0);
       portrait.setOrigin(0.5, 1);
       if (c.side === 'party') portrait.setCrop(0, 4, 32, 40);
       const name = this.add
