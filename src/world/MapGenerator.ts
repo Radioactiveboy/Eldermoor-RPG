@@ -35,6 +35,8 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }
   }
 
+  joinDiagonals(terrain, Terrain.Water, Terrain.Sand);
+
   // A winding dirt road in from the west edge, bending across the meadow up to the cottage yard.
   // Its line wanders a little each way and it's wider in places, worn in by carts rather than laid out.
   const roadEnd = { x: home.x + 4, y: home.y + 3 };
@@ -79,7 +81,7 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   addGarden(data, home.x + 5, home.y - 2);
   addCave(data, { x: home.x + 4, y: home.y - 1 }, home.x + 7, 4);
   addHenFarm(data, home.x - 4, home.y - 23);
-  joinDiagonals(terrain);
+  joinDiagonals(terrain, Terrain.Dirt, Terrain.Grass);
   // A lone wolf nosing about south of the cottage, in sight of the door.
   (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });
   // Folk travelling the road, spread out along it (see entities/Npc.ts).
@@ -130,16 +132,17 @@ function spaced(line: Vec[], step: number): Vec[] {
 }
 
 /**
- * Where two patches of dirt only touch at a corner, wears away one of the
- * grass tiles between them, so a path never pinches down to a point.
+ * Where two patches of `kind` (dirt, water) only touch at a corner, turns one
+ * of the `between` tiles that separate them into it too, so a path or the
+ * shore never pinches down to a point.
  */
-function joinDiagonals(terrain: Terrain[][]): void {
-  const dirt = (x: number, y: number) => terrain[y][x] === Terrain.Dirt;
+function joinDiagonals(terrain: Terrain[][], kind: Terrain, between: Terrain): void {
+  const dirt = (x: number, y: number) => terrain[y][x] === kind;
   for (let y = 0; y < terrain.length - 1; y++) {
     for (let x = 0; x < terrain[0].length - 1; x++) {
       const across = (dirt(x, y) && dirt(x + 1, y + 1)) || (dirt(x + 1, y) && dirt(x, y + 1));
-      const grass = [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].filter(([gx, gy]) => terrain[gy][gx] === Terrain.Grass);
-      if (across && grass.length === 2) terrain[grass[0][1]][grass[0][0]] = Terrain.Dirt;
+      const grass = [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].filter(([gx, gy]) => terrain[gy][gx] === between);
+      if (across && grass.length === 2) terrain[grass[0][1]][grass[0][0]] = kind;
     }
   }
 }

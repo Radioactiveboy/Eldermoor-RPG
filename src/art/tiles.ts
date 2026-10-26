@@ -171,11 +171,13 @@ function highlight(): PixelCanvas {
   return c;
 }
 
-/** The grass and dirt variants, kept so road edges can be blended from them (see blendTileKey). */
-const grassArt: PixelCanvas[] = [];
-const dirtArt: PixelCanvas[] = [];
+/** The ground variants that blend into each other, kept so their edges can be painted from them (see blendTileKey). */
+const groundArt: Record<BlendGround, PixelCanvas[]> = { grass: [], dirt: [], sand: [], water: [] };
 
-/** How many wobbly shapes a road's edge can take along one side of a tile. */
+/** Ground that blends softly into its neighbours: dirt or sand over grass, and water over sand. */
+export type BlendGround = 'grass' | 'dirt' | 'sand' | 'water';
+
+/** How many wobbly shapes an edge can take along one side of a tile. */
 export const EDGE_VARIANTS = 4;
 
 /** Edge wobbles, each a few soft waves that come back to nothing at both ends of the side. */
@@ -190,46 +192,79 @@ function edgeWave(variant: number, t: number): number {
 }
 
 /**
- * A ground tile where dirt and grass meet, so roads and paths have soft,
- * wandering edges instead of the tiles' straight sides and square corners.
- *
- * Which of the 3x3 tiles around it are dirt (`mask`, bit (dy + 1) * 3 + dx + 1)
- * sets a smooth field that rounds off corners; `edges` (left, right, top,
- * bottom, each 0 for none or 1..EDGE_VARIANTS) wobble the line along each
- * side. A side's wobble is picked for that side of the map, so both tiles
- * that share it bend the same way and the edge carries on unbroken.
- * Made the first time it's needed and kept.
+ * One boundary across a tile: which of the 3x3 tiles around it lie on the
+ * upper side (`mask`, bit (dy + 1) * 3 + dx + 1) and how the line wobbles
+ * along each side (`edges`: left, right, top, bottom, each 0 for none or
+ * 1..EDGE_VARIANTS).
  */
-export function blendTileKey(scene: Phaser.Scene, mask: number, edges: number[], variant: number): string {
-  const key = `tile-blend-${mask}-${edges.join('')}-${variant}`;
+export interface BlendLayer {
+  mask: number;
+  edges: number[];
+}
+
+/**
+ * How far a point (u, v) of the tile lies on the upper side of a boundary:
+ * positive above it, negative below. The mask sets a smooth field that rounds
+ * off corners; the wobbles bend the line along each side. A side's wobble is
+ * picked for that side of the map, so both tiles that share it bend the same
+ * way and the edge carries on unbroken.
+ */
+function blendField(layer: BlendLayer, u: number, v: number): number {
+  const at = (dx: number, dy: number) => (layer.mask >> ((dy + 1) * 3 + dx + 1)) & 1;
+  const [left, right, top, bottom] = layer.edges;
+  // Bilinear between the centres of this tile and the three nearest neighbours.
+  const sx = u < 0.5 ? -1 : 1;
+  const sy = v < 0.5 ? -1 : 1;
+  const a = Math.abs(u - 0.5);
+  const b = Math.abs(v - 0.5);
+  const field = (1 - a) * (1 - b) * at(0, 0) + a * (1 - b) * at(sx, 0) + (1 - a) * b * at(0, sy) + a * b * at(sx, sy);
+  // Each side's wobble fades out towards the middle of the tile, smoothly so corners don't kink.
+  const fade = (t: number) => Math.max(0, 1 - 2 * t) ** 2;
+  const wobble =
+    fade(u) * edgeWave(left, v) + fade(1 - u) * edgeWave(right, v) + fade(v) * edgeWave(top, u) + fade(1 - v) * edgeWave(bottom, u);
+  return field + wobble - 0.5;
+}
+
+/**
+ * A ground tile where grass, a road (or a sandy shore) and water meet, so their
+ * edges are soft and wandering instead of the tiles' straight sides and square
+ * corners. `ground` is the bare earth or sand lying over the grass along the
+ * `shore` boundary; water lies over that along `wet`, if given, and then the
+ * foam along the water's edge is made as its own texture (the key plus
+ * '-foam') so it can lap back and forth. Made the first time it's needed and kept.
+ */
+export function blendTileKey(scene: Phaser.Scene, ground: 'dirt' | 'sand', shore: BlendLayer, wet: BlendLayer | undefined, variant: number): string {
+  const layerKey = (l?: BlendLayer) => (l ? `${l.mask}-${l.edges.join('')}` : 'x');
+  const key = `tile-blend-${ground}-${layerKey(shore)}-${layerKey(wet)}-${variant}`;
   if (scene.textures.exists(key)) return key;
-  const dirtAt = (dx: number, dy: number) => (mask >> ((dy + 1) * 3 + dx + 1)) & 1;
-  const [left, right, top, bottom] = edges;
-  const rnd = seededRandom(mask * 97 + variant * 13 + 1);
-  const grassSrc = grassArt[variant];
-  const dirtSrc = dirtArt[variant];
+  const rnd = seededRandom(shore.mask * 97 + (wet?.mask ?? 0) * 31 + variant * 13 + 1);
+  const grassSrc = groundArt.grass[variant];
+  const groundSrc = groundArt[ground][variant];
+  const waterSrc = groundArt.water[variant];
+  const rim = ground === 'dirt' ? P.dirtDark : P.sandDark;
+  const foam = wet ? new PixelCanvas(TILE_WIDTH, TILE_HEIGHT) : undefined;
   const c = paintDiamond(variant + 1, (c, x, y, u, v) => {
-    // Bilinear between the centres of this tile and the three nearest neighbours.
-    const sx = u < 0.5 ? -1 : 1;
-    const sy = v < 0.5 ? -1 : 1;
-    const a = Math.abs(u - 0.5);
-    const b = Math.abs(v - 0.5);
-    const field =
-      (1 - a) * (1 - b) * dirtAt(0, 0) + a * (1 - b) * dirtAt(sx, 0) + (1 - a) * b * dirtAt(0, sy) + a * b * dirtAt(sx, sy);
-    const wobble =
-      Math.max(0, 1 - 2 * u) * edgeWave(left, v) + Math.max(0, 2 * u - 1) * edgeWave(right, v) +
-      Math.max(0, 1 - 2 * v) * edgeWave(top, u) + Math.max(0, 2 * v - 1) * edgeWave(bottom, u);
-    const d = field + wobble - 0.5;
     const r = rnd();
+    const w = wet ? blendField(wet, u, v) : -1;
+    if (w > 0) {
+      // Water, a little lighter in the shallows (the foam lapping there is its own texture, below).
+      c.set(x, y, w < 0.05 && r < 0.25 ? P.waterLight : waterSrc.get(x, y) ?? P.water);
+      if (foam && w < 0.08) foam.set(x, y, r < 0.2 ? P.waterLight : P.foam, 220);
+      else if (foam && w < 0.16 && r < 0.35) foam.set(x, y, P.foam, 140);
+      return;
+    }
+    const d = blendField(shore, u, v);
     if (d > 0) {
-      // Bare earth, a little darker where it's trodden down along the edge.
-      c.set(x, y, d < 0.06 && r < 0.45 ? P.dirtDark : dirtSrc.get(x, y) ?? P.dirt);
+      // Bare earth or sand, darker where it's trodden down or wet along the edge.
+      const edge = (d < 0.06 && r < 0.45) || (w > -0.07 && r < 0.6);
+      c.set(x, y, edge ? rim : groundSrc.get(x, y) ?? P.dirt);
     } else {
-      // Grass, in ragged tufts where it overhangs the dirt.
+      // Grass, in ragged tufts where it overhangs the edge.
       c.set(x, y, d > -0.05 && r < 0.35 ? (r < 0.15 ? P.grassTip : P.grassDark) : grassSrc.get(x, y) ?? P.grass);
     }
   });
   c.toTexture(scene, key);
+  foam?.toTexture(scene, `${key}-foam`);
   return key;
 }
 
@@ -248,8 +283,8 @@ export function generateTiles(scene: Phaser.Scene): void {
     for (let v = 0; v < TILE_VARIANTS; v++) {
       const art = make(v + 1);
       art.toTexture(scene, tileKey(key, v));
-      if (key === 'tile-grass') grassArt[v] = art;
-      if (key === 'tile-dirt') dirtArt[v] = art;
+      const blend = key.slice('tile-'.length);
+      if (blend in groundArt) groundArt[blend as BlendGround][v] = art;
     }
   }
   highlight().toTexture(scene, 'tile-highlight');

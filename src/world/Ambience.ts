@@ -127,7 +127,7 @@ export class Ambience {
 
   // ------------------------------------------------------------ water
 
-  /** Glints on every water tile, and foam where it meets the shore. */
+  /** Glints on the open water, and foam where it meets the shore. */
   private dressWater(): void {
     const { width, height, terrain } = this.map.data;
     const isWater = (x: number, y: number) => x < 0 || y < 0 || x >= width || y >= height || terrain[y][x] === Terrain.Water;
@@ -136,18 +136,22 @@ export class Ambience {
         if (terrain[ty][tx] !== Terrain.Water) continue;
         const c = gridToScreen(tx + 0.5, ty + 0.5);
         this.water.push({ x: tx + 0.5, y: ty + 0.5 });
+        // Not on the edge, where the shore's soft line cuts into the tile.
+        if (!isWater(tx, ty - 1) || !isWater(tx, ty + 1) || !isWater(tx - 1, ty) || !isWater(tx + 1, ty)) continue;
         this.scene.add
           .sprite(c.x, c.y, 'water-shimmer')
           .setDepth(GROUND_FX_DEPTH)
           .play({ key: 'water-shimmer', startFrame: (tx * 3 + ty * 5) % 8 });
-        const edges =
-          (isWater(tx, ty - 1) ? 0 : 1) | (isWater(tx, ty + 1) ? 0 : 2) | (isWater(tx - 1, ty) ? 0 : 4) | (isWater(tx + 1, ty) ? 0 : 8);
-        if (edges) {
-          const image = this.scene.add.image(c.x, c.y, `water-foam-${edges}`).setDepth(GROUND_FX_DEPTH + 0.01);
-          // Neighbouring tiles are a little out of step, so the lapping travels round the shore.
-          this.foam.push({ image, phase: (tx + ty) * 0.45 });
-        }
       }
+    }
+    // The foam follows the shore's blended edge (see IsoMap.foam).
+    for (const [i, key] of this.map.foam) {
+      const tx = i % width;
+      const ty = Math.floor(i / width);
+      const c = gridToScreen(tx + 0.5, ty + 0.5);
+      const image = this.scene.add.image(c.x, c.y, key).setDepth(GROUND_FX_DEPTH + 0.01);
+      // Neighbouring tiles are a little out of step, so the lapping travels round the shore.
+      this.foam.push({ image, phase: (tx + ty) * 0.45 });
     }
   }
 

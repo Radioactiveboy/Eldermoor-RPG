@@ -3,7 +3,7 @@ import { TILE_WIDTH } from '../config';
 import { MODEL_ART, WALL_HEIGHT } from '../art/interior';
 import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
 import { DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
-import { blendTileKey, EDGE_VARIANTS, TILE_VARIANTS, tileKey } from '../art/tiles';
+import { BlendLayer, blendTileKey, EDGE_VARIANTS, TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { circle, circleHits, FULL_TILE, isBehind, offsetShape, Shape } from './Collision';
 import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
@@ -42,6 +42,17 @@ const TERRAIN_TEXTURE: Record<Terrain, string> = {
 
 const TILE_HALF = TILE_WIDTH / 2;
 
+/**
+ * Grounds that blend softly into each other, from the bottom up: dirt or sand
+ * lies over grass, and water over sand (see IsoMap.groundKey).
+ */
+const BLEND_LEVEL: Partial<Record<Terrain, number>> = {
+  [Terrain.Grass]: 0,
+  [Terrain.Dirt]: 1,
+  [Terrain.Sand]: 1,
+  [Terrain.Water]: 2,
+};
+
 /** Stable pseudo-random number per tile, so variants don't change between loads. */
 function tileHash(tx: number, ty: number, salt = 0): number {
   let h = (tx * 374761393 + ty * 668265263 + salt * 2246822519) | 0;
@@ -59,6 +70,8 @@ export class IsoMap {
   readonly trees = new Map<number, { image: Phaser.GameObjects.Image; pine: boolean }>();
   /** Crop sprites by tile index (see MapData.crops). */
   readonly crops = new Map<number, Phaser.GameObjects.Image>();
+  /** Foam along the lake's edge, by tile index: its texture key (see blendTileKey). */
+  readonly foam = new Map<number, string>();
   /** Sprites of the standing objects, so their art can be changed (a stall covered over at night). */
   private readonly objectSprites = new Map<MapObject, Phaser.GameObjects.Sprite>();
   /** People and animals walking about; characters bump into them. */
@@ -295,32 +308,51 @@ export class IsoMap {
   }
 
   /**
-   * The ground texture for a tile. Where a road or path meets grass the tile
-   * is blended (see blendTileKey) so the dirt has soft, uneven edges.
+   * The ground texture for a tile. Where a road or path meets grass, or the
+   * lake meets its sandy shore and the shore the grass, the tile is blended
+   * (see blendTileKey) so the edges are soft and uneven.
    */
   private groundKey(tx: number, ty: number): string {
     const t = this.terrainAt(tx, ty);
     const variant = Math.floor(tileHash(tx, ty) * TILE_VARIANTS);
-    if (t !== Terrain.Dirt && t !== Terrain.Grass) return tileKey(TERRAIN_TEXTURE[t], variant);
-    // Only dirt against grass blends: next to anything else (soil, stone, water) a tile keeps its edge.
-    const dirt = (x: number, y: number) => {
-      const n = this.terrainAt(x, y);
-      return n === Terrain.Dirt ? 1 : n === Terrain.Grass ? 0 : t === Terrain.Dirt ? 1 : 0;
+    const plain = tileKey(TERRAIN_TEXTURE[t], variant);
+    const level = BLEND_LEVEL[t];
+    if (level === undefined) return plain;
+    // Only these grounds blend: next to anything else (soil, stone) a tile keeps its edge.
+    const levelAt = (x: number, y: number) => BLEND_LEVEL[this.terrainAt(x, y)] ?? level;
+    // A boundary between the ground at or above `min` and the ground below it.
+    const layer = (min: number, salt: number): BlendLayer | undefined => {
+      let mask = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) mask |= (levelAt(tx + dx, ty + dy) >= min ? 1 : 0) << ((dy + 1) * 3 + dx + 1);
+      const self = (mask >> 4) & 1;
+      if (mask === (self ? 0x1ff : 0)) return undefined;
+      // Each side's wobble belongs to that side of the map, so the tiles either side of it agree.
+      const side = (x: number, y: number, s: number, other: number) =>
+        other === self ? 0 : 1 + Math.floor(tileHash(x, y, s) * EDGE_VARIANTS);
+      return {
+        mask,
+        edges: [
+          side(tx, ty, salt, (mask >> 3) & 1),
+          side(tx + 1, ty, salt, (mask >> 5) & 1),
+          side(tx, ty, salt + 1, (mask >> 1) & 1),
+          side(tx, ty + 1, salt + 1, (mask >> 7) & 1),
+        ],
+      };
     };
-    let mask = 0;
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) mask |= dirt(tx + dx, ty + dy) << ((dy + 1) * 3 + dx + 1);
-    const self = (mask >> 4) & 1;
-    if (mask === (self ? 0x1ff : 0)) return tileKey(TERRAIN_TEXTURE[t], variant);
-    // Each side's wobble belongs to that side of the map, so the tiles either side of it agree.
-    const side = (x: number, y: number, salt: number, other: number) =>
-      other === self ? 0 : 1 + Math.floor(tileHash(x, y, salt) * EDGE_VARIANTS);
-    const edges = [
-      side(tx, ty, 11, (mask >> 3) & 1),
-      side(tx + 1, ty, 11, (mask >> 5) & 1),
-      side(tx, ty, 12, (mask >> 1) & 1),
-      side(tx, ty + 1, 12, (mask >> 7) & 1),
-    ];
-    return blendTileKey(this.scene, mask, edges, variant);
+    const shore = layer(1, 11);
+    const wet = layer(2, 13);
+    if (!shore && !wet) return plain;
+    // What lies between the grass and the water here: the tile's own dirt or sand, else its neighbours'.
+    let ground: 'dirt' | 'sand' = t === Terrain.Dirt ? 'dirt' : 'sand';
+    if (t === Terrain.Grass) {
+      let sand = false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sand ||= this.terrainAt(tx + dx, ty + dy) === Terrain.Sand;
+      ground = sand ? 'sand' : 'dirt';
+    }
+    const full = { mask: 0x1ff, edges: [0, 0, 0, 0] };
+    const key = blendTileKey(this.scene, ground, shore ?? full, wet, variant);
+    if (wet && this.inBounds(tx, ty)) this.foam.set(ty * this.width + tx, `${key}-foam`);
+    return key;
   }
 
   /**
