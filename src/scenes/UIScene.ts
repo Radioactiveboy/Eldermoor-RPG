@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
+import { Experience, ExperienceEvent } from '../systems/Experience';
 import { Inventory, InventoryEvent, itemDef } from '../systems/Inventory';
 import { QuestLog, QuestEvent } from '../systems/Quests';
 import { SaveGame } from '../systems/SaveGame';
@@ -82,6 +83,7 @@ export class UIScene extends Phaser.Scene {
     this.world.onSign = (heading, lines) => this.toasts.sign(heading, lines);
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
+    const offXp = Experience.onChange((e) => this.onExperienceEvent(e));
     const offSave = SaveGame.onSave((save) => this.toasts.quest('Game saved', SaveGame.describe(save)));
 
     this.input.keyboard!.on('keydown-M', () => this.toggleMinimap());
@@ -92,6 +94,7 @@ export class UIScene extends Phaser.Scene {
       this.scale.off('resize', this.layout, this);
       off();
       offItems();
+      offXp();
       offSave();
       this.world.onHint = undefined;
       this.world.onSign = undefined;
@@ -131,6 +134,28 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: pop, y: y - 36, duration: 1400, ease: 'Cubic.easeOut' });
     this.tweens.add({ targets: pop, alpha: 0, delay: 900, duration: 500, onComplete: () => pop.destroy() });
     this.nudge(this.satchelButton);
+  }
+
+  /** "+40 XP" rising from the hero (a fight shows its own over the fallen beast), and a banner on a level-up. */
+  private onExperienceEvent(e: ExperienceEvent): void {
+    if (e.type === 'levelled') {
+      this.toasts.levelUp('Level up!', `You are now level ${e.level}. Maximum health ${this.world.stats.maxHealth}.`);
+      return;
+    }
+    if (this.world.inCombat || !this.world.player) return;
+    const cam = this.world.cameras.main;
+    const sprite = this.world.player.sprite;
+    const x = (sprite.x - cam.worldView.x) * cam.zoom;
+    // A little above where "+1 Carrot" pops, so a reward and its XP don't sit on top of each other.
+    const y = (sprite.y - cam.worldView.y) * cam.zoom - 48 * cam.zoom - 22;
+    const pop = this.add
+      .text(Math.round(x), Math.round(y), `+${e.amount} XP`, {
+        fontFamily: UI_FONT, fontSize: '13px', color: '#f2d27a', stroke: '#000000', strokeThickness: 3, fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(5);
+    this.tweens.add({ targets: pop, y: y - 30, duration: 1600, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: pop, alpha: 0, delay: 1100, duration: 500, onComplete: () => pop.destroy() });
   }
 
   /** Bounce a HUD button to draw the eye to it. */

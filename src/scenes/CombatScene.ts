@@ -16,6 +16,7 @@ import {
   HEAVY_TO_HIT,
   Outcome,
 } from '../systems/Combat';
+import { Experience } from '../systems/Experience';
 import { Inventory, itemDef, ItemId } from '../systems/Inventory';
 import { bodyStyle, THEME, titleStyle } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
@@ -413,7 +414,10 @@ export class CombatScene extends Phaser.Scene {
       if (target.creature) {
         GameAudio.yelp();
         target.creature.die();
-        this.log(`The ${target.c.name} crumples to the ground and lies still.`);
+        const xp = FOES[target.creature.kind].xp;
+        this.log(`The ${target.c.name} crumples to the ground and lies still. You earn ${xp} experience.`);
+        this.float(target, `+${xp} XP`, THEME.goldText);
+        this.gainXp(xp, target.c.name);
       } else {
         this.log('Your legs give way and the world goes dark...');
       }
@@ -451,7 +455,17 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
-  /** The hero's numbers, from what they're wearing and wielding. */
+  /** Experience for a kill. A level gained mid-fight counts at once: the new health is there to use. */
+  private gainXp(xp: number, reason: string): void {
+    Experience.gain(xp, reason);
+    const stats = this.world.stats;
+    if (stats.maxHealth !== this.hero.c.maxHp) {
+      Object.assign(this.hero.c, this.heroStats());
+      this.drawOrder();
+    }
+  }
+
+  /** The hero's numbers, from their level and what they're wearing and wielding. */
   private heroStats(): CombatantDef {
     const gear = Inventory.totals;
     const weapon = Inventory.equipped.mainHand;
@@ -463,8 +477,8 @@ export class CombatScene extends Phaser.Scene {
       hp: Math.round(stats.health),
       maxHp: stats.maxHealth,
       ac: 10 + gear.defence,
-      toHit: 3 + gear.attack,
-      damage: weapon ? { count: 1, sides: 6, bonus: gear.attack } : { count: 1, sides: 4, bonus: gear.attack },
+      toHit: 3 + gear.attack + Experience.toHitBonus,
+      damage: { count: 1, sides: weapon ? 6 : 4, bonus: gear.attack + Experience.damageBonus },
       quickness: 2,
       verb: weapon ? `swing your ${itemDef(weapon).name.toLowerCase()} at` : 'throw a punch at',
     };

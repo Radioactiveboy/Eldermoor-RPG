@@ -20,6 +20,8 @@ export interface QuestDef {
   /** A short paragraph for the journal, in the hero's own words. */
   summary: string;
   objectives: ObjectiveDef[];
+  /** Experience for finishing it (each step on the way earns a little too; see Experience.ts). */
+  xp: number;
 }
 
 export const QUESTS: Record<string, QuestDef> = {
@@ -36,6 +38,7 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'find', text: 'Find a healer or herbalist with moonpetal tincture' },
       { id: 'return', text: 'Bring the medicine home to Mother' },
     ],
+    xp: 200,
   },
   'lost-sheep': {
     id: 'lost-sheep',
@@ -50,6 +53,7 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'find', text: 'Find Bess and Bramble' },
       { id: 'tell', text: 'Tell Wil what became of his ewes' },
     ],
+    xp: 150,
   },
 };
 

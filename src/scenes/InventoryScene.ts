@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
+import { Experience } from '../systems/Experience';
 import { BAG_SIZE, EQUIP_SLOTS, EquipSlot, Inventory, ItemDef, itemDef, itemEffects, ItemId } from '../systems/Inventory';
 import { bodyStyle, makeButton, makePanel, THEME, titleStyle } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
@@ -247,7 +248,12 @@ export class InventoryScene extends Phaser.Scene {
     const totals = this.add
       .text(cx, y0 + GRID_H + 30, `Defence ${defence}     Attack ${attack}`, bodyStyle(17, THEME.goldText))
       .setOrigin(0.5, 1);
-    this.content.add(totals);
+    // The hero's level, between the slots, and how far it is to the next one.
+    const { into, span } = Experience.progress;
+    const next = span > 0 ? `${into} / ${span} XP to level ${Experience.level + 1}` : 'Highest level';
+    const level = this.add.text(cx, y0 + 196, `Level ${Experience.level}`, bodyStyle(17, THEME.goldText)).setOrigin(0.5, 0);
+    const xp = this.add.text(cx, level.y + level.height + 2, next, bodyStyle(12, THEME.dimText)).setOrigin(0.5, 0);
+    this.content.add([totals, level, xp]);
   }
 
   /** What's selected: its picture, name, description and what you can do with it. */

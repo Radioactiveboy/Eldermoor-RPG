@@ -6,13 +6,14 @@ import { Npc } from '../entities/Npc';
 import { SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
+import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
 import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
 import { Inventory, ItemId, itemDef } from '../systems/Inventory';
 import { findPath, GridPoint } from '../systems/Pathfinding';
 import { rollLoot } from '../systems/Loot';
 import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
-import { SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
+import { AREA_NAMES, SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops, SHOPS } from '../systems/Shops';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { buildCaveMap } from '../world/CaveMap';
@@ -200,6 +201,7 @@ export class GameScene extends Phaser.Scene {
       );
       QuestLog.dayProvider = () => this.clock.day;
       Inventory.reset();
+      Experience.reset();
       Farm.reset();
       Shops.reset();
       this.defeatedFoes.clear();
@@ -259,7 +261,17 @@ export class GameScene extends Phaser.Scene {
       );
     }
     if (this.area === 'cave') this.enteredCave();
+    // Finding somewhere new is worth a little experience (not the hero's own home).
+    if (!this.visited.has(this.area) && !data.newGame && this.area !== 'home') {
+      const name = AREA_NAMES[this.area];
+      this.time.delayedCall(700, () => Experience.gain(XP_REWARDS.discovery, `Found ${name}`));
+    }
     this.visited.add(this.area);
+    // A new level brings more maximum health, and the hero gets that much back straight away.
+    const offXp = Experience.onChange((e) => {
+      if (e.type === 'levelled') this.stats.heal((e.level - e.from) * HEALTH_PER_LEVEL);
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, offXp);
   }
 
   /** Into the wolves' den: the first time, the hero takes it in; on Wil's errand, that step is done. */

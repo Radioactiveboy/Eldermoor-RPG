@@ -217,7 +217,7 @@ export function chooseFoeAction(battle: Battle, foe: Combatant, rng: Rng = Math.
   return { type: 'attack', target };
 }
 
-/** The beasts that can be met in the wild. */
+/** The beasts that can be met in the wild, and the experience each is worth when slain. */
 export const FOES = {
   wolf: {
     name: 'Grey Wolf',
@@ -227,7 +227,8 @@ export const FOES = {
     damage: { count: 2, sides: 4, bonus: 2 },
     quickness: 2,
     verb: 'lunges at',
+    xp: 40,
   },
-} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'>>;
+} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number }>;
 
 export type FoeKind = keyof typeof FOES;
