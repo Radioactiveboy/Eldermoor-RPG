@@ -90,6 +90,8 @@ src/
   art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
                           boulders, bones and the dead ewes
+  art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker
+  art/gear.ts             How worn gear looks on the hero's sprite (hat, staff): add an entry to dress new items
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), item icons (items.ts),
@@ -97,7 +99,7 @@ src/
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
   settings/Settings.ts    Volume settings, saved in the browser
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
-  scenes/BootScene.ts     Generates the art, then opens the main menu
+  scenes/BootScene.ts     Generates the art, repaints the hero when gear changes, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
   scenes/SettingsScene.ts Volume sliders + fullscreen, opened from either menu

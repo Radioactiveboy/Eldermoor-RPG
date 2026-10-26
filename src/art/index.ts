@@ -9,6 +9,7 @@ import { generateInterior } from './interior';
 import { generateItemIcons } from './items';
 import { generateMarket } from './market';
 import { generateNpcs } from './npc';
+import { generatePortraits } from './portraits';
 import { generateProps } from './props';
 import { generateTiles } from './tiles';
 
@@ -24,6 +25,7 @@ export function generateArt(scene: Phaser.Scene): void {
   generateNpcs(scene);
   generateCreatures(scene);
   generateFolk(scene);
+  generatePortraits(scene);
   generateInterior(scene);
   generateFarm(scene);
   generateItemIcons(scene);

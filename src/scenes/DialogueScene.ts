@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { DialogueChoice, DialogueNode, DialogueScript, Speaker, SPEAKERS } from '../dialogue/Dialogue';
-import { PORTRAIT_SIZE } from '../art/npc';
+import { PORTRAIT_SIZE } from '../art/portraits';
 import { THEME } from '../ui/Widgets';
 
 export interface DialogueSceneData {
@@ -35,7 +35,7 @@ interface BoxLayout {
 function boxLayout(screenW: number): BoxLayout {
   if (screenW < COMPACT) {
     const w = screenW - 16;
-    const portrait = 92;
+    const portrait = 108;
     const px = -w / 2 + 10;
     return {
       compact: true, w, h: 150, portrait, px, py: -portrait + 16,
@@ -44,7 +44,7 @@ function boxLayout(screenW: number): BoxLayout {
     };
   }
   const w = 860;
-  const portrait = 144;
+  const portrait = 162;
   const px = -w / 2 + 18;
   const textX = px + portrait + 22;
   return {
