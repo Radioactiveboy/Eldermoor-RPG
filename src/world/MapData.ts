@@ -100,6 +100,21 @@ export interface Seat {
   name: string;
 }
 
+/**
+ * Somewhere to sleep. Sleeping passes the time and saves the game, so every
+ * bed is a save point: add one to any area to make another.
+ */
+export interface Bed {
+  /** Remembered in the save, so loading knows where the player went to sleep. */
+  id: string;
+  /** The tile clicking on selects it, and the point its prompt floats over. */
+  tx: number;
+  ty: number;
+  /** Where the player must stand near to use it, and where they wake up. */
+  gx: number;
+  gy: number;
+}
+
 export interface NpcSpawn {
   id: string;
   gx: number;
@@ -131,6 +146,7 @@ export interface MapData {
   npcs?: NpcSpawn[];
   crops?: CropPatch[];
   seats?: Seat[];
+  beds?: Bed[];
   creatures?: CreatureSpawn[];
   /** Chimney tops that smoke: grid position and height in pixels. */
   chimneys?: Array<{ gx: number; gy: number; z: number }>;

@@ -10,18 +10,20 @@ import { Inventory, ItemId, itemDef } from '../systems/Inventory';
 import { findPath, GridPoint } from '../systems/Pathfinding';
 import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
+import { SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops, SHOPS } from '../systems/Shops';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { buildHomeMap } from '../world/HomeMap';
 import { buildMarketMap } from '../world/MarketMap';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
-import { AreaId, CropPatch, Door, MapData, Prop, Seat } from '../world/MapData';
+import { AreaId, Bed, CropPatch, Door, MapData, Prop, Seat } from '../world/MapData';
 import { cropKey } from '../art/farm';
 import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
 import type { DialogueSceneData } from './DialogueScene';
 import type { CombatResult, CombatSceneData } from './CombatScene';
+import type { SleepSceneData } from './SleepScene';
 import type { ConfirmSceneData } from './ConfirmScene';
 
 type MoveKeys = Record<
@@ -37,6 +39,10 @@ export interface GameSceneData {
   entry?: string;
   /** Coming round at home after being beaten in a fight. */
   knockedOut?: boolean;
+  /** Carry on from a saved game: this replaces everything else here. */
+  load?: SaveData;
+  /** Just woke up after sleeping this many hours. */
+  slept?: number;
 }
 
 /** Things the HUD can show the player as a speech-like hint. */
@@ -97,6 +103,14 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
   ],
 };
 
+/** What the hero thinks on waking, by the hour. */
+function wakingThought(hour: number): string {
+  if (hour >= 5 && hour < 10) return 'Morning already. I feel rested, and the fire has burned low.';
+  if (hour >= 10 && hour < 16) return 'I slept half the day away. Still, I feel better for it.';
+  if (hour >= 16 && hour < 20) return 'The light is going. I feel rested, at least.';
+  return 'Dark outside. The fire crackles, and the house is quiet.';
+}
+
 /** Builds the map for an area. */
 function buildArea(area: AreaId): MapData {
   if (area === 'home') return buildHomeMap();
@@ -149,10 +163,21 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super('Game');
+    // What this scene itself remembers about the world goes in saves too.
+    SaveGame.register('world', {
+      save: () => ({ defeatedFoes: [...this.defeatedFoes], visited: [...this.visited] }),
+      load: (data) => {
+        const d = data as { defeatedFoes?: string[]; visited?: AreaId[] } | undefined;
+        this.defeatedFoes = new Set(d?.defeatedFoes ?? []);
+        this.visited = new Set(d?.visited ?? []);
+      },
+    });
   }
 
   create(data: GameSceneData = {}): void {
-    if (data.newGame || !this.stats) {
+    if (data.load) {
+      this.loadSave(data.load);
+    } else if (data.newGame || !this.stats) {
       this.stats = new PlayerStats();
       this.clock = new TimeOfDay();
       QuestLog.reset(
@@ -169,7 +194,7 @@ export class GameScene extends Phaser.Scene {
       const hourParam = new URLSearchParams(window.location.search).get('hour');
       if (hourParam !== null && !Number.isNaN(Number(hourParam))) this.clock.setHour(Number(hourParam));
     }
-    this.area = data.area ?? 'home';
+    this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market to start there.
     const areaParam = new URLSearchParams(window.location.search).get('area');
     if (data.newGame && (areaParam === 'market' || areaParam === 'world')) this.area = areaParam;
@@ -182,7 +207,7 @@ export class GameScene extends Phaser.Scene {
     this.arrivalGrace = ARRIVAL_GRACE;
 
     this.map = new IsoMap(this, buildArea(this.area));
-    const start = (data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn;
+    const start = data.load?.position ?? ((data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn);
     this.player = new Player(this, this.map, start.x, start.y);
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
@@ -201,6 +226,11 @@ export class GameScene extends Phaser.Scene {
 
     if (data.knockedOut) {
       this.time.delayedCall(1200, () => this.onHint?.('I came to on the cottage floor, aching all over. That wolf is still out there.'));
+    }
+    if (data.slept !== undefined) {
+      this.time.delayedCall(1000, () => this.onHint?.(wakingThought(this.clock.hour)));
+    } else if (data.load) {
+      this.time.delayedCall(1000, () => this.onHint?.('I wake in my own bed. The day is waiting.'));
     }
     if (data.newGame) {
       this.time.delayedCall(1200, () => this.onHint?.('Mother is resting by the hearth. She wants to speak with you.'));
@@ -360,6 +390,63 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // ------------------------------------------------------------ sleeping and saving
+
+  /** Lie down in a bed: choose how long to sleep for, then sleep and save. */
+  private goToBed(bed: Bed): void {
+    if (!QuestLog.has('mother-medicine')) {
+      this.onHint?.("I can't sleep yet. Mother wants to speak with me.");
+      return;
+    }
+    if (!this.takeControls()) return;
+    const data: SleepSceneData = { clock: this.clock };
+    this.scene.launch('Sleep', data);
+    this.scene.get('Sleep').events.once('sleep-closed', (hours?: number) => {
+      if (hours) this.sleep(bed, hours);
+      else this.release();
+    });
+  }
+
+  /** Fade to black, let the hours pass, wake rested, and save the game. */
+  private sleep(bed: Bed, hours: number): void {
+    this.player.setPath([]);
+    this.cameras.main.fadeOut(900, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.clock.advance(hours);
+      this.stats.heal(this.stats.maxHealth);
+      this.stats.restoreStamina(this.stats.maxStamina);
+      const save = this.makeSave(bed);
+      SaveGame.write(save);
+      // Wake up from the save just made, so waking always matches what loading it later gives.
+      this.scene.restart({ load: save, slept: hours } satisfies GameSceneData);
+    });
+  }
+
+  /** Everything needed to come back to this moment, waking in `bed`. */
+  private makeSave(bed: Bed): SaveData {
+    return {
+      version: SAVE_VERSION,
+      savedAt: Date.now(),
+      savePoint: bed.id,
+      area: this.area,
+      position: { x: bed.gx, y: bed.gy },
+      hours: this.clock.elapsedHours,
+      health: this.stats.health,
+      stamina: this.stats.stamina,
+      sections: SaveGame.collect(),
+    };
+  }
+
+  /** Puts the whole game back as it was when a save was made. */
+  private loadSave(save: SaveData): void {
+    this.stats = new PlayerStats();
+    this.stats.health = save.health;
+    this.stats.stamina = save.stamina;
+    this.clock = new TimeOfDay(save.hours);
+    QuestLog.dayProvider = () => this.clock.day;
+    SaveGame.restore(save);
+  }
+
   // ------------------------------------------------------------ combat
 
   private spawnCreatures(): Creature[] {
@@ -474,6 +561,7 @@ export class GameScene extends Phaser.Scene {
     for (const npc of this.npcs) list.push(this.npcInteraction(npc));
     for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
     for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
+    for (const bed of this.map.data.beds ?? []) list.push(this.bedInteraction(bed));
     for (const crop of this.map.data.crops ?? []) {
       if (Math.abs(crop.tx + 0.5 - gx) < 2 && Math.abs(crop.ty + 0.5 - gy) < 2) {
         const i = this.cropInteraction(crop);
@@ -528,6 +616,15 @@ export class GameScene extends Phaser.Scene {
       key: `seat:${seat.gx},${seat.gy}`, label: 'Sit', gx: seat.gx, gy: seat.gy, range: 1.3,
       promptX: p.x, promptY: p.y - 26, tile: { x: Math.floor(seat.gx), y: Math.floor(seat.gy) },
       run: () => this.sitOn(seat),
+    };
+  }
+
+  private bedInteraction(bed: Bed): Interaction {
+    const p = gridToScreen(bed.tx + 0.5, bed.ty + 0.5);
+    return {
+      key: `bed:${bed.id}`, label: 'Sleep', gx: bed.gx, gy: bed.gy, range: 1.2,
+      promptX: p.x, promptY: p.y - 30, tile: { x: bed.tx, y: bed.ty },
+      run: () => this.goToBed(bed),
     };
   }
 

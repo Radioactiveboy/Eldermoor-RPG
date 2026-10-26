@@ -11,6 +11,7 @@ export class TimeOfDay {
   /** Multiplier on how fast time passes, e.g. for fast-forward. */
   timeScale = 1;
 
+  /** @param startHour hours since the start of day 1 (a save may be days in) */
   constructor(startHour = START_HOUR) {
     this.totalHours = startHour;
   }
@@ -18,6 +19,17 @@ export class TimeOfDay {
   /** Jump to an hour of the current day, e.g. 0 for midnight. */
   setHour(hour: number): void {
     this.totalHours = Math.floor(this.totalHours / 24) * 24 + Phaser.Math.Wrap(hour, 0, 24);
+  }
+
+  /** Let some hours pass at once, as when sleeping. */
+  advance(hours: number): void {
+    this.totalHours += hours;
+  }
+
+  /** Hours until the clock next reads `hour`: never zero, so "until morning" at 7am means tomorrow. */
+  hoursUntil(hour: number): number {
+    const h = Phaser.Math.Wrap(hour - this.hour, 0, 24);
+    return h < 0.25 ? h + 24 : h;
   }
 
   update(dt: number): void {
