@@ -16,6 +16,7 @@ const KEY_CONTROLS: Array<[string, string]> = [
   ['J', 'Journal'],
   ['I', 'Satchel'],
   ['C', 'Equipment'],
+  ['M', 'Show or hide the map'],
   ['Mouse wheel', 'Zoom'],
   ['Hold T', 'Fast-forward time'],
   ['Esc', 'Pause'],

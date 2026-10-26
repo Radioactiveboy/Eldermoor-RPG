@@ -24,6 +24,7 @@ import { generateMap } from '../world/MapGenerator';
 import type { DialogueSceneData } from './DialogueScene';
 import type { CombatResult, CombatSceneData } from './CombatScene';
 import type { SleepSceneData } from './SleepScene';
+import type { ConfirmSceneData } from './ConfirmScene';
 
 type MoveKeys = Record<
   'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'fastForward',
@@ -155,6 +156,10 @@ export class GameScene extends Phaser.Scene {
   private visited = new Set<AreaId>();
   /** A trader's stall to open once the conversation that asked for it closes. */
   private pendingShop?: ShopId;
+  /** Off while the player stands on a road exit they just turned back from, so it isn't asked again at once. */
+  private exitArmed = true;
+  /** The last tile the player stood on that isn't a road exit: where turning back walks them to. */
+  private lastOffExit: GridPoint = { x: 0, y: 0 };
 
   constructor() {
     super('Game');
@@ -204,6 +209,8 @@ export class GameScene extends Phaser.Scene {
     this.map = new IsoMap(this, buildArea(this.area));
     const start = data.load?.position ?? ((data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn);
     this.player = new Player(this, this.map, start.x, start.y);
+    this.exitArmed = true;
+    this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
     this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy));
     this.creatures = this.spawnCreatures();
     this.syncCrops();
@@ -816,7 +823,12 @@ export class GameScene extends Phaser.Scene {
     if (this.busy) return;
     const { tileX, tileY } = this.player;
     const exit = this.map.data.doors?.find((d) => d.auto && d.tx === tileX && d.ty === tileY);
-    if (exit) this.useDoor(exit);
+    if (!exit) {
+      this.exitArmed = true;
+      this.lastOffExit = { x: tileX, y: tileY };
+    } else if (this.exitArmed) {
+      this.useDoor(exit);
+    }
   }
 
   private useDoor(door: Door): void {
@@ -825,6 +837,33 @@ export class GameScene extends Phaser.Scene {
       this.onHint?.("I shouldn't go anywhere before I've spoken with Mother.");
       return;
     }
+    if (door.ask) this.askBeforeLeaving(door);
+    else this.leaveThrough(door);
+  }
+
+  /** "Do you want to make the trek to...?" Yes goes; no turns back. */
+  private askBeforeLeaving(door: Door): void {
+    if (!this.takeControls()) return;
+    if (this.seat) this.standUp();
+    const data: ConfirmSceneData = {
+      question: door.ask!,
+      yes: 'Set off',
+      no: 'Not yet',
+      onAnswer: (yes) => (yes ? this.leaveThrough(door) : this.turnBack(door)),
+    };
+    this.scene.launch('Confirm', data);
+  }
+
+  /** Changed their mind at a road's end: step back off it, so the question isn't asked again straight away. */
+  private turnBack(door: Door): void {
+    this.release();
+    if (!door.auto) return;
+    this.exitArmed = false;
+    const path = this.pathTo(this.lastOffExit);
+    if (path) this.player.setPath(path);
+  }
+
+  private leaveThrough(door: Door): void {
     this.busy = true;
     this.player.setPath([]);
     if (!door.auto) GameAudio.door();

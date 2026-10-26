@@ -72,7 +72,10 @@ export function buildMarketMap(): MapData {
     spawn: entry,
     music: 'market',
     entries: { road: entry },
-    doors: ROAD_ROWS.map((ty) => ({ tx: W - 1, ty, to: 'world' as const, entry: 'market', auto: true })),
+    doors: ROAD_ROWS.map((ty) => ({
+      tx: W - 1, ty, to: 'world' as const, entry: 'market', auto: true,
+      ask: 'Do you want to make the trek home to Adowvale Hollow?',
+    })),
     lights: [],
     npcs: [],
     seats: [],

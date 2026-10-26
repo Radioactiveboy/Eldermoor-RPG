@@ -61,8 +61,13 @@ export interface Door {
   to: AreaId;
   /** Entry point name in the destination's MapData.entries. */
   entry: string;
-  /** Taken by walking onto the tile, with no prompt: a road leading off the map. */
+  /** Taken by walking onto the tile, with no E prompt: a road leading off the map. */
   auto?: boolean;
+  /**
+   * Asked before going, e.g. "Do you want to make the trek to Adowvale Market?".
+   * Saying no turns the player back the way they came.
+   */
+  ask?: string;
 }
 
 /** A warm light source that brightens its surroundings in the dark. */
