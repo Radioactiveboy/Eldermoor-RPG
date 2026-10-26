@@ -18,7 +18,7 @@ const STALLS: Array<{ kind: 'baker' | 'smith' | 'tanner'; tx: number; ty: number
 
 /**
  * The market at Eldermoor, at the far end of the road from the cottage: a
- * cobbled square with the well in the middle, three traders' stalls, tall
+ * bare-earth square with the well in the middle, three traders' stalls, tall
  * townhouses and an inn around it, lamp posts that light up at night, and the
  * village militia walking their rounds. The road leaves by the east edge,
  * back towards home.
@@ -34,11 +34,14 @@ export function buildMarketMap(): MapData {
     props.push(new Array(W).fill(Prop.None));
   }
 
-  // The square: cobbles, with ragged edges where the grass creeps in.
+  // The square: earth trodden bare by feet and carts, fading into worn grass at the edges, with a
+  // few flagstones laid round the well.
   for (let y = 5; y <= 22; y++) {
     for (let x = 5; x <= 24; x++) {
       const edge = Math.min(x - 5, 24 - x, y - 5, 22 - y);
-      if (edge > 0 || rnd.frac() < 0.6) terrain[y][x] = Terrain.Stone;
+      const bare = edge >= 3 ? 1 : edge === 2 ? 0.8 : edge === 1 ? 0.5 : 0.25;
+      if (rnd.frac() < bare) terrain[y][x] = Terrain.Dirt;
+      if (Math.hypot(x + 0.5 - 15, y + 0.5 - 14) < 2.3) terrain[y][x] = Terrain.Stone;
     }
   }
   // The road in from the east, worn into the grass.

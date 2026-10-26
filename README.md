@@ -57,7 +57,7 @@ src/
   world/MapData.ts        Terrain + prop types, walkability table
   world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
-  world/MarketMap.ts      The market at the end of the road: cobbled square, well, stalls, houses, militia
+  world/MarketMap.ts      The market at the end of the road: bare-earth square, well, stalls, houses, militia
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
   world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
   world/Ambience.ts       Living world: water glints and foam, birds, bats, sparrows, butterflies,
