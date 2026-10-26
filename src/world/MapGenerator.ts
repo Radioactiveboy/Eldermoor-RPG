@@ -69,6 +69,7 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   addRoadToMarket(data);
   addCottage(data, home.x, home.y);
   addGarden(data, home.x + 5, home.y - 2);
+  addCave(data, home.x + 4, home.y - 1);
   // A lone wolf nosing about south of the cottage, in sight of the door.
   (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });
   // Folk travelling the road, spread out along it (see entities/Npc.ts).
@@ -141,6 +142,44 @@ function addCottage(data: MapData, x0: number, y0: number): void {
   (data.seats ??= []).push({ name: 'bench', gx: x0 + 3.32, gy: y0 + 0.6, faceX: 1, faceY: 0, standX: x0 + 4.5, standY: y0 + 0.5 });
   // A dirt track from the door along the yard to the garden gates.
   for (let y = y0; y <= y0 + 3; y++) setIf(data.terrain, x0 + 4, y, Terrain.Dirt);
+}
+
+/**
+ * The wolves' cave, in the hill at the north edge of the map: a sheep track
+ * runs up to it from the cottage yard (starting at `from`, just north of the
+ * door), and the cave mouth opens towards it. See CaveMap.ts for inside.
+ */
+function addCave(data: MapData, fromX: number, fromY: number): void {
+  // The hill's 3x3 footprint; its mouth is over the front tile (2, 2), which stays open.
+  const hx = fromX - 2;
+  const hy = 3;
+  const door = { x: hx + 2, y: hy + 2 };
+  // The track wanders a little on its way north.
+  const track: Array<{ x: number; y: number }> = [];
+  let last = fromX;
+  for (let y = fromY; y > door.y; y--) {
+    const x = y > fromY - 4 || y < door.y + 3 ? door.x : door.x + Math.round(Math.sin(y * 0.45) * 1.2);
+    // Step sideways on the same row, so the track never breaks at a corner.
+    for (let sx = Math.min(x, last); sx <= Math.max(x, last); sx++) track.push({ x: sx, y });
+    last = x;
+  }
+  for (const t of track) {
+    for (let y = t.y - 1; y <= t.y + 1; y++) for (let x = t.x - 1; x <= t.x + 1; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
+    setIf(data.terrain, t.x, t.y, Terrain.Dirt);
+  }
+  // Clear the hillside and the ground in front of the mouth.
+  for (let y = hy - 1; y <= hy + 4; y++) {
+    for (let x = hx - 1; x <= hx + 4; x++) {
+      const front = x >= hx + 1 && y >= hy + 1;
+      if (data.props[y]?.[x] !== undefined && (front || y >= hy)) data.props[y][x] = Prop.None;
+    }
+  }
+  const blocks: Array<[number, number]> = [];
+  for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (x !== 2 || y !== 2) blocks.push([x, y]);
+  placeObject(data, { key: 'cave-entrance', tx: hx, ty: hy, w: 3, h: 3, blocks });
+  data.terrain[door.y][door.x] = Terrain.Dirt;
+  (data.doors ??= []).push({ tx: door.x, ty: door.y, to: 'cave', entry: 'mouth', label: 'Enter the cave', facing: 'front', ask: 'Do you want to venture into the cave?' });
+  (data.entries ??= {}).cave = { x: door.x + 0.5, y: door.y + 1.6 };
 }
 
 /**

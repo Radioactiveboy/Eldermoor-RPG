@@ -12,6 +12,8 @@ export enum Terrain {
   Floor,
   /** Tilled garden soil. */
   Soil,
+  /** The gravelly rock floor of a cave. */
+  Cave,
 }
 
 export enum Prop {
@@ -23,7 +25,7 @@ export enum Prop {
 }
 
 /** The places the player can be. Each is its own map; doors lead between them. */
-export type AreaId = 'home' | 'world' | 'market';
+export type AreaId = 'home' | 'world' | 'market' | 'cave';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -42,6 +44,8 @@ export interface MapObject {
   flipX?: boolean;
   /** Animation to play on it (e.g. the hearth's fire). */
   anim?: string;
+  /** Hangs high overhead (stalactites), so it's drawn in front of anyone walking beneath it. */
+  overhead?: boolean;
   /** Tiles it blocks, if not its whole footprint (relative to tx, ty). */
   blocks?: Array<[number, number]>;
   /**
@@ -63,11 +67,28 @@ export interface Door {
   entry: string;
   /** Taken by walking onto the tile, with no E prompt: a road leading off the map. */
   auto?: boolean;
+  /** What the prompt says, if not "Go inside" / "Go outside". */
+  label?: string;
+  /**
+   * Whether it's in a wall along the tile's -x edge (the cottage's doors, which
+   * have their prompt there) or opens towards the viewer (the cave mouth).
+   */
+  facing?: 'wall' | 'front';
   /**
    * Asked before going, e.g. "Do you want to make the trek to Adowvale Market?".
    * Saying no turns the player back the way they came.
    */
   ask?: string;
+}
+
+/** Something to look at closely (the lost ewes in the cave). GameScene decides what examining it does. */
+export interface Sight {
+  id: string;
+  gx: number;
+  gy: number;
+  label: string;
+  /** Height of the prompt above the ground, in pixels. */
+  z: number;
 }
 
 /** A warm light source that brightens its surroundings in the dark. */
@@ -137,8 +158,8 @@ export interface MapData {
   props: Prop[][]; // [y][x]
   spawn: { x: number; y: number };
   objects?: MapObject[];
-  /** Back walls of an indoor room: texture keys along y = 0 (back) and x = 0 (side). */
-  walls?: { back: string[]; side: string[] };
+  /** Back walls of an indoor room: texture keys along y = 0 (back) and x = 0 (side), the corner post, and their height. */
+  walls?: { back: string[]; side: string[]; corner?: string; height?: number };
   doors?: Door[];
   /** Named arrival points, in tile units. */
   entries?: Record<string, { x: number; y: number }>;
@@ -148,12 +169,17 @@ export interface MapData {
   seats?: Seat[];
   beds?: Bed[];
   creatures?: CreatureSpawn[];
+  sights?: Sight[];
+  /** Where water drips from overhead (stalactite tips): grid position and height in pixels. */
+  drips?: Array<{ gx: number; gy: number; z: number }>;
   /** Chimney tops that smoke: grid position and height in pixels. */
   chimneys?: Array<{ gx: number; gy: number; z: number }>;
   /** Road tiles in order from one end to the other, for travellers to wander along. */
   road?: Array<{ x: number; y: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
+  /** Underground (with `indoor`): dark whatever the hour, so the hero's lantern is lit. */
+  underground?: boolean;
   /** The music for the area (see audio/Audio.ts). */
   music?: TrackName;
 }
@@ -166,6 +192,7 @@ export const TERRAIN_WALKABLE: Record<Terrain, boolean> = {
   [Terrain.Sand]: true,
   [Terrain.Floor]: true,
   [Terrain.Soil]: true,
+  [Terrain.Cave]: true,
 };
 
 /** Marks every tile an object covers as blocked (or just the ones it lists). */

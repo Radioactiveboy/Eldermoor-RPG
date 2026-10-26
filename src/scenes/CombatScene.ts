@@ -166,7 +166,9 @@ export class CombatScene extends Phaser.Scene {
     this.world.player.faceTowards(first.pos().x, first.pos().y);
     this.log(
       this.foes.length > 1
-        ? 'Wolves slink out of the grass, hackles raised. You are surrounded!'
+        ? this.world.map.data.underground
+          ? 'Eyes shine in the lantern light. Wolves pad out of the dark, hackles raised. You are surrounded!'
+          : 'Wolves slink out of the grass, hackles raised. You are surrounded!'
         : 'The wolf lowers its head and snarls, circling you. It means to fight!',
     );
     // The beasts close in, and the camera settles on the fight.

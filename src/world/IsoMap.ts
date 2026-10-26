@@ -37,6 +37,7 @@ const TERRAIN_TEXTURE: Record<Terrain, string> = {
   [Terrain.Sand]: 'tile-sand',
   [Terrain.Floor]: 'tile-floor',
   [Terrain.Soil]: 'tile-soil',
+  [Terrain.Cave]: 'tile-cave',
 };
 
 const TILE_HALF = TILE_WIDTH / 2;
@@ -179,7 +180,7 @@ export class IsoMap {
     const right = gridToScreen(this.data.width, 0).x;
     const bottom = gridToScreen(this.data.width, this.data.height).y;
     // Leave room above the map for walls and tall things on the back row.
-    const top = this.data.walls ? WALL_HEIGHT + 30 : 64;
+    const top = this.data.walls ? (this.data.walls.height ?? WALL_HEIGHT) + 30 : 64;
     return new Phaser.Geom.Rectangle(left, -top, right - left, bottom + top);
   }
 
@@ -394,14 +395,15 @@ export class IsoMap {
     };
     walls.back.forEach((key, gx) => put(key, gx, 0, 0.8));
     walls.side.forEach((key, gy) => put(key, 0, gy, 0.8));
-    put('wall-corner', 0, 0, 0.9);
+    put(walls.corner ?? 'wall-corner', 0, 0, 0.9);
   }
 
   private placeObject(obj: MapObject): void {
     const art = MODEL_ART[obj.key];
     const p = gridToScreen(obj.tx, obj.ty);
     // Sort by the middle of the footprint, so you can walk in front of and behind it.
-    const depth = depthAt(obj.tx + obj.w / 2, obj.ty + obj.h / 2);
+    // Things hanging overhead go in front of everything on the map.
+    const depth = obj.overhead ? depthAt(this.width, this.height) + 0.5 : depthAt(obj.tx + obj.w / 2, obj.ty + obj.h / 2);
     const sprite = this.scene.add.sprite(p.x, p.y, art.key, obj.anim ? 0 : undefined);
     sprite.setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY).setFlipX(!!obj.flipX).setDepth(depth);
     if (obj.anim) sprite.play(obj.anim);

@@ -13,11 +13,13 @@ import { QuestLog } from '../systems/Quests';
 import { SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops, SHOPS } from '../systems/Shops';
 import { TimeOfDay } from '../systems/TimeOfDay';
+import { buildCaveMap } from '../world/CaveMap';
+import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
 import { buildMarketMap } from '../world/MarketMap';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
-import { AreaId, Bed, CropPatch, Door, MapData, Prop, Seat } from '../world/MapData';
+import { AreaId, Bed, CropPatch, Door, MapData, Prop, Seat, Sight } from '../world/MapData';
 import { cropKey } from '../art/farm';
 import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
@@ -80,7 +82,8 @@ export interface Channel {
   onCancel?: () => void;
 }
 
-/** Things to muse on while sitting down for a moment. */
+/** Coins Wil pays for news of his ewes. */
+const SHEEP_REWARD = 30;
 /** Other beasts this close (in tiles) to the one that starts a fight join in. */
 const PACK_RANGE = 7;
 /** Seconds after arriving in an area before beasts can notice the player, so there's time to see them first. */
@@ -115,6 +118,7 @@ function wakingThought(hour: number): string {
 function buildArea(area: AreaId): MapData {
   if (area === 'home') return buildHomeMap();
   if (area === 'market') return buildMarketMap();
+  if (area === 'cave') return buildCaveMap();
   return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
 }
 
@@ -131,6 +135,8 @@ export class GameScene extends Phaser.Scene {
   inCombat = false;
   /** Birds, rippling water and the like, outdoors only. */
   ambience?: Ambience;
+  /** Water dripping from stalactites, in the cave. */
+  private drips?: Drips;
   /** What the player would do by pressing E right now, if anything. */
   focus?: Interaction;
   /** A few-seconds action in progress, for the HUD's progress bar. */
@@ -195,9 +201,9 @@ export class GameScene extends Phaser.Scene {
       if (hourParam !== null && !Number.isNaN(Number(hourParam))) this.clock.setHour(Number(hourParam));
     }
     this.area = data.load?.area ?? data.area ?? 'home';
-    // Handy for testing: open the game with ?area=market to start there.
+    // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
     const areaParam = new URLSearchParams(window.location.search).get('area');
-    if (data.newGame && (areaParam === 'market' || areaParam === 'world')) this.area = areaParam;
+    if (data.newGame && (areaParam === 'market' || areaParam === 'world' || areaParam === 'cave')) this.area = areaParam;
     this.busy = false;
     this.walkingTo = undefined;
     this.focus = undefined;
@@ -215,6 +221,7 @@ export class GameScene extends Phaser.Scene {
     this.creatures = this.spawnCreatures();
     this.syncCrops();
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
+    this.drips = this.map.data.drips ? new Drips(this, this.map.data) : undefined;
 
     this.hover = this.add.image(0, 0, 'tile-highlight').setDepth(1).setAlpha(0.6).setVisible(false);
     this.marker = this.add.image(0, 0, 'tile-highlight').setDepth(1).setTint(0x9cf09c).setVisible(false);
@@ -243,7 +250,15 @@ export class GameScene extends Phaser.Scene {
           'marching about in their tin hats. Someone here must know where to find moonpetal.',
       );
     }
+    if (this.area === 'cave') this.enteredCave();
     this.visited.add(this.area);
+  }
+
+  /** Into the wolves' den: the first time, the hero takes it in; on Wil's errand, that step is done. */
+  private enteredCave(): void {
+    QuestLog.complete('lost-sheep', 'cave');
+    if (this.visited.has('cave')) return;
+    this.time.delayedCall(1000, () => this.onHint?.('Cold, wet rock, and the stink of wolf. Something has been dragged in here.'));
   }
 
   update(_time: number, deltaMs: number): void {
@@ -260,6 +275,7 @@ export class GameScene extends Phaser.Scene {
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : 1);
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
+    this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
     // Time stands still while fighting, turn by turn.
     if (!this.inCombat) {
       this.stats.update(dt, wantsSprint && moved);
@@ -278,7 +294,7 @@ export class GameScene extends Phaser.Scene {
       this.cropTimer = 1;
     }
 
-    if (this.map.data.indoor) {
+    if (this.map.data.indoor && !this.map.data.underground) {
       this.crackleTimer -= dt;
       if (this.crackleTimer <= 0) {
         GameAudio.crackle();
@@ -383,6 +399,24 @@ export class GameScene extends Phaser.Scene {
         QuestLog.writeDiary(
           "Mother's cough is worse. She tried to hide the fever from me, but her hands shake too much to hold a cup. " +
             'She needs moonpetal and willow bark tincture. I will find someone in the village who has it.',
+        );
+        break;
+      case 'start-sheep-quest':
+        QuestLog.start('lost-sheep', ['talk']);
+        QuestLog.writeDiary(
+          "Met Wil the drover on the road again, still hunting for his master's two ewes. Something dragged them off " +
+            'towards the cave in the hill north of the cottage. He is too scared to look, so I said I would.',
+        );
+        break;
+      case 'finish-sheep-quest':
+        // He may hear the news without having asked: the ewes were found first.
+        QuestLog.start('lost-sheep', ['talk', 'cave', 'find']);
+        QuestLog.complete('lost-sheep', 'tell');
+        Inventory.reward(SHEEP_REWARD);
+        GameAudio.coins();
+        QuestLog.writeDiary(
+          `Told Wil about Bess and Bramble. He took it quietly, then pressed ${SHEEP_REWARD} coins into my hand and would not ` +
+            'hear of me giving them back. I hope his master is kinder to him than he expects.',
         );
         break;
       default:
@@ -524,6 +558,9 @@ export class GameScene extends Phaser.Scene {
           ? 'It lies still now. The pelt might be worth something in the village.'
           : 'It ran off into the trees. I doubt it will come back.',
       );
+      if (this.area === 'cave' && this.creatures.every((c) => !c.active || foes.includes(c))) {
+        this.time.delayedCall(2600, () => this.onHint?.('The den is quiet now. Only the dripping water, and something pale at the back of the cave.'));
+      }
       if (foes.some((c) => c.id === 'cottage-wolf')) {
         QuestLog.writeDiary(
           'A grey wolf was nosing around the cottage when I stepped out. It went for me, and I had to fight it off. ' +
@@ -561,6 +598,7 @@ export class GameScene extends Phaser.Scene {
     for (const npc of this.npcs) list.push(this.npcInteraction(npc));
     for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
     for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
+    for (const sight of this.map.data.sights ?? []) list.push(this.sightInteraction(sight));
     for (const bed of this.map.data.beds ?? []) list.push(this.bedInteraction(bed));
     for (const crop of this.map.data.crops ?? []) {
       if (Math.abs(crop.tx + 0.5 - gx) < 2 && Math.abs(crop.ty + 0.5 - gy) < 2) {
@@ -601,12 +639,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private doorInteraction(door: Door): Interaction {
-    // Both doors so far are in a wall along the tile's -x edge.
-    const p = gridToScreen(door.tx, door.ty + 0.5);
+    // Doors in a wall along the tile's -x edge have the prompt over the doorway; the cave mouth, over its tile.
+    const front = door.facing === 'front';
+    const p = front ? gridToScreen(door.tx + 0.5, door.ty + 0.5) : gridToScreen(door.tx, door.ty + 0.5);
     return {
-      key: `door:${door.tx},${door.ty}`, label: door.to === 'home' ? 'Go inside' : 'Go outside',
-      gx: door.tx + 0.5, gy: door.ty + 0.5, range: 1.3, promptX: p.x, promptY: p.y - 58,
+      key: `door:${door.tx},${door.ty}`, label: door.label ?? (door.to === 'home' ? 'Go inside' : 'Go outside'),
+      gx: door.tx + 0.5, gy: door.ty + 0.5, range: 1.3, promptX: p.x, promptY: p.y - (front ? 62 : 58),
       tile: { x: door.tx, y: door.ty }, walkOnto: true, run: () => this.useDoor(door),
+    };
+  }
+
+  private sightInteraction(sight: Sight): Interaction {
+    const p = gridToScreen(sight.gx, sight.gy);
+    return {
+      key: `sight:${sight.id}`, label: sight.label, gx: sight.gx, gy: sight.gy, range: 1.5,
+      promptX: p.x, promptY: p.y - sight.z, tile: { x: Math.floor(sight.gx), y: Math.floor(sight.gy) },
+      run: () => this.examine(sight),
     };
   }
 
@@ -777,6 +825,42 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Look closely at something: so far, the remains of Wil's ewes in the cave. */
+  private examine(sight: Sight): void {
+    this.walkingTo = undefined;
+    this.player.setPath([]);
+    this.player.faceTowards(sight.gx, sight.gy);
+    const flag = `saw-${sight.id}`;
+    const first = !QuestLog.hasFlag(flag);
+    QuestLog.setFlag(flag);
+    const asked = QuestLog.has('lost-sheep');
+    const thoughts: Record<string, string> = {
+      bess: asked
+        ? 'A ewe, torn open and cold. There is a little bell on a cord round her neck, scratched "BESS". Poor Wil.'
+        : 'A dead ewe, torn open and cold. A bell round her neck is scratched with a name: "BESS".',
+      bramble: asked
+        ? 'Another ewe, just beyond the first. This must be Bramble. She followed Bess right to the end.'
+        : 'Another dead ewe, wool matted with blood. Someone has lost two sheep, and wolves have found them.',
+    };
+    if (!first) {
+      this.onHint?.('I would rather not look again. Wil should hear what happened.');
+      return;
+    }
+    this.onHint?.(thoughts[sight.id] ?? 'Nothing worth a closer look.');
+    if (!QuestLog.hasFlag('saw-bess') || !QuestLog.hasFlag('saw-bramble')) return;
+    if (asked) {
+      QuestLog.complete('lost-sheep', 'cave');
+      QuestLog.complete('lost-sheep', 'find');
+    }
+    QuestLog.writeDiary(
+      asked
+        ? 'Found Bess and Bramble at the back of the wolves\' cave. The wolves got them both. I will have to tell Wil; ' +
+            'I would rather he heard it from me than found them like that.'
+        : 'Found two dead ewes at the back of a wolves\' den in the hill, a bell on one scratched "BESS". Someone on the road ' +
+            'must be missing them.',
+    );
+  }
+
   /** Adds items to the satchel, or says why not. The HUD shows what was gained. */
   private give(id: ItemId, count: number): void {
     if (Inventory.add(id, count)) GameAudio.pickup();
@@ -866,7 +950,8 @@ export class GameScene extends Phaser.Scene {
   private leaveThrough(door: Door): void {
     this.busy = true;
     this.player.setPath([]);
-    if (!door.auto) GameAudio.door();
+    // Only real doors creak: not the end of a road, nor the mouth of a cave.
+    if (!door.auto && door.facing !== 'front' && !this.map.data.underground) GameAudio.door();
     this.cameras.main.fadeOut(door.auto ? 500 : 350, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.restart({ area: door.to, entry: door.entry } satisfies GameSceneData);

@@ -55,7 +55,7 @@ export class QuestTracker {
   }
 
   update(): void {
-    const quest = QuestLog.active[0];
+    const quest = QuestLog.focused;
     const title = quest ? quest.def.title : 'At home';
     const step = quest ? (QuestLog.current(quest)?.text ?? 'Return to whoever gave you this quest') : 'Speak with Mother';
     const text = `${title}|${step}`;

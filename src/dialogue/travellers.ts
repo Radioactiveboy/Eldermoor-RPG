@@ -1,8 +1,8 @@
 import type { DialogueScript } from './Dialogue';
 
 /**
- * Folk travelling the road past the cottage. They don't start quests; they
- * pass the time of day and know a little about Eldermoor and what's around it.
+ * Folk travelling the road past the cottage. Most don't start quests (Wil the
+ * drover, who has lost two ewes, is the exception); they pass the time of day and know a little about Eldermoor and what's around it.
  * Each has a first meeting, a shorter hello afterwards, and a few things to ask.
  */
 
@@ -120,59 +120,112 @@ export const PILGRIM: DialogueScript = {
   },
 };
 
-export const DROVER: DialogueScript = {
-  start: 'greet',
-  nodes: {
-    greet: {
-      speaker: 'drover',
-      lines: [
-        "Oh! Sorry, you made me jump. Wil. I'm a drover, or I was meant to be, driving Master Coombe's ewes to market.",
-        "Only I've lost two of them. Again. He'll have my hide.",
-      ],
-      next: 'ask',
+/**
+ * How far along Wil's lost ewes are: not yet asked about, found before he
+ * asked ('found-first'), being looked for, found, or the news given.
+ */
+export type SheepStage = 'none' | 'found-first' | 'active' | 'found' | 'done';
+
+/**
+ * Wil the drover, who has lost two of his master's ewes. He asks the hero to
+ * look for them (see the 'lost-sheep' quest); once they're found he hears the
+ * news and pays for the trouble.
+ * @param first whether this is the first time they've met
+ */
+export function droverScript(stage: SheepStage, first: boolean): DialogueScript {
+  const start = stage === 'active' ? 'waiting' : stage === 'found' ? 'back' : stage === 'done' ? 'thanks' : first ? 'greet' : 'again';
+  return {
+    start,
+    nodes: {
+      greet: {
+        speaker: 'drover',
+        lines: [
+          "Oh! Sorry, you made me jump. Wil. I'm a drover, or I was meant to be, driving Master Coombe's ewes to market.",
+          "Only I've lost two of them. Again. He'll have my hide.",
+        ],
+        next: 'ask',
+      },
+      again: {
+        speaker: 'drover',
+        lines: ["Still no sign of them. You'd think sheep would be easier to find. They're white."],
+        next: 'ask',
+      },
+      waiting: {
+        speaker: 'drover',
+        lines: ['Any luck? The tracks went north, up the sheep track past your garden, to that cave in the hill.'],
+        next: 'ask',
+      },
+      back: {
+        speaker: 'drover',
+        lines: ["You're back! And in one piece. Did you find them? Bess and Bramble?"],
+        choices: [{ text: "I found them, Wil. I'm sorry.", next: 'news' }],
+      },
+      thanks: {
+        speaker: 'drover',
+        lines: ["Master Coombe took it better than I feared. Said wolves aren't my fault. Then docked my pay anyway."],
+        next: 'ask',
+      },
+      ask: {
+        speaker: 'drover',
+        lines: ['You live round here?'],
+        choices: [
+          stage === 'found-first'
+            ? { text: 'I found two ewes in a cave north of here. Wolves got them.', next: 'news' }
+            : { text: 'How did you lose them?', next: 'lost' },
+          { text: 'Tell me about the lake.', next: 'lake' },
+          { text: 'Seen anything strange on the road?', next: 'strange' },
+          { text: stage === 'done' ? 'Take care, Wil.' : 'Good luck finding them.', next: 'bye' },
+        ],
+      },
+      lost: {
+        speaker: 'drover',
+        lines: [
+          'Something spooked them last night by the lake. I found tracks in the mud this morning. Big ones. Bigger than a dog\'s.',
+          'They went north, up past your cottage towards the old cave in the hill. Something dragged them, by the look of it.',
+          "I'm not saying it was a wolf. I'm just saying I'm not going up there on my own.",
+        ],
+        // Not yet asked: the hero can offer to go and look.
+        ...(stage === 'none'
+          ? { choices: [{ text: "I'll go up there and look for them.", next: 'offer' }, { text: 'Rather you than me.', next: 'ask' }] }
+          : { next: 'ask' }),
+      },
+      offer: {
+        speaker: 'drover',
+        lines: [
+          'You would? Honest? Follow the sheep track north from your garden, up to the hill. That\'s where the tracks went.',
+          "If they're alive, bring me word and I'll fetch them. If they're not... I'd still rather know. I'll make it worth your while.",
+        ],
+        action: 'start-sheep-quest',
+      },
+      news: {
+        speaker: 'drover',
+        lines: [
+          'Wolves. In the cave. Both of them? ...Poor Bess. She always was the one to wander, and Bramble followed her everywhere.',
+          "Well. At least now I know, and I can tell Master Coombe something better than \"they ran off\".",
+          "Here. Master Coombe gave me coin for the road. You've earned it more than I have, going in there.",
+        ],
+        action: 'finish-sheep-quest',
+      },
+      lake: {
+        speaker: 'drover',
+        lines: [
+          "Mirrormere, my gran called it. Still as glass on a calm day. There's a chapel at the bottom, she said, drowned when the river changed its course.",
+          "On quiet nights you can hear its bell. I've never heard it. I've never stayed out late enough to try.",
+        ],
+        next: 'ask',
+      },
+      strange: {
+        speaker: 'drover',
+        lines: [
+          "There's a pedlar with a pack bigger than he is, and a holy sister who walks slower than my sheep. That's about all.",
+          "Oh, and the birds have all gone quiet down by the trees past your garden. Birds don't go quiet for nothing.",
+        ],
+        next: 'ask',
+      },
+      bye: {
+        speaker: 'drover',
+        lines: [stage === 'done' ? 'And you. Mind the wolves.' : 'Thanks. If you see two ewes looking guilty, they answer to Bess and Bramble.'],
+      },
     },
-    again: {
-      speaker: 'drover',
-      lines: ["Still no sign of them. You'd think sheep would be easier to find. They're white."],
-      next: 'ask',
-    },
-    ask: {
-      speaker: 'drover',
-      lines: ['You live round here?'],
-      choices: [
-        { text: 'How did you lose them?', next: 'lost' },
-        { text: 'Tell me about the lake.', next: 'lake' },
-        { text: 'Seen anything strange on the road?', next: 'strange' },
-        { text: 'Good luck finding them.', next: 'bye' },
-      ],
-    },
-    lost: {
-      speaker: 'drover',
-      lines: [
-        "Something spooked them last night by the lake. I found tracks in the mud this morning. Big ones. Bigger than a dog's.",
-        "I'm not saying it was a wolf. I'm just saying I'm not going back to look on my own.",
-      ],
-      next: 'ask',
-    },
-    lake: {
-      speaker: 'drover',
-      lines: [
-        "Mirrormere, my gran called it. Still as glass on a calm day. There's a chapel at the bottom, she said, drowned when the river changed its course.",
-        "On quiet nights you can hear its bell. I've never heard it. I've never stayed out late enough to try.",
-      ],
-      next: 'ask',
-    },
-    strange: {
-      speaker: 'drover',
-      lines: [
-        "There's a pedlar with a pack bigger than he is, and a holy sister who walks slower than my sheep. That's about all.",
-        "Oh, and the birds have all gone quiet down by the trees past your garden. Birds don't go quiet for nothing.",
-      ],
-      next: 'ask',
-    },
-    bye: {
-      speaker: 'drover',
-      lines: ['Thanks. If you see two ewes looking guilty, they answer to Bess and Bramble.'],
-    },
-  },
-};
+  };
+}

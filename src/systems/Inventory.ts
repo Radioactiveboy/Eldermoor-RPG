@@ -278,6 +278,8 @@ export interface Stack {
 
 export type InventoryEvent =
   | { type: 'added'; id: ItemId; count: number }
+  /** Coins given as a reward, which the HUD shows floating up like a found item. */
+  | { type: 'rewarded'; coins: number }
   | { type: 'changed' };
 
 type Listener = (e: InventoryEvent) => void;
@@ -343,6 +345,13 @@ class InventoryStore {
     }
     this.emit({ type: 'changed' });
     return true;
+  }
+
+  /** Coins given for a job done, announced on the HUD. */
+  reward(coins: number): void {
+    this.coins += coins;
+    this.emit({ type: 'changed' });
+    this.emit({ type: 'rewarded', coins });
   }
 
   /** Pays out or takes in coins. Returns false (changing nothing) if there isn't enough to pay. */
