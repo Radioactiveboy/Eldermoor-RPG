@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { WOLF_FRAME } from '../art/creatures';
+import { HERO_NAME } from '../config';
 import type { Creature } from '../entities/Creature';
 import { Vec2 } from '../iso/IsoMath';
 import {
@@ -472,7 +473,7 @@ export class CombatScene extends Phaser.Scene {
     const stats = this.world.stats;
     return {
       id: 'hero',
-      name: 'You',
+      name: HERO_NAME,
       side: 'party',
       hp: Math.round(stats.health),
       maxHp: stats.maxHealth,
