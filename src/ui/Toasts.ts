@@ -4,14 +4,16 @@ import { THEME } from './Widgets';
 import { UI_FONT } from './theme';
 
 interface Toast {
-  kind: 'quest' | 'thought';
+  /** Quest news and level-ups are announced with a heading and a sound; thoughts are quiet italics. */
+  kind: 'quest' | 'level' | 'thought';
   heading?: string;
   text: string;
 }
 
 /**
  * Banners that slide in near the top of the screen one at a time: "New quest"
- * announcements with a chime, and the hero's passing thoughts (hints).
+ * announcements with a chime, "Level up!" with a fanfare, and the hero's
+ * passing thoughts (hints).
  */
 export class Toasts {
   private readonly scene: Phaser.Scene;
@@ -36,6 +38,10 @@ export class Toasts {
     this.push({ kind: 'quest', heading, text });
   }
 
+  levelUp(heading: string, text: string): void {
+    this.push({ kind: 'level', heading, text });
+  }
+
   thought(text: string): void {
     // Don't repeat a hint that's already showing or waiting.
     if (this.queue.some((t) => t.text === text) || this.current?.name === text) return;
@@ -55,11 +61,12 @@ export class Toasts {
     }
     const s = this.scene;
     const parts: Phaser.GameObjects.GameObject[] = [];
+    const announce = t.kind !== 'thought';
     const body = s.add
       .text(0, 0, t.text, {
-        fontFamily: t.kind === 'quest' ? THEME.font : UI_FONT,
-        fontSize: t.kind === 'quest' ? '22px' : '16px',
-        color: t.kind === 'quest' ? THEME.text : '#f3e9d2',
+        fontFamily: announce ? THEME.font : UI_FONT,
+        fontSize: announce ? '22px' : '16px',
+        color: announce ? THEME.text : '#f3e9d2',
         fontStyle: t.kind === 'thought' ? 'italic' : 'normal',
         align: 'center',
         wordWrap: { width: this.maxWidth - 40 },
@@ -82,13 +89,14 @@ export class Toasts {
     bg.fillRoundedRect(-w / 2 + 3, 4, w, h, 10);
     bg.fillStyle(THEME.panel, 0.92);
     bg.fillRoundedRect(-w / 2, 0, w, h, 10);
-    bg.lineStyle(t.kind === 'quest' ? 2 : 1, THEME.gold, t.kind === 'quest' ? 1 : 0.6);
+    bg.lineStyle(announce ? 2 : 1, THEME.gold, announce ? 1 : 0.6);
     bg.strokeRoundedRect(-w / 2, 0, w, h, 10);
     const box = s.add.container(this.x, this.y, [bg, ...parts, body]).setName(t.text).setDepth(10);
     this.current = box;
 
     if (t.kind === 'quest') GameAudio.questChime();
-    const hold = t.kind === 'quest' ? 3200 : 2200 + t.text.length * 30;
+    else if (t.kind === 'level') GameAudio.levelUp();
+    const hold = announce ? 3200 : 2200 + t.text.length * 30;
     box.setAlpha(0).setScale(0.9);
     s.tweens.add({ targets: box, alpha: 1, scale: 1, duration: 250, ease: 'Back.easeOut' });
     s.tweens.add({

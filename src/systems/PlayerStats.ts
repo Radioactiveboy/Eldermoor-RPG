@@ -1,17 +1,22 @@
 import Phaser from 'phaser';
 import { HEALTH, STAMINA } from '../config';
+import { Experience } from './Experience';
 
 /**
- * Health and stamina. Sprinting spends stamina; it refills after a short rest.
+ * Health and stamina. Maximum health rises with each level. Sprinting spends stamina; it refills after a short rest.
  * Combat and hazards can call damage() / heal() once they exist.
  */
 export class PlayerStats {
   health = HEALTH.max;
   stamina = STAMINA.max;
-  readonly maxHealth = HEALTH.max;
   readonly maxStamina = STAMINA.max;
   private restTimer = 0;
   private exhausted = false;
+
+  /** Grows with the hero's level. */
+  get maxHealth(): number {
+    return HEALTH.max + Experience.healthBonus;
+  }
 
   /** True after stamina ran dry, until it recovers enough to sprint again. */
   get isExhausted(): boolean {

@@ -77,6 +77,7 @@ src/
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
+  systems/Experience.ts   XP and levels: what each level needs, what it gives, XP for quests
   systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, fleeing,
                           how beasts choose their moves, and the beasts' stats (FOES)
   entities/Player.ts      Movement, collision, click-to-move path following
@@ -107,7 +108,7 @@ src/
   scenes/SleepScene.ts    "How long to sleep?" box, opened from a bed
   scenes/CombatScene.ts   Turn-based fights over the world: turn order, action menu, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera
-  ui/StatusBars.ts        Slim health and stamina bars
+  ui/StatusBars.ts        Slim health and stamina bars, the hero's level and an XP bar
   ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day
   ui/Minimap.ts           Isometric minimap with player and camera view
   ui/DayNightOverlay.ts   Tints the world by time of day; lantern, hearth and candle light
@@ -178,6 +179,17 @@ src/
   bolt when badly hurt. Lose and you wake up at home. The clock stops during a
   fight. New beasts go in `FOES` (`systems/Combat.ts`) with art in `art/` and a
   spawn in the map's `creatures` list.
+
+- **Experience and levels.** The hero earns XP for slaying beasts (each beast
+  in `FOES` has an `xp` value; a grey wolf is 40), for each step of a quest (20),
+  for finishing one (each quest in `QUESTS` has its own `xp`), and for finding a
+  new area (25). Level 2 takes 100 XP, level 3 250, level 4 450, and so on up to
+  level 20 (`xpForLevel` in `systems/Experience.ts`). Each level adds 10 maximum
+  health (and gives it straight back), every other level adds +1 to hit, and every
+  third level +1 damage. The level and a thin gold XP bar sit under the health and
+  stamina bars; "+40 XP" rises from the hero, and a banner and fanfare announce a
+  level-up. The Equipment tab (C) shows your level and how far to the next one.
+  To award XP for something new, call `Experience.gain(amount, reason)`.
 
 ## Good next steps
 

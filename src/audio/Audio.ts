@@ -568,6 +568,15 @@ class AudioEngine {
     this.pluckNote(78, t + 0.5, 0.2);
   }
 
+  /** Rising run of notes and a held top one, for gaining a level. */
+  levelUp(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    [67, 71, 74, 79, 83].forEach((n, i) => this.pluckNote(n, t + i * 0.08, 0.17));
+    this.pluckNote(86, t + 0.45, 0.2);
+    this.pluckNote(79, t + 0.45, 0.14);
+  }
+
   /** Slow falling notes for being beaten. */
   defeat(): void {
     if (!this.unlocked) return;
