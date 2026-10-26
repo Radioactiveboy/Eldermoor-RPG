@@ -9,7 +9,7 @@ import type { IsoMap } from '../world/IsoMap';
 /** The children's voices, for the blips as a bubble pops up. */
 const VOICES: Record<string, number> = { pip: 430, hetty: 540 };
 /** They say hello when the player comes this close (in tiles). */
-const GREET_RANGE = 2.6;
+const GREET_RANGE = 1.9;
 /** A pause between one line and the reply. */
 const LINE_GAP = 0.35;
 

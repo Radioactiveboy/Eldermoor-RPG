@@ -36,8 +36,8 @@ export function buildHutMap(): MapData {
       { gx: 3.4, gy: 2.5, z: 40, radius: 100, flicker: 0.35 },
     ],
     children: [
-      { id: 'pip', gx: 3.2, gy: 4.3 },
-      { id: 'hetty', gx: 4.6, gy: 3.7 },
+      { id: 'pip', gx: 3.2, gy: 4.6 },
+      { id: 'hetty', gx: 5.1, gy: 3.3 },
     ],
     seats: [
       { name: 'hut-stool', gx: 1.5, gy: 2.5, faceX: 1, faceY: 0, standX: 1.5, standY: 3.5 },
