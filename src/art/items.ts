@@ -156,6 +156,20 @@ const charm = () =>
     c.set(7, 10, P.flowerWhite);
   });
 
+const ring = () =>
+  icon((c) => {
+    // A thick band seen at an angle, dulled silver, with a dark stone set in the top.
+    for (let y = 4; y < 16; y++) {
+      for (let x = 2; x < 15; x++) {
+        const d = Math.hypot((x + 0.5 - 8.5) / 5.5, (y + 0.5 - 10.5) / 4.5);
+        if (d > 1 || d < 0.55) continue;
+        c.set(x, y, y > 11 ? P.stoneDark : x < 7 && y < 10 ? P.stoneLight : P.stone);
+      }
+    }
+    c.ellipse(8, 5, 2.4, 1.8, P.iron, P.outline, P.ironLight);
+    c.set(7, 4, 0xffffff);
+  });
+
 const pelt = () =>
   icon((c) => {
     // A rolled-up grey hide tied with a cord, the tail hanging from one end.
@@ -297,6 +311,7 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-tunic', tunic],
     ['item-boots', boots],
     ['item-charm', charm],
+    ['item-ring', ring],
     ['item-pelt', pelt],
     ['item-cheese', cheese],
     ['item-pie', pie],

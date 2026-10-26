@@ -81,7 +81,10 @@ export interface Door {
   ask?: string;
 }
 
-/** Something to look at closely (the lost ewes in the cave). GameScene decides what examining it does. */
+/**
+ * Something to look at closely: the lost ewes in the cave, a signpost, a pile
+ * of bones. GameScene decides what examining it does.
+ */
 export interface Sight {
   id: string;
   gx: number;
@@ -89,6 +92,10 @@ export interface Sight {
   label: string;
   /** Height of the prompt above the ground, in pixels. */
   z: number;
+  /** A signpost: reading it shows where each arm points. */
+  sign?: { heading: string; lines: string[] };
+  /** Can be searched once for a random find (see systems/Loot.ts). */
+  loot?: 'bones';
 }
 
 /** A warm light source that brightens its surroundings in the dark. */

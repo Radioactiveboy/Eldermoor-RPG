@@ -252,6 +252,16 @@ export const ITEMS = {
     defence: 2,
     value: 15,
   },
+  'silver-ring': {
+    name: 'Tarnished Ring',
+    description: "A silver ring, black with age, found among old bones in the wolves' den. It feels lucky.",
+    icon: 'item-ring',
+    category: 'Clothing',
+    stack: 1,
+    slot: 'trinket',
+    defence: 1,
+    value: 22,
+  },
 } satisfies Record<string, ItemDef>;
 
 export type ItemId = keyof typeof ITEMS;

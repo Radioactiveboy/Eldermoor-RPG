@@ -79,6 +79,7 @@ export class UIScene extends Phaser.Scene {
     this.combatMode = false;
 
     this.world.onHint = (text) => this.toasts.thought(text);
+    this.world.onSign = (heading, lines) => this.toasts.sign(heading, lines);
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
     const offSave = SaveGame.onSave((save) => this.toasts.quest('Game saved', SaveGame.describe(save)));
@@ -93,6 +94,7 @@ export class UIScene extends Phaser.Scene {
       offItems();
       offSave();
       this.world.onHint = undefined;
+      this.world.onSign = undefined;
       this.minimap?.destroy();
       this.minimap = undefined;
       this.minimapOf = undefined;
