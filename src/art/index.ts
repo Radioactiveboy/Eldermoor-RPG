@@ -13,6 +13,7 @@ import { generateNpcs } from './npc';
 import { generatePortraits } from './portraits';
 import { generateProps } from './props';
 import { generateTiles } from './tiles';
+import { generateTollGate } from './tollgate';
 
 /**
  * Draws all of the game's pixel art at startup and registers it as textures
@@ -34,4 +35,5 @@ export function generateArt(scene: Phaser.Scene): void {
   generateMarket(scene);
   generateCave(scene);
   generateHenFarm(scene);
+  generateTollGate(scene);
 }

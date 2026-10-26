@@ -24,10 +24,12 @@ import { buildCaveMap } from '../world/CaveMap';
 import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
 import { buildHutMap } from '../world/HutMap';
-import { buildMarketMap } from '../world/MarketMap';
+import { buildMarketMap, TOLL, tollGateShape } from '../world/MarketMap';
+import { buildPlainsMap } from '../world/PlainsMap';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
-import { AreaId, Bed, CropPatch, Door, MapData, Prop, Seat, Sight } from '../world/MapData';
+import { AreaId, Bed, CropPatch, Door, MapData, Musing, Prop, Seat, Sight } from '../world/MapData';
+import { FoeKind, FOES } from '../systems/Combat';
 import { cropKey } from '../art/farm';
 import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
@@ -130,6 +132,22 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
   ],
 };
 
+/** What's left of each kind of beast once it's slain. */
+const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
+  wolf: [['wolf-pelt', 1]],
+  deer: [['venison', 2], ['deer-hide', 1]],
+  hare: [['hare-pelt', 1]],
+  boar: [['boar-tusk', 2]],
+};
+
+/** What the hero thinks over a beast they've brought down, and when one gets away. */
+const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
+  wolf: { slain: 'It lies still now. The pelt might be worth something in the village.', fled: 'It ran off into the trees. I doubt it will come back.' },
+  deer: { slain: 'Venison for the pot, and a fine hide. Tamsin will want that.', fled: 'Gone, white rump bobbing away over the grass. I need to be quicker.' },
+  hare: { slain: 'A hare. Not much eating on it, but the pelt is soft.', fled: 'Gone in a flash. Hares are quicker than they look.' },
+  boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and so is my hide.', fled: 'It crashed off into the thicket. Good riddance.' },
+};
+
 /** What the militia call out about the market's hours. */
 const MILITIA_CALLS = {
   closing: "Market's closing! Stalls are shut till morning, folks. Off home with you.",
@@ -148,7 +166,8 @@ function wakingThought(hour: number): string {
 /** Builds the map for an area. */
 function buildArea(area: AreaId): MapData {
   if (area === 'home') return buildHomeMap();
-  if (area === 'market') return buildMarketMap();
+  if (area === 'market') return buildMarketMap(QuestLog.hasFlag('paid-toll'));
+  if (area === 'plains') return buildPlainsMap();
   if (area === 'cave') return buildCaveMap();
   if (area === 'hut') return buildHutMap();
   return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
@@ -206,6 +225,12 @@ export class GameScene extends Phaser.Scene {
   private lastOffExit: GridPoint = { x: 0, y: 0 };
   /** Whether the market was open last frame, so the militia can call out when it shuts or opens. */
   private marketWasOpen = true;
+  /** Sprinting this frame, which sends shy game running. */
+  private sprinting = false;
+  /** The patch of ground with a thought attached (MapData.musings) the player is standing in, so it's only had once. */
+  private musing?: Musing;
+  /** Something to happen once the conversation that led to it closes (the toll gate swinging open). */
+  private afterTalk?: () => void;
 
   constructor() {
     super('Game');
@@ -244,7 +269,7 @@ export class GameScene extends Phaser.Scene {
     this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
     const areaParam = new URLSearchParams(window.location.search).get('area');
-    if (data.newGame && (areaParam === 'market' || areaParam === 'world' || areaParam === 'cave' || areaParam === 'hut')) this.area = areaParam;
+    if (data.newGame && (['market', 'world', 'cave', 'hut', 'plains'] as const).some((a) => a === areaParam)) this.area = areaParam as AreaId;
     this.busy = false;
     this.walkingTo = undefined;
     this.focus = undefined;
@@ -252,6 +277,8 @@ export class GameScene extends Phaser.Scene {
     this.seat = undefined;
     this.inCombat = false;
     this.arrivalGrace = ARRIVAL_GRACE;
+    this.afterTalk = undefined;
+    this.musing = undefined;
 
     this.map = new IsoMap(this, buildArea(this.area));
     const start = data.load?.position ?? ((data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn);
@@ -295,12 +322,19 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.area === 'market' && !this.visited.has('market')) {
       const firstSight = this.marketWasOpen
-        ? 'The market at last. Fresh bread, woodsmoke, and the clang of the smithy.'
-        : 'The market at last, but the stalls are all covered over for the night.';
+        ? 'Adowvale at last. Fresh bread, woodsmoke, and the clang of the smithy in the market square.'
+        : 'Adowvale at last, but the market stalls are all covered over for the night.';
       this.time.delayedCall(1000, () => this.onHint?.(firstSight));
       QuestLog.writeDiary(
-        'Followed the old road all the way to the market. The square was busier than I remembered, with the militia ' +
+        'Followed the old road all the way to Adowvale. The market square was busier than I remembered, with the militia ' +
           'marching about in their tin hats. Someone here must know where to find moonpetal.',
+      );
+    }
+    if (this.area === 'plains' && !this.visited.has('plains')) {
+      this.time.delayedCall(1000, () => this.onHint?.('Open sky at last. The grass runs on for miles, and the wind smells of rain.'));
+      QuestLog.writeDiary(
+        "Went out through Lord Morten's gate onto Adowvale Plains. I have never seen so much sky. Deer grazing in the long " +
+          'grass, the road running off to a crossroads, and not a wall in sight.',
       );
     }
     if (this.area === 'cave') this.enteredCave();
@@ -357,6 +391,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.updateChannel(dt);
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : 1);
+    this.sprinting = wantsSprint && moved;
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
     this.updateMarketHours();
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
@@ -371,6 +406,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHens(dt);
     this.siblings?.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
     this.checkRoadExits();
+    this.checkMusings();
     this.updateHover();
     this.updateFocus();
     this.updateSitting(dt);
@@ -475,6 +511,9 @@ export class GameScene extends Phaser.Scene {
     this.scene.get('Dialogue').events.once('dialogue-closed', () => {
       const shop = this.pendingShop;
       this.pendingShop = undefined;
+      const after = this.afterTalk;
+      this.afterTalk = undefined;
+      after?.();
       // Asked to see a trader's goods: go straight from talking to trading.
       if (shop) this.openShop(shop);
       else this.release();
@@ -530,6 +569,17 @@ export class GameScene extends Phaser.Scene {
         QuestLog.writeDiary(
           "Took Iran his sack of feed. The hens mobbed him before he'd got it open. He sent me off with eggs for Mother, " +
             'and his little girl shouted goodbye from the doorway until I was halfway down the hill.',
+        );
+        break;
+      case 'pay-toll':
+        this.payToll();
+        break;
+      case 'heard-of-monastery':
+        if (QuestLog.hasFlag('heard-of-monastery')) return;
+        QuestLog.setFlag('heard-of-monastery');
+        QuestLog.writeDiary(
+          "Met a traveller on the Lord's Road who says the monks of Saint Elda grow moonpetal in their cloister pond, a day's " +
+            'walk east of the crossroads. Brother Anselm keeps it dried. If anyone can help Mother, it is them.',
         );
         break;
       case 'finish-sheep-quest':
@@ -647,11 +697,11 @@ export class GameScene extends Phaser.Scene {
     this.arrivalGrace = Math.max(0, this.arrivalGrace - dt);
     for (const creature of this.creatures) {
       const watching = !this.busy && this.arrivalGrace <= 0 && this.scene.isActive();
-      if (creature.update(dt, watching ? { x: this.player.gx, y: this.player.gy } : undefined)) this.startCombat(creature);
+      if (creature.update(dt, watching ? { x: this.player.gx, y: this.player.gy } : undefined, this.sprinting)) this.startCombat(creature);
     }
   }
 
-  /** A beast has spotted the player: it and any of its pack close by attack. */
+  /** A beast has spotted the player (or the player has gone after some game): it and any of its pack close by fight. */
   startCombat(first: Creature): void {
     if (this.busy || this.inCombat) {
       first.disengage();
@@ -663,9 +713,14 @@ export class GameScene extends Phaser.Scene {
     this.inCombat = true;
     this.walkingTo = undefined;
     this.player.setPath([]);
-    const foes = this.creatures.filter((c) => c === first || (c.active && c.distanceTo(first.gx, first.gy) < PACK_RANGE));
+    // Only beasts that hunt in packs (wolves) bring the rest of the pack with them.
+    const pack = FOES[first.kind].packs;
+    const foes = this.creatures.filter(
+      (c) => c === first || (pack && c.active && c.kind === first.kind && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
+    );
+    const hunted = first.huntable;
     foes.forEach((c) => c.engage());
-    GameAudio.growl();
+    if (!hunted) GameAudio.growl();
     GameAudio.playMusic('battle');
     const data: CombatSceneData = { foes };
     this.scene.launch('Combat', data);
@@ -684,7 +739,9 @@ export class GameScene extends Phaser.Scene {
 
   private endCombat(result: CombatResult, foes: Creature[]): void {
     this.inCombat = false;
-    for (const id of [...result.slain, ...result.fled]) this.defeatedFoes.add(id);
+    // Gone for good, except the plains' game, which is back the next time the hero comes this way.
+    const respawns = new Set((this.map.data.creatures ?? []).filter((s) => s.respawns).map((s) => s.id));
+    for (const id of [...result.slain, ...result.fled]) if (!respawns.has(id)) this.defeatedFoes.add(id);
     this.fitCamera();
     if (result.outcome === 'defeat') {
       this.knockedOut();
@@ -695,12 +752,10 @@ export class GameScene extends Phaser.Scene {
       foes.forEach((c) => c.disengage());
       this.onHint?.("I got away. Best keep my distance from it for now.");
     } else {
-      if (result.slain.length > 0) this.give('wolf-pelt', result.slain.length);
-      this.onHint?.(
-        result.slain.length > 0
-          ? 'It lies still now. The pelt might be worth something in the village.'
-          : 'It ran off into the trees. I doubt it will come back.',
-      );
+      const slain = foes.filter((c) => result.slain.includes(c.id));
+      for (const beast of slain) for (const [item, count] of SPOILS[beast.kind]) this.give(item, count);
+      const after = AFTER_THE_FIGHT[foes[0].kind];
+      this.onHint?.(slain.length > 0 ? after.slain : after.fled);
       if (this.area === 'cave' && this.creatures.every((c) => !c.active || foes.includes(c))) {
         this.time.delayedCall(2600, () => this.onHint?.('The den is quiet now. Only the dripping water, and something pale at the back of the cave.'));
       }
@@ -739,6 +794,7 @@ export class GameScene extends Phaser.Scene {
       return list;
     }
     for (const npc of this.npcs) if (npc.present) list.push(this.npcInteraction(npc));
+    for (const beast of this.creatures) if (beast.huntable) list.push(this.huntInteraction(beast));
     for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
     for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
     for (const sight of this.map.data.sights ?? []) {
@@ -782,6 +838,19 @@ export class GameScene extends Phaser.Scene {
       key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
       promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
       run: () => this.startConversation(npc),
+    };
+  }
+
+  /** Go after a deer or a hare: walk up quietly (running sends it off) and the hunt starts as a fight. */
+  private huntInteraction(beast: Creature): Interaction {
+    const p = gridToScreen(beast.gx, beast.gy);
+    return {
+      key: `hunt:${beast.id}`, label: 'Hunt', target: beast.name, gx: beast.gx, gy: beast.gy, range: 2.2,
+      promptX: p.x, promptY: p.y - beast.sprite.displayHeight * beast.sprite.originY - 4,
+      tile: { x: Math.floor(beast.gx), y: Math.floor(beast.gy) },
+      run: () => {
+        if (beast.huntable) this.startCombat(beast);
+      },
     };
   }
 
@@ -1097,6 +1166,41 @@ export class GameScene extends Phaser.Scene {
     } else if (this.exitArmed) {
       this.useDoor(exit);
     }
+  }
+
+  /** Stepping into a patch of ground with a thought attached (where a road runs on off the map) brings it on, once each time. */
+  private checkMusings(): void {
+    const { gx, gy } = this.player;
+    const here = this.map.data.musings?.find((m) => gx >= m.x0 && gx < m.x1 && gy >= m.y0 && gy < m.y1);
+    if (here && here !== this.musing && !this.busy) this.onHint?.(here.text);
+    this.musing = here;
+  }
+
+  /**
+   * Paying Lord Morten's tithe at the toll gate: the coins go, the gate swings
+   * open as the conversation ends, and it stays open from then on (the flag
+   * is saved with the quest log, and Adowvale is built with the gate open).
+   */
+  private payToll(): void {
+    if (QuestLog.hasFlag('paid-toll')) return;
+    if (!Inventory.addCoins(-TOLL)) {
+      this.onHint?.("I'm short of the toll. I'll need more coins than that.");
+      return;
+    }
+    QuestLog.setFlag('paid-toll');
+    GameAudio.coins();
+    QuestLog.writeDiary(
+      `Paid Lord Morten's toll guards ${TOLL} coins to use the gate north of Adowvale. A tithe, they called it. ` +
+        "Robbery, Mother would call it. Still, the gate is open to me now, and the Lord's Road beyond.",
+    );
+    this.afterTalk = () => {
+      const gate = this.map.data.objects?.find((o) => o.key === 'toll-gate');
+      if (!gate) return;
+      const open = tollGateShape(true);
+      GameAudio.door();
+      this.map.reshapeObject(gate, 'toll-gate-open', open.shapes, open.blocks);
+      this.time.delayedCall(200, () => this.onHint?.('The guards heave the gate open. Beyond it, the road runs out into open country.'));
+    };
   }
 
   private useDoor(door: Door): void {

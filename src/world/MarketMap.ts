@@ -2,9 +2,26 @@ import Phaser from 'phaser';
 import { TOWNHOUSE_CHIMNEY } from '../art/market';
 import { box, circle, Shape } from './Collision';
 import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
+import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 
 export const MARKET_W = 34;
 export const MARKET_H = 30;
+
+/** The back corner of Lord Morten's toll gate, across the road north out of the village (see addTollGate). */
+export const TOLL_GATE = { tx: 23, ty: 0, w: 4, h: 1 };
+
+/** Coins the toll guards ask for, once, to open the gate onto the Lord's Road. */
+export const TOLL = 100;
+
+/**
+ * What the toll gate blocks, shut or open (relative to its corner): the stone
+ * piers on its outer tiles always, and the road between them while it's shut.
+ */
+export function tollGateShape(open: boolean): { shapes: Shape[]; blocks: Array<[number, number]> } {
+  const piers = [box(0, 0.3, 1, 0.7), box(3, 0.3, 4, 0.7)];
+  if (open) return { shapes: piers, blocks: [[0, 0], [3, 0]] };
+  return { shapes: [...piers, box(1, 0.42, 2, 0.58), box(2, 0.42, 3, 0.58)], blocks: [[0, 0], [1, 0], [2, 0], [3, 0]] };
+}
 
 /** The road comes in from the east edge along these two rows. */
 const ROAD_ROWS = [17, 18];
@@ -30,14 +47,17 @@ const STALLS: Array<{
 ];
 
 /**
- * The market at Eldermoor, at the far end of the road from the cottage: a
- * bare-earth square with the well in the middle, three traders' stalls, tall
- * townhouses and an inn around it, lamp posts that light up at night, and the
- * village militia walking their rounds. The traders keep market hours (see
- * systems/MarketHours.ts), going home to the houses round the square at night. The road leaves by the east edge,
- * back towards home.
+ * Adowvale, the village at the far end of the road from the cottage, built
+ * round its market square: bare earth with the well in the middle, three
+ * traders' stalls, tall townhouses and an inn around it, lamp posts that light
+ * up at night, and the village militia walking their rounds. The traders keep
+ * market hours (see systems/MarketHours.ts), going home to the houses round the
+ * square at night. The road leaves by the east edge, back towards home, and a
+ * lane runs north out of the square to Lord Morten's toll gate and the Lord's
+ * Road onto Adowvale Plains.
+ * @param gateOpen whether the toll has been paid, so the gate stands open
  */
-export function buildMarketMap(): MapData {
+export function buildMarketMap(gateOpen = false): MapData {
   const W = MARKET_W;
   const H = MARKET_H;
   const rnd = new Phaser.Math.RandomDataGenerator(['eldermoor-market']);
@@ -94,6 +114,7 @@ export function buildMarketMap(): MapData {
       tx: W - 1, ty, to: 'world' as const, entry: 'market', auto: true,
       ask: 'Do you want to make the trek home to Adowvale Hollow?',
     })),
+    landmarks: [{ gx: 15, gy: 14, name: 'The market square', range: 10 }],
     lights: [],
     npcs: [],
     seats: [],
@@ -167,8 +188,9 @@ export function buildMarketMap(): MapData {
   placeObject(data, { key: 'mkt-signpost', tx: 27, ty: 19, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
   data.sights = [{
     id: 'signpost-market', gx: 27.5, gy: 19.5, label: 'Read the sign', z: 58,
-    sign: { heading: 'Signpost', lines: ['→  East: Adowvale Hollow', '←  West: Adowvale Market square'] },
+    sign: { heading: 'Signpost', lines: ['→  East: Adowvale Hollow', '←  West: Adowvale market square', '↑  North: the toll gate and the Lord\'s Road'] },
   }];
+  addTollGate(data, gateOpen);
 
   // The militia, each walking their own patch of the square.
   data.npcs!.push(
@@ -178,4 +200,52 @@ export function buildMarketMap(): MapData {
     { id: 'guard-4', gx: 25.5, gy: 16.5 },
   );
   return data;
+}
+
+/**
+ * Lord Morten's toll gate: a lane leaves the north-east corner of the square
+ * and runs up to a stone-piered gate in a stake palisade at the north edge of
+ * the village, where the Lord's Road sets off across Adowvale Plains. Two of
+ * his men keep the gate, with a booth to shelter in and his banner flying. The
+ * gate opens once the toll is paid, and stays open (see GameScene.payToll).
+ */
+function addTollGate(data: MapData, open: boolean): void {
+  const { tx, ty } = TOLL_GATE;
+  const middle = tx + 2;
+  // Clear the ground up to the gate, keeping the trees either side of the palisade.
+  for (let y = 0; y <= 6; y++) {
+    for (let x = 20; x <= 30; x++) if (data.props[y][x] === Prop.Tree || data.props[y][x] === Prop.Rock) data.props[y][x] = Prop.None;
+  }
+  // The lane, worn into the grass, bending up out of the corner of the square to the gate.
+  const lane = smoothLine([{ x: 22.5, y: 9 }, { x: 23.8, y: 6 }, { x: middle - 0.2, y: 3 }, { x: middle, y: 1 }, { x: middle, y: -1 }]);
+  paintPath(data.terrain, lane, (t) => 1.05 + 0.2 * Math.sin(t * 11 + 2));
+  for (let x = tx + 1; x <= tx + 2; x++) data.terrain[ty][x] = Terrain.Dirt;
+  joinDiagonals(data.terrain, Terrain.Dirt, Terrain.Grass);
+
+  const shape = tollGateShape(open);
+  placeObject(data, { key: open ? 'toll-gate-open' : 'toll-gate', tx, ty, w: TOLL_GATE.w, h: TOLL_GATE.h, ...shape });
+  // The palisade either side, running off into the trees.
+  for (let x = 19; x <= 30; x++) {
+    if (x >= tx && x < tx + TOLL_GATE.w) continue;
+    placeObject(data, { key: 'toll-palisade', tx: x, ty, w: 1, h: 1, shapes: [box(0, 0.38, 1, 0.62)] });
+  }
+  placeObject(data, { key: 'toll-booth', tx: 28, ty: 1, w: 1, h: 1, shapes: [box(0.1, 0.1, 0.9, 0.9)] });
+  placeObject(data, { key: 'toll-banner', tx: 21, ty: 1, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
+  placeObject(data, { key: 'mkt-lamp', tx: 27, ty: 3, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.14)] });
+  data.lights!.push({ gx: 27.5, gy: 3.5, z: 50, radius: 150, flicker: 0.5 });
+
+  // Through the gate: the Lord's Road, and Adowvale Plains beyond.
+  for (let x = tx + 1; x <= tx + 2; x++) {
+    data.doors!.push({ tx: x, ty, to: 'plains', entry: 'gate', auto: true, ask: "Do you want to take the Lord's Road out onto Adowvale Plains?" });
+  }
+  data.entries!.gate = { x: middle, y: 2.2 };
+  // Lord Morten's men, one in front of each pier.
+  data.npcs!.push({ id: 'tollguard-1', gx: tx + 0.5, gy: 1.5 }, { id: 'tollguard-2', gx: tx + 3.5, gy: 1.5 });
+
+  placeObject(data, { key: 'mkt-signpost', tx: 26, ty: 7, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
+  data.sights!.push({
+    id: 'signpost-tollgate', gx: 26.5, gy: 7.5, label: 'Read the sign', z: 58,
+    sign: { heading: 'Signpost', lines: ['↑  North: toll gate, the Lord\'s Road, Adowvale Plains', '↓  South: Adowvale market square'] },
+  });
+  data.landmarks!.push({ gx: middle, gy: 1, name: 'The toll gate', range: 6 });
 }

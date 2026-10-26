@@ -8,7 +8,7 @@ const PAD_Y = 6;
 /** How close (in tiles) to a landmark's door the player must be for its name to show under the area's. */
 const NEAR = 9;
 
-/** Places in the Hollow that are worth naming, found by the door that leads into them. */
+/** Places that are worth naming, found by the door that leads into them (more are listed in MapData.landmarks). */
 const LANDMARKS: Partial<Record<AreaId, string>> = {
   home: 'Home',
   hut: "Farmer Iran's farm",
@@ -23,7 +23,7 @@ export class LocationLabel {
   private readonly frame: Phaser.GameObjects.Graphics;
   private readonly title: Phaser.GameObjects.Text;
   private readonly place: Phaser.GameObjects.Text;
-  private landmarks: Array<{ x: number; y: number; name: string }> = [];
+  private landmarks: Array<{ x: number; y: number; name: string; range: number }> = [];
   private area?: AreaId;
   private shown = '';
   private visible = true;
@@ -45,8 +45,10 @@ export class LocationLabel {
     this.area = area;
     this.landmarks = (map.doors ?? []).flatMap((d) => {
       const name = LANDMARKS[d.to];
-      return name && d.to !== area ? [{ x: d.tx + 0.5, y: d.ty + 0.5, name }] : [];
+      return name && d.to !== area ? [{ x: d.tx + 0.5, y: d.ty + 0.5, name, range: NEAR }] : [];
     });
+    // Places within the area itself, like Adowvale's market square.
+    for (const l of map.landmarks ?? []) this.landmarks.push({ x: l.gx, y: l.gy, name: l.name, range: l.range ?? NEAR });
     this.shown = '';
   }
 
@@ -75,9 +77,9 @@ export class LocationLabel {
   update(gx: number, gy: number): void {
     if (!this.visible || !this.area) return;
     const near = this.landmarks
-      .map((l) => ({ name: l.name, d: Phaser.Math.Distance.Between(gx, gy, l.x, l.y) }))
-      .filter((l) => l.d < NEAR)
-      .sort((a, b) => a.d - b.d)[0];
+      .map((l) => ({ name: l.name, d: Phaser.Math.Distance.Between(gx, gy, l.x, l.y), range: l.range }))
+      .filter((l) => l.d < l.range)
+      .sort((a, b) => a.d / a.range - b.d / b.range)[0];
     const title = AREA_NAMES[this.area];
     const place = near?.name ?? '';
     const key = `${title}|${place}|${this.cx},${this.y},${this.below},${this.alignRight}`;

@@ -2,7 +2,7 @@ import { HERO_NAME } from '../config';
 import type { DialogueScript } from './Dialogue';
 
 /**
- * The market at Eldermoor: three stallholders and the village militia. The
+ * Adowvale's market square: three stallholders and the village militia. The
  * traders open their stalls with the `shop:<id>` action (see GameScene); the
  * militia stand about, keep an eye on things and grumble. Out of market hours
  * the traders start on 'closing' (packing up, walking home) or 'opening'
@@ -218,6 +218,7 @@ export const GUARD: DialogueScript = {
         { text: 'What are you guarding against?', next: 'wolves' },
         { text: 'Is the road safe?', next: 'road' },
         { text: 'When is the market open?', next: 'hours' },
+        { text: 'Who are the soldiers at the north gate?', next: 'tollgate' },
         { text: 'Carry on.', next: 'bye' },
       ],
     },
@@ -241,6 +242,14 @@ export const GUARD: DialogueScript = {
       lines: [
         'From seven in the morning till six in the evening, when the light starts to go. Then the traders pack up and go home.',
         "Hilde's always first to set up and first to leave, mind. Bakers keep strange hours.",
+      ],
+      next: 'ask',
+    },
+    tollgate: {
+      speaker: 'guard',
+      lines: [
+        "Not ours, them. Lord Morten's men, in his red and black. He's put a gate on the Lord's Road and wants a hundred coins off anyone going through.",
+        "A tithe, he calls it. We call it something else, but not where they can hear. It's open country past there, mind: Adowvale Plains, deer and all.",
       ],
       next: 'ask',
     },

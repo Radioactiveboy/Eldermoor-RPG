@@ -5,6 +5,8 @@ import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
 import { FeedStage, iranScript } from '../dialogue/iran';
+import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
+import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
 import { Inventory } from '../systems/Inventory';
@@ -117,6 +119,12 @@ const NPCS: Record<string, NpcDef> = {
   baker: { texture: 'folk-baker', script: traveller('baker', BAKER), offDuty: BAKER, talkRange: 2.6 },
   smith: { texture: 'folk-smith', script: traveller('smith', SMITH), offDuty: SMITH, talkRange: 2.6 },
   tanner: { texture: 'folk-tanner', script: traveller('tanner', TANNER), offDuty: TANNER, talkRange: 2.6 },
+  // Lord Morten's men at the toll gate, who stand their ground.
+  'tollguard-1': { texture: 'folk-tollguard', script: () => tollGuardScript(QuestLog.hasFlag('paid-toll'), Inventory.coins >= TOLL, TOLL, false) },
+  'tollguard-2': { texture: 'folk-tollguard', script: () => tollGuardScript(QuestLog.hasFlag('paid-toll'), Inventory.coins >= TOLL, TOLL, true) },
+  // Travellers on the Lord's Road across the plains.
+  carter: { texture: 'folk-carter', script: traveller('carter', CARTER), wander: 14 },
+  herbwife: { texture: 'folk-herbwife', script: traveller('herbwife', HERBWIFE), wander: 10 },
   // The village militia, walking their rounds of the square, day and night.
   ...Object.fromEntries(
     [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),

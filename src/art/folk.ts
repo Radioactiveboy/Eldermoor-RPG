@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { generateCharacter, Outfit } from './character';
 import { PALETTE as P } from './palette';
+import { MORTEN } from './tollgate';
 
 /**
  * Travelling folk met on the road. Each walks with the hero's body in their own
@@ -95,6 +96,49 @@ export const FOLK: Record<string, Outfit> = {
     staff: true,
     spear: true,
     mail: true,
+  },
+  // Lord Morten's toll guards: a blackened helm, mail under his crimson, and a spear.
+  tollguard: {
+    cloak: [MORTEN.black, 0x18141a, 0x3a343c],
+    hood: false,
+    tunic: [MORTEN.crimson, MORTEN.crimsonDark, MORTEN.crimsonLight],
+    shirt: [P.ironLight, P.iron],
+    trouser: [0x2a2224, 0x1d1620],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xd8a482, 0xb07a5a],
+    hair: 0x2a2024,
+    hat: [0x4e4a56, 0x36323e, 0x6a6672],
+    beard: 0x2a2024,
+    staff: true,
+    spear: true,
+    mail: true,
+  },
+  // Odo the carter: flat cap, russet coat, a blue neckerchief.
+  carter: {
+    cloak: null,
+    hood: false,
+    tunic: [0x8a4a2a, 0x66361e, 0xa8623c],
+    shirt: [0x2e5a7a, 0x22465e],
+    trouser: [0x4e4234, 0x3a3026],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xe0a07c, 0xbc7c5c],
+    hair: 0x6a4a30,
+    hat: [0x5a5a3e, 0x44442e, 0x74745a],
+    beard: 0x6a4a30,
+  },
+  // Ness the herb-gatherer: a sage-green hooded cloak over a brown dress, a staff, and her basket on her back.
+  herbwife: {
+    cloak: [0x6a7a52, 0x4e5c3a, 0x86966a],
+    hood: true,
+    tunic: [0x7a5a46, 0x5a4232, 0x96745a],
+    shirt: [0x7a5a46, 0x5a4232],
+    trouser: [0x5a4232, 0x42301e],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xd8a888, 0xb08468],
+    hair: 0x6a625e,
+    robe: true,
+    staff: true,
+    pack: true,
   },
   // Farmer Iran: a battered straw hat, a grey beard and an undyed wool smock.
   iran: {

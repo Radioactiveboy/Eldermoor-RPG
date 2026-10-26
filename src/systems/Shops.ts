@@ -61,7 +61,7 @@ export const SHOPS = {
     stock: [['jerkin', 1], ['wool-hood', 2], ['riding-boots', 1], ['boots', 1]],
     buys: ['Material', 'Clothing'],
     buyRate: 0.4,
-    wants: { 'wolf-pelt': 0.75 },
+    wants: { 'wolf-pelt': 0.75, 'deer-hide': 0.75 },
   },
 } satisfies Record<string, ShopDef>;
 

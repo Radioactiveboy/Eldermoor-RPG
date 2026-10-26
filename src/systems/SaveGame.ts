@@ -44,9 +44,10 @@ const STORAGE_KEY = 'eldermoor.save';
 export const AREA_NAMES: Record<AreaId, string> = {
   home: 'The cottage',
   world: 'Adowvale Hollow',
-  market: 'Adowvale Market',
+  market: 'Adowvale',
   cave: "The wolves' cave",
   hut: "Farmer Iran's hut",
+  plains: 'Adowvale Plains',
 };
 
 type Listener = (save: SaveData) => void;

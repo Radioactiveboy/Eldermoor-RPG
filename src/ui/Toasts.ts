@@ -48,7 +48,7 @@ export class Toasts {
     this.push({ kind: 'thought', text });
   }
 
-  /** A signpost read: one line per arm, e.g. "← West: Adowvale Market". */
+  /** A signpost read: one line per arm, e.g. "← West: Adowvale village and market". */
   sign(heading: string, lines: string[]): void {
     const text = lines.join('\n');
     if (this.queue.some((t) => t.text === text) || this.current?.name === text) return;

@@ -25,8 +25,11 @@ export enum Prop {
   Blocked,
 }
 
-/** The places the player can be. Each is its own map; doors lead between them. */
-export type AreaId = 'home' | 'world' | 'market' | 'cave' | 'hut';
+/**
+ * The places the player can be. Each is its own map; doors lead between them.
+ * ('market' is the village of Adowvale, round its market square: the id is kept so old saves still load.)
+ */
+export type AreaId = 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -76,7 +79,7 @@ export interface Door {
    */
   facing?: 'wall' | 'front';
   /**
-   * Asked before going, e.g. "Do you want to make the trek to Adowvale Market?".
+   * Asked before going, e.g. "Do you want to make the trek to Adowvale?".
    * Saying no turns the player back the way they came.
    */
   ask?: string;
@@ -171,6 +174,26 @@ export interface CreatureSpawn {
   kind: FoeKind;
   gx: number;
   gy: number;
+  /** Game that's back the next time the area is visited, however many times it's hunted (the plains' deer and hares). */
+  respawns?: boolean;
+}
+
+/** A named spot, shown under the area's name when the player is near it (see ui/LocationLabel.ts). */
+export interface Landmark {
+  gx: number;
+  gy: number;
+  name: string;
+  /** How close the player must be, in tiles. */
+  range?: number;
+}
+
+/** A stretch of ground where the hero has a thought on stepping into it, e.g. where a road runs on off the map. */
+export interface Musing {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  text: string;
 }
 
 /** A fenced run that hens stay inside, in grid units (the open ground within the fence). */
@@ -218,6 +241,10 @@ export interface MapData {
   drips?: Array<{ gx: number; gy: number; z: number }>;
   /** Chimney tops that smoke: grid position and height in pixels. */
   chimneys?: Array<{ gx: number; gy: number; z: number }>;
+  landmarks?: Landmark[];
+  musings?: Musing[];
+  /** How much of the grass has flowers, tufts and pebbles on it (0..1; 0.22 if not given). */
+  decor?: number;
   /** Road tiles in order from one end to the other, for travellers to wander along. */
   road?: Array<{ x: number; y: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */

@@ -47,8 +47,10 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, back to main menu)
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
-- Add `?area=market` to start in the market (or `?area=world` outside the cottage, `?area=cave`
-  in the wolves' cave, or `?area=hut` inside Farmer Iran's hut)
+- Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
+  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, or `?area=plains` on Adowvale Plains)
+- **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
+  game sends it running, and in a fight it may bolt rather than stand
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
   testing fights against several enemies)
 
@@ -62,7 +64,11 @@ src/
   world/MapData.ts        Terrain + prop types, walkability table
   world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
-  world/MarketMap.ts      The market at the end of the road: bare-earth square, well, stalls, houses, militia
+  world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses,
+                          militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
+  world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map, open grass, copses, a mere, the
+                          Lord's Road to a crossroads, deer, hares and boar, and two travellers
+  world/BakedLayer.ts     Bakes the ground into textures of at most 2048px, so big maps fit on phones
   world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
                           stalagmites, a pool, three wolves, the drover's lost ewes, and bone piles to search
@@ -91,6 +97,7 @@ src/
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
+  art/tollgate.ts         Lord Morten's toll gate (shut and open), the palisade, the guards' booth and his banner
   art/henfarm.ts          Farmer Iran's hut, the hen coop and trough, and the hens and rooster
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
                           boulders, bones and the dead ewes
@@ -150,9 +157,16 @@ src/
   hand-made maps (e.g. from the Tiled editor) can plug in later. A map can have
   furniture and buildings (`objects`), back walls for rooms, `doors` that lead
   to another area, light sources, NPCs, seats and crops. Using a door (E by it)
-  swaps the area (`home`, `world` and `market` so far). A door marked `auto` is
-  the end of a road at the map's edge: walking onto it goes on to the next area
-  (the road west from the cottage leads to the market, and back).
+  swaps the area. A door marked `auto` is the end of a road at the map's edge:
+  walking onto it goes on to the next area (the road west from the cottage
+  leads to Adowvale, and the toll gate north of Adowvale to the plains). A map
+  can also name `landmarks` for the location label, and `musings`: patches of
+  ground where the hero has a thought, like the plains' road ends.
+- **The toll gate.** Lord Morten's two guards at the north edge of Adowvale want
+  100 coins (`TOLL` in `world/MarketMap.ts`) before they'll open the gate. Paying
+  (the `pay-toll` dialogue action) sets the `paid-toll` quest-log flag, which is
+  saved, and swings the gate open (`IsoMap.reshapeObject`); from then on
+  Adowvale is always built with it open.
 - **Interactions** are built in `GameScene.interactionsNear`: each nearby NPC,
   door, seat, ripe crop or tree offers an `Interaction` (a label, a range and
   what to do). The nearest one in range gets the HUD's "E" prompt. Slower
@@ -186,7 +200,12 @@ src/
   against 10, +2 per extra enemy). Wolves gang up (+2 to hit in a pack) and may
   bolt when badly hurt. Lose and you wake up at home. The clock stops during a
   fight. New beasts go in `FOES` (`systems/Combat.ts`) with art in `art/` and a
-  spawn in the map's `creatures` list.
+  spawn in the map's `creatures` list. How each behaves in the wild is in
+  `WAYS` (`entities/Creature.ts`): wolves and boar attack when you come close;
+  deer and hares are shy game you hunt yourself, which may bolt (`skittish`).
+  What each leaves behind is `SPOILS` in `GameScene` (venison and a hide from a
+  deer, a hare's pelt, a boar's tusks). Spawns marked `respawns` (the plains'
+  game) are back every visit.
 
 - **Experience and levels.** The hero earns XP for slaying beasts (each beast
   in `FOES` has an `xp` value; a grey wolf is 40), for each step of a quest (20),
@@ -201,6 +220,8 @@ src/
 
 ## Good next steps
 
+Saint Elda's monastery, east of the plains' crossroads, where the travellers
+say moonpetal grows (the `heard-of-monastery` flag is set once one tells you).
 The village herbalist (the next step of "Medicine for Mother"; Hilde the baker
 mentions Old Maud), more villagers and buildings to go into,
 more beasts and weapons, a reward for the wolf pelt, cooking with the garden's

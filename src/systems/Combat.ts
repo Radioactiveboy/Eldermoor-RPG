@@ -36,6 +36,10 @@ export interface CombatantDef {
   quickness: number;
   /** How the attack reads in the log, up to the target ("lunges at", "swing your staff at"). */
   verb: string;
+  /** Game that would rather run: the chance each turn that it bolts (doubled once it's hurt). */
+  skittish?: number;
+  /** Never runs, however badly hurt (a boar fights to the end). */
+  stubborn?: boolean;
 }
 
 export interface Combatant extends CombatantDef {
@@ -212,12 +216,16 @@ export function chooseFoeAction(battle: Battle, foe: Combatant, rng: Rng = Math.
   if (targets.length === 0) return { type: 'wait' };
   const hurt = foe.hp / foe.maxHp;
   const alone = battle.standing('foes').length === 1;
-  if (hurt <= 0.3 && rng() < (alone ? 0.45 : 0.2)) return { type: 'flee' };
+  if (foe.skittish && rng() < foe.skittish * (hurt < 1 ? 2 : 1)) return { type: 'flee' };
+  if (!foe.stubborn && hurt <= 0.3 && rng() < (alone ? 0.45 : 0.2)) return { type: 'flee' };
   const target = targets.reduce((a, b) => (b.hp < a.hp ? b : a));
   return { type: 'attack', target };
 }
 
-/** The beasts that can be met in the wild, and the experience each is worth when slain. */
+/**
+ * The beasts that can be met in the wild, the experience each is worth when
+ * slain, and whether others of its kind nearby join in (`packs`).
+ */
 export const FOES = {
   wolf: {
     name: 'Grey Wolf',
@@ -228,7 +236,45 @@ export const FOES = {
     quickness: 2,
     verb: 'lunges at',
     xp: 40,
+    packs: true,
   },
-} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number }>;
+  // Plains game (see world/PlainsMap.ts): it would rather run than fight, so bring it down quickly.
+  deer: {
+    name: 'Red Deer',
+    maxHp: 16,
+    ac: 11,
+    toHit: 2,
+    damage: { count: 1, sides: 6, bonus: 0 },
+    quickness: 4,
+    verb: 'lashes out with its antlers at',
+    xp: 25,
+    packs: false,
+    skittish: 0.12,
+  },
+  hare: {
+    name: 'Brown Hare',
+    maxHp: 5,
+    ac: 13,
+    toHit: 0,
+    damage: { count: 1, sides: 2, bonus: 0 },
+    quickness: 6,
+    verb: 'kicks at',
+    xp: 8,
+    packs: false,
+    skittish: 0.2,
+  },
+  boar: {
+    name: 'Wild Boar',
+    maxHp: 30,
+    ac: 13,
+    toHit: 4,
+    damage: { count: 1, sides: 8, bonus: 2 },
+    quickness: 1,
+    verb: 'gores',
+    xp: 60,
+    packs: false,
+    stubborn: true,
+  },
+} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean }>;
 
 export type FoeKind = keyof typeof FOES;

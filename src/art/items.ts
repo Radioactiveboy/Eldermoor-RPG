@@ -314,6 +314,51 @@ const egg = () =>
     c.set(10, 8, 0xc49c76);
   });
 
+/** A haunch of venison: dark red meat with a knuckle of bone, on a dock leaf. */
+const venison = () =>
+  icon((c) => {
+    c.ellipse(8, 12, 6.5, 2.5, P.leafDark, P.leafDeep, P.leaf);
+    c.ellipse(7, 8.5, 5, 4, 0x9a2e2e, 0x6a1c22, 0xc0504a);
+    c.ellipse(5.5, 7.5, 2, 1.4, 0xd8a090);
+    // The bone sticking out, with its knob.
+    for (let i = 0; i < 4; i++) c.set(11 + i, 5 - i * 0.6, 0xece2cc);
+    c.ellipse(14, 2.5, 1.4, 1.2, 0xf6eedc, 0xc8bca0);
+  });
+
+/** A rolled red deer hide, tied with a cord. */
+const deerHide = () =>
+  icon((c) => {
+    c.ellipse(8, 8, 6.5, 4.5, 0x9a5a32, 0x6a3a22, 0xb87a4a);
+    c.ellipse(4, 8, 2.2, 3.6, 0x6a3a22, 0x6a3a22);
+    c.ellipse(4, 8, 1.2, 2.2, 0xe6d2ae, 0xe6d2ae);
+    c.rect(9, 4, 1, 9, P.leatherDark);
+    for (const [x, y] of [[11, 6], [13, 9], [7, 10]]) c.set(x, y, 0xe6d2ae);
+  });
+
+/** A small folded hare pelt. */
+const harePelt = () =>
+  icon((c) => {
+    c.ellipse(8, 9, 5.5, 4, 0x8e6c48, 0x5e4630, 0xb48e64);
+    c.ellipse(8, 10, 3, 1.6, 0xe8dcc4);
+    // The ears, black-tipped.
+    c.rect(5, 2, 1, 4, 0x8e6c48);
+    c.rect(7, 1, 1, 5, 0x8e6c48);
+    c.set(5, 2, P.outline);
+    c.set(7, 1, P.outline);
+  });
+
+/** A curved boar's tusk. */
+const tusk = () =>
+  icon((c) => {
+    for (let i = 0; i < 11; i++) {
+      const a = (i / 10) * Math.PI * 0.75;
+      const x = 3 + i * 0.95;
+      const y = 13 - Math.sin(a) * 8;
+      const w = Math.max(1, Math.round(3 - i * 0.22));
+      for (let k = 0; k < w; k++) c.set(x, y + k, k === 0 ? 0xfaf2de : i < 3 ? 0xc8a868 : 0xe8dcbc);
+    }
+  });
+
 /** A copper coin, for prices and the purse. */
 const coin = () =>
   icon((c) => {
@@ -351,6 +396,10 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-coin', coin],
     ['item-feed', feed],
     ['item-egg', egg],
+    ['item-venison', venison],
+    ['item-deerhide', deerHide],
+    ['item-harepelt', harePelt],
+    ['item-tusk', tusk],
   ];
   for (const [key, make] of icons) make().toTexture(scene, key);
 }

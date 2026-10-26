@@ -24,7 +24,7 @@ const NUMBER = '#c9a14a';
  * A yes-or-no question in a small box at the bottom of the screen, in the
  * manner of Old School RuneScape's "Select an Option": the question, then the
  * answers as a short numbered list, such as "Do you want to make the trek to
- * Adowvale Market?" before leaving an area.
+ * Adowvale?" before leaving an area.
  *
  * 1, Y, Enter or E says yes; 2, N or Esc says no; or click/tap an answer.
  */
