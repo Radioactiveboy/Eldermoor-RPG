@@ -3,12 +3,14 @@ import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SPRINT_MULTIPLIER } from '../config';
 import { Creature } from '../entities/Creature';
 import { Npc } from '../entities/Npc';
+import { SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
 import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
 import { Inventory, ItemId, itemDef } from '../systems/Inventory';
 import { findPath, GridPoint } from '../systems/Pathfinding';
+import { rollLoot } from '../systems/Loot';
 import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
 import { AREA_NAMES, SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
@@ -50,6 +52,8 @@ export interface GameSceneData {
 
 /** Things the HUD can show the player as a speech-like hint. */
 export type HintListener = (text: string) => void;
+/** A signpost the player has read, for the HUD to show. */
+export type SignListener = (heading: string, lines: string[]) => void;
 
 /**
  * Something the player can do where they stand: talk to someone, use a door,
@@ -59,7 +63,10 @@ export type HintListener = (text: string) => void;
 export interface Interaction {
   /** Identifies it across frames, e.g. "crop:24,22". */
   key: string;
+  /** What to do, e.g. "Talk-to" or "Go inside". */
   label: string;
+  /** Who or what it's done to, shown after the label in yellow, e.g. "Mother". */
+  target?: string;
   /** Where it is, in grid space, for the range check. */
   gx: number;
   gy: number;
@@ -146,6 +153,7 @@ export class GameScene extends Phaser.Scene {
   busy = false;
   /** The HUD sets this to show short messages. */
   onHint?: HintListener;
+  onSign?: SignListener;
   private keys!: MoveKeys;
   private hover!: Phaser.GameObjects.Image;
   private marker!: Phaser.GameObjects.Image;
@@ -610,7 +618,11 @@ export class GameScene extends Phaser.Scene {
     for (const npc of this.npcs) list.push(this.npcInteraction(npc));
     for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
     for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
-    for (const sight of this.map.data.sights ?? []) list.push(this.sightInteraction(sight));
+    for (const sight of this.map.data.sights ?? []) {
+      // A pile already searched has nothing more to give.
+      if (sight.loot && QuestLog.hasFlag(`searched-${sight.id}`)) continue;
+      list.push(this.sightInteraction(sight));
+    }
     for (const bed of this.map.data.beds ?? []) list.push(this.bedInteraction(bed));
     for (const crop of this.map.data.crops ?? []) {
       if (Math.abs(crop.tx + 0.5 - gx) < 2 && Math.abs(crop.ty + 0.5 - gy) < 2) {
@@ -644,7 +656,7 @@ export class GameScene extends Phaser.Scene {
   private npcInteraction(npc: Npc): Interaction {
     const head = npc.promptPoint;
     return {
-      key: `npc:${npc.id}`, label: 'Talk', gx: npc.gx, gy: npc.gy, range: npc.talkRange,
+      key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
       promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
       run: () => this.startConversation(npc),
     };
@@ -837,11 +849,20 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Look closely at something: so far, the remains of Wil's ewes in the cave. */
+  /** Look closely at something: a signpost, a pile of bones, the remains of Wil's ewes in the cave. */
   private examine(sight: Sight): void {
     this.walkingTo = undefined;
     this.player.setPath([]);
     this.player.faceTowards(sight.gx, sight.gy);
+    if (sight.sign) {
+      GameAudio.click();
+      this.onSign?.(sight.sign.heading, sight.sign.lines);
+      return;
+    }
+    if (sight.loot) {
+      this.search(sight);
+      return;
+    }
     const flag = `saw-${sight.id}`;
     const first = !QuestLog.hasFlag(flag);
     QuestLog.setFlag(flag);
@@ -870,6 +891,33 @@ export class GameScene extends Phaser.Scene {
             'I would rather he heard it from me than found them like that.'
         : 'Found two dead ewes at the back of a wolves\' den in the hill, a bell on one scratched "BESS". Someone on the road ' +
             'must be missing them.',
+    );
+  }
+
+  /** Rummage through something (a pile of bones) for a random find. Each can only be searched once. */
+  private search(sight: Sight): void {
+    GameAudio.rustle();
+    this.startChannel(
+      {
+        label: 'Searching',
+        seconds: 1.6,
+        onDone: () => {
+          const find = rollLoot(sight.loot!);
+          // Leave it be if there's no room, so it can be searched again once there is.
+          if (find.item && !Inventory.canAdd(find.item)) {
+            this.onHint?.('There is something under the bones, but my satchel is full.');
+            return;
+          }
+          QuestLog.setFlag(`searched-${sight.id}`);
+          if (find.item) this.give(find.item, 1);
+          if (find.coins) {
+            Inventory.reward(find.coins);
+            GameAudio.coins();
+          }
+          this.onHint?.(find.text);
+        },
+      },
+      { x: sight.gx, y: sight.gy },
     );
   }
 

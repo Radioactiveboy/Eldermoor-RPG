@@ -5,15 +5,15 @@ import { UI_FONT } from './theme';
 
 interface Toast {
   /** Quest news and level-ups are announced with a heading and a sound; thoughts are quiet italics. */
-  kind: 'quest' | 'level' | 'thought';
+  kind: 'quest' | 'level' | 'thought' | 'sign';
   heading?: string;
   text: string;
 }
 
 /**
  * Banners that slide in near the top of the screen one at a time: "New quest"
- * announcements with a chime, "Level up!" with a fanfare, and the hero's
- * passing thoughts (hints).
+ * announcements with a chime, "Level up!" with a fanfare, the hero's passing
+ * thoughts (hints), and what a signpost says.
  */
 export class Toasts {
   private readonly scene: Phaser.Scene;
@@ -48,6 +48,13 @@ export class Toasts {
     this.push({ kind: 'thought', text });
   }
 
+  /** A signpost read: one line per arm, e.g. "← West: Adowvale Market". */
+  sign(heading: string, lines: string[]): void {
+    const text = lines.join('\n');
+    if (this.queue.some((t) => t.text === text) || this.current?.name === text) return;
+    this.push({ kind: 'sign', heading, text });
+  }
+
   private push(t: Toast): void {
     this.queue.push(t);
     if (!this.current) this.next();
@@ -61,14 +68,15 @@ export class Toasts {
     }
     const s = this.scene;
     const parts: Phaser.GameObjects.GameObject[] = [];
-    const announce = t.kind !== 'thought';
+    const announce = t.kind === 'quest' || t.kind === 'level';
     const body = s.add
       .text(0, 0, t.text, {
-        fontFamily: announce ? THEME.font : UI_FONT,
-        fontSize: announce ? '22px' : '16px',
+        fontFamily: t.kind === 'thought' ? UI_FONT : THEME.font,
+        fontSize: announce ? '22px' : t.kind === 'sign' ? '17px' : '16px',
         color: announce ? THEME.text : '#f3e9d2',
         fontStyle: t.kind === 'thought' ? 'italic' : 'normal',
-        align: 'center',
+        align: t.kind === 'sign' ? 'left' : 'center',
+        lineSpacing: t.kind === 'sign' ? 6 : 0,
         wordWrap: { width: this.maxWidth - 40 },
       })
       .setOrigin(0.5, 0);
@@ -96,7 +104,7 @@ export class Toasts {
 
     if (t.kind === 'quest') GameAudio.questChime();
     else if (t.kind === 'level') GameAudio.levelUp();
-    const hold = announce ? 3200 : 2200 + t.text.length * 30;
+    const hold = announce ? 3200 : t.kind === 'sign' ? 4500 : 2200 + t.text.length * 30;
     box.setAlpha(0).setScale(0.9);
     s.tweens.add({ targets: box, alpha: 1, scale: 1, duration: 250, ease: 'Back.easeOut' });
     s.tweens.add({

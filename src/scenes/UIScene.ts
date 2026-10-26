@@ -80,6 +80,7 @@ export class UIScene extends Phaser.Scene {
     this.combatMode = false;
 
     this.world.onHint = (text) => this.toasts.thought(text);
+    this.world.onSign = (heading, lines) => this.toasts.sign(heading, lines);
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
     const offXp = Experience.onChange((e) => this.onExperienceEvent(e));
@@ -96,6 +97,7 @@ export class UIScene extends Phaser.Scene {
       offXp();
       offSave();
       this.world.onHint = undefined;
+      this.world.onSign = undefined;
       this.minimap?.destroy();
       this.minimap = undefined;
       this.minimapOf = undefined;
@@ -240,59 +242,67 @@ export class UIScene extends Phaser.Scene {
     return [...fires, ...glows];
   }
 
-  /** "E  Talk" (or "E  Sit", "E  Go inside"...) bubble over whatever the player can use. */
+  /** "E  Talk-to Mother" (or "E  Sit", "E  Go inside"...) over whatever the player can use. */
   private updatePrompt(toScreen: (x: number, y: number) => { x: number; y: number }): void {
     const focus = this.world.focus;
     if (!focus || this.world.busy) {
       this.prompt?.setVisible(false);
       return;
     }
-    if (!this.prompt || focus.label !== this.promptLabel) {
+    const label = focus.target ? `${focus.label}|${focus.target}` : focus.label;
+    if (!this.prompt || label !== this.promptLabel) {
       this.prompt?.destroy();
-      this.prompt = this.makePrompt(focus.label);
-      this.promptLabel = focus.label;
+      this.prompt = this.makePrompt(focus.label, focus.target);
+      this.promptLabel = label;
     }
     const p = toScreen(focus.promptX, focus.promptY);
-    const bob = Math.sin(this.time.now / 260) * 2;
-    this.prompt.setVisible(true).setPosition(Math.round(p.x), Math.round(p.y - 8 + bob));
+    this.prompt.setVisible(true).setPosition(Math.round(p.x), Math.round(p.y - 4));
   }
 
-  private makePrompt(text: string): Phaser.GameObjects.Container {
+  /**
+   * Old School RuneScape style: no bubble, just small shadowed text, the action
+   * in white and who it's done to in yellow, with a tiny key cap before it.
+   */
+  private makePrompt(action: string, target?: string): Phaser.GameObjects.Container {
     const touch = this.sys.game.device.input.touch;
-    const bg = this.add.graphics();
-    const label = this.add
-      .text(0, 0, touch ? `Tap: ${text}` : text, { fontFamily: UI_FONT, fontSize: '13px', color: UI_COLORS.text })
-      .setOrigin(0, 0.5);
-    const parts: Phaser.GameObjects.GameObject[] = [bg];
-    let x = -label.width / 2;
+    const style = (color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
+      fontFamily: UI_FONT,
+      fontSize: '12px',
+      color,
+      stroke: '#000000',
+      strokeThickness: 3,
+      shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 0, fill: true, stroke: true },
+    });
+    // Each piece, with how wide it is, to lay them out in a row.
+    const row: { obj: Phaser.GameObjects.Container | Phaser.GameObjects.Text; w: number }[] = [];
     if (!touch) {
       // A little key cap showing which key to press.
       const cap = this.add.graphics();
+      cap.fillStyle(0x000000, 0.6);
+      cap.fillRoundedRect(-6, -5, 12, 12, 2);
       cap.fillStyle(0xf3e9d2, 1);
-      cap.fillRoundedRect(-8, -8, 16, 16, 3);
+      cap.fillRoundedRect(-6, -6, 12, 12, 2);
       cap.fillStyle(0xb8a888, 1);
-      cap.fillRect(-8, 5, 16, 3);
-      const keyText = this.add.text(0, -1, 'E', { fontFamily: UI_FONT, fontSize: '11px', color: '#1c1712', fontStyle: 'bold' }).setOrigin(0.5);
-      const capC = this.add.container(0, 0, [cap, keyText]);
-      const total = 16 + 6 + label.width;
-      capC.x = -total / 2 + 8;
-      x = -total / 2 + 22;
-      parts.push(capC);
+      cap.fillRect(-6, 4, 12, 2);
+      const keyText = this.add.text(0, -1, 'E', { fontFamily: UI_FONT, fontSize: '9px', color: '#1c1712', fontStyle: 'bold' }).setOrigin(0.5);
+      row.push({ obj: this.add.container(0, 0, [cap, keyText]), w: 12 });
     }
-    label.x = x;
-    const w = (touch ? label.width : label.width + 22) + 14;
-    const h = 24;
-    bg.fillStyle(UI_COLORS.panel, 0.92);
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 6);
-    bg.lineStyle(1.5, UI_COLORS.trim, 1);
-    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 6);
-    // Little pointer down towards the thing it's about.
-    bg.fillStyle(UI_COLORS.trim, 1);
-    bg.fillTriangle(-4, h / 2, 4, h / 2, 0, h / 2 + 5);
-    parts.push(label);
+    for (const [text, color] of [[action, '#ffffff'], [target, '#ffff00']]) {
+      if (!text) continue;
+      const t = this.add.text(0, 0, text, style(color!)).setOrigin(0.5);
+      row.push({ obj: t, w: t.width - 3 });
+    }
+    const gap = 4;
+    const total = row.reduce((sum, r) => sum + r.w, 0) + gap * (row.length - 1);
+    let x = -total / 2;
+    for (const r of row) {
+      r.obj.x = Math.round(x + r.w / 2);
+      x += r.w + gap;
+    }
+    const parts = row.map((r) => r.obj);
     const prompt = this.add.container(0, 0, parts).setVisible(false);
-    // Phones get a slightly bigger hit area than the bubble, so it's still easy to tap.
-    prompt.setSize(w + 12, h + 16).setInteractive({ useHandCursor: true });
+    // A bigger hit area than the text, so it's still easy to tap on a phone.
+    prompt.setSize(total + 24, 32).setInteractive({ useHandCursor: true });
     prompt.on('pointerup', () => this.world.interact());
     return prompt;
   }

@@ -89,8 +89,11 @@ export function buildCaveMap(): MapData {
   for (const gx of [2.4, 5.6, 10.3, 13.5]) data.drips!.push({ gx, gy: 0.2, z: 70 });
   for (const gy of [5.4, 8.6, 11.3]) data.drips!.push({ gx: 0.2, gy, z: 70 });
 
-  // The ewes, and old bones the wolves have left about.
+  // The ewes, and old bones the wolves have left about, each worth a rummage.
   for (const e of EWES) add(e.art, e.tx, e.ty, { shapes: [circle(0.5, 0.5, 0.3)] });
-  for (const [tx, ty, v] of [[11, 12, 0], [12, 9, 1], [9, 11, 1], [10, 5, 0], [5, 4, 1]]) add(`cave-bones-${v}`, tx, ty, { flat: true });
+  for (const [tx, ty, v] of [[11, 12, 0], [12, 9, 1], [9, 11, 1], [10, 5, 0], [5, 4, 1]]) {
+    add(`cave-bones-${v}`, tx, ty, { flat: true });
+    data.sights!.push({ id: `bones-${tx},${ty}`, gx: tx + 0.5, gy: ty + 0.5, label: 'Search the bones', z: 18, loot: 'bones' });
+  }
   return data;
 }
