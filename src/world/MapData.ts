@@ -1,3 +1,4 @@
+import type { TrackName } from '../audio/Audio';
 import type { FoeKind } from '../systems/Combat';
 import type { CropKind } from '../systems/Farm';
 import type { Shape } from './Collision';
@@ -22,7 +23,7 @@ export enum Prop {
 }
 
 /** The places the player can be. Each is its own map; doors lead between them. */
-export type AreaId = 'home' | 'world';
+export type AreaId = 'home' | 'world' | 'market';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -50,13 +51,18 @@ export interface MapObject {
   shapes?: Shape[];
 }
 
-/** A door the player can use (press E nearby) to go to another area. */
+/**
+ * A way to another area: a door the player uses with E, or (when `auto`) the
+ * end of a road at the map's edge, which the player just walks off.
+ */
 export interface Door {
   tx: number;
   ty: number;
   to: AreaId;
   /** Entry point name in the destination's MapData.entries. */
   entry: string;
+  /** Taken by walking onto the tile, with no prompt: a road leading off the map. */
+  auto?: boolean;
 }
 
 /** A warm light source that brightens its surroundings in the dark. */
@@ -127,6 +133,8 @@ export interface MapData {
   road?: Array<{ x: number; y: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
+  /** The music for the area (see audio/Audio.ts). */
+  music?: TrackName;
 }
 
 export const TERRAIN_WALKABLE: Record<Terrain, boolean> = {

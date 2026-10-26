@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { FENCE, fenceKey } from '../art/farm';
 import type { CropKind } from '../systems/Farm';
-import { fenceShapes } from './Collision';
+import { circle, fenceShapes } from './Collision';
 import { MapData, placeObject, Prop, Terrain } from './MapData';
 
 /**
@@ -65,7 +65,8 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     }
   }
 
-  const data: MapData = { width, height, terrain, props, road, spawn: { x: home.x + 4.5, y: home.y + 1.5 } };
+  const data: MapData = { width, height, terrain, props, road, music: 'world', spawn: { x: home.x + 4.5, y: home.y + 1.5 } };
+  addRoadToMarket(data);
   addCottage(data, home.x, home.y);
   addGarden(data, home.x + 5, home.y - 2);
   // A lone wolf nosing about south of the cottage, in sight of the door.
@@ -80,6 +81,30 @@ export function generateMap(width: number, height: number, seed: string): MapDat
     return { id: id as string, gx: p.x, gy: p.y };
   });
   return data;
+}
+
+/**
+ * The road runs off the west edge of the map towards the market (see
+ * MarketMap.ts): walking off the end of it goes there. A signpost beside the
+ * road points the way.
+ */
+function addRoadToMarket(data: MapData): void {
+  const road = data.road!;
+  for (let y = 0; y < data.height; y++) {
+    if (data.terrain[y][0] === Terrain.Dirt) (data.doors ??= []).push({ tx: 0, ty: y, to: 'market', entry: 'road', auto: true });
+  }
+  const arrive = road[3];
+  (data.entries ??= {}).market = { x: arrive.x, y: arrive.y };
+  // The signpost stands on the first patch of grass beside the road, a few steps in.
+  const at = road[5];
+  for (const [dx, dy] of [[0, -2], [-1, -2], [1, -2], [0, 1], [1, 1]]) {
+    const tx = Math.floor(at.x) + dx;
+    const ty = Math.floor(at.y) + dy;
+    if (data.terrain[ty]?.[tx] !== Terrain.Grass) continue;
+    for (let y = ty - 1; y <= ty + 1; y++) for (let x = tx - 1; x <= tx + 1; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
+    placeObject(data, { key: 'mkt-signpost', tx, ty, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
+    break;
+  }
 }
 
 /**

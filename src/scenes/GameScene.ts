@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SPRINT_MULTIPLIER } from '../config';
 import { Creature } from '../entities/Creature';
-import { Npc, TALK_RANGE } from '../entities/Npc';
+import { Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
@@ -10,11 +10,13 @@ import { Inventory, ItemId, itemDef } from '../systems/Inventory';
 import { findPath, GridPoint } from '../systems/Pathfinding';
 import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
+import { ShopId, Shops, SHOPS } from '../systems/Shops';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { buildHomeMap } from '../world/HomeMap';
+import { buildMarketMap } from '../world/MarketMap';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
-import { AreaId, CropPatch, Door, Prop, Seat } from '../world/MapData';
+import { AreaId, CropPatch, Door, MapData, Prop, Seat } from '../world/MapData';
 import { cropKey } from '../art/farm';
 import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
@@ -87,7 +89,19 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
     'The fire pops and settles. It is warm in here, at least.',
     'The old table is covered in knife marks and candle wax.',
   ],
+  'market-bench': [
+    'The smell of fresh bread drifts over from the bakehouse stall.',
+    'Somewhere a cart rattles over the cobbles. Two women are arguing about the price of eggs.',
+    'Clang, clang, clang. The smith is at it again.',
+  ],
 };
+
+/** Builds the map for an area. */
+function buildArea(area: AreaId): MapData {
+  if (area === 'home') return buildHomeMap();
+  if (area === 'market') return buildMarketMap();
+  return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
+}
 
 export class GameScene extends Phaser.Scene {
   map!: IsoMap;
@@ -123,6 +137,10 @@ export class GameScene extends Phaser.Scene {
   /** Beasts beaten or chased off for good, by spawn id. */
   private defeatedFoes = new Set<string>();
   private arrivalGrace = 0;
+  /** Areas visited this game, for first-visit thoughts. */
+  private visited = new Set<AreaId>();
+  /** A trader's stall to open once the conversation that asked for it closes. */
+  private pendingShop?: ShopId;
 
   constructor() {
     super('Game');
@@ -139,12 +157,17 @@ export class GameScene extends Phaser.Scene {
       QuestLog.dayProvider = () => this.clock.day;
       Inventory.reset();
       Farm.reset();
+      Shops.reset();
       this.defeatedFoes.clear();
+      this.visited.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
       const hourParam = new URLSearchParams(window.location.search).get('hour');
       if (hourParam !== null && !Number.isNaN(Number(hourParam))) this.clock.setHour(Number(hourParam));
     }
     this.area = data.area ?? 'home';
+    // Handy for testing: open the game with ?area=market to start there.
+    const areaParam = new URLSearchParams(window.location.search).get('area');
+    if (data.newGame && (areaParam === 'market' || areaParam === 'world')) this.area = areaParam;
     this.busy = false;
     this.walkingTo = undefined;
     this.focus = undefined;
@@ -153,7 +176,7 @@ export class GameScene extends Phaser.Scene {
     this.inCombat = false;
     this.arrivalGrace = ARRIVAL_GRACE;
 
-    this.map = new IsoMap(this, this.area === 'home' ? buildHomeMap() : generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED));
+    this.map = new IsoMap(this, buildArea(this.area));
     const start = (data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn;
     this.player = new Player(this, this.map, start.x, start.y);
     this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy));
@@ -166,7 +189,7 @@ export class GameScene extends Phaser.Scene {
 
     this.setupCamera();
     this.setupInput();
-    GameAudio.playMusic(this.area === 'home' ? 'home' : 'world');
+    GameAudio.playMusic(this.map.data.music ?? 'world');
     this.cameras.main.fadeIn(450, 0, 0, 0);
 
     if (data.knockedOut) {
@@ -175,7 +198,15 @@ export class GameScene extends Phaser.Scene {
     if (data.newGame) {
       this.time.delayedCall(1200, () => this.onHint?.('Mother is resting by the hearth. She wants to speak with you.'));
     }
-    if (this.area === 'world') QuestLog.complete('mother-medicine', 'leave');
+    if (this.area !== 'home') QuestLog.complete('mother-medicine', 'leave');
+    if (this.area === 'market' && !this.visited.has('market')) {
+      this.time.delayedCall(1000, () => this.onHint?.('The market at last. Fresh bread, woodsmoke, and the clang of the smithy.'));
+      QuestLog.writeDiary(
+        'Followed the old road all the way to the market. The square was busier than I remembered, with the militia ' +
+          'marching about in their tin hats. Someone here must know where to find moonpetal.',
+      );
+    }
+    this.visited.add(this.area);
   }
 
   update(_time: number, deltaMs: number): void {
@@ -199,6 +230,7 @@ export class GameScene extends Phaser.Scene {
       this.clock.update(dt);
     }
     this.updateCreatures(dt);
+    this.checkRoadExits();
     this.updateHover();
     this.updateFocus();
     this.updateSitting(dt);
@@ -279,16 +311,34 @@ export class GameScene extends Phaser.Scene {
     this.walkingTo = undefined;
     this.player.setPath([]);
     npc.faceTowards(this.player.gx, this.player.gy);
+    this.pendingShop = undefined;
     const data: DialogueSceneData = {
       script: npc.script(),
       onAction: (action) => this.runDialogueAction(action),
     };
     this.scene.launch('Dialogue', data);
-    this.scene.get('Dialogue').events.once('dialogue-closed', () => this.release());
+    this.scene.get('Dialogue').events.once('dialogue-closed', () => {
+      const shop = this.pendingShop;
+      this.pendingShop = undefined;
+      // Asked to see a trader's goods: go straight from talking to trading.
+      if (shop) this.openShop(shop);
+      else this.release();
+    });
+  }
+
+  /** A trader's stall: buy and sell. Opened from the conversation with them (see dialogue/market.ts). */
+  private openShop(shop: ShopId): void {
+    this.busy = true;
+    this.scene.launch('Shop', { shop });
+    this.scene.get('Shop').events.once('shop-closed', () => this.release());
   }
 
   /** Story effects triggered by lines of dialogue (see dialogue/*.ts). */
   private runDialogueAction(action: string): void {
+    if (action.startsWith('shop:') && action.slice(5) in SHOPS) {
+      this.pendingShop = action.slice(5) as ShopId;
+      return;
+    }
     switch (action) {
       case 'start-medicine-quest':
         if (QuestLog.has('mother-medicine')) return;
@@ -369,7 +419,7 @@ export class GameScene extends Phaser.Scene {
       this.knockedOut();
       return;
     }
-    GameAudio.playMusic(this.area === 'home' ? 'home' : 'world');
+    GameAudio.playMusic(this.map.data.music ?? 'world');
     if (result.outcome === 'escaped') {
       foes.forEach((c) => c.disengage());
       this.onHint?.("I got away. Best keep my distance from it for now.");
@@ -415,7 +465,7 @@ export class GameScene extends Phaser.Scene {
       return list;
     }
     for (const npc of this.npcs) list.push(this.npcInteraction(npc));
-    for (const door of this.map.data.doors ?? []) list.push(this.doorInteraction(door));
+    for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
     for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
     for (const crop of this.map.data.crops ?? []) {
       if (Math.abs(crop.tx + 0.5 - gx) < 2 && Math.abs(crop.ty + 0.5 - gy) < 2) {
@@ -449,7 +499,7 @@ export class GameScene extends Phaser.Scene {
   private npcInteraction(npc: Npc): Interaction {
     const head = npc.promptPoint;
     return {
-      key: `npc:${npc.id}`, label: 'Talk', gx: npc.gx, gy: npc.gy, range: TALK_RANGE,
+      key: `npc:${npc.id}`, label: 'Talk', gx: npc.gx, gy: npc.gy, range: npc.talkRange,
       promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
       run: () => this.startConversation(npc),
     };
@@ -664,6 +714,14 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Walking off the end of a road at the edge of the map goes on to the next area. */
+  private checkRoadExits(): void {
+    if (this.busy) return;
+    const { tileX, tileY } = this.player;
+    const exit = this.map.data.doors?.find((d) => d.auto && d.tx === tileX && d.ty === tileY);
+    if (exit) this.useDoor(exit);
+  }
+
   private useDoor(door: Door): void {
     if (this.area === 'home' && !QuestLog.has('mother-medicine')) {
       // Don't let the story start without its first scene.
@@ -672,8 +730,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.busy = true;
     this.player.setPath([]);
-    GameAudio.door();
-    this.cameras.main.fadeOut(350, 0, 0, 0);
+    if (!door.auto) GameAudio.door();
+    this.cameras.main.fadeOut(door.auto ? 500 : 350, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.restart({ area: door.to, entry: door.entry } satisfies GameSceneData);
     });

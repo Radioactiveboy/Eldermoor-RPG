@@ -31,6 +31,10 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **J** or the **book** button: open the journal (arrow keys or click to turn pages)
 - **I** or the **satchel** button: the satchel (inventory). **C**: equipment.
   Tab switches between them; select an item to eat, wear or take it off
+- **Trading at a stall**: talk to the stallholder and ask to see their goods. Drag
+  things from the stall to your satchel to buy them, or from your satchel to the stall
+  to sell them; when there's more than one, a box asks how many (slider, - / +, or the
+  arrow keys, then Enter). Or click something and press Buy / Sell. Esc closes
 - **In a fight**: pick an action with the mouse, the number keys, or arrows then Enter;
   Esc goes back from a sub-menu (choosing a target or an item)
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
@@ -39,6 +43,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Esc** or the **II** button: pause menu (resume, controls, settings, back to main menu)
 - **Enter** on the title screen: start a new game (you wake up at home)
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
+- Add `?area=market` to start in the market (or `?area=world` outside the cottage)
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
   testing fights against several enemies)
 
@@ -52,6 +57,7 @@ src/
   world/MapData.ts        Terrain + prop types, walkability table
   world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
+  world/MarketMap.ts      The market at the end of the road: cobbled square, well, stalls, houses, militia
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
   world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
   world/Ambience.ts       Living world: water glints and foam, birds, bats, sparrows, butterflies,
@@ -59,16 +65,18 @@ src/
   systems/Pathfinding.ts  8-direction A* on the tile grid
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
+  systems/Shops.ts        The market traders: stock, what they buy, prices
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, fleeing,
                           how beasts choose their moves, and the beasts' stats (FOES)
   entities/Player.ts      Movement, collision, click-to-move path following
-  entities/Npc.ts         People you can talk to, which conversation they have, and travellers
-                          who wander up and down the road
+  entities/Npc.ts         People you can talk to, which conversation they have, travellers
+                          who wander up and down the road, and the militia on their rounds
   entities/Creature.ts    Wild animals: wander and sniff near their den, start a fight when you come close
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
+  art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), item icons (items.ts),
@@ -84,6 +92,7 @@ src/
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
+  scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
   scenes/CombatScene.ts   Turn-based fights over the world: turn order, action menu, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera
   ui/StatusBars.ts        Slim health and stamina bars
@@ -111,14 +120,18 @@ src/
   (`tile-grass`, `prop-tree`, `player`, ...).
 - **Music is code, not files.** `audio/Audio.ts` defines each track as a tempo,
   a chord progression and an arpeggio pattern, played by simple synth voices
-  (harp pluck, pad, drone, flute). There is a calm `menu` track and a livelier
-  `world` track; add more by adding entries to `TRACKS`. Recorded music can
+  (harp pluck, pad, drone, flute, and optionally a frame drum and tambourine).
+  There is a calm `menu` track, a livelier `world` track, a sad `home` one, a
+  tense `battle` one and a bouncing `market` dance; add more by adding entries
+  to `TRACKS`. Each map names its track (`MapData.music`). Recorded music can
   replace it later without changing the scenes.
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;
   hand-made maps (e.g. from the Tiled editor) can plug in later. A map can have
   furniture and buildings (`objects`), back walls for rooms, `doors` that lead
   to another area, light sources, NPCs, seats and crops. Using a door (E by it)
-  swaps the area (`home` and `world` so far).
+  swaps the area (`home`, `world` and `market` so far). A door marked `auto` is
+  the end of a road at the map's edge: walking onto it goes on to the next area
+  (the road west from the cottage leads to the market, and back).
 - **Interactions** are built in `GameScene.interactionsNear`: each nearby NPC,
   door, seat, ripe crop or tree offers an `Interaction` (a label, a range and
   what to do). The nearest one in range gets the HUD's "E" prompt. Slower
@@ -126,7 +139,12 @@ src/
   cancels them. To add a new kind of thing to use, add another case there.
 - **Items** are defined in `ITEMS` (`systems/Inventory.ts`) with an icon from
   `art/items.ts`. `Inventory.add(id, n)` puts them in the satchel and the HUD
-  shows "+n Name" over the hero.
+  shows "+n Name" over the hero. An item's `value` is its price at a stall.
+- **Trading.** Coins are kept in `Inventory.coins`. Each trader in `SHOPS`
+  (`systems/Shops.ts`) has starting stock, the kinds of thing they'll buy, and
+  what fraction of an item's value they pay (Tamsin pays extra for wolf pelts).
+  What you sell goes onto their stall. A conversation opens a stall with the
+  `shop:<id>` action.
 - **Conversations and quests are data.** A conversation is a set of nodes in
   `src/dialogue/`; replies point at the next node, and `action` names (like
   `start-medicine-quest`) are carried out in `GameScene.runDialogueAction`.
@@ -151,6 +169,7 @@ src/
 
 ## Good next steps
 
-The village herbalist (the next step of "Medicine for Mother"), more villagers,
+The village herbalist (the next step of "Medicine for Mother"; Hilde the baker
+mentions Old Maud), more villagers and buildings to go into,
 more beasts and weapons, a reward for the wolf pelt, cooking with the garden's
 crops, showing worn gear on the hero's sprite, save/load.

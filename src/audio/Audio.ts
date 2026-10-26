@@ -9,7 +9,7 @@ import { Settings, SettingsData } from '../settings/Settings';
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'home' | 'battle';
+export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market';
 
 interface TrackDef {
   bpm: number;
@@ -22,6 +22,11 @@ interface TrackDef {
   scale: number[];
   melodyChance: number;
   padCutoff: number;
+  /**
+   * Hand drum and tambourine, one character per eighth note: 'X' a loud drum
+   * beat, 'x' a soft one, 'j' a jingle, '.' nothing. Loops independently.
+   */
+  drums?: string;
 }
 
 // D minor / dorian: suits a quiet medieval-fantasy feel.
@@ -88,6 +93,26 @@ const TRACKS: Record<TrackName, TrackDef> = {
     melodyChance: 0.15,
     padCutoff: 500,
   },
+  // Market day: a bright, bouncing G major dance with a frame drum and tambourine.
+  market: {
+    bpm: 104,
+    chords: [
+      [55, 59, 62], // G
+      [48, 52, 55], // C
+      [55, 59, 62], // G
+      [50, 54, 57], // D
+      [52, 55, 59], // Em
+      [48, 52, 55], // C
+      [50, 54, 57], // D
+      [55, 59, 62], // G
+    ],
+    barsPerChord: 1,
+    arp: [0, 2, 4, 2, 3, 2, 4, 5],
+    scale: [67, 69, 71, 72, 74, 76, 78, 79],
+    melodyChance: 0.45,
+    padCutoff: 1100,
+    drums: 'X.jxX.jj',
+  },
 };
 
 const LOOKAHEAD_S = 0.4;
@@ -101,6 +126,8 @@ class Track {
   private nextTime: number;
   private melodyNote: number;
   private timer: number;
+  /** White noise for the tambourine, made the first time it's needed. */
+  private noise?: AudioBuffer;
 
   constructor(
     private ctx: AudioContext,
@@ -137,7 +164,12 @@ class Track {
   }
 
   private playStep(step: number, t: number, eighth: number): void {
-    const { chords, barsPerChord, arp, scale, melodyChance, padCutoff } = this.def;
+    const { chords, barsPerChord, arp, scale, melodyChance, padCutoff, drums } = this.def;
+    if (drums) {
+      const hit = drums[step % drums.length];
+      if (hit === 'X' || hit === 'x') this.drum(t, hit === 'X' ? 0.3 : 0.16);
+      else if (hit === 'j') this.jingle(t);
+    }
     const stepsPerChord = 8 * barsPerChord;
     const chord = chords[Math.floor(step / stepsPerChord) % chords.length];
     const inChord = step % stepsPerChord;
@@ -209,6 +241,41 @@ class Track {
     shimmer.gain.value = 0.25;
     shimmer.connect(g);
     this.osc('sine', midi + 12, t, 1.6, shimmer);
+  }
+
+  /** A frame drum: a low, quickly falling thump. */
+  private drum(t: number, peak: number): void {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(130, t);
+    o.frequency.exponentialRampToValueAtTime(58, t + 0.12);
+    g.gain.setValueAtTime(peak, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+    o.connect(g).connect(this.out);
+    o.start(t);
+    o.stop(t + 0.3);
+  }
+
+  /** Tambourine: a short burst of bright, high noise. */
+  private jingle(t: number): void {
+    if (!this.noise) {
+      this.noise = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.3, this.ctx.sampleRate);
+      const data = this.noise.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = 6500;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.06, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12 + Math.random() * 0.05);
+    src.connect(f).connect(g).connect(this.out);
+    src.start(t);
+    src.stop(t + 0.2);
   }
 
   /** Soft breathy lead with a little vibrato. */
@@ -374,6 +441,17 @@ class AudioEngine {
     const t = this.ctx!.currentTime;
     this.pluckNote(79, t, 0.12);
     this.pluckNote(86, t + 0.08, 0.1);
+  }
+
+  /** Coins changing hands: a few bright metallic clinks. */
+  coins(): void {
+    if (!this.unlocked) return;
+    const t0 = this.ctx!.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const t = t0 + i * 0.07 + Math.random() * 0.02;
+      this.pluckNote(96 + Math.floor(Math.random() * 4), t, 0.07);
+      this.noise(t, 0.04, 'highpass', 5000, 7000, 0.7, 0.12);
+    }
   }
 
   /** A bite of food. */

@@ -167,6 +167,122 @@ const pelt = () =>
     c.set(12, 6, 0xcfc6bb);
   });
 
+const cheese = () =>
+  icon((c) => {
+    // A wedge seen from the side: pale cut face, waxy rind along the back.
+    for (let y = 0; y < 8; y++) {
+      const left = 2 + Math.round((7 - y) * 0.9);
+      for (let x = left; x < 14; x++) c.set(x, 5 + y, x > 12 ? 0xc89a30 : y === 0 ? 0xfbe6a0 : 0xf2d27a);
+    }
+    c.rect(2, 13, 12, 1, 0xa87c24);
+    for (const [x, y] of [[8, 9], [11, 7], [10, 11], [6, 11]]) c.set(x, y, 0xd0aa50);
+  });
+
+const pie = () =>
+  icon((c) => {
+    c.ellipse(8, 10, 7, 4, CRUST, CRUST_DARK, CRUST_LIGHT);
+    c.ellipse(8, 8.5, 6, 3, CRUST_LIGHT, CRUST);
+    // Steam vents in the lid and a dark rim of gravy.
+    c.rect(6, 8, 1, 1, CRUST_DARK);
+    c.rect(9, 8, 1, 1, CRUST_DARK);
+    c.rect(3, 12, 10, 1, 0x5a3018);
+    c.set(7, 4, P.linen);
+    c.set(8, 3, P.linen);
+    c.set(9, 5, P.linenDark);
+  });
+
+const honeyCake = () =>
+  icon((c) => {
+    c.shadedRect(3, 7, 10, 6, 0xd09048, 0xa8642e, 0xe8b060);
+    // Honey glaze dripping down the sides.
+    c.rect(3, 6, 10, 2, 0xf0b830);
+    for (const [x, h] of [[4, 2], [7, 3], [10, 1], [12, 2]]) c.rect(x, 8, 1, h, 0xf0b830);
+    c.set(6, 6, 0xffe08a);
+    c.set(9, 6, 0xffe08a);
+  });
+
+const knife = () =>
+  icon((c) => {
+    // Blade on the diagonal, antler grip at the bottom.
+    for (let i = 0; i < 7; i++) {
+      c.set(7 + i, 8 - i, P.ironLight);
+      c.set(8 + i, 8 - i, P.stoneLight);
+      c.set(8 + i, 9 - i, P.iron);
+    }
+    c.rect(5, 9, 3, 2, P.iron);
+    for (let i = 0; i < 4; i++) {
+      c.set(2 + i, 13 - i, P.linen);
+      c.set(3 + i, 13 - i, P.linenDark);
+    }
+  });
+
+const sword = () =>
+  icon((c) => {
+    for (let i = 0; i < 10; i++) {
+      c.set(5 + i, 10 - i, P.stoneLight);
+      c.set(6 + i, 10 - i, P.ironLight);
+      c.set(6 + i, 11 - i, P.iron);
+    }
+    // Crossguard, leather grip and pommel.
+    for (let i = -2; i <= 2; i++) c.set(5 + i, 11 + i, P.gold);
+    for (let i = 0; i < 3; i++) c.set(3 - i + 1, 13 - i + 1, P.leather);
+    c.set(1, 15, P.goldLight);
+    c.set(2, 14, P.leatherDark);
+  });
+
+const buckler = () =>
+  icon((c) => {
+    c.ellipse(8, 8, 6.5, 6.5, P.iron, P.iron);
+    c.ellipse(8, 8, 5.4, 5.4, P.plank, P.plankDark, P.plankLight);
+    for (let y = 3; y < 14; y++) if (y % 3 === 0) c.rect(3, y, 10, 1, P.plankDark);
+    c.ellipse(8, 8, 1.8, 1.8, P.ironLight, P.iron);
+  });
+
+const ironCap = () =>
+  icon((c) => {
+    c.ellipse(8, 11, 7.5, 2.4, P.iron, P.mortar, P.ironLight);
+    c.ellipse(8, 8, 4.6, 4.6, P.ironLight, P.iron, P.stoneLight);
+    c.rect(3, 10, 10, 1, P.iron);
+    c.set(8, 4, P.mortar);
+  });
+
+const jerkin = () =>
+  icon((c) => {
+    c.shadedRect(4, 3, 8, 11, P.leather, P.leatherDark, P.leatherLight);
+    c.rect(2, 3, 2, 4, P.leatherDark);
+    c.rect(12, 3, 2, 4, P.leatherDark);
+    // Laces down the front and a stitched hem.
+    for (let y = 4; y < 10; y += 2) c.set(8, y, P.linen);
+    c.rect(7, 3, 3, 1, P.leatherDark);
+    c.rect(4, 12, 8, 1, P.barkDark);
+  });
+
+const hood = () =>
+  icon((c) => {
+    c.ellipse(8, 11, 7, 3.5, P.wool, P.woolDark);
+    c.ellipse(8, 7, 5, 5.5, P.wool, P.woolDark, 0xb0aaa8);
+    c.ellipse(8, 8, 2.6, 3, P.ink, P.ink);
+  });
+
+const ridingBoots = () =>
+  icon((c) => {
+    c.shadedRect(3, 1, 4, 11, P.barkLight, P.bark, P.leatherLight);
+    c.rect(3, 11, 7, 3, P.barkLight);
+    c.rect(3, 13, 7, 1, P.barkDark);
+    c.shadedRect(9, 1, 4, 10, P.bark, P.barkDark, P.barkLight);
+    c.rect(9, 10, 6, 3, P.bark);
+    for (let y = 3; y < 10; y += 2) c.set(5, y, P.linen);
+    c.rect(3, 1, 4, 1, P.leatherLight);
+  });
+
+/** A copper coin, for prices and the purse. */
+const coin = () =>
+  icon((c) => {
+    c.ellipse(8, 8, 5.5, 5.5, 0xd08a3a, 0x9a5a22, 0xf0b060);
+    c.ellipse(8, 8, 3.2, 3.2, 0xb87430, 0xb87430);
+    c.rect(7, 6, 2, 4, 0xf0b060);
+  });
+
 export function generateItemIcons(scene: Phaser.Scene): void {
   const icons: Array<[string, () => PixelCanvas]> = [
     ['item-carrot', carrot],
@@ -182,6 +298,17 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-boots', boots],
     ['item-charm', charm],
     ['item-pelt', pelt],
+    ['item-cheese', cheese],
+    ['item-pie', pie],
+    ['item-honeycake', honeyCake],
+    ['item-knife', knife],
+    ['item-sword', sword],
+    ['item-buckler', buckler],
+    ['item-ironcap', ironCap],
+    ['item-jerkin', jerkin],
+    ['item-hood', hood],
+    ['item-ridingboots', ridingBoots],
+    ['item-coin', coin],
   ];
   for (const [key, make] of icons) make().toTexture(scene, key);
 }
