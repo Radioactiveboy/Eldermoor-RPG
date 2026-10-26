@@ -11,6 +11,7 @@ import { TimeWheel } from '../ui/TimeWheel';
 import { Toasts } from '../ui/Toasts';
 import { drawPanel, UI_COLORS, UI_FONT } from '../ui/theme';
 import { gridToScreen } from '../iso/IsoMath';
+import { Settings } from '../settings/Settings';
 import type { IsoMap } from '../world/IsoMap';
 import type { GameScene } from './GameScene';
 
@@ -78,6 +79,8 @@ export class UIScene extends Phaser.Scene {
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
 
+    this.input.keyboard!.on('keydown-M', () => this.toggleMinimap());
+
     this.layout();
     this.scale.on('resize', this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -135,8 +138,8 @@ export class UIScene extends Phaser.Scene {
       // A new area was built, so the minimap can bake its terrain. Rooms are too small to need one.
       this.minimap?.destroy();
       this.minimap = new Minimap(this, game.map);
-      this.minimap.setVisible(!game.map.data.indoor);
       this.minimapOf = game.map;
+      this.showMinimap();
       this.layout();
     }
 
@@ -163,8 +166,21 @@ export class UIScene extends Phaser.Scene {
     const show = !on;
     this.wheel.setVisible(show);
     this.tracker.setVisible(show);
-    this.minimap?.setVisible(show && !this.world.map.data.indoor);
+    this.showMinimap();
     for (const button of [this.pauseButton, this.journalButton, this.satchelButton]) button.setVisible(show);
+  }
+
+  /** M shows or hides the minimap, and it stays that way next time the game is opened. */
+  private toggleMinimap(): void {
+    if (!this.minimap || this.combatMode || this.world.map.data.indoor) return;
+    Settings.set('showMinimap', !Settings.get().showMinimap);
+    GameAudio.click();
+    this.showMinimap();
+  }
+
+  /** Outdoors only, never in a fight, and only if the player hasn't hidden it. */
+  private showMinimap(): void {
+    this.minimap?.setVisible(Settings.get().showMinimap && !this.combatMode && !this.world.map.data.indoor);
   }
 
   /** The daylight let in by the windows, warmed and dimmed, so the fire does most of the lighting. */
