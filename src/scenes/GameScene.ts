@@ -3,6 +3,7 @@ import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SPRINT_MULTIPLIER } from '../config';
 import { Creature } from '../entities/Creature';
 import { Npc } from '../entities/Npc';
+import { SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
@@ -58,7 +59,10 @@ export type HintListener = (text: string) => void;
 export interface Interaction {
   /** Identifies it across frames, e.g. "crop:24,22". */
   key: string;
+  /** What to do, e.g. "Talk-to" or "Go inside". */
   label: string;
+  /** Who or what it's done to, shown after the label in yellow, e.g. "Mother". */
+  target?: string;
   /** Where it is, in grid space, for the range check. */
   gx: number;
   gy: number;
@@ -632,7 +636,7 @@ export class GameScene extends Phaser.Scene {
   private npcInteraction(npc: Npc): Interaction {
     const head = npc.promptPoint;
     return {
-      key: `npc:${npc.id}`, label: 'Talk', gx: npc.gx, gy: npc.gy, range: npc.talkRange,
+      key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
       promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
       run: () => this.startConversation(npc),
     };
