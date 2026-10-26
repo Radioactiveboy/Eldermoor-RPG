@@ -9,6 +9,12 @@ export const MARKET_H = 30;
 /** The road comes in from the east edge along these two rows. */
 const ROAD_ROWS = [17, 18];
 
+/** The middle of the road (in y) at column x, from the square out to the east edge. */
+function roadMiddle(x: number): number {
+  const t = Phaser.Math.Clamp((x - 22) / (MARKET_W - 27), 0, 1);
+  return ROAD_ROWS[1] - 1.2 * Math.sin(Math.PI * t);
+}
+
 /**
  * Where each stall stands (its back corner), which way it faces, and who keeps it; where the
  * keeper steps out from behind it and the front door of the house they go home to at night, and
@@ -52,9 +58,13 @@ export function buildMarketMap(): MapData {
       if (Math.hypot(x + 0.5 - 15, y + 0.5 - 14) < 2.3) terrain[y][x] = Terrain.Stone;
     }
   }
-  // The road in from the east, worn into the grass.
-  for (let x = 23; x < W; x++) for (const y of ROAD_ROWS) terrain[y][x] = Terrain.Dirt;
-  for (let x = 25; x < W; x += 1) if (rnd.frac() < 0.4) terrain[ROAD_ROWS[0] - 1][x] = Terrain.Dirt;
+  // The road in from the east, worn into the grass: it dips north a little on its way out of the
+  // square and widens and narrows as it goes, then runs straight along ROAD_ROWS off the edge.
+  for (let x = 22; x < W; x++) {
+    const mid = roadMiddle(x);
+    const half = 1 + 0.25 * Math.sin(x * 1.3);
+    for (let y = 0; y < H; y++) if (Math.abs(y + 0.5 - mid) <= half) terrain[y][x] = Terrain.Dirt;
+  }
 
   // Trees thick around the edges, a few dotted about the meadow east of town.
   const inTown = (x: number, y: number) => x >= 1 && x <= 26 && y >= 1 && y <= 27;
@@ -62,7 +72,7 @@ export function buildMarketMap(): MapData {
     for (let x = 0; x < W; x++) {
       if (terrain[y][x] !== Terrain.Grass) continue;
       const edge = Math.min(x, y, W - 1 - x, H - 1 - y);
-      const nearRoad = Math.abs(y - 17.5) < 3 && x > 22;
+      const nearRoad = Math.abs(y + 0.5 - roadMiddle(x)) < 3 && x > 22;
       if (nearRoad) continue;
       const chance = edge < 2 ? 0.7 : inTown(x, y) ? 0 : 0.12;
       const roll = rnd.frac();

@@ -171,6 +171,68 @@ function highlight(): PixelCanvas {
   return c;
 }
 
+/** The grass and dirt variants, kept so road edges can be blended from them (see blendTileKey). */
+const grassArt: PixelCanvas[] = [];
+const dirtArt: PixelCanvas[] = [];
+
+/** How many wobbly shapes a road's edge can take along one side of a tile. */
+export const EDGE_VARIANTS = 4;
+
+/** Edge wobbles, each a few soft waves that come back to nothing at both ends of the side. */
+const EDGE_WAVES: number[][] = (() => {
+  const rnd = seededRandom(4242);
+  return Array.from({ length: EDGE_VARIANTS }, () => [1, 2, 3].map((k) => (rnd() - 0.5) * (0.34 / k)));
+})();
+
+function edgeWave(variant: number, t: number): number {
+  if (variant === 0) return 0;
+  return EDGE_WAVES[variant - 1].reduce((sum, amp, i) => sum + amp * Math.sin((i + 1) * Math.PI * t), 0);
+}
+
+/**
+ * A ground tile where dirt and grass meet, so roads and paths have soft,
+ * wandering edges instead of the tiles' straight sides and square corners.
+ *
+ * Which of the 3x3 tiles around it are dirt (`mask`, bit (dy + 1) * 3 + dx + 1)
+ * sets a smooth field that rounds off corners; `edges` (left, right, top,
+ * bottom, each 0 for none or 1..EDGE_VARIANTS) wobble the line along each
+ * side. A side's wobble is picked for that side of the map, so both tiles
+ * that share it bend the same way and the edge carries on unbroken.
+ * Made the first time it's needed and kept.
+ */
+export function blendTileKey(scene: Phaser.Scene, mask: number, edges: number[], variant: number): string {
+  const key = `tile-blend-${mask}-${edges.join('')}-${variant}`;
+  if (scene.textures.exists(key)) return key;
+  const dirtAt = (dx: number, dy: number) => (mask >> ((dy + 1) * 3 + dx + 1)) & 1;
+  const [left, right, top, bottom] = edges;
+  const rnd = seededRandom(mask * 97 + variant * 13 + 1);
+  const grassSrc = grassArt[variant];
+  const dirtSrc = dirtArt[variant];
+  const c = paintDiamond(variant + 1, (c, x, y, u, v) => {
+    // Bilinear between the centres of this tile and the three nearest neighbours.
+    const sx = u < 0.5 ? -1 : 1;
+    const sy = v < 0.5 ? -1 : 1;
+    const a = Math.abs(u - 0.5);
+    const b = Math.abs(v - 0.5);
+    const field =
+      (1 - a) * (1 - b) * dirtAt(0, 0) + a * (1 - b) * dirtAt(sx, 0) + (1 - a) * b * dirtAt(0, sy) + a * b * dirtAt(sx, sy);
+    const wobble =
+      Math.max(0, 1 - 2 * u) * edgeWave(left, v) + Math.max(0, 2 * u - 1) * edgeWave(right, v) +
+      Math.max(0, 1 - 2 * v) * edgeWave(top, u) + Math.max(0, 2 * v - 1) * edgeWave(bottom, u);
+    const d = field + wobble - 0.5;
+    const r = rnd();
+    if (d > 0) {
+      // Bare earth, a little darker where it's trodden down along the edge.
+      c.set(x, y, d < 0.06 && r < 0.45 ? P.dirtDark : dirtSrc.get(x, y) ?? P.dirt);
+    } else {
+      // Grass, in ragged tufts where it overhangs the dirt.
+      c.set(x, y, d > -0.05 && r < 0.35 ? (r < 0.15 ? P.grassTip : P.grassDark) : grassSrc.get(x, y) ?? P.grass);
+    }
+  });
+  c.toTexture(scene, key);
+  return key;
+}
+
 export function generateTiles(scene: Phaser.Scene): void {
   const kinds: Array<[string, (seed: number) => PixelCanvas]> = [
     ['tile-grass', grass],
@@ -183,7 +245,12 @@ export function generateTiles(scene: Phaser.Scene): void {
     ['tile-cave', caveFloorTile],
   ];
   for (const [key, make] of kinds) {
-    for (let v = 0; v < TILE_VARIANTS; v++) make(v + 1).toTexture(scene, tileKey(key, v));
+    for (let v = 0; v < TILE_VARIANTS; v++) {
+      const art = make(v + 1);
+      art.toTexture(scene, tileKey(key, v));
+      if (key === 'tile-grass') grassArt[v] = art;
+      if (key === 'tile-dirt') dirtArt[v] = art;
+    }
   }
   highlight().toTexture(scene, 'tile-highlight');
 }

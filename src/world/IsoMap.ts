@@ -3,7 +3,7 @@ import { TILE_WIDTH } from '../config';
 import { MODEL_ART, WALL_HEIGHT } from '../art/interior';
 import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
 import { DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
-import { TILE_VARIANTS, tileKey } from '../art/tiles';
+import { blendTileKey, EDGE_VARIANTS, TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { circle, circleHits, FULL_TILE, isBehind, offsetShape, Shape } from './Collision';
 import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
@@ -240,8 +240,7 @@ export class IsoMap {
       for (let tx = 0; tx < width; tx++) {
         const center = gridToScreen(tx + 0.5, ty + 0.5);
         const t = terrain[ty][tx];
-        const variant = Math.floor(tileHash(tx, ty) * TILE_VARIANTS);
-        stamp.setTexture(tileKey(TERRAIN_TEXTURE[t], variant));
+        stamp.setTexture(this.groundKey(tx, ty));
         // Subtle per-tile brightness variation so large areas don't look flat.
         const shade = 0xec + Math.floor(tileHash(tx, ty, 1) * 0x14);
         stamp.setTint(Phaser.Display.Color.GetColor(shade, shade, shade));
@@ -286,6 +285,45 @@ export class IsoMap {
   }
 
   /**
+   * The ground at a tile, carrying on past the map's edge as whatever is at
+   * the nearest edge tile, so roads and shores run on out.
+   */
+  private terrainAt(tx: number, ty: number): Terrain {
+    if (this.inBounds(tx, ty)) return this.data.terrain[ty][tx];
+    const t = this.data.terrain[Phaser.Math.Clamp(ty, 0, this.height - 1)][Phaser.Math.Clamp(tx, 0, this.width - 1)];
+    return t === Terrain.Soil || t === Terrain.Floor ? Terrain.Grass : t;
+  }
+
+  /**
+   * The ground texture for a tile. Where a road or path meets grass the tile
+   * is blended (see blendTileKey) so the dirt has soft, uneven edges.
+   */
+  private groundKey(tx: number, ty: number): string {
+    const t = this.terrainAt(tx, ty);
+    const variant = Math.floor(tileHash(tx, ty) * TILE_VARIANTS);
+    if (t !== Terrain.Dirt && t !== Terrain.Grass) return tileKey(TERRAIN_TEXTURE[t], variant);
+    // Only dirt against grass blends: next to anything else (soil, stone, water) a tile keeps its edge.
+    const dirt = (x: number, y: number) => {
+      const n = this.terrainAt(x, y);
+      return n === Terrain.Dirt ? 1 : n === Terrain.Grass ? 0 : t === Terrain.Dirt ? 1 : 0;
+    };
+    let mask = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) mask |= dirt(tx + dx, ty + dy) << ((dy + 1) * 3 + dx + 1);
+    const self = (mask >> 4) & 1;
+    if (mask === (self ? 0x1ff : 0)) return tileKey(TERRAIN_TEXTURE[t], variant);
+    // Each side's wobble belongs to that side of the map, so the tiles either side of it agree.
+    const side = (x: number, y: number, salt: number, other: number) =>
+      other === self ? 0 : 1 + Math.floor(tileHash(x, y, salt) * EDGE_VARIANTS);
+    const edges = [
+      side(tx, ty, 11, (mask >> 3) & 1),
+      side(tx + 1, ty, 11, (mask >> 5) & 1),
+      side(tx, ty, 12, (mask >> 1) & 1),
+      side(tx, ty + 1, 12, (mask >> 7) & 1),
+    ];
+    return blendTileKey(this.scene, mask, edges, variant);
+  }
+
+  /**
    * The land past the map's edge, so there's no black void around it: the
    * ground carries on (roads and shores run straight out), thick forest grows
    * on it, and it all fades into mist further out. It's only painted; nobody
@@ -293,7 +331,7 @@ export class IsoMap {
    * front of it go in one layer drawn over everything on the map.
    */
   private renderOutskirts(ground: Phaser.GameObjects.RenderTexture, canvas: Phaser.Geom.Rectangle, stamp: Phaser.GameObjects.Image): void {
-    const { width, height, terrain, props } = this.data;
+    const { width, height, props } = this.data;
     const fog = Phaser.Display.Color.IntegerToColor(OUTSKIRTS_FOG);
     // Multiply-tint towards the fog the further out a tile is (f: 0 at the edge, 1 deep in the mist).
     const tint = (f: number, shade = 0xff): number =>
@@ -324,18 +362,15 @@ export class IsoMap {
         if (this.inBounds(tx, ty)) continue;
         const center = gridToScreen(tx + 0.5, ty + 0.5);
         if (center.x < canvas.left - TILE_HALF || center.x > canvas.right + TILE_HALF || center.y < canvas.top - 16) continue;
-        // Carry on whatever is at the nearest edge tile, so roads and shores run on out.
         const ex = Phaser.Math.Clamp(tx, 0, width - 1);
         const ey = Phaser.Math.Clamp(ty, 0, height - 1);
-        let t = terrain[ey][ex];
-        if (t === Terrain.Soil || t === Terrain.Floor) t = Terrain.Grass;
+        const t = this.terrainAt(tx, ty);
         const out = Math.max(-tx, -ty, tx - width + 1, ty - height + 1);
         const f = Math.min(1, out / OUTSKIRTS_FADE);
 
         if (center.y < canvas.bottom + 16) {
-          const variant = Math.floor(tileHash(tx, ty) * TILE_VARIANTS);
           const shade = 0xec + Math.floor(tileHash(tx, ty, 1) * 0x14);
-          stamp.setTexture(tileKey(TERRAIN_TEXTURE[t], variant)).setTint(tint(f, shade)).setOrigin(0.5);
+          stamp.setTexture(this.groundKey(tx, ty)).setTint(tint(f, shade)).setOrigin(0.5);
           ground.batchDraw(stamp, center.x - canvas.x, center.y - canvas.y);
         }
 
