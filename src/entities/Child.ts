@@ -52,9 +52,13 @@ export class Child implements Speaker {
     return this.line?.text;
   }
 
-  /** Just above their head, which is lower than a grown-up's. */
   get promptPoint(): { x: number; y: number } {
     return { x: this.sprite.x, y: this.sprite.y - FEET_Y + 1 };
+  }
+
+  /** The top of their head, which is lower than a grown-up's. */
+  get speechPoint(): { x: number; y: number } {
+    return { x: this.sprite.x, y: this.sprite.y - FEET_Y + 14 };
   }
 
   say(text: string): void {

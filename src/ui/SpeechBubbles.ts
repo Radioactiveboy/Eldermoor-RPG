@@ -4,8 +4,10 @@ import { UI_FONT } from './theme';
 /** Anyone who can say something out loud (see Npc.say). */
 export interface Speaker {
   speech?: string;
-  /** World position just above their head. */
+  /** World position just above their head, for the talk prompt. */
   promptPoint: { x: number; y: number };
+  /** Where a speech bubble's tail points: the top of their head (the prompt sits higher). */
+  speechPoint?: { x: number; y: number };
 }
 
 const MAX_WIDTH = 190;
@@ -40,11 +42,12 @@ export class SpeechBubbles {
         b = { text: who.speech, box: this.make(who.speech) };
         this.bubbles.set(who, b);
       }
-      const p = toScreen(who.promptPoint.x, who.promptPoint.y);
+      const at = who.speechPoint ?? who.promptPoint;
+      const p = toScreen(at.x, at.y);
       // Kept on screen, even if that leaves the tail a little to one side of the speaker.
       const half = b.box.width / 2 + 4;
       const x = Phaser.Math.Clamp(p.x, half, Math.max(half, this.scene.scale.width - half));
-      const y = Math.max(b.box.height + TAIL + 4, p.y - 20);
+      const y = Math.max(b.box.height + TAIL + 4, p.y);
       b.box.setPosition(Math.round(x), Math.round(y)).setVisible(visible);
     }
   }

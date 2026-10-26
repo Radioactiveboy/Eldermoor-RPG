@@ -222,6 +222,11 @@ export class Npc implements Body {
     return Math.floor(this.gy);
   }
 
+  /** The top of their head, where a speech bubble's tail points. */
+  get speechPoint(): { x: number; y: number } {
+    return { x: this.sprite.x, y: this.sprite.y - FEET_Y + 7 };
+  }
+
   /** World position just above their head, for the talk prompt. */
   get promptPoint(): { x: number; y: number } {
     return { x: this.sprite.x, y: this.sprite.y - FEET_Y - 6 };
