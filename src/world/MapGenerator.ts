@@ -92,7 +92,12 @@ export function generateMap(width: number, height: number, seed: string): MapDat
 function addRoadToMarket(data: MapData): void {
   const road = data.road!;
   for (let y = 0; y < data.height; y++) {
-    if (data.terrain[y][0] === Terrain.Dirt) (data.doors ??= []).push({ tx: 0, ty: y, to: 'market', entry: 'road', auto: true });
+    if (data.terrain[y][0] === Terrain.Dirt) {
+      (data.doors ??= []).push({
+        tx: 0, ty: y, to: 'market', entry: 'road', auto: true,
+        ask: 'Do you want to make the trek to Adowvale Market?',
+      });
+    }
   }
   const arrive = road[3];
   (data.entries ??= {}).market = { x: arrive.x, y: arrive.y };
@@ -173,7 +178,7 @@ function addCave(data: MapData, fromX: number, fromY: number): void {
   for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (x !== 2 || y !== 2) blocks.push([x, y]);
   placeObject(data, { key: 'cave-entrance', tx: hx, ty: hy, w: 3, h: 3, blocks });
   data.terrain[door.y][door.x] = Terrain.Dirt;
-  (data.doors ??= []).push({ tx: door.x, ty: door.y, to: 'cave', entry: 'mouth', label: 'Enter the cave', facing: 'front' });
+  (data.doors ??= []).push({ tx: door.x, ty: door.y, to: 'cave', entry: 'mouth', label: 'Enter the cave', facing: 'front', ask: 'Do you want to venture into the cave?' });
   (data.entries ??= {}).cave = { x: door.x + 0.5, y: door.y + 1.6 };
 }
 

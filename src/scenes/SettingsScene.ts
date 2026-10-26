@@ -19,7 +19,7 @@ export function openSettings(caller: Phaser.Scene, onClose?: () => void): void {
   });
 }
 
-const VOLUMES: [keyof SettingsData, string][] = [
+const VOLUMES: [Exclude<keyof SettingsData, 'showMinimap'>, string][] = [
   ['masterVolume', 'Master'],
   ['musicVolume', 'Music'],
   ['effectsVolume', 'Effects'],

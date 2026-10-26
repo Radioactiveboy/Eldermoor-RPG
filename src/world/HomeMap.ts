@@ -38,6 +38,8 @@ export function buildHomeMap(): MapData {
       { gx: 0.6, gy: 0.6, z: 26, radius: 90, flicker: 0.35 },
     ],
     npcs: [{ id: 'mother', gx: 2.5, gy: 1.6 }],
+    // The hero's own straw bed: sleeping in it saves the game.
+    beds: [{ id: 'home-bed', tx: 7, ty: 4, gx: 6.5, gy: 4.9 }],
     // The stools around the table, each facing it.
     seats: [
       { name: 'stool', gx: 2.5, gy: 3.5, faceX: 1, faceY: 0, standX: 2.5, standY: 4.5 },

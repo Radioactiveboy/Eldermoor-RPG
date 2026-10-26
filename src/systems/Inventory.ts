@@ -1,3 +1,5 @@
+import { SaveGame } from './SaveGame';
+
 /**
  * What the hero carries and wears. Items are defined once in ITEMS; the
  * satchel is a fixed number of slots holding stacks of them, and each
@@ -417,6 +419,26 @@ class InventoryStore {
     return true;
   }
 
+  toSave(): { bag: Array<Stack | null>; equipped: Partial<Record<EquipSlot, ItemId>>; coins: number } {
+    return { bag: this.bag.map((s) => s && { ...s }), equipped: { ...this.equipped }, coins: this.coins };
+  }
+
+  fromSave(data: ReturnType<InventoryStore['toSave']>): void {
+    // Items that have since been taken out of the game are quietly dropped.
+    const isItem = (id: unknown): id is ItemId => typeof id === 'string' && id in ITEMS;
+    this.bag = new Array(BAG_SIZE).fill(null).map((_, i) => {
+      const s = data.bag?.[i];
+      return s && isItem(s.id) && s.count > 0 ? { id: s.id, count: s.count } : null;
+    });
+    this.equipped = {};
+    for (const { id: slot } of EQUIP_SLOTS) {
+      const id = data.equipped?.[slot];
+      if (isItem(id)) this.equipped[slot] = id;
+    }
+    this.coins = typeof data.coins === 'number' ? data.coins : START_COINS;
+    this.emit({ type: 'changed' });
+  }
+
   /** Totals from everything worn. */
   get totals(): { defence: number; attack: number } {
     let defence = 0;
@@ -436,3 +458,11 @@ class InventoryStore {
 
 export const Inventory = new InventoryStore();
 Inventory.reset();
+
+SaveGame.register('inventory', {
+  save: () => Inventory.toSave(),
+  load(data) {
+    Inventory.reset();
+    if (data) Inventory.fromSave(data as ReturnType<InventoryStore['toSave']>);
+  },
+});

@@ -23,8 +23,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Click / tap**: walk to that spot (A* pathfinding around trees, rocks and water,
   smoothed into straight lines). Clicking a person or thing walks over to it and uses it
 - **E** (or **Enter**, or tapping the prompt): do what the prompt over something
-  nearby says: talk, go through a door, sit on a bench or stool, pick crops,
-  shake a tree. Moving or pressing E again gets up from a seat; moving cancels
+  nearby says: talk, go through a door, sit on a bench or stool, sleep in your
+  bed, pick crops, shake a tree. Moving or pressing E again gets up from a seat; moving cancels
   picking
 - **During a conversation**: click / Space / Enter / E to skip the typing or carry on;
   pick a reply with the mouse, the number keys, or up/down then Enter
@@ -40,8 +40,12 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
 - **Hold T**: fast-forward the clock (60x) to watch the day/night cycle
-- **Esc** or the **II** button: pause menu (resume, controls, settings, back to main menu)
-- **Enter** on the title screen: start a new game (you wake up at home)
+- **Sleeping and saving**: use your straw bed at home and choose how long to sleep
+  (until morning, midday, evening or night; or press 1-4). You wake rested, and the game
+  is saved. **Continue** on the title screen, or **Load Last Save** in the pause menu,
+  brings you back to that moment. Any bed added to a map (`MapData.beds`) is another save point
+- **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, back to main menu)
+- **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in the market (or `?area=world` outside the cottage, or `?area=cave`
   in the wolves' cave)
@@ -71,6 +75,7 @@ src/
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
   systems/Shops.ts        The market traders: stock, what they buy, prices
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
+  systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, fleeing,
                           how beasts choose their moves, and the beasts' stats (FOES)
@@ -99,6 +104,7 @@ src/
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
   scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
+  scenes/SleepScene.ts    "How long to sleep?" box, opened from a bed
   scenes/CombatScene.ts   Turn-based fights over the world: turn order, action menu, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera
   ui/StatusBars.ts        Slim health and stamina bars

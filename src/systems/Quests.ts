@@ -1,3 +1,5 @@
+import { SaveGame } from './SaveGame';
+
 /**
  * The quest log: which quests the player has taken on, how far along each one
  * is, and the diary entries the journal shows. Quests are defined as data in
@@ -171,6 +173,32 @@ class QuestLogStore {
     return out;
   }
 
+  /** The log as plain data, for a save. */
+  toSave(): {
+    quests: Array<{ id: string; done: string[]; completed: boolean; day: number }>;
+    diary: DiaryEntry[];
+    flags?: string[];
+    focus?: string;
+  } {
+    return {
+      quests: this.quests.map((q) => ({ id: q.def.id, done: [...q.done], completed: q.completed, day: q.day })),
+      diary: this.diaryEntries.map((e) => ({ ...e })),
+      flags: [...this.flags],
+      focus: this.focusId,
+    };
+  }
+
+  /** Puts the log back from a save, quietly (no "new quest" announcements). */
+  fromSave(data: ReturnType<QuestLogStore['toSave']>): void {
+    // Quests that have since been taken out of the game are skipped.
+    this.quests = data.quests
+      .filter((q) => QUESTS[q.id])
+      .map((q) => ({ def: QUESTS[q.id], done: new Set(q.done), completed: q.completed, day: q.day }));
+    this.diaryEntries = data.diary.map((e) => ({ ...e }));
+    this.flags = new Set(data.flags ?? []);
+    this.focusId = data.focus;
+  }
+
   writeDiary(text: string): void {
     const entry = { day: this.dayProvider(), text };
     this.diaryEntries.push(entry);
@@ -189,3 +217,11 @@ class QuestLogStore {
 }
 
 export const QuestLog = new QuestLogStore();
+
+SaveGame.register('quests', {
+  save: () => QuestLog.toSave(),
+  load(data) {
+    QuestLog.reset();
+    if (data) QuestLog.fromSave(data as ReturnType<QuestLogStore['toSave']>);
+  },
+});

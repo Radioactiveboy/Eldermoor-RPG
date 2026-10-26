@@ -65,7 +65,7 @@ export interface Door {
   to: AreaId;
   /** Entry point name in the destination's MapData.entries. */
   entry: string;
-  /** Taken by walking onto the tile, with no prompt: a road leading off the map. */
+  /** Taken by walking onto the tile, with no E prompt: a road leading off the map. */
   auto?: boolean;
   /** What the prompt says, if not "Go inside" / "Go outside". */
   label?: string;
@@ -74,6 +74,11 @@ export interface Door {
    * have their prompt there) or opens towards the viewer (the cave mouth).
    */
   facing?: 'wall' | 'front';
+  /**
+   * Asked before going, e.g. "Do you want to make the trek to Adowvale Market?".
+   * Saying no turns the player back the way they came.
+   */
+  ask?: string;
 }
 
 /** Something to look at closely (the lost ewes in the cave). GameScene decides what examining it does. */
@@ -116,6 +121,21 @@ export interface Seat {
   name: string;
 }
 
+/**
+ * Somewhere to sleep. Sleeping passes the time and saves the game, so every
+ * bed is a save point: add one to any area to make another.
+ */
+export interface Bed {
+  /** Remembered in the save, so loading knows where the player went to sleep. */
+  id: string;
+  /** The tile clicking on selects it, and the point its prompt floats over. */
+  tx: number;
+  ty: number;
+  /** Where the player must stand near to use it, and where they wake up. */
+  gx: number;
+  gy: number;
+}
+
 export interface NpcSpawn {
   id: string;
   gx: number;
@@ -147,6 +167,7 @@ export interface MapData {
   npcs?: NpcSpawn[];
   crops?: CropPatch[];
   seats?: Seat[];
+  beds?: Bed[];
   creatures?: CreatureSpawn[];
   sights?: Sight[];
   /** Where water drips from overhead (stalactite tips): grid position and height in pixels. */

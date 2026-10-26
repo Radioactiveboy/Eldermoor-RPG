@@ -1,4 +1,5 @@
-import { ItemCategory, itemDef, ItemId } from './Inventory';
+import { ItemCategory, itemDef, ItemId, ITEMS } from './Inventory';
+import { SaveGame } from './SaveGame';
 
 /**
  * The market's traders: what each one sells, what they'll buy, and how much
@@ -76,6 +77,19 @@ class ShopStore {
     this.stock.clear();
   }
 
+  /** Only stalls that have been traded with; the rest still have their starting stock. */
+  toSave(): Partial<Record<ShopId, ShopStack[]>> {
+    return Object.fromEntries([...this.stock].map(([shop, list]) => [shop, list.map((g) => ({ ...g }))]));
+  }
+
+  fromSave(data: Partial<Record<string, ShopStack[]>>): void {
+    this.stock.clear();
+    for (const [shop, list] of Object.entries(data)) {
+      if (!(shop in SHOPS) || !list) continue;
+      this.stock.set(shop as ShopId, list.filter((g) => g.id in ITEMS && g.count > 0).map((g) => ({ ...g })));
+    }
+  }
+
   def(shop: ShopId): ShopDef {
     return SHOPS[shop];
   }
@@ -120,3 +134,11 @@ class ShopStore {
 }
 
 export const Shops = new ShopStore();
+
+SaveGame.register('shops', {
+  save: () => Shops.toSave(),
+  load(data) {
+    Shops.reset();
+    if (data) Shops.fromSave(data as Partial<Record<string, ShopStack[]>>);
+  },
+});

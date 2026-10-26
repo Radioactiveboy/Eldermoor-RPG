@@ -44,7 +44,7 @@ export function buildCaveMap(): MapData {
       corner: 'cave-corner',
       height: 120,
     },
-    doors: [{ tx: 0, ty: 2, to: 'world', entry: 'cave', label: 'Leave the cave' }],
+    doors: [{ tx: 0, ty: 2, to: 'world', entry: 'cave', label: 'Leave the cave', ask: 'Do you want to leave the cave and head back to Adowvale Hollow?' }],
     entries: { mouth },
     // Daylight through the mouth.
     lights: [{ gx: 0.3, gy: 2.5, z: 40, radius: 240, flicker: 0 }],
