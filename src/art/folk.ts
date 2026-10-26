@@ -96,6 +96,44 @@ export const FOLK: Record<string, Outfit> = {
     spear: true,
     mail: true,
   },
+  // Farmer Iran: a battered straw hat, a grey beard and an undyed wool smock.
+  iran: {
+    cloak: null,
+    hood: false,
+    tunic: [0x9a8a6a, 0x766850, 0xb4a682],
+    shirt: [0x7a5a3a, 0x5a4028],
+    trouser: [0x4e4234, 0x3a3026],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xc8906a, 0xa06e50],
+    hair: 0x3a2e28,
+    hat: [P.straw, P.strawDark, P.strawLight],
+    beard: 0x7a706a,
+  },
+  // Iran's children. Pip: a scruffy lad in a patched green tunic.
+  pip: {
+    cloak: null,
+    hood: false,
+    tunic: [0x5a7a3a, 0x42602a, 0x76964e],
+    shirt: [P.linen, P.linenDark],
+    trouser: [0x6b4a30, 0x4a3020],
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+    skin: [0xd8a07a, 0xb07a5a],
+    hair: 0x2e2420,
+    child: true,
+  },
+  // Hetty: his little sister, in a blue dress.
+  hetty: {
+    cloak: null,
+    hood: false,
+    tunic: [0x5a74a8, 0x42588a, 0x7a94c4],
+    shirt: [P.linen, P.linenDark],
+    trouser: [0x42588a, 0x32446a],
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+    skin: [0xd8a07a, 0xb07a5a],
+    hair: 0x3a2a22,
+    robe: true,
+    child: true,
+  },
 };
 
 export function generateFolk(scene: Phaser.Scene): void {

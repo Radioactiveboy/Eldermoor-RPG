@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SPRINT_MULTIPLIER } from '../config';
+import { Child, Siblings } from '../entities/Child';
 import { Creature } from '../entities/Creature';
+import { Hen } from '../entities/Hen';
 import { Npc } from '../entities/Npc';
 import { SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
+import { EGG_REWARD, FEED_MONEY, SIBLING_BANTER, SIBLING_GREETINGS, SIBLING_THANKS } from '../dialogue/iran';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
@@ -20,6 +23,7 @@ import { TimeOfDay } from '../systems/TimeOfDay';
 import { buildCaveMap } from '../world/CaveMap';
 import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
+import { buildHutMap } from '../world/HutMap';
 import { buildMarketMap } from '../world/MarketMap';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
@@ -27,6 +31,7 @@ import { AreaId, Bed, CropPatch, Door, MapData, Prop, Seat, Sight } from '../wor
 import { cropKey } from '../art/farm';
 import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
+import type { Speaker } from '../ui/SpeechBubbles';
 import type { DialogueSceneData } from './DialogueScene';
 import type { CombatResult, CombatSceneData } from './CombatScene';
 import type { SleepSceneData } from './SleepScene';
@@ -108,6 +113,10 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
     'The fire pops and settles. It is warm in here, at least.',
     'The old table is covered in knife marks and candle wax.',
   ],
+  'hut-stool': [
+    'Somebody has carved a lopsided hen into the table. Two somebodies, by the look of it.',
+    'There is a basket of eggs on the shelf, and a feather in the butter.',
+  ],
   'market-bench': [
     'The smell of fresh bread drifts over from the bakehouse stall.',
     'Somewhere a cart rattles over the cobbles. Two women are arguing about the price of eggs.',
@@ -141,6 +150,7 @@ function buildArea(area: AreaId): MapData {
   if (area === 'home') return buildHomeMap();
   if (area === 'market') return buildMarketMap();
   if (area === 'cave') return buildCaveMap();
+  if (area === 'hut') return buildHutMap();
   return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
 }
 
@@ -153,6 +163,11 @@ export class GameScene extends Phaser.Scene {
   npcs: Npc[] = [];
   /** Wild animals roaming the area. */
   creatures: Creature[] = [];
+  /** Farmer Iran's hens, pottering about their run. */
+  private hens: Hen[] = [];
+  private cluckTimer = 0;
+  /** Iran's children, chattering away indoors. */
+  private siblings?: Siblings;
   /** True during a fight: the clock stops and health doesn't regenerate. */
   inCombat = false;
   /** Birds, rippling water and the like, outdoors only. */
@@ -229,7 +244,7 @@ export class GameScene extends Phaser.Scene {
     this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
     const areaParam = new URLSearchParams(window.location.search).get('area');
-    if (data.newGame && (areaParam === 'market' || areaParam === 'world' || areaParam === 'cave')) this.area = areaParam;
+    if (data.newGame && (areaParam === 'market' || areaParam === 'world' || areaParam === 'cave' || areaParam === 'hut')) this.area = areaParam;
     this.busy = false;
     this.walkingTo = undefined;
     this.focus = undefined;
@@ -246,6 +261,10 @@ export class GameScene extends Phaser.Scene {
     this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour));
     this.marketWasOpen = marketOpen(this.clock.hour);
     this.creatures = this.spawnCreatures();
+    const hens = this.map.data.hens;
+    this.hens = (hens?.flock ?? []).map((h) => new Hen(this, this.map, hens!.pen, h.kind, h.gx, h.gy));
+    const children = (this.map.data.children ?? []).map((c) => new Child(this, this.map, c.id, c.gx, c.gy));
+    this.siblings = children.length > 0 ? new Siblings(children, SIBLING_BANTER, () => this.siblingHello()) : undefined;
     this.syncCrops();
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
     this.drips = this.map.data.drips ? new Drips(this, this.map.data) : undefined;
@@ -285,6 +304,9 @@ export class GameScene extends Phaser.Scene {
       );
     }
     if (this.area === 'cave') this.enteredCave();
+    if (this.area === 'hut' && !this.visited.has('hut')) {
+      this.time.delayedCall(900, () => this.onHint?.('Warm, smoky, and loud. Iran was not exaggerating about the children.'));
+    }
     // Finding somewhere new is worth a little experience (not the hero's own home).
     if (!this.visited.has(this.area) && !data.newGame && this.area !== 'home') {
       const name = AREA_NAMES[this.area];
@@ -296,6 +318,24 @@ export class GameScene extends Phaser.Scene {
       if (e.type === 'levelled') this.stats.heal((e.level - e.from) * HEALTH_PER_LEVEL);
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, offXp);
+    // Buying Iran's chicken feed moves his errand on.
+    const offItems = Inventory.onChange((e) => {
+      if (e.type === 'added' && e.id === 'chicken-feed') QuestLog.complete('chicken-feed', 'buy');
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, offItems);
+  }
+
+  /** What the children say when the hero walks in: thanks once the hens are fed, a plain hello otherwise. */
+  private siblingHello() {
+    if (QuestLog.get('chicken-feed')?.completed) return SIBLING_THANKS[0];
+    const met = QuestLog.hasFlag('met-iran-children');
+    QuestLog.setFlag('met-iran-children');
+    return met ? SIBLING_GREETINGS[2] : SIBLING_GREETINGS[Math.floor(Math.random() * 2)];
+  }
+
+  /** People besides the NPCs who can say things in speech bubbles (Iran's children), for the HUD. */
+  get speakers(): Speaker[] {
+    return this.siblings?.speakers ?? [];
   }
 
   /** Into the wolves' den: the first time, the hero takes it in; on Wil's errand, that step is done. */
@@ -328,6 +368,8 @@ export class GameScene extends Phaser.Scene {
       this.clock.update(dt);
     }
     this.updateCreatures(dt);
+    this.updateHens(dt);
+    this.siblings?.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
     this.checkRoadExits();
     this.updateHover();
     this.updateFocus();
@@ -468,6 +510,28 @@ export class GameScene extends Phaser.Scene {
             'towards the cave in the hill north of the cottage. He is too scared to look, so I said I would.',
         );
         break;
+      case 'start-feed-quest':
+        if (QuestLog.has('chicken-feed')) return;
+        QuestLog.start('chicken-feed', ['talk']);
+        Inventory.reward(FEED_MONEY);
+        GameAudio.coins();
+        // Bought a sack already, before he asked.
+        if (Inventory.count('chicken-feed') > 0) QuestLog.complete('chicken-feed', 'buy');
+        QuestLog.writeDiary(
+          'Met Farmer Iran up the hill, who keeps the hens. He remembered me as a boy. His hens have gone without feed for ' +
+            `two days, so he gave me ${FEED_MONEY} coins to fetch a sack from Hilde at the market.`,
+        );
+        break;
+      case 'finish-feed-quest':
+        Inventory.remove('chicken-feed', 1);
+        QuestLog.complete('chicken-feed', 'buy');
+        QuestLog.complete('chicken-feed', 'return');
+        this.give('egg', EGG_REWARD);
+        QuestLog.writeDiary(
+          "Took Iran his sack of feed. The hens mobbed him before he'd got it open. He sent me off with eggs for Mother, " +
+            'and his little girl shouted goodbye from the doorway until I was halfway down the hill.',
+        );
+        break;
       case 'finish-sheep-quest':
         // He may hear the news without having asked: the ewes were found first.
         QuestLog.start('lost-sheep', ['talk', 'cave', 'find']);
@@ -482,6 +546,25 @@ export class GameScene extends Phaser.Scene {
       default:
         console.warn(`Unknown dialogue action: ${action}`);
     }
+  }
+
+  /** The hens peck about by day and roost in the coop at night; now and then one clucks. */
+  private updateHens(dt: number): void {
+    if (this.hens.length === 0) return;
+    const hour = this.clock.hour;
+    const roosting = hour >= 21 || hour < 6;
+    const player = { x: this.player.gx, y: this.player.gy };
+    for (const hen of this.hens) {
+      hen.roosting = roosting;
+      hen.update(dt, player);
+    }
+    this.cluckTimer -= dt;
+    if (this.cluckTimer > 0 || roosting || this.busy) return;
+    this.cluckTimer = 2 + Math.random() * 5;
+    // Louder the closer the player is to the run.
+    const pen = this.map.data.hens!.pen;
+    const d = Math.hypot((pen.x0 + pen.x1) / 2 - player.x, (pen.y0 + pen.y1) / 2 - player.y);
+    if (d < 12) GameAudio.cluck(Math.max(0.1, 1 - d / 12));
   }
 
   // ------------------------------------------------------------ sleeping and saving

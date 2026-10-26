@@ -55,6 +55,20 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 150,
   },
+  'chicken-feed': {
+    id: 'chicken-feed',
+    title: 'Feed for the Hens',
+    giver: 'Farmer Iran',
+    summary:
+      'Farmer Iran, who keeps hens on the hill north of our cottage, has run out of chicken feed, and hungry hens do not lay. ' +
+      "He can't leave the farm with wolves about, so he gave me ten coins to buy a sack from Hilde's bakehouse stall at the market.",
+    objectives: [
+      { id: 'talk', text: 'Speak with Farmer Iran' },
+      { id: 'buy', text: "Buy a sack of chicken feed at Hilde's stall in Adowvale Market" },
+      { id: 'return', text: 'Bring the feed back to Farmer Iran' },
+    ],
+    xp: 80,
+  },
 };
 
 export interface QuestState {

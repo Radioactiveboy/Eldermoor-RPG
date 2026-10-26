@@ -28,7 +28,7 @@ export interface DialogueScript {
   nodes: Record<string, DialogueNode>;
 }
 
-export type SpeakerId = 'mother' | 'pedlar' | 'pilgrim' | 'drover' | 'baker' | 'smith' | 'tanner' | 'guard';
+export type SpeakerId = 'mother' | 'pedlar' | 'pilgrim' | 'drover' | 'baker' | 'smith' | 'tanner' | 'guard' | 'iran';
 
 export interface Speaker {
   name: string;
@@ -47,4 +47,5 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   smith: { name: 'Osric the Smith', portrait: 'portrait-smith', voice: { pitch: 130, spread: 0.1, wave: 'sawtooth' } },
   tanner: { name: 'Tamsin the Tanner', portrait: 'portrait-tanner', voice: { pitch: 280, spread: 0.18, wave: 'square' } },
   guard: { name: 'Militiaman', portrait: 'portrait-guard', voice: { pitch: 190, spread: 0.1, wave: 'sawtooth' } },
+  iran: { name: 'Farmer Iran', portrait: 'portrait-iran', voice: { pitch: 150, spread: 0.14, wave: 'triangle' } },
 };

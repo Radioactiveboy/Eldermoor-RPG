@@ -607,6 +607,35 @@ class AudioEngine {
     }
   }
 
+  /** A hen muttering to herself: a few short, nasal "buk" notes, the last drawn out and rising. */
+  cluck(volume = 1): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t0 = ctx.currentTime;
+    const notes = 2 + Math.floor(Math.random() * 3);
+    const base = 480 + Math.random() * 160;
+    for (let i = 0; i < notes; i++) {
+      const last = i === notes - 1;
+      const t = t0 + i * 0.12;
+      const len = last ? 0.16 : 0.05;
+      const o = ctx.createOscillator();
+      o.type = 'square';
+      o.frequency.setValueAtTime(base * (last ? 1.1 : 1), t);
+      o.frequency.linearRampToValueAtTime(base * (last ? 1.5 : 0.85), t + len);
+      const formant = ctx.createBiquadFilter();
+      formant.type = 'bandpass';
+      formant.frequency.value = 1200;
+      formant.Q.value = 2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.06 * volume, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(formant).connect(g).connect(this.sfxBus);
+      o.start(t);
+      o.stop(t + len + 0.02);
+    }
+  }
+
   /** A drop of water falling into a puddle somewhere in the cave: a short rising bloop, echoing. */
   drip(volume = 1): void {
     if (!this.unlocked) return;

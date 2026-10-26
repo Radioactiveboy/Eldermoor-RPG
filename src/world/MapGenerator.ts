@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { FENCE, fenceKey } from '../art/farm';
+import { HUT_CHIMNEY } from '../art/henfarm';
 import type { CropKind } from '../systems/Farm';
-import { circle, fenceShapes } from './Collision';
+import { box, circle, fenceShapes } from './Collision';
 import { MapData, placeObject, Prop, Terrain } from './MapData';
 
 /**
@@ -70,17 +71,20 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   addCottage(data, home.x, home.y);
   addGarden(data, home.x + 5, home.y - 2);
   addCave(data, home.x + 4, home.y - 1);
+  addHenFarm(data, home.x - 5, home.y - 16);
   // A lone wolf nosing about south of the cottage, in sight of the door.
   (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });
   // Folk travelling the road, spread out along it (see entities/Npc.ts).
-  data.npcs = [
-    ['pedlar', 0.22],
-    ['pilgrim', 0.5],
-    ['drover', 0.74],
-  ].map(([id, along]) => {
-    const p = road[Math.floor(road.length * (along as number))];
-    return { id: id as string, gx: p.x, gy: p.y };
-  });
+  (data.npcs ??= []).push(
+    ...[
+      ['pedlar', 0.22],
+      ['pilgrim', 0.5],
+      ['drover', 0.74],
+    ].map(([id, along]) => {
+      const p = road[Math.floor(road.length * (along as number))];
+      return { id: id as string, gx: p.x, gy: p.y };
+    }),
+  );
   return data;
 }
 
@@ -215,7 +219,62 @@ function addGarden(data: MapData, x0: number, y0: number): void {
   // Packed-earth paths between the rows, out through the gates.
   for (const y of [y0 + 2, y0 + 4]) for (let x = x0; x < x1; x++) setIf(data.terrain, x, y, Terrain.Dirt);
 
-  // The fence: each piece joins up with the fence pieces beside it.
+  addFence(data, x0, y0, x1, y1, gates);
+}
+
+/**
+ * Farmer Iran's smallholding, west of the sheep track up to the cave: his
+ * thatched hut (see HutMap.ts for inside), and in front of it a fenced hen run
+ * with a coop and a water trough, its gate opening onto the track. Iran
+ * stands by the run. (x0, y0) is the hut's back corner.
+ */
+function addHenFarm(data: MapData, x0: number, y0: number): void {
+  const rnd = new Phaser.Math.RandomDataGenerator(['iran']);
+  // The run: fenced from (px0, py0) to (px1, py1), with the gate on its east side.
+  const px0 = x0 - 2;
+  const py0 = y0 + 5;
+  const px1 = px0 + 6;
+  const py1 = py0 + 5;
+  const gate = { x: px1, y: py0 + 2 };
+  // Clear the woods for the yard, then lay paths from the hut door and the gate out to the track.
+  for (let y = y0 - 2; y <= py1 + 1; y++) {
+    for (let x = px0 - 1; x <= px1 + 2; x++) if (data.props[y]?.[x] !== undefined) data.props[y][x] = Prop.None;
+  }
+  const toTrack = (x: number, y: number) => {
+    for (; x < data.width && data.terrain[y][x] !== Terrain.Dirt; x++) setIf(data.terrain, x, y, Terrain.Dirt);
+  };
+  const door = { x: x0 + 2, y: y0 + 1 };
+  toTrack(door.x, door.y);
+  toTrack(gate.x, gate.y);
+  // Inside the run the hens have scratched the grass down to bare earth.
+  for (let y = py0 + 1; y < py1; y++) for (let x = px0 + 1; x < px1; x++) setIf(data.terrain, x, y, Terrain.Dirt);
+  addFence(data, px0, py0, px1, py1, new Set([`${gate.x},${gate.y}`]));
+
+  placeObject(data, {
+    key: 'bld-hut', tx: x0, ty: y0, w: 2, h: 3,
+    // The hut, plus the chopping block by the door and the woodpile along the front.
+    blocks: [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2], [2, 2], [0, 3], [1, 3]],
+  });
+  (data.doors ??= []).push({ tx: door.x, ty: door.y, to: 'hut', entry: 'door', label: 'Go inside' });
+  (data.entries ??= {}).hut = { x: door.x + 0.5, y: door.y + 0.5 };
+  (data.chimneys ??= []).push({ gx: x0 + HUT_CHIMNEY.gx, gy: y0 + HUT_CHIMNEY.gy, z: HUT_CHIMNEY.z });
+
+  // The coop in the back corner of the run, its ramp facing the gate, and a trough by the fence.
+  placeObject(data, { key: 'farm-coop', tx: px0 + 1, ty: py0 + 1, w: 2, h: 1 });
+  placeObject(data, { key: 'farm-trough', tx: px0 + 1, ty: py1 - 1, w: 1, h: 1, shapes: [box(0.2, 0.3, 0.8, 0.7)] });
+  const pen = { x0: px0 + 1, y0: py0 + 1, x1: px1, y1: py1 };
+  const flock = (['rooster', 'white', 'brown', 'speckled', 'white', 'brown'] as const).map((kind, i) => ({
+    kind,
+    gx: px0 + 2 + (i % 3) * 1.4 + rnd.frac() * 0.5,
+    gy: py0 + 2.6 + Math.floor(i / 3) * 1.3 + rnd.frac() * 0.4,
+  }));
+  data.hens = { pen, flock };
+  // Iran keeps an eye on his hens from just outside the run, by the corner nearest his door.
+  (data.npcs ??= []).push({ id: 'iran', gx: px1 - 0.5, gy: py0 - 0.5 });
+}
+
+/** A rectangle of split-rail fence; each piece joins up with the pieces beside it. Gates are left open. */
+function addFence(data: MapData, x0: number, y0: number, x1: number, y1: number, gates: Set<string>): void {
   const isFence = (x: number, y: number) =>
     (x === x0 || x === x1 || y === y0 || y === y1) && x >= x0 && x <= x1 && y >= y0 && y <= y1 && !gates.has(`${x},${y}`);
   for (let y = y0; y <= y1; y++) {

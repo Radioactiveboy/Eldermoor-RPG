@@ -193,7 +193,7 @@ export class UIScene extends Phaser.Scene {
     this.wheel.update(game.clock);
     this.minimap!.update(sprite, cam.worldView, outdoor.color);
     this.tracker.update();
-    this.bubbles.update(game.npcs, toScreen, !game.inCombat);
+    this.bubbles.update([...game.npcs, ...game.speakers], toScreen, !game.inCombat);
     this.updatePrompt(toScreen);
     this.updateProgress(toScreen);
     if (this.combatMode !== game.inCombat) this.setCombatMode(game.inCombat);
