@@ -203,8 +203,12 @@ function lighten(c: number): number {
 export interface TownhouseStyle {
   roof: number;
   plaster: number;
-  /** Which face the door is on: the front (+y) or the side (+x). */
-  door: 'front' | 'side';
+  /**
+   * Which face the door is on: the front (+y), the side (+x), or 'back' for
+   * houses whose door is on a face the camera can't see (a house on the near
+   * side of the square, facing into it, shows only its back walls).
+   */
+  door: 'front' | 'side' | 'back';
   /** A hanging sign over the door (an inn, a shop). */
   sign?: number;
 }
@@ -276,7 +280,7 @@ function townhouse(style: TownhouseStyle): IsoModel {
     right: (_u, v) => ((v * 8) % 1 < 0.15 ? P.mortar : P.stoneDark),
   });
   m.quad({ x: 0, y: S, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, wall([[0.12, 0.3], [0.7, 0.88]], front ? [0.4, 0.6] : null, false));
-  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, wall([[0.15, 0.33], [0.67, 0.85]], front ? null : [0.4, 0.6], true));
+  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, wall([[0.15, 0.33], [0.67, 0.85]], style.door === 'side' ? [0.4, 0.6] : null, true));
   // Gable over the side, plastered and framed like the upper floor.
   m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: R }, (u, v) => {
     if (v > 1 - Math.abs(u * 2 - 1)) return null;
@@ -308,8 +312,12 @@ export const TOWNHOUSE_CHIMNEY = { gx: 0.62, gy: 0.72, z: 150 };
 export const TOWNHOUSES: Record<string, TownhouseStyle> = {
   'bld-house-red': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'front' },
   'bld-house-slate': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'front' },
-  'bld-house-ochre': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'side' },
+  'bld-house-ochre': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'front' },
   'bld-inn': { roof: 0x7a3a2e, plaster: 0xeee4cc, door: 'front', sign: P.gold },
+  // Seen from behind: the houses along the near side of the square, facing into it.
+  'bld-house-red-back': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'back' },
+  'bld-house-slate-back': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'back' },
+  'bld-house-ochre-back': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'back' },
 };
 
 export function generateMarket(scene: Phaser.Scene): void {

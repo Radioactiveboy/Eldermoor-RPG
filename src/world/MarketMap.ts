@@ -76,21 +76,24 @@ export function buildMarketMap(): MapData {
     chimneys: [],
   };
 
-  // Houses around the square: a row along the back, cottages down the west side, more along the south.
-  const house = (key: string, tx: number, ty: number) => {
-    placeObject(data, { key, tx, ty, w: 3, h: 3 });
-    const c = key === 'bld-cottage' ? { gx: 0.78, gy: 0.68, z: 134 } : TOWNHOUSE_CHIMNEY;
-    data.chimneys!.push({ gx: tx + c.gx, gy: ty + c.gy, z: c.z });
+  // Houses around the square, all facing into it: a row along the back, more down the west side
+  // (mirrored, so their fronts face east), and along the south a row seen from behind (their doors
+  // are on the side facing the square, out of view).
+  const house = (key: string, tx: number, ty: number, flipX = false) => {
+    placeObject(data, { key, tx, ty, w: 3, h: 3, flipX });
+    const c = TOWNHOUSE_CHIMNEY;
+    // Mirroring the art swaps x and y on the grid.
+    data.chimneys!.push({ gx: tx + (flipX ? c.gy : c.gx), gy: ty + (flipX ? c.gx : c.gy), z: c.z });
   };
   house('bld-house-red', 5, 1);
   house('bld-inn', 9, 1);
   house('bld-house-slate', 14, 1);
   house('bld-house-red', 19, 2);
-  house('bld-cottage', 1, 6);
-  house('bld-house-ochre', 1, 16);
-  house('bld-house-slate', 8, 24);
-  house('bld-house-red', 13, 24);
-  house('bld-cottage', 19, 24);
+  house('bld-house-slate', 1, 6, true);
+  house('bld-house-ochre', 1, 16, true);
+  house('bld-house-slate-back', 8, 24);
+  house('bld-house-red-back', 13, 24);
+  house('bld-house-ochre-back', 19, 24);
 
   // The well in the middle of the square.
   placeObject(data, { key: 'mkt-well', tx: 14, ty: 13, w: 2, h: 2 });
