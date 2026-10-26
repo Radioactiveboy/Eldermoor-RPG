@@ -142,6 +142,13 @@ export function buildMarketMap(): MapData {
   placeObject(data, { key: 'furn-barrels', tx: 7, ty: 11, w: 1, h: 1, shapes: [circle(0.35, 0.35, 0.3), circle(0.55, 0.8, 0.2)] });
   placeObject(data, { key: 'mkt-crates', tx: 24, ty: 14, w: 1, h: 1, shapes: [box(0.1, 0.15, 0.95, 0.95)] });
 
+  // A signpost where the road leaves the square, pointing the way home.
+  placeObject(data, { key: 'mkt-signpost', tx: 27, ty: 19, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
+  data.sights = [{
+    id: 'signpost-market', gx: 27.5, gy: 19.5, label: 'Read the sign', z: 58,
+    sign: { heading: 'Signpost', lines: ['→  East: Adowvale Hollow', '←  West: Adowvale Market square'] },
+  }];
+
   // The militia, each walking their own patch of the square.
   data.npcs!.push(
     { id: 'guard-1', gx: 11.5, gy: 15.5 },

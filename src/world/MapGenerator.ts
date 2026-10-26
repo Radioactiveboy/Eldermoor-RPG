@@ -109,6 +109,13 @@ function addRoadToMarket(data: MapData): void {
     if (data.terrain[ty]?.[tx] !== Terrain.Grass) continue;
     for (let y = ty - 1; y <= ty + 1; y++) for (let x = tx - 1; x <= tx + 1; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
     placeObject(data, { key: 'mkt-signpost', tx, ty, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
+    (data.sights ??= []).push({
+      id: 'signpost-road', gx: tx + 0.5, gy: ty + 0.5, label: 'Read the sign', z: 58,
+      sign: {
+        heading: 'Signpost',
+        lines: ['←  West: Adowvale Market', '→  East: Adowvale Hollow', '↑  North: the hill caves'],
+      },
+    });
     break;
   }
 }

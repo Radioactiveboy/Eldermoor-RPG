@@ -64,7 +64,7 @@ src/
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
   world/MarketMap.ts      The market at the end of the road: bare-earth square, well, stalls, houses, militia
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
-                          stalagmites, a pool, three wolves and the drover's lost ewes
+                          stalagmites, a pool, three wolves, the drover's lost ewes, and bone piles to search
   world/Drips.ts          Water dripping from the cave's stalactites
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
   world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
@@ -74,6 +74,7 @@ src/
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
   systems/Shops.ts        The market traders: stock, what they buy, prices
+  systems/Loot.ts         Random finds: what searching a pile of bones can turn up, and how likely each is
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
