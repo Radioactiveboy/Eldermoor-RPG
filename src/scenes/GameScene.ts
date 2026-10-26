@@ -683,7 +683,7 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     // Pixel art looks best zoomed in, but phones need to see more of the map.
     cam.setZoom(Phaser.Math.Clamp(this.scale.width / 640, 1, CAMERA_ZOOM.default));
-    cam.setBackgroundColor('#0e0f14');
+    cam.setBackgroundColor(this.map.backgroundColor);
     cam.roundPixels = true;
     this.fitCamera();
     this.scale.on('resize', this.fitCamera, this);

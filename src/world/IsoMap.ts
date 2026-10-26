@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
+import { TILE_WIDTH } from '../config';
 import { MODEL_ART, WALL_HEIGHT } from '../art/interior';
 import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
 import { DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
 import { TILE_VARIANTS, tileKey } from '../art/tiles';
-import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
+import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { circle, circleHits, FULL_TILE, isBehind, offsetShape, Shape } from './Collision';
 import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
 
@@ -13,6 +14,13 @@ const PROP_SHAPES: Record<string, Shape[]> = {
   pine: [circle(0.58, 0.58, 0.17)],
   rock: [circle(0.55, 0.55, 0.34)],
 };
+
+/** How far past the camera's limits the outskirts are painted, in pixels, for screens wider than the map. */
+const OUTSKIRTS_MARGIN = 192;
+/** Tiles past the map's edge over which the outskirts fade into the mist. */
+const OUTSKIRTS_FADE = 7;
+/** Tint the outskirts fade towards: a dark, misty blue-green. */
+const OUTSKIRTS_FOG = 0x3a4a4c;
 
 /** Something that moves around and gets in the way, like a wandering traveller. */
 export interface Body {
@@ -30,6 +38,8 @@ const TERRAIN_TEXTURE: Record<Terrain, string> = {
   [Terrain.Floor]: 'tile-floor',
   [Terrain.Soil]: 'tile-soil',
 };
+
+const TILE_HALF = TILE_WIDTH / 2;
 
 /** Stable pseudo-random number per tile, so variants don't change between loads. */
 function tileHash(tx: number, ty: number, salt = 0): number {
@@ -173,6 +183,11 @@ export class IsoMap {
     return new Phaser.Geom.Rectangle(left, -top, right - left, bottom + top);
   }
 
+  /** Colour behind the map: dark for a room, the far mist for outdoors so the edges blend in. */
+  get backgroundColor(): string {
+    return this.data.indoor ? '#0e0f14' : '#141d1a';
+  }
+
   /** Works out every tile's collision outline from its terrain, prop or object. */
   private buildShapes(): void {
     const { width, height, terrain, props } = this.data;
@@ -210,7 +225,9 @@ export class IsoMap {
     const { width, height, terrain, props } = this.data;
 
     // Bake all ground tiles into one texture: one draw call instead of thousands.
+    // Outdoors it also takes in the outskirts past the map's edge.
     const bounds = this.getWorldBounds();
+    if (!this.data.indoor) Phaser.Geom.Rectangle.Inflate(bounds, OUTSKIRTS_MARGIN, OUTSKIRTS_MARGIN);
     const ground = this.scene.add.renderTexture(bounds.x, bounds.y, bounds.width, bounds.height);
     ground.setOrigin(0, 0).setDepth(0);
     const stamp = this.scene.make.image({ key: 'tile-grass' }, false);
@@ -252,6 +269,7 @@ export class IsoMap {
     }
     ground.endDraw();
     ground.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    if (!this.data.indoor) this.renderOutskirts(ground, bounds, stamp);
     stamp.destroy();
 
     this.renderWalls();
@@ -262,6 +280,107 @@ export class IsoMap {
       img.setOrigin(0.5, CROP_ORIGIN_Y / CROP_H).setDepth(depthAt(crop.tx + 0.5, crop.ty + 0.5));
       this.crops.set(crop.ty * width + crop.tx, img);
     }
+  }
+
+  /**
+   * The land past the map's edge, so there's no black void around it: the
+   * ground carries on (roads and shores run straight out), thick forest grows
+   * on it, and it all fades into mist further out. It's only painted; nobody
+   * can walk there. Trees behind the map are baked into the ground; trees in
+   * front of it go in one layer drawn over everything on the map.
+   */
+  private renderOutskirts(ground: Phaser.GameObjects.RenderTexture, canvas: Phaser.Geom.Rectangle, stamp: Phaser.GameObjects.Image): void {
+    const { width, height, terrain, props } = this.data;
+    const fog = Phaser.Display.Color.IntegerToColor(OUTSKIRTS_FOG);
+    // Multiply-tint towards the fog the further out a tile is (f: 0 at the edge, 1 deep in the mist).
+    const tint = (f: number, shade = 0xff): number =>
+      Phaser.Display.Color.GetColor(
+        Math.round(shade + (fog.red - shade) * f),
+        Math.round(shade + (fog.green - shade) * f),
+        Math.round(shade + (fog.blue - shade) * f),
+      );
+    type Tree = { tx: number; ty: number; x: number; y: number; art: (typeof TREE_ART)[number]; tint: number; flip: boolean };
+    const back: Tree[] = [];
+    const front: Tree[] = [];
+
+    // Every tile that can show on the canvas; ones below it still poke their tree tops in.
+    const corners = [
+      screenToGrid(canvas.left, canvas.top),
+      screenToGrid(canvas.right, canvas.top),
+      screenToGrid(canvas.left, canvas.bottom + 160),
+      screenToGrid(canvas.right, canvas.bottom + 160),
+    ];
+    const minX = Math.floor(Math.min(...corners.map((c) => c.x))) - 1;
+    const maxX = Math.ceil(Math.max(...corners.map((c) => c.x))) + 1;
+    const minY = Math.floor(Math.min(...corners.map((c) => c.y))) - 1;
+    const maxY = Math.ceil(Math.max(...corners.map((c) => c.y))) + 1;
+
+    ground.beginDraw();
+    for (let ty = minY; ty <= maxY; ty++) {
+      for (let tx = minX; tx <= maxX; tx++) {
+        if (this.inBounds(tx, ty)) continue;
+        const center = gridToScreen(tx + 0.5, ty + 0.5);
+        if (center.x < canvas.left - TILE_HALF || center.x > canvas.right + TILE_HALF || center.y < canvas.top - 16) continue;
+        // Carry on whatever is at the nearest edge tile, so roads and shores run on out.
+        const ex = Phaser.Math.Clamp(tx, 0, width - 1);
+        const ey = Phaser.Math.Clamp(ty, 0, height - 1);
+        let t = terrain[ey][ex];
+        if (t === Terrain.Soil || t === Terrain.Floor) t = Terrain.Grass;
+        const out = Math.max(-tx, -ty, tx - width + 1, ty - height + 1);
+        const f = Math.min(1, out / OUTSKIRTS_FADE);
+
+        if (center.y < canvas.bottom + 16) {
+          const variant = Math.floor(tileHash(tx, ty) * TILE_VARIANTS);
+          const shade = 0xec + Math.floor(tileHash(tx, ty, 1) * 0x14);
+          stamp.setTexture(tileKey(TERRAIN_TEXTURE[t], variant)).setTint(tint(f, shade)).setOrigin(0.5);
+          ground.batchDraw(stamp, center.x - canvas.x, center.y - canvas.y);
+        }
+
+        // Thick forest, thickening further out, but never on the road or in the water.
+        const edgeProp = props[ey][ex];
+        if (t !== Terrain.Grass || edgeProp === Prop.Blocked) continue;
+        if (tileHash(tx, ty, 8) > 0.45 + 0.4 * Math.min(1, out / 4)) continue;
+        const art = TREE_ART[Math.floor(tileHash(tx, ty, 6) * TREE_ART.length)];
+        const tree = { tx, ty, x: center.x, y: center.y + 4, art, tint: tint(f), flip: tileHash(tx, ty, 7) < 0.5 };
+        (tx >= width || ty >= height ? front : back).push(tree);
+      }
+    }
+
+    const byDepth = (a: Tree, b: Tree) => a.tx + a.ty - (b.tx + b.ty);
+    const draw = (layer: Phaser.GameObjects.RenderTexture, trees: Tree[], ox: number, oy: number) => {
+      for (const tree of trees.sort(byDepth)) {
+        stamp.setTexture('shadow-large').setTint(tree.tint).setFlipX(false).setOrigin(0.5);
+        layer.batchDraw(stamp, tree.x - ox, tree.y - 2 - oy);
+        stamp.setTexture(tree.art.key).setFlipX(tree.flip).setOrigin(0.5, tree.art.originY);
+        layer.batchDraw(stamp, tree.x - ox, tree.y - oy);
+      }
+    };
+    draw(ground, back, canvas.x, canvas.y);
+    ground.endDraw();
+
+    if (front.length === 0) return;
+    // The front layer only needs to be as big as the trees in it.
+    const box = new Phaser.Geom.Rectangle(Infinity, Infinity, 0, 0);
+    let right = -Infinity;
+    let bottom = -Infinity;
+    for (const tree of front) {
+      const frame = this.scene.textures.getFrame(tree.art.key);
+      box.x = Math.min(box.x, tree.x - frame.width / 2);
+      box.y = Math.min(box.y, tree.y - frame.height * tree.art.originY);
+      right = Math.max(right, tree.x + frame.width / 2);
+      bottom = Math.max(bottom, tree.y + frame.height * (1 - tree.art.originY));
+    }
+    box.x = Math.floor(Math.max(box.x, canvas.left));
+    box.y = Math.floor(box.y);
+    right = Math.min(right, canvas.right);
+    bottom = Math.min(bottom, canvas.bottom);
+    const layer = this.scene.add.renderTexture(box.x, box.y, Math.ceil(right - box.x), Math.ceil(bottom - box.y));
+    layer.setOrigin(0, 0).setDepth(depthAt(width, height) + 1);
+    layer.beginDraw();
+    draw(layer, front, box.x, box.y);
+    layer.endDraw();
+    layer.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    stamp.setFlipX(false);
   }
 
   /** The two back walls of an indoor room, behind everything else. */
