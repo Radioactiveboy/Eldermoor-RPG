@@ -148,9 +148,9 @@ export function buildMarketMap(): MapData {
     data.seats!.push({ name: 'market-bench', gx: tx + 0.5, gy: ty + 0.55, faceX: 0, faceY: 1, standX: tx + 0.5, standY: ty + 1.5 });
   }
   placeObject(data, { key: 'mkt-crates', tx: 12, ty: 8, w: 1, h: 1, shapes: [box(0.1, 0.15, 0.95, 0.95)] });
-  placeObject(data, { key: 'furn-barrels', tx: 13, ty: 8, w: 1, h: 1, shapes: [circle(0.35, 0.35, 0.3), circle(0.55, 0.8, 0.2)] });
+  placeObject(data, { key: 'furn-barrels', tx: 13, ty: 8, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
   placeObject(data, { key: 'mkt-crates', tx: 18, ty: 8, w: 1, h: 1, shapes: [box(0.1, 0.15, 0.95, 0.95)] });
-  placeObject(data, { key: 'furn-barrels', tx: 7, ty: 11, w: 1, h: 1, shapes: [circle(0.35, 0.35, 0.3), circle(0.55, 0.8, 0.2)] });
+  placeObject(data, { key: 'furn-barrels', tx: 7, ty: 11, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
   placeObject(data, { key: 'mkt-crates', tx: 24, ty: 14, w: 1, h: 1, shapes: [box(0.1, 0.15, 0.95, 0.95)] });
 
   // A signpost where the road leaves the square, pointing the way home.
