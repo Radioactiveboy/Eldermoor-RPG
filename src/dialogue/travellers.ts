@@ -1,3 +1,4 @@
+import { HERO_NAME } from '../config';
 import type { DialogueScript } from './Dialogue';
 
 /**
@@ -143,21 +144,26 @@ export function droverScript(stage: SheepStage, first: boolean): DialogueScript 
           "Oh! Sorry, you made me jump. Wil. I'm a drover, or I was meant to be, driving Master Coombe's ewes to market.",
           "Only I've lost two of them. Again. He'll have my hide.",
         ],
+        choices: [{ text: `I'm ${HERO_NAME}. I live in the cottage just up the lane.`, next: 'met' }],
+      },
+      met: {
+        speaker: 'drover',
+        lines: [`${HERO_NAME}. Well met. Sorry again for jumping. It's been a long night.`],
         next: 'ask',
       },
       again: {
         speaker: 'drover',
-        lines: ["Still no sign of them. You'd think sheep would be easier to find. They're white."],
+        lines: [`Still no sign of them, ${HERO_NAME}. You'd think sheep would be easier to find. They're white.`],
         next: 'ask',
       },
       waiting: {
         speaker: 'drover',
-        lines: ['Any luck? The tracks went north, up the sheep track past your garden, to that cave in the hill.'],
+        lines: [`Any luck, ${HERO_NAME}? The tracks went north, up the sheep track past your garden, to that cave in the hill.`],
         next: 'ask',
       },
       back: {
         speaker: 'drover',
-        lines: ["You're back! And in one piece. Did you find them? Bess and Bramble?"],
+        lines: [`${HERO_NAME}, you're back! And in one piece. Did you find them? Bess and Bramble?`],
         choices: [{ text: "I found them, Wil. I'm sorry.", next: 'news' }],
       },
       thanks: {
@@ -167,7 +173,7 @@ export function droverScript(stage: SheepStage, first: boolean): DialogueScript 
       },
       ask: {
         speaker: 'drover',
-        lines: ['You live round here?'],
+        lines: ['What can I tell you?'],
         choices: [
           stage === 'found-first'
             ? { text: 'I found two ewes in a cave north of here. Wolves got them.', next: 'news' }
@@ -202,7 +208,7 @@ export function droverScript(stage: SheepStage, first: boolean): DialogueScript 
         lines: [
           'Wolves. In the cave. Both of them? ...Poor Bess. She always was the one to wander, and Bramble followed her everywhere.',
           "Well. At least now I know, and I can tell Master Coombe something better than \"they ran off\".",
-          "Here. Master Coombe gave me coin for the road. You've earned it more than I have, going in there.",
+          `Here. Master Coombe gave me coin for the road. You've earned it more than I have, ${HERO_NAME}, going in there.`,
         ],
         action: 'finish-sheep-quest',
       },
@@ -224,7 +230,7 @@ export function droverScript(stage: SheepStage, first: boolean): DialogueScript 
       },
       bye: {
         speaker: 'drover',
-        lines: [stage === 'done' ? 'And you. Mind the wolves.' : 'Thanks. If you see two ewes looking guilty, they answer to Bess and Bramble.'],
+        lines: [stage === 'done' ? `And you, ${HERO_NAME}. Mind the wolves.` : 'Thanks. If you see two ewes looking guilty, they answer to Bess and Bramble.'],
       },
     },
   };

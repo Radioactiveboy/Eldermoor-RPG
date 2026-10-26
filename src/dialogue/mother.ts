@@ -1,3 +1,4 @@
+import { HERO_NAME } from '../config';
 import type { DialogueScript } from './Dialogue';
 
 /** The first conversation: Mother asks the hero to find her medicine. */
@@ -7,7 +8,7 @@ export const MOTHER_INTRO: DialogueScript = {
     greet: {
       speaker: 'mother',
       lines: [
-        'Oh... there you are, my dear. Come here, let me look at you.',
+        `Oh... there you are, ${HERO_NAME}, my dear. Come here, let me look at you.`,
         "*cough* ...I won't pretend any longer. This sickness in my chest grows worse with every passing night.",
       ],
       choices: [
@@ -53,7 +54,7 @@ export const MOTHER_INTRO: DialogueScript = {
       speaker: 'mother',
       action: 'start-medicine-quest',
       lines: [
-        "Bless you. You've your father's stubborn heart.",
+        `Bless you, ${HERO_NAME}. You've your father's stubborn heart.`,
         "Take care out there... and keep your journal close. You've always had a head like a sieve.",
       ],
     },
@@ -66,7 +67,7 @@ export const MOTHER_WAITING: DialogueScript = {
   nodes: {
     ask: {
       speaker: 'mother',
-      lines: ['Back so soon? Did you find the moonpetal tincture?'],
+      lines: [`Back so soon, ${HERO_NAME}? Did you find the moonpetal tincture?`],
       choices: [
         { text: "Not yet. I'm still looking.", next: 'not-yet' },
         { text: 'How are you feeling?', next: 'feeling' },
@@ -75,7 +76,7 @@ export const MOTHER_WAITING: DialogueScript = {
     },
     'not-yet': {
       speaker: 'mother',
-      lines: ["Then don't dawdle here on my account. *cough* I'll keep."],
+      lines: [`Then don't dawdle here on my account, ${HERO_NAME}. *cough* I'll keep.`],
     },
     feeling: {
       speaker: 'mother',
