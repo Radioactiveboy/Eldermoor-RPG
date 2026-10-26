@@ -6,7 +6,7 @@ import { PixelCanvas } from './PixelCanvas';
 /**
  * Mother: a frail old woman in a plum dress and rust-coloured shawl, leaning
  * on a walking stick. Drawn facing the viewer, since she mostly stays put.
- * Also draws her dialogue portrait, with talking and blinking frames.
+ * Her dialogue portrait is in portraits.ts.
  */
 
 interface MotherPose {
@@ -83,90 +83,6 @@ const POSES: MotherPose[] = [
   { bob: 1, cough: true },
 ];
 
-/** Portrait frames: 0 = mouth closed, 1 = mouth open, 2 = blinking. */
-function drawPortrait(c: PixelCanvas, mouthOpen: boolean, blink: boolean): void {
-  // Bun and back hair, then shawl and shoulders.
-  c.ellipse(32, 9, 7, 5, P.hairGrey, P.hairGreyDark, P.hairGreyLight);
-  c.ellipse(32, 23, 16.5, 13, P.hairGrey, P.hairGreyDark, P.hairGreyLight);
-  c.rect(16, 24, 5, 16, P.hairGrey);
-  c.rect(43, 24, 5, 16, P.hairGreyDark);
-  c.ellipse(32, 68, 30, 18, P.dress, P.dressDark, P.dressLight);
-  c.shadedRect(27, 42, 11, 12, P.skinPaleShade, P.skinPaleDeep);
-  // Linen collar, then the shawl crossing over it.
-  for (let y = 52; y < 64; y++) {
-    const half = (y - 50) * 0.8;
-    c.rect(32 - half, y, half * 2, 1, y > 60 ? P.linenDark : P.linen);
-  }
-  for (let y = 50; y < 64; y++) {
-    const inner = 6 + (y - 50) * 0.9;
-    for (let x = 0; x < 64; x++) {
-      const d = Math.abs(x - 32);
-      if (d < inner || d > inner + 14 + (y - 50)) continue;
-      c.set(x, y, x > 40 ? P.shawlDark : d > inner + 10 ? P.shawlLight : P.shawl);
-    }
-  }
-  c.ellipse(32, 59, 3, 2.5, P.shawlDark, P.shawlDark);
-
-  // Face.
-  c.ellipse(32, 33, 12.5, 15, P.skinPale, P.skinPaleShade);
-  // Front hair: a soft hairline swept back from a middle parting.
-  for (let y = 10; y < 30; y++) {
-    for (let x = 16; x < 49; x++) {
-      const nx = (x + 0.5 - 32) / 16.5;
-      const ny = (y + 0.5 - 23) / 13;
-      if (nx * nx + ny * ny > 1) continue;
-      const line = 21 + Math.pow((x - 32) / 12, 2) * 7;
-      if (y > line) continue;
-      const strand = (x + Math.floor(y / 2)) % 4 === 0;
-      c.set(x, y, x > 40 ? P.hairGreyDark : strand ? P.hairGreyLight : P.hairGrey);
-    }
-  }
-  c.set(32, 15, P.hairGreyDark);
-  c.set(32, 16, P.hairGreyDark);
-
-  // Brows raised in the middle: worried.
-  for (let i = 0; i < 5; i++) {
-    c.set(24 + i, 27 - (i > 2 ? 1 : 0), P.hairGreyDark);
-    c.set(40 - i, 27 - (i > 2 ? 1 : 0), P.hairGreyDark);
-  }
-  // Eyes, with tired shadows beneath.
-  for (const ex of [27, 37]) {
-    if (blink) {
-      c.rect(ex - 2, 32, 5, 1, P.skinPaleDeep);
-    } else {
-      c.rect(ex - 2, 30, 5, 1, P.skinPaleDeep);
-      c.rect(ex - 2, 31, 5, 2, P.flowerWhite);
-      c.rect(ex - 1, 31, 2, 2, P.eye);
-      c.set(ex - 1, 31, P.stoneLight);
-    }
-    c.rect(ex - 2, 34, 5, 1, P.skinPaleShade);
-    c.set(ex + 3, 33, P.skinPaleShade);
-  }
-  // Nose, cheek lines and forehead creases.
-  for (let y = 32; y < 39; y++) c.set(34, y, P.skinPaleShade);
-  c.set(31, 39, P.skinPaleDeep);
-  c.set(34, 39, P.skinPaleDeep);
-  c.rect(32, 40, 2, 1, P.skinPaleShade);
-  for (let i = 0; i < 4; i++) {
-    c.set(25 + Math.floor(i / 2), 39 + i, P.skinPaleShade);
-    c.set(39 - Math.floor(i / 2), 39 + i, P.skinPaleShade);
-  }
-  c.rect(28, 22, 8, 1, P.skinPaleShade);
-  // Mouth.
-  if (mouthOpen) {
-    c.rect(29, 43, 7, 1, P.lip);
-    c.rect(30, 44, 5, 2, P.ink);
-    c.rect(31, 46, 3, 1, P.lip);
-  } else {
-    c.rect(29, 44, 7, 1, P.lip);
-    c.set(28, 45, P.skinPaleShade);
-    c.set(36, 45, P.skinPaleShade);
-  }
-  c.outline();
-}
-
-export const PORTRAIT_SIZE = 64;
-
 export function generateNpcs(scene: Phaser.Scene): void {
   const sheet = new PixelCanvas(FRAME_W * POSES.length, FRAME_H);
   POSES.forEach((pose, i) => {
@@ -183,17 +99,4 @@ export function generateNpcs(scene: Phaser.Scene): void {
     frameRate: 1.6,
     repeat: -1,
   });
-
-  const portraits = new PixelCanvas(PORTRAIT_SIZE * 3, PORTRAIT_SIZE);
-  [
-    [false, false],
-    [true, false],
-    [false, true],
-  ].forEach(([mouth, blink], i) => {
-    const frame = new PixelCanvas(PORTRAIT_SIZE, PORTRAIT_SIZE);
-    drawPortrait(frame, mouth, blink);
-    portraits.blit(frame, i * PORTRAIT_SIZE, 0);
-  });
-  const ptex = portraits.toTexture(scene, 'portrait-mother');
-  for (let i = 0; i < 3; i++) ptex.add(i, 0, i * PORTRAIT_SIZE, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
 }

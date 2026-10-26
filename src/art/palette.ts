@@ -95,6 +95,10 @@ export const PALETTE = {
   wool: 0x8f8a8c,
   straw: 0xc8a858,
   strawDark: 0x9c8040,
+  strawLight: 0xe4cc84,
+  ashDark: 0x6e5234,
+  ash: 0xb08a58,
+  ashLight: 0xd4b07a,
   iron: 0x4a4a54,
   ironLight: 0x7a7a86,
 

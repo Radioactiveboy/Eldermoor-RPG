@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { GearLook } from './gear';
 import { PALETTE as P } from './palette';
 import { PixelCanvas } from './PixelCanvas';
 
@@ -32,7 +33,7 @@ const WALK_FRAMES = 4;
 const SIT_FRAMES = 2;
 const COLS = IDLE_FRAMES + WALK_FRAMES + SIT_FRAMES;
 
-interface Pose {
+export interface Pose {
   /** -1..1 leg swing: positive puts the left leg forward. */
   stride: number;
   /** Pixels the upper body sinks (walk contact frames, idle breathing). */
@@ -58,7 +59,25 @@ const SIT: Pose[] = [
   { stride: 0, bob: 4, flutter: 0, sit: true },
 ];
 
-type Draw = { z: number; paint: () => void };
+/** One piece of a figure, painted in depth order (higher z is nearer the viewer). */
+export type Draw = { z: number; paint: () => void };
+
+/**
+ * Where a figure stands in one frame, for gear to draw itself in the right
+ * place (see gear.ts). X and Z turn an offset on the body (L to the figure's
+ * left, D forward) into a screen x and a depth.
+ */
+export interface FigureFrame {
+  c: PixelCanvas;
+  oy: number;
+  feet: number;
+  cos: number;
+  sin: number;
+  pose: Pose;
+  X: (L: number, D: number) => number;
+  Z: (L: number, D: number) => number;
+  outfit: Outfit;
+}
 
 /** A colour about a third darker, for shading hair. */
 export function darker(color: number): number {
@@ -96,6 +115,10 @@ export interface Outfit {
   spear?: boolean;
   /** A shirt of mail: grey rings showing at the shoulders and under the tunic's hem. */
   mail?: boolean;
+  /** The hood pushed back, bunched on the shoulders (for wearing a hat over a hooded cloak). */
+  hoodDown?: boolean;
+  /** Worn and carried things layered over the body, each drawing its own pieces (see gear.ts). */
+  gear?: GearLook[];
 }
 
 export const HERO_OUTFIT: Outfit = {
@@ -109,7 +132,9 @@ export const HERO_OUTFIT: Outfit = {
   hair: P.hair,
 };
 
-function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, pose: Pose, o: Outfit): void {
+function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, pose: Pose, outfit: Outfit): void {
+  // Gear can change the body under it first (a hat pushes the hood back).
+  const o = (outfit.gear ?? []).reduce((acc, g) => (g.adjust ? g.adjust(acc) : acc), outfit);
   const a = (angleDeg * Math.PI) / 180;
   const cos = Math.cos(a);
   const sin = Math.sin(a);
@@ -224,6 +249,16 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
     },
   });
 
+  // A hood pushed back sits in folds behind the neck.
+  if (o.hoodDown && o.cloak) parts.push({
+    z: Z(0, -3) + 0.1,
+    paint: () => {
+      const y = oy + 19 + b;
+      c.ellipse(X(0, -3), y, 5 * Math.abs(cos) + 3.5 * Math.abs(sin) + 0.5, 3, cloak, cloakDark, cloakLight);
+      c.rect(Math.round(X(0, -3)) - 2, y, 4, 1, cloakDark);
+    },
+  });
+
   // Torso: leather vest over a linen shirt, belt with a gold buckle.
   parts.push({
     z: 0,
@@ -326,6 +361,9 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
     },
   });
 
+  const frame: FigureFrame = { c, oy, feet, cos, sin, pose, X, Z, outfit: o };
+  for (const g of o.gear ?? []) parts.push(...g.parts(frame));
+
   parts.sort((p, q) => p.z - q.z).forEach((p) => p.paint());
 }
 
@@ -335,19 +373,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
  * '<key>-sit-<dir>' and '<key>-work-<dir>' animations. The hero is 'player'.
  */
 export function generateCharacter(scene: Phaser.Scene, key = 'player', outfit: Outfit = HERO_OUTFIT): void {
-  const sheet = new PixelCanvas(FRAME_W * COLS, FRAME_H * DIRECTIONS.length);
-  DIRECTIONS.forEach((dir, row) => {
-    const poses = [...IDLE, ...WALK, ...SIT];
-    poses.forEach((pose, col) => {
-      // Draw each frame alone so the outline pass can't bleed between frames.
-      const frame = new PixelCanvas(FRAME_W, FRAME_H);
-      drawFigure(frame, 0, 0, dir.angle, pose, outfit);
-      frame.outline();
-      sheet.blit(frame, col * FRAME_W, row * FRAME_H);
-    });
-  });
-
-  const tex = sheet.toTexture(scene, key);
+  const tex = drawSheet(outfit).toTexture(scene, key);
   let i = 0;
   for (let row = 0; row < DIRECTIONS.length; row++) {
     for (let col = 0; col < COLS; col++) tex.add(i++, 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
@@ -364,4 +390,31 @@ export function generateCharacter(scene: Phaser.Scene, key = 'player', outfit: O
     scene.anims.create({ key: `${key}-sit-${dir.name}`, frames: sitFrames, frameRate: 1.5, repeat: -1 });
     scene.anims.create({ key: `${key}-work-${dir.name}`, frames: sitFrames, frameRate: 6, repeat: -1 });
   });
+}
+
+/**
+ * Repaints a character made by {@link generateCharacter} in a new outfit, in
+ * place: every sprite and image already showing it changes with it, and its
+ * frames and animations stay as they were.
+ */
+export function redrawCharacter(scene: Phaser.Scene, key: string, outfit: Outfit): void {
+  const tex = scene.textures.get(key) as Phaser.Textures.CanvasTexture;
+  tex.context.putImageData(drawSheet(outfit).toImageData(), 0, 0);
+  tex.refresh();
+}
+
+/** Every frame of a character: rows = directions, cols = 2 idle + 4 walk + 2 sitting. */
+function drawSheet(outfit: Outfit): PixelCanvas {
+  const sheet = new PixelCanvas(FRAME_W * COLS, FRAME_H * DIRECTIONS.length);
+  DIRECTIONS.forEach((dir, row) => {
+    const poses = [...IDLE, ...WALK, ...SIT];
+    poses.forEach((pose, col) => {
+      // Draw each frame alone so the outline pass can't bleed between frames.
+      const frame = new PixelCanvas(FRAME_W, FRAME_H);
+      drawFigure(frame, 0, 0, dir.angle, pose, outfit);
+      frame.outline();
+      sheet.blit(frame, col * FRAME_W, row * FRAME_H);
+    });
+  });
+  return sheet;
 }
