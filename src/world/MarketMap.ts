@@ -9,18 +9,26 @@ export const MARKET_H = 30;
 /** The road comes in from the east edge along these two rows. */
 const ROAD_ROWS = [17, 18];
 
-/** Where each stall stands (its back corner), which way it faces, and who keeps it. */
-const STALLS: Array<{ kind: 'baker' | 'smith' | 'tanner'; tx: number; ty: number; facing: 'y' | 'x' }> = [
-  { kind: 'baker', tx: 10, ty: 8, facing: 'y' },
-  { kind: 'smith', tx: 16, ty: 8, facing: 'y' },
-  { kind: 'tanner', tx: 7, ty: 13, facing: 'x' },
+/**
+ * Where each stall stands (its back corner), which way it faces, and who keeps it; where the
+ * keeper steps out from behind it and the front door of the house they go home to at night, and
+ * how much later than the others they keep their hours (Hilde the baker is up before everyone).
+ */
+const STALLS: Array<{
+  kind: 'baker' | 'smith' | 'tanner'; tx: number; ty: number; facing: 'y' | 'x';
+  exit: { x: number; y: number }; home: { x: number; y: number }; late: number;
+}> = [
+  { kind: 'baker', tx: 10, ty: 8, facing: 'y', exit: { x: 9.5, y: 8.5 }, home: { x: 6.5, y: 4.3 }, late: -0.5 },
+  { kind: 'smith', tx: 16, ty: 8, facing: 'y', exit: { x: 15.5, y: 8.5 }, home: { x: 15.5, y: 4.3 }, late: 0 },
+  { kind: 'tanner', tx: 7, ty: 13, facing: 'x', exit: { x: 7.5, y: 15.5 }, home: { x: 4.3, y: 17.5 }, late: 0.25 },
 ];
 
 /**
  * The market at Eldermoor, at the far end of the road from the cottage: a
  * bare-earth square with the well in the middle, three traders' stalls, tall
  * townhouses and an inn around it, lamp posts that light up at night, and the
- * village militia walking their rounds. The road leaves by the east edge,
+ * village militia walking their rounds. The traders keep market hours (see
+ * systems/MarketHours.ts), going home to the houses round the square at night. The road leaves by the east edge,
  * back towards home.
  */
 export function buildMarketMap(): MapData {
@@ -122,7 +130,10 @@ export function buildMarketMap(): MapData {
     };
     placeObject(data, stall);
     const keeper = flip ? { x: 0.55, y: 1 } : { x: 1, y: 0.55 };
-    data.npcs!.push({ id: s.kind, gx: s.tx + keeper.x, gy: s.ty + keeper.y });
+    data.npcs!.push({
+      id: s.kind, gx: s.tx + keeper.x, gy: s.ty + keeper.y,
+      commute: { stall, exit: s.exit, home: s.home, late: s.late },
+    });
   }
 
   // Lamp posts at the corners of the square, lit at dusk.

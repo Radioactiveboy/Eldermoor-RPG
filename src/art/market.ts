@@ -34,8 +34,9 @@ const AWNINGS: Record<StallKind, [number, number, number]> = {
  * A market stall on a 2x2 footprint facing +y: a plank counter across the
  * front row with goods on top, four posts, and a striped awning high enough
  * that the stallholder (standing in the back row) is seen beneath it.
+ * Closed for the night, the goods are gone and a sheet is roped over the counter.
  */
-function stall(kind: StallKind): IsoModel {
+function stall(kind: StallKind, closed = false): IsoModel {
   const m = new IsoModel();
   const [stripe, stripe2, cloth] = AWNINGS[kind];
   const post = { top: P.barkLight, left: P.bark, right: P.barkDark };
@@ -52,7 +53,8 @@ function stall(kind: StallKind): IsoModel {
     left: (u, v) => (v < 0.22 ? (Math.floor(u * 16) % 2 ? stripe : cloth) : front(u, v)),
     right: P.plankDark,
   });
-  goods(m, kind, counterTop);
+  if (closed) coverUp(m, counterTop);
+  else goods(m, kind, counterTop);
   // Front posts, then the sloping awning on top of everything.
   m.box(0.08, 1.52, 0, 0.1, 0.1, 74, post);
   m.box(1.82, 1.52, 0, 0.1, 0.1, 74, post);
@@ -69,6 +71,17 @@ function stall(kind: StallKind): IsoModel {
     return Math.floor(u * 10) % 2 === 0 ? darken(stripe, 0.9) : darken(stripe2, 0.9);
   });
   return m;
+}
+
+/** A sackcloth sheet over the bare counter, tied down with rope, for the night. */
+function coverUp(m: IsoModel, z: number): void {
+  const sack = 0xb8a47c;
+  const rope = (u: number) => Math.abs(u - 0.22) < 0.02 || Math.abs(u - 0.78) < 0.02;
+  m.box(0.1, 1.03, z, 1.8, 0.56, 7, {
+    top: (u, v) => (rope(u) ? P.strawDark : hash(Math.floor(u * 40), Math.floor(v * 12)) < 0.15 ? darken(sack, 0.9) : sack),
+    left: (u) => (rope(u) ? P.strawDark : darken(sack, 0.85)),
+    right: darken(sack, 0.7),
+  });
 }
 
 /** What each trader sets out on the counter. */
@@ -326,7 +339,10 @@ export function generateMarket(scene: Phaser.Scene): void {
     const tex = r.canvas.toTexture(scene, key);
     MODEL_ART[key] = { key, originX: r.anchorX / tex.width, originY: r.anchorY / tex.height };
   };
-  for (const kind of Object.keys(AWNINGS) as StallKind[]) put(`mkt-stall-${kind}`, stall(kind));
+  for (const kind of Object.keys(AWNINGS) as StallKind[]) {
+    put(`mkt-stall-${kind}`, stall(kind));
+    put(`mkt-stall-${kind}-closed`, stall(kind, true));
+  }
   for (const [key, style] of Object.entries(TOWNHOUSES)) put(key, townhouse(style));
   put('mkt-well', well());
   put('mkt-lamp', lampPost());

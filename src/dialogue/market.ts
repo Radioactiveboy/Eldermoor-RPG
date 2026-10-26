@@ -3,7 +3,9 @@ import type { DialogueScript } from './Dialogue';
 /**
  * The market at Eldermoor: three stallholders and the village militia. The
  * traders open their stalls with the `shop:<id>` action (see GameScene); the
- * militia stand about, keep an eye on things and grumble.
+ * militia stand about, keep an eye on things and grumble. Out of market hours
+ * the traders start on 'closing' (packing up, walking home) or 'opening'
+ * (walking back in the morning), and the militia on 'closed'.
  */
 
 export const BAKER: DialogueScript = {
@@ -52,6 +54,17 @@ export const BAKER: DialogueScript = {
       speaker: 'baker',
       lines: ['Mind how you go, and give your mother my love.'],
     },
+    closing: {
+      speaker: 'baker',
+      lines: [
+        "Oh, I'm all packed up, love. There's dough to set for the morning, and I'm up before the cock crows.",
+        "Come and find me at my stall tomorrow. I'll keep you a warm one.",
+      ],
+    },
+    opening: {
+      speaker: 'baker',
+      lines: ["Morning, love! Give me a moment to set out the loaves and I'll be open directly."],
+    },
   },
 };
 
@@ -99,6 +112,14 @@ export const SMITH: DialogueScript = {
     bye: {
       speaker: 'smith',
       lines: ['Hm.'],
+    },
+    closing: {
+      speaker: 'smith',
+      lines: ["Hm. Closed. The forge is cold till morning, and so am I."],
+    },
+    opening: {
+      speaker: 'smith',
+      lines: ['Hm. Not open yet. Let me get to my stall first.'],
     },
   },
 };
@@ -149,6 +170,17 @@ export const TANNER: DialogueScript = {
       speaker: 'tanner',
       lines: ['Watch yourself on the road. Bring me something back.'],
     },
+    closing: {
+      speaker: 'tanner',
+      lines: [
+        "Done for the day. My hands stink of lye and I want my supper.",
+        'Find me at my stall in the morning, and bring pelts.',
+      ],
+    },
+    opening: {
+      speaker: 'tanner',
+      lines: ["Morning. Let me get the hides laid out first, then we'll talk."],
+    },
   },
 };
 
@@ -170,12 +202,21 @@ export const GUARD: DialogueScript = {
       lines: ['Quiet morning. The only thing I have arrested today is a goose. It bit me.'],
       next: 'ask',
     },
+    closed: {
+      speaker: 'guard',
+      lines: [
+        "If you're after the stalls, you're out of luck. The market's shut for the night.",
+        "Hilde, Osric and Tamsin packed up at dusk and went home to their suppers. They'll be back in the morning.",
+      ],
+      next: 'ask',
+    },
     ask: {
       speaker: 'guard',
       lines: ['Something you need?'],
       choices: [
         { text: 'What are you guarding against?', next: 'wolves' },
         { text: 'Is the road safe?', next: 'road' },
+        { text: 'When is the market open?', next: 'hours' },
         { text: 'Carry on.', next: 'bye' },
       ],
     },
@@ -191,6 +232,14 @@ export const GUARD: DialogueScript = {
       speaker: 'guard',
       lines: [
         'In daylight, mostly. After dark, stay in, bar the door and keep a fire going. Wolves hate fire.',
+      ],
+      next: 'ask',
+    },
+    hours: {
+      speaker: 'guard',
+      lines: [
+        'From seven in the morning till six in the evening, when the light starts to go. Then the traders pack up and go home.',
+        "Hilde's always first to set up and first to leave, mind. Bakers keep strange hours.",
       ],
       next: 'ask',
     },

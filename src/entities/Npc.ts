@@ -5,9 +5,11 @@ import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
+import { marketOpen } from '../systems/MarketHours';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
 import type { Body, IsoMap } from '../world/IsoMap';
+import type { Commute } from '../world/MapData';
 
 /** How close (in tiles) the player must be to talk. */
 export const TALK_RANGE = 1.7;
@@ -19,8 +21,13 @@ interface NpcDef {
   texture: string;
   /** Idle animation, for people who stay put. Walkers use '<texture>-idle-<dir>' and '-walk-'. */
   anim?: string;
-  /** Which conversation to have, given the story so far. */
-  script: () => DialogueScript;
+  /** Which conversation to have, given the story so far and the hour of the day. */
+  script: (hour: number) => DialogueScript;
+  /**
+   * A trader's conversation while their stall is shut: it opens on 'closing' as
+   * they pack up and walk home, and on 'opening' on their way back in the morning.
+   */
+  offDuty?: DialogueScript;
   /** Wanders up and down the road, up to this many steps either side of where it started. */
   wander?: number;
   /** Strolls about anywhere within this many tiles of where it started (the militia on their rounds). */
@@ -54,6 +61,22 @@ function sheepStage(): SheepStage {
   return quest.done.has('find') ? 'found' : 'active';
 }
 
+/** The militia grumble about their feet by day; after hours, they tell you the market is shut. */
+const daytimeGuard = anyOf(GUARD, ['greet', 'tired', 'bored']);
+function guardScript(hour: number): DialogueScript {
+  return marketOpen(hour) ? daytimeGuard() : { ...GUARD, start: 'closed' };
+}
+
+/**
+ * Where a trader is in their day: at the stall, covering it over at closing
+ * time, walking home, indoors for the night, or walking back in the morning.
+ */
+type Shift = 'open' | 'packing' | 'leaving' | 'away' | 'arriving';
+/** Seconds spent covering the stall before setting off home. */
+const PACKING_SECONDS = 2.5;
+/** Seconds to fade in or out at the front door. */
+const DOOR_FADE_MS = 500;
+
 const NPCS: Record<string, NpcDef> = {
   mother: {
     texture: 'npc-mother',
@@ -71,13 +94,13 @@ const NPCS: Record<string, NpcDef> = {
     },
     wander: 9,
   },
-  // The market's stallholders stand behind their counters.
-  baker: { texture: 'folk-baker', script: traveller('baker', BAKER), talkRange: 2.6 },
-  smith: { texture: 'folk-smith', script: traveller('smith', SMITH), talkRange: 2.6 },
-  tanner: { texture: 'folk-tanner', script: traveller('tanner', TANNER), talkRange: 2.6 },
-  // The village militia, walking their rounds of the square.
+  // The market's stallholders stand behind their counters, while the market is open.
+  baker: { texture: 'folk-baker', script: traveller('baker', BAKER), offDuty: BAKER, talkRange: 2.6 },
+  smith: { texture: 'folk-smith', script: traveller('smith', SMITH), offDuty: SMITH, talkRange: 2.6 },
+  tanner: { texture: 'folk-tanner', script: traveller('tanner', TANNER), offDuty: TANNER, talkRange: 2.6 },
+  // The village militia, walking their rounds of the square, day and night.
   ...Object.fromEntries(
-    [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: anyOf(GUARD, ['greet', 'tired', 'bored']), roam: 5 }]),
+    [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),
   ),
 };
 
@@ -85,7 +108,9 @@ const NPCS: Record<string, NpcDef> = {
  * Someone in the world who can be talked to. People who stay put (Mother, the
  * stallholders) block the tile they stand on; travellers stroll along the
  * road and the militia about the square, stopping to look about, and are
- * bumped into like any solid thing (see IsoMap.bodies).
+ * bumped into like any solid thing (see IsoMap.bodies). Stallholders keep
+ * market hours: in the evening they cover their stalls and walk home, and in
+ * the morning they walk back and open up again.
  */
 export class Npc implements Body {
   readonly id: string;
@@ -109,8 +134,20 @@ export class Npc implements Body {
   private wait = 0;
   /** Where a roaming NPC started, which it never strays far from. */
   private readonly origin: Vec2;
+  /** A trader's walk between their stall and their front door, and where they are in their day. */
+  private readonly commute?: Commute;
+  private shift: Shift = 'open';
+  /** The hour of the day, as of the last update. */
+  private hour: number;
+  /** Something said out loud, shown in a bubble over their head (see ui/SpeechBubbles.ts). */
+  speech?: string;
+  private speechLeft = 0;
 
-  constructor(scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number) {
+  /**
+   * @param commute for a trader, their walk home (see MapData.Commute)
+   * @param hour the hour of the day now, so a trader who has gone home isn't there to begin with
+   */
+  constructor(scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number, commute?: Commute, hour = 12) {
     const def = NPCS[id];
     if (!def) throw new Error(`Unknown NPC: ${id}`);
     this.id = id;
@@ -119,6 +156,8 @@ export class Npc implements Body {
     this.gx = gx;
     this.gy = gy;
     this.origin = { x: gx, y: gy };
+    this.commute = commute;
+    this.hour = hour;
     this.shadow = scene.add.image(0, 0, 'shadow');
     this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
     if (def.wander && map.data.road?.length) {
@@ -136,7 +175,24 @@ export class Npc implements Body {
       map.setOccupied(Math.floor(gx), Math.floor(gy), true);
     }
     if (def.anim) this.sprite.play({ key: def.anim, startFrame: Math.floor(Math.random() * 4) });
+    if (commute && !marketOpen(hour, commute.late)) {
+      // Already gone home for the night.
+      this.shift = 'away';
+      this.setVisible(false);
+      map.setObjectArt(commute.stall, `${commute.stall.key}-closed`);
+    }
     this.sync(false);
+  }
+
+  /** Here to be seen and talked to (not indoors for the night). */
+  get present(): boolean {
+    return this.shift !== 'away';
+  }
+
+  /** Say something out loud, in a bubble over their head, for a few seconds. */
+  say(text: string, seconds = 5): void {
+    this.speech = text;
+    this.speechLeft = seconds;
   }
 
   get tileX(): number {
@@ -153,16 +209,24 @@ export class Npc implements Body {
   }
 
   script(): DialogueScript {
-    return this.def.script();
+    if (this.shift !== 'open' && this.def.offDuty) {
+      return { ...this.def.offDuty, start: this.shift === 'arriving' ? 'opening' : 'closing' };
+    }
+    return this.def.script(this.hour);
   }
 
+  /** Stallholders are spoken to across their counters; out from behind them, up close like anyone else. */
   get talkRange(): number {
-    return this.def.talkRange ?? TALK_RANGE;
+    return (this.shift === 'open' || this.shift === 'packing') && this.def.talkRange ? this.def.talkRange : TALK_RANGE;
   }
 
-  /** Walks about (along the road, or round the square) rather than standing in one place. */
+  /** Walks about (along the road, round the square, or home from the market) rather than standing in one place. */
   private get moves(): boolean {
-    return this.road.length > 0 || !!this.def.roam;
+    return this.road.length > 0 || !!this.def.roam || this.commuting;
+  }
+
+  private get commuting(): boolean {
+    return this.shift === 'leaving' || this.shift === 'arriving';
   }
 
   /** Turn to face a point (Mother is only drawn facing forward, so she just mirrors). */
@@ -185,7 +249,16 @@ export class Npc implements Body {
    * look about, repeat. Stops to face the player when they come near, so
    * they're easy to talk to.
    */
-  update(dt: number, player: Vec2, paused: boolean): void {
+  update(dt: number, player: Vec2, paused: boolean, hour: number): void {
+    this.hour = hour;
+    if (this.speech && !paused) {
+      this.speechLeft -= dt;
+      if (this.speechLeft <= 0) this.speech = undefined;
+    }
+    if (this.commute) {
+      this.keepHours(dt, paused);
+      return;
+    }
     if (!this.moves) return;
     if (paused || this.distanceTo(player.x, player.y) < NOTICE_RANGE) {
       if (this.distanceTo(player.x, player.y) < NOTICE_RANGE) this.face({ x: player.x - this.gx, y: player.y - this.gy });
@@ -220,6 +293,107 @@ export class Npc implements Body {
       if (reached >= 0) this.roadIndex = reached;
     }
     this.sync(true);
+  }
+
+  /**
+   * A trader's day: at closing time, cover the stall and walk home; at opening
+   * time, come out of the front door and walk back to the stall. They don't
+   * stop for the player on the way (it's been a long day), but will stop to talk.
+   */
+  private keepHours(dt: number, paused: boolean): void {
+    const c = this.commute!;
+    const open = marketOpen(this.hour, c.late);
+    if (paused) {
+      if (this.commuting) this.sync(false);
+      return;
+    }
+    switch (this.shift) {
+      case 'open':
+        if (open) return;
+        this.shift = 'packing';
+        this.wait = PACKING_SECONDS;
+        this.map.setObjectArt(c.stall, `${c.stall.key}-closed`);
+        return;
+      case 'packing':
+        this.wait -= dt;
+        if (this.wait > 0) return;
+        this.shift = 'leaving';
+        this.route = this.commuteRoute(this.origin, c.exit, c.home);
+        return;
+      case 'away':
+        if (!open) return;
+        this.shift = 'arriving';
+        this.gx = c.home.x;
+        this.gy = c.home.y;
+        this.route = this.commuteRoute(c.home, c.exit, this.origin, true);
+        this.setVisible(true, true);
+        return;
+      default:
+        if (this.walkRoute(dt)) return;
+        if (this.shift === 'leaving') {
+          // Home: in at the door, gone till morning.
+          this.shift = 'away';
+          this.setVisible(false, true);
+        } else {
+          // Back behind the counter: uncover the goods.
+          this.shift = 'open';
+          this.facing = 0;
+          this.map.setObjectArt(c.stall, c.stall.key);
+          this.sync(false);
+        }
+    }
+  }
+
+  /**
+   * The way between the stall and home: out from behind the counter (which
+   * only the trader may walk through), then by the open ground to the door.
+   * @param reverse walking from home to the stall rather than from the stall home
+   */
+  private commuteRoute(from: Vec2, exit: Vec2, to: Vec2, reverse = false): Array<{ point: Vec2; index: number }> {
+    const ground = reverse ? from : to;
+    const a = { x: Math.floor(exit.x), y: Math.floor(exit.y) };
+    const b = { x: Math.floor(ground.x), y: Math.floor(ground.y) };
+    const tiles = findPath(reverse ? b : a, reverse ? a : b, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 4000) ?? [];
+    const middle = tiles.map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 }));
+    const points = reverse ? [...middle, exit, to] : [exit, ...middle, to];
+    return points.map((point) => ({ point, index: -1 }));
+  }
+
+  /** Walk on along the route, through anything in the way. False once it's walked. */
+  private walkRoute(dt: number): boolean {
+    const next = this.route[0]?.point;
+    if (!next) return false;
+    const dx = next.x - this.gx;
+    const dy = next.y - this.gy;
+    const dist = Math.hypot(dx, dy);
+    const step = Math.min(dist, WALK_SPEED * dt);
+    if (dist > 0) {
+      this.gx += (dx / dist) * step;
+      this.gy += (dy / dist) * step;
+      this.face({ x: dx, y: dy });
+    }
+    if (dist - step < 0.02) this.route.shift();
+    this.sync(true);
+    return true;
+  }
+
+  /** Show or hide them, fading at the front door. */
+  private setVisible(visible: boolean, fade = false): void {
+    const targets = [this.sprite, this.shadow];
+    this.sprite.scene.tweens.killTweensOf(targets);
+    if (!fade) {
+      for (const t of targets) t.setVisible(visible).setAlpha(1);
+      return;
+    }
+    for (const t of targets) t.setVisible(true).setAlpha(visible ? 0 : 1);
+    this.sprite.scene.tweens.add({
+      targets,
+      alpha: visible ? 1 : 0,
+      duration: DOOR_FADE_MS,
+      onComplete: () => {
+        if (!visible) for (const t of targets) t.setVisible(false);
+      },
+    });
   }
 
   /** Pick what to do next: usually a short walk along the road, sometimes just a look round. */
