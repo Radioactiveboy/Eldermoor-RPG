@@ -91,7 +91,12 @@ export function generateMap(width: number, height: number, seed: string): MapDat
 function addRoadToMarket(data: MapData): void {
   const road = data.road!;
   for (let y = 0; y < data.height; y++) {
-    if (data.terrain[y][0] === Terrain.Dirt) (data.doors ??= []).push({ tx: 0, ty: y, to: 'market', entry: 'road', auto: true });
+    if (data.terrain[y][0] === Terrain.Dirt) {
+      (data.doors ??= []).push({
+        tx: 0, ty: y, to: 'market', entry: 'road', auto: true,
+        ask: 'Do you want to make the trek to Adowvale Market?',
+      });
+    }
   }
   const arrive = road[3];
   (data.entries ??= {}).market = { x: arrive.x, y: arrive.y };
