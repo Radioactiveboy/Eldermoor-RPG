@@ -826,7 +826,75 @@ const guard: Painter = (c, fr) => {
   finish(c);
 };
 
-const PAINTERS: Record<string, Painter> = { mother, pedlar, pilgrim, drover, baker, smith, tanner, guard };
+/** Farmer Iran: weathered and smiling, a short grey beard, a frayed straw hat with a hen's feather in the band, a wool smock. */
+const iran: Painter = (c, fr) => {
+  const skin = ramp(0xc8906a);
+  const hair = ramp(0x4a3e38);
+  const beard = ramp(0x8a827c);
+  const smock = ramp(0x9a8a6a);
+  const straw = ramp(P.straw);
+  const hairTex = strands((x, y) => (x - CX) * 0.8 + y * 0.2, 40, 21);
+  // Hair showing under the hat at the back and sides.
+  blob(c, CX, 46, 23, 18, hair, -0.05, hairTex);
+  neck(c, skin, 8, 62);
+  shoulders(c, smock, 74, 12);
+  collar(c, ramp(0x7a5a3a), 74, 9, 7);
+  // A cord lacing the smock at the neck.
+  for (let y = 76; y < 86; y += 3) {
+    c.set(CX - 2, y, P.leatherDark);
+    c.set(CX + 2, y + 1, P.leatherDark);
+  }
+  ears(c, skin, 17.5);
+  const shape = { skin, width: 17.5, jaw: 9, top: 26, chin: 70, shadowAbove: 33 };
+  face(c, shape);
+  eyes(c, { iris: 0x5a4030, blink: fr.blink, skin });
+  brows(c, 0x6a5e58, 'heavy', 2);
+  nose(c, skin, 1);
+  wrinkles(c, skin, true);
+  blush(c, 0xc0604a, 0.4);
+  mouth(c, { skin, lip: 0x9a5a4a, open: fr.open, curve: 1, half: 4, y: EYE_Y + 16 });
+  // A short, neat grey beard along the jaw and round the mouth.
+  const beardTex = strands((x, y) => x * 0.9 + y * 0.1, undefined, 23);
+  for (let y = EYE_Y + 8; y < 78; y++) {
+    for (let x = CX - 20; x <= CX + 20; x++) {
+      const dx = Math.abs(x + 0.5 - CX);
+      const w = (faceHalf(shape, Math.min(y, 69)) ?? 9) + 1;
+      const lowest = 72 + 5 * (1 - (dx / 18) ** 2);
+      if (dx > w || y > lowest) continue;
+      if (y < EYE_Y + 8 + Math.max(0, 14 - dx) * 0.55) continue;
+      if (y >= EYE_Y + 15 && y <= EYE_Y + (fr.open ? 19 : 17) && dx < 4.5) continue;
+      c.set(x, y, tone(beard, lightness((x - CX) / 22, (y - 68) / 30, 0.05) + beardTex(x, y), x, y));
+    }
+  }
+  // The straw hat: a wide, frayed brim and a round crown with a band.
+  const weave = (x: number, y: number) => ((x + y) % 4 === 0 ? -0.12 : (x - y) % 4 === 0 ? 0.06 : 0);
+  blob(c, CX, 22, 19, 13, straw, 0.1, weave, (_x, y) => y < 32);
+  for (let y = 26; y <= 38; y++) {
+    for (let x = 0; x < S; x++) {
+      const nx = (x + 0.5 - CX) / 38;
+      const ny = (y + 0.5 - 32) / 5.5;
+      if (nx * nx + ny * ny > 1) continue;
+      // Frayed ends round the rim.
+      if (nx * nx + ny * ny > 0.82 && hash(x, y) < 0.35) continue;
+      c.set(x, y, ny > 0.35 ? straw[1] : tone(straw, lightness(nx, -0.6, 0.08) + weave(x, y), x, y));
+    }
+  }
+  for (let x = CX - 18; x <= CX + 18; x++) {
+    c.set(x, 28, 0x6a3a22);
+    c.set(x, 29, 0x4a2818);
+  }
+  // A brown-and-white hen's feather tucked in the band.
+  for (let i = 0; i < 12; i++) {
+    const x = CX + 14 + Math.round(i * 0.55);
+    const y = 28 - i;
+    c.set(x, y, i % 3 ? 0xa2622e : 0xece6d6);
+    c.set(x + 1, y, i % 2 ? 0x7a4420 : 0xc48448);
+    if (i > 2 && i < 10) c.set(x - 1, y, 0xc48448);
+  }
+  finish(c);
+};
+
+const PAINTERS: Record<string, Painter> = { mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */
 export function generatePortraits(scene: Phaser.Scene): void {

@@ -25,6 +25,8 @@ export interface ShopDef {
   buyRate: number;
   /** Things they pay over the odds for, as a fraction of value. */
   wants?: Partial<Record<ItemId, number>>;
+  /** Goods they never run short of: topped back up to this many (so an errand can always be done, even from an old save). */
+  keeps?: Partial<Record<ItemId, number>>;
 }
 
 export const SHOPS = {
@@ -34,9 +36,11 @@ export const SHOPS = {
     greeting: 'Fresh this morning, all of it. Well, most of it.',
     refuse: "Bless you, but I only deal in food, love.",
     thanks: ['Lovely. Mind, that pie is hot.', 'There you are, love.', "A pleasure. Come back tomorrow, there'll be buns."],
-    stock: [['bread', 8], ['meat-pie', 4], ['honey-cake', 5], ['cheese', 4], ['apple', 10]],
+    stock: [['bread', 8], ['meat-pie', 4], ['honey-cake', 5], ['cheese', 4], ['apple', 10], ['chicken-feed', 3]],
     buys: ['Food'],
     buyRate: 0.5,
+    // Farmer Iran sends the hero here for feed (the 'chicken-feed' quest).
+    keeps: { 'chicken-feed': 1 },
   },
   smith: {
     name: "Osric's Forge",
@@ -100,6 +104,11 @@ class ShopStore {
       list = SHOPS[shop].stock.map(([id, count]) => ({ id: id as ItemId, count }));
       this.stock.set(shop, list);
     }
+    const { keeps }: ShopDef = SHOPS[shop];
+    for (const [id, min] of Object.entries(keeps ?? {}) as Array<[ItemId, number]>) {
+      const have = list.find((g) => g.id === id)?.count ?? 0;
+      if (have < min) this.put(shop, id, min - have, list);
+    }
     return list;
   }
 
@@ -125,8 +134,7 @@ class ShopStore {
     if (s.count <= 0) list.splice(list.indexOf(s), 1);
   }
 
-  put(shop: ShopId, id: ItemId, count: number): void {
-    const list = this.goods(shop);
+  put(shop: ShopId, id: ItemId, count: number, list = this.goods(shop)): void {
     const s = list.find((g) => g.id === id);
     if (s) s.count += count;
     else list.push({ id, count });

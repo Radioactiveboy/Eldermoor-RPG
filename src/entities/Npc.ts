@@ -4,8 +4,10 @@ import type { DialogueScript } from '../dialogue/Dialogue';
 import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
+import { FeedStage, iranScript } from '../dialogue/iran';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
+import { Inventory } from '../systems/Inventory';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
 import type { Body, IsoMap } from '../world/IsoMap';
@@ -77,6 +79,14 @@ const PACKING_SECONDS = 2.5;
 /** Seconds to fade in or out at the front door. */
 const DOOR_FADE_MS = 500;
 
+/** How Farmer Iran's errand for chicken feed stands (see the 'chicken-feed' quest). */
+function feedStage(): FeedStage {
+  const quest = QuestLog.get('chicken-feed');
+  if (!quest) return 'none';
+  if (quest.completed) return 'done';
+  return Inventory.count('chicken-feed') > 0 ? 'carrying' : 'active';
+}
+
 const NPCS: Record<string, NpcDef> = {
   mother: {
     texture: 'npc-mother',
@@ -93,6 +103,15 @@ const NPCS: Record<string, NpcDef> = {
       return droverScript(sheepStage(), first);
     },
     wander: 9,
+  },
+  // Farmer Iran, keeping an eye on his hens.
+  iran: {
+    texture: 'folk-iran',
+    script: () => {
+      const first = !met.has('iran');
+      met.add('iran');
+      return iranScript(feedStage(), first);
+    },
   },
   // The market's stallholders stand behind their counters, while the market is open.
   baker: { texture: 'folk-baker', script: traveller('baker', BAKER), offDuty: BAKER, talkRange: 2.6 },
@@ -201,6 +220,11 @@ export class Npc implements Body {
 
   get tileY(): number {
     return Math.floor(this.gy);
+  }
+
+  /** The top of their head, where a speech bubble's tail points. */
+  get speechPoint(): { x: number; y: number } {
+    return { x: this.sprite.x, y: this.sprite.y - FEET_Y + 7 };
   }
 
   /** World position just above their head, for the talk prompt. */

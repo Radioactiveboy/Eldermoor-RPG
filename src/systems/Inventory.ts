@@ -252,6 +252,23 @@ export const ITEMS = {
     defence: 2,
     value: 15,
   },
+  'chicken-feed': {
+    name: 'Sack of Chicken Feed',
+    description: "Cracked corn and barley, a good heavy sackful. Farmer Iran's hens are waiting for it.",
+    icon: 'item-feed',
+    category: 'Material',
+    stack: 5,
+    value: 10,
+  },
+  egg: {
+    name: "Hen's Egg",
+    description: 'Brown and still faintly warm. Better boiled, but it will do raw in a pinch.',
+    icon: 'item-egg',
+    category: 'Food',
+    stack: 20,
+    eat: { health: 5, stamina: 10 },
+    value: 2,
+  },
   'silver-ring': {
     name: 'Tarnished Ring',
     description: "A silver ring, black with age, found among old bones in the wolves' den. It feels lucky.",

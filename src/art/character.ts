@@ -119,6 +119,8 @@ export interface Outfit {
   hoodDown?: boolean;
   /** Worn and carried things layered over the body, each drawing its own pieces (see gear.ts). */
   gear?: GearLook[];
+  /** A child: the same head on a shorter, slighter body. */
+  child?: boolean;
 }
 
 export const HERO_OUTFIT: Outfit = {
@@ -146,15 +148,22 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
   const feet = oy + FEET_Y;
   const parts: Draw[] = [];
   const front = cos > 0.2;
+  // A child's head and shoulders sit lower, over a shorter body and legs.
+  const kid = !!o.child;
+  const up = oy + (kid ? 7 : 0);
+  const torsoH = kid ? 9 : 13;
+  const hipY = oy + (kid ? 38 : 34);
+  const armLen = kid ? 6 : 8;
+  const legL = kid ? 2 : 2.5;
 
   // Seated: thighs reach forward from the hips, shins drop to the ground.
   if (pose.sit) {
     for (const side of [-1, 1]) {
-      const L = side * 2.5;
+      const L = side * legL;
       parts.push({
         z: Z(L, 3) - 0.5,
         paint: () => {
-          const hip = oy + 35;
+          const hip = hipY + 1;
           for (let d = 0; d <= 3; d++) c.shadedRect(Math.round(X(L, d) - 1.5), hip, 3, 3, ...o.trouser);
           const x = Math.round(X(L, 3.5) - 1.5);
           c.shadedRect(x, hip + 2, 3, feet - hip - 4, ...o.trouser);
@@ -167,7 +176,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
 
   // Legs and boots. The trailing leg lifts a little.
   for (const side of pose.sit ? [] : [-1, 1]) {
-    const L = side * 2.5;
+    const L = side * legL;
     const swing = pose.stride * side;
     const D = swing * 2.5;
     const lift = swing < 0 ? 2 : 0;
@@ -175,7 +184,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
       z: Z(L, D) - 0.5,
       paint: () => {
         const x = Math.round(X(L, D) - 1.5);
-        const top = oy + 34;
+        const top = hipY;
         const bottom = feet - lift;
         c.shadedRect(x, top, 3, bottom - top - 2, ...o.trouser);
         // Boot toe points the way we face.
@@ -191,7 +200,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
     parts.push({
       z: Z(0, 0) - 0.2,
       paint: () => {
-        const top = oy + 31 + b;
+        const top = up + torsoH + 18 + b;
         for (let y = top; y <= feet - 1; y++) {
           const half = 4.5 * Math.abs(cos) + 3.5 * Math.abs(sin) + (y - top) * 0.15 + 0.5;
           const mid = X(0, 0) + (y - top) * pose.stride * 0.04 * cos;
@@ -228,7 +237,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
     z: Z(0, -2.5),
     paint: () => {
       const halfW = 7 * Math.abs(cos) + 3 * Math.abs(sin);
-      const top = oy + 22 + b;
+      const top = up + 22 + b;
       const hem = oy + 40 + (cos < -0.2 ? 0 : -1);
       for (let y = top; y <= hem; y++) {
         const t = (y - top) / (hem - top);
@@ -253,7 +262,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
   if (o.hoodDown && o.cloak) parts.push({
     z: Z(0, -3) + 0.1,
     paint: () => {
-      const y = oy + 19 + b;
+      const y = up + 19 + b;
       c.ellipse(X(0, -3), y, 5 * Math.abs(cos) + 3.5 * Math.abs(sin) + 0.5, 3, cloak, cloakDark, cloakLight);
       c.rect(Math.round(X(0, -3)) - 2, y, 4, 1, cloakDark);
     },
@@ -263,14 +272,14 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
   parts.push({
     z: 0,
     paint: () => {
-      const halfW = 5 * Math.abs(cos) + 3.5 * Math.abs(sin);
+      const halfW = (kid ? 4 : 5) * Math.abs(cos) + (kid ? 3 : 3.5) * Math.abs(sin);
       const left = Math.round(cx - halfW);
       const w = Math.round(halfW * 2);
-      const top = oy + 23 + b;
-      c.shadedRect(left, top, w, 13, ...o.tunic);
+      const top = up + 23 + b;
+      c.shadedRect(left, top, w, torsoH, ...o.tunic);
       // Mail shows below the tunic's hem.
-      if (o.mail) c.rect(left, top + 13, w, 2, (pose.stride + b) % 2 ? P.iron : P.ironLight);
-      const beltY = oy + 32 + b;
+      if (o.mail) c.rect(left, top + torsoH, w, 2, (pose.stride + b) % 2 ? P.iron : P.ironLight);
+      const beltY = top + torsoH - 4;
       c.rect(left, beltY, w, 1, P.leatherDark);
       if (front) {
         const chest = Math.round(X(0, 3));
@@ -284,16 +293,16 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
 
   // Arms swing opposite to the legs.
   for (const side of [-1, 1]) {
-    const L = side * 6;
+    const L = side * (kid ? 5 : 6);
     const D = -pose.stride * side * 2;
     parts.push({
       z: Z(L, D) + (Math.abs(sin) > 0.5 ? 0.2 : 0),
       paint: () => {
         const x = Math.round(X(L, D) - 1);
-        const top = oy + 24 + b;
-        c.shadedRect(x, top, 3, 8, ...o.shirt);
-        c.rect(x, top + 6, 3, 1, P.leatherDark); // bracer edge
-        c.rect(x, top + 8, 3, 2, o.skin[0]);
+        const top = up + 24 + b;
+        c.shadedRect(x, top, 3, armLen, ...o.shirt);
+        c.rect(x, top + armLen - 2, 3, 1, P.leatherDark); // bracer edge
+        c.rect(x, top + armLen, 3, 2, o.skin[0]);
       },
     });
   }
@@ -324,7 +333,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
   parts.push({
     z: 1,
     paint: () => {
-      const hy = oy + 15 + b;
+      const hy = up + 15 + b;
       if (o.hood) {
         const hoodX = X(0, -1.2);
         c.ellipse(hoodX, hy, 7.2, 7.5, cloak, cloakDark, cloakLight);
@@ -357,7 +366,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
         c.rect(Math.round(X(0, -0.5) - 4), hy - 4, 8, 1, P.leatherDark); // hatband
       }
       // Gold cloak clasp at the throat.
-      if (front && o.cloak) c.set(X(0, 3), oy + 22 + b, P.gold);
+      if (front && o.cloak) c.set(X(0, 3), up + 22 + b, P.gold);
     },
   });
 

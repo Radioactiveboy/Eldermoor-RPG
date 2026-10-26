@@ -46,6 +46,7 @@ export const AREA_NAMES: Record<AreaId, string> = {
   world: 'Adowvale Hollow',
   market: 'Adowvale Market',
   cave: "The wolves' cave",
+  hut: "Farmer Iran's hut",
 };
 
 type Listener = (save: SaveData) => void;

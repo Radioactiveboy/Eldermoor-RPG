@@ -1,4 +1,5 @@
 import type { TrackName } from '../audio/Audio';
+import type { HenKind } from '../art/henfarm';
 import type { FoeKind } from '../systems/Combat';
 import type { CropKind } from '../systems/Farm';
 import type { Shape } from './Collision';
@@ -25,7 +26,7 @@ export enum Prop {
 }
 
 /** The places the player can be. Each is its own map; doors lead between them. */
-export type AreaId = 'home' | 'world' | 'market' | 'cave';
+export type AreaId = 'home' | 'world' | 'market' | 'cave' | 'hut';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -172,6 +173,25 @@ export interface CreatureSpawn {
   gy: number;
 }
 
+/** A fenced run that hens stay inside, in grid units (the open ground within the fence). */
+export interface HenPen {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
+ * Children who play together and chatter in speech bubbles rather than
+ * holding a conversation (see entities/Child.ts). They say hello when the
+ * player comes near.
+ */
+export interface ChildSpawn {
+  id: string;
+  gx: number;
+  gy: number;
+}
+
 export interface MapData {
   width: number;
   height: number;
@@ -190,6 +210,9 @@ export interface MapData {
   seats?: Seat[];
   beds?: Bed[];
   creatures?: CreatureSpawn[];
+  /** Hens pottering about a pen (see entities/Hen.ts). */
+  hens?: { pen: HenPen; flock: Array<{ kind: HenKind; gx: number; gy: number }> };
+  children?: ChildSpawn[];
   sights?: Sight[];
   /** Where water drips from overhead (stalactite tips): grid position and height in pixels. */
   drips?: Array<{ gx: number; gy: number; z: number }>;

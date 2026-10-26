@@ -47,8 +47,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, back to main menu)
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
-- Add `?area=market` to start in the market (or `?area=world` outside the cottage, or `?area=cave`
-  in the wolves' cave)
+- Add `?area=market` to start in the market (or `?area=world` outside the cottage, `?area=cave`
+  in the wolves' cave, or `?area=hut` inside Farmer Iran's hut)
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
   testing fights against several enemies)
 
@@ -63,6 +63,7 @@ src/
   world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
   world/MarketMap.ts      The market at the end of the road: bare-earth square, well, stalls, houses, militia
+  world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
                           stalagmites, a pool, three wolves, the drover's lost ewes, and bone piles to search
   world/Drips.ts          Water dripping from the cave's stalactites
@@ -84,10 +85,13 @@ src/
   entities/Player.ts      Movement, collision, click-to-move path following
   entities/Npc.ts         People you can talk to, which conversation they have, travellers
                           who wander up and down the road, and the militia on their rounds
+  entities/Hen.ts         Farmer Iran's hens: peck, strut about the run, scurry from the hero, roost at night
+  entities/Child.ts       Children who chatter to each other in speech bubbles and say hello as you come near
   entities/Creature.ts    Wild animals: wander and sniff near their den, start a fight when you come close
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
+  art/henfarm.ts          Farmer Iran's hut, the hen coop and trough, and the hens and rooster
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
                           boulders, bones and the dead ewes
   art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker

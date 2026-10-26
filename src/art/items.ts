@@ -289,6 +289,31 @@ const ridingBoots = () =>
     c.rect(3, 1, 4, 1, P.leatherLight);
   });
 
+/** A sack of chicken feed, tied at the neck, with grain spilling from the top. */
+const feed = () =>
+  icon((c) => {
+    for (let y = 5; y < 15; y++) {
+      const half = 3.5 + Math.min(2.5, (y - 5) * 0.6) - (y > 13 ? 1 : 0);
+      for (let x = Math.round(8 - half); x < Math.round(8 + half); x++) {
+        const rel = (x - (8 - half)) / (half * 2);
+        c.set(x, y, rel > 0.68 ? P.linenDark : rel < 0.2 ? 0xe8dcbc : P.linen);
+      }
+    }
+    c.rect(5, 4, 6, 1, P.leatherDark);
+    c.ellipse(8, 2.5, 3, 1.6, P.linen, P.linenDark);
+    for (const [x, y] of [[7, 1], [9, 2], [8, 3], [6, 2]]) c.set(x, y, P.goldLight);
+    for (const [x, y] of [[7, 9], [9, 11], [6, 12], [10, 8]]) c.set(x, y, P.linenDark);
+  });
+
+/** A brown hen's egg. */
+const egg = () =>
+  icon((c) => {
+    c.ellipse(8, 9, 4.5, 5.5, 0xd8b088, 0xb08a64, 0xf0d4b0);
+    c.ellipse(6.5, 6.5, 1.2, 1.5, 0xfaecd6);
+    c.set(9, 11, 0xb08a64);
+    c.set(10, 8, 0xc49c76);
+  });
+
 /** A copper coin, for prices and the purse. */
 const coin = () =>
   icon((c) => {
@@ -324,6 +349,8 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-hood', hood],
     ['item-ridingboots', ridingBoots],
     ['item-coin', coin],
+    ['item-feed', feed],
+    ['item-egg', egg],
   ];
   for (const [key, make] of icons) make().toTexture(scene, key);
 }
