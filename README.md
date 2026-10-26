@@ -43,7 +43,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Esc** or the **II** button: pause menu (resume, controls, settings, back to main menu)
 - **Enter** on the title screen: start a new game (you wake up at home)
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
-- Add `?area=market` to start in the market (or `?area=world` outside the cottage)
+- Add `?area=market` to start in the market (or `?area=world` outside the cottage, or `?area=cave`
+  in the wolves' cave)
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
   testing fights against several enemies)
 
@@ -58,6 +59,9 @@ src/
   world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
   world/MarketMap.ts      The market at the end of the road: bare-earth square, well, stalls, houses, militia
+  world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
+                          stalagmites, a pool, three wolves and the drover's lost ewes
+  world/Drips.ts          Water dripping from the cave's stalactites
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
   world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
   world/Ambience.ts       Living world: water glints and foam, birds, bats, sparrows, butterflies,
@@ -77,6 +81,8 @@ src/
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
+  art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
+                          boulders, bones and the dead ewes
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), item icons (items.ts),

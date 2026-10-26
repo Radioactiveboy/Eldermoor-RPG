@@ -9,7 +9,7 @@ import { Settings, SettingsData } from '../settings/Settings';
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market';
+export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave';
 
 interface TrackDef {
   bpm: number;
@@ -112,6 +112,21 @@ const TRACKS: Record<TrackName, TrackDef> = {
     melodyChance: 0.45,
     padCutoff: 1100,
     drums: 'X.jxX.jj',
+  },
+  // The wolves' cave: very slow, low and sparse, hanging on an unresolved E phrygian.
+  cave: {
+    bpm: 44,
+    chords: [
+      [40, 47, 52], // E5
+      [41, 48, 53], // F, a half-step of dread
+      [40, 47, 52],
+      [38, 45, 50], // D5
+    ],
+    barsPerChord: 2,
+    arp: [0, -1, -1, 3, -1, -1, 1, -1],
+    scale: [64, 65, 67, 69, 71, 72, 74],
+    melodyChance: 0.1,
+    padCutoff: 380,
   },
 };
 
@@ -581,6 +596,26 @@ class AudioEngine {
       o.start(t);
       o.stop(t + 0.08);
     }
+  }
+
+  /** A drop of water falling into a puddle somewhere in the cave: a short rising bloop, echoing. */
+  drip(volume = 1): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    const base = 900 + Math.random() * 700;
+    o.type = 'sine';
+    o.frequency.setValueAtTime(base, t);
+    o.frequency.exponentialRampToValueAtTime(base * 2.2, t + 0.05);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05 * volume, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.connect(g).connect(this.sfxBus);
+    g.connect(this.reverb);
+    o.start(t);
+    o.stop(t + 0.1);
   }
 
   /** Little wings beating as birds take off. */

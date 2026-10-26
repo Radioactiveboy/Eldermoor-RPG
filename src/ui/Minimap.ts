@@ -17,6 +17,7 @@ const TERRAIN_COLOR: Record<Terrain, number> = {
   [Terrain.Sand]: 0xd8c38a,
   [Terrain.Floor]: 0x7a5636,
   [Terrain.Soil]: 0x5e3e26,
+  [Terrain.Cave]: 0x4a4452,
 };
 const PROP_COLOR: Partial<Record<Prop, number>> = {
   [Prop.Tree]: 0x1f4d22,

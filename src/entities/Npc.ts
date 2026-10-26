@@ -3,7 +3,7 @@ import { DrawnDir, FEET_Y, FRAME_H } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
 import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
-import { DROVER, PEDLAR, PILGRIM } from '../dialogue/travellers';
+import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
@@ -46,6 +46,14 @@ function traveller(id: string, script: DialogueScript): () => DialogueScript {
   };
 }
 
+/** How far along the hunt for Wil's ewes is (see the 'lost-sheep' quest). */
+function sheepStage(): SheepStage {
+  const quest = QuestLog.get('lost-sheep');
+  if (!quest) return QuestLog.hasFlag('saw-bess') && QuestLog.hasFlag('saw-bramble') ? 'found-first' : 'none';
+  if (quest.completed) return 'done';
+  return quest.done.has('find') ? 'found' : 'active';
+}
+
 const NPCS: Record<string, NpcDef> = {
   mother: {
     texture: 'npc-mother',
@@ -54,7 +62,15 @@ const NPCS: Record<string, NpcDef> = {
   },
   pedlar: { texture: 'folk-pedlar', script: traveller('pedlar', PEDLAR), wander: 7 },
   pilgrim: { texture: 'folk-pilgrim', script: traveller('pilgrim', PILGRIM), wander: 5 },
-  drover: { texture: 'folk-drover', script: traveller('drover', DROVER), wander: 9 },
+  drover: {
+    texture: 'folk-drover',
+    script: () => {
+      const first = !met.has('drover');
+      met.add('drover');
+      return droverScript(sheepStage(), first);
+    },
+    wander: 9,
+  },
   // The market's stallholders stand behind their counters.
   baker: { texture: 'folk-baker', script: traveller('baker', BAKER), talkRange: 2.6 },
   smith: { texture: 'folk-smith', script: traveller('smith', SMITH), talkRange: 2.6 },

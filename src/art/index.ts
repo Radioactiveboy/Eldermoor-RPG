@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { generateCave } from './cave';
 import { generateCharacter } from './character';
 import { generateCreatures } from './creatures';
 import { generateCritters } from './critters';
@@ -28,4 +29,5 @@ export function generateArt(scene: Phaser.Scene): void {
   generateItemIcons(scene);
   generateCritters(scene);
   generateMarket(scene);
+  generateCave(scene);
 }

@@ -35,6 +35,20 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'return', text: 'Bring the medicine home to Mother' },
     ],
   },
+  'lost-sheep': {
+    id: 'lost-sheep',
+    title: 'The Lost Ewes',
+    giver: 'Wil the Drover',
+    summary:
+      "Wil, a drover on the old road, has lost two of Master Coombe's ewes, Bess and Bramble. Something big spooked them " +
+      'by the lake, and its tracks lead north past our cottage, to the cave in the hill. He is too frightened to look himself.',
+    objectives: [
+      { id: 'talk', text: 'Speak with Wil the Drover' },
+      { id: 'cave', text: 'Follow the tracks north to the cave in the hill' },
+      { id: 'find', text: 'Find Bess and Bramble' },
+      { id: 'tell', text: 'Tell Wil what became of his ewes' },
+    ],
+  },
 };
 
 export interface QuestState {
@@ -61,7 +75,11 @@ type Listener = (e: QuestEvent) => void;
 class QuestLogStore {
   private quests: QuestState[] = [];
   private diaryEntries: DiaryEntry[] = [];
+  /** Things that have happened which quests may care about later (e.g. 'saw-bess'). */
+  private flags = new Set<string>();
   private listeners = new Set<Listener>();
+  /** Id of the quest last started or moved on (see `focused`). */
+  private focusId?: string;
   /** Supplies the current in-game day for new entries. */
   dayProvider: () => number = () => 1;
 
@@ -69,6 +87,22 @@ class QuestLogStore {
   reset(openingEntry?: string): void {
     this.quests = [];
     this.diaryEntries = openingEntry ? [{ day: 1, text: openingEntry }] : [];
+    this.flags.clear();
+    this.focusId = undefined;
+  }
+
+  setFlag(flag: string): void {
+    this.flags.add(flag);
+  }
+
+  hasFlag(flag: string): boolean {
+    return this.flags.has(flag);
+  }
+
+  /** The quest the player is most likely busy with: the last one started or moved on, if it's still going. */
+  get focused(): QuestState | undefined {
+    const quest = this.focusId ? this.get(this.focusId) : undefined;
+    return quest && !quest.completed ? quest : this.active[0];
   }
 
   get all(): readonly QuestState[] {
@@ -102,6 +136,7 @@ class QuestLogStore {
     if (!def) throw new Error(`Unknown quest: ${id}`);
     const quest: QuestState = { def, done: new Set(alreadyDone), completed: false, day: this.dayProvider() };
     this.quests.push(quest);
+    this.focusId = id;
     this.emit({ type: 'started', quest });
   }
 
@@ -112,6 +147,7 @@ class QuestLogStore {
     const def = quest.def.objectives.find((o) => o.id === objective);
     if (!def) return;
     quest.done.add(objective);
+    this.focusId = id;
     this.emit({ type: 'progress', quest, objective: def });
     if (quest.def.objectives.every((o) => quest.done.has(o.id))) {
       quest.completed = true;

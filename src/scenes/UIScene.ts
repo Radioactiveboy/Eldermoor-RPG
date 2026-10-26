@@ -16,6 +16,8 @@ import type { GameScene } from './GameScene';
 
 /** Indoors the room is lit mostly by the fire: the daylight is dimmed and warmed. */
 const INDOOR_TINT = 0x8a6a66;
+/** Underground it's always this dark, whatever the hour: the hero's lantern does the work. */
+const UNDERGROUND: Ambient = { color: 0x3c3e5a, darkness: 0.85 };
 const MARGIN = 14;
 /** Below this screen width the HUD switches to a compact layout. */
 const NARROW = 760;
@@ -107,15 +109,15 @@ export class UIScene extends Phaser.Scene {
 
   /** "+2 Carrot" floating up from the hero when something goes in the satchel. */
   private onInventoryEvent(e: InventoryEvent): void {
-    if (e.type !== 'added') return;
+    if (e.type !== 'added' && e.type !== 'rewarded') return;
     const cam = this.world.cameras.main;
     const sprite = this.world.player.sprite;
     const x = (sprite.x - cam.worldView.x) * cam.zoom;
     const y = (sprite.y - cam.worldView.y) * cam.zoom - 48 * cam.zoom;
-    const def = itemDef(e.id);
-    const icon = this.add.image(0, 0, def.icon).setScale(2).setOrigin(1, 0.5);
+    const [iconKey, label] = e.type === 'added' ? [itemDef(e.id).icon, `+${e.count} ${itemDef(e.id).name}`] : ['item-coin', `+${e.coins} coins`];
+    const icon = this.add.image(0, 0, iconKey).setScale(2).setOrigin(1, 0.5);
     const text = this.add
-      .text(4, 0, `+${e.count} ${def.name}`, { fontFamily: UI_FONT, fontSize: '16px', color: '#fff6e0', stroke: '#000000', strokeThickness: 4 })
+      .text(4, 0, label, { fontFamily: UI_FONT, fontSize: '16px', color: '#fff6e0', stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0, 0.5);
     const pop = this.add.container(Math.round(x - text.width / 2 + 16), Math.round(y), [icon, text]).setDepth(5);
     this.tweens.add({ targets: pop, y: y - 36, duration: 1400, ease: 'Cubic.easeOut' });
@@ -144,10 +146,11 @@ export class UIScene extends Phaser.Scene {
     const cam = game.cameras.main;
     const outdoor = game.clock.ambient;
     const indoor = !!game.map.data.indoor;
-    const ambient = indoor ? this.indoorAmbient(outdoor) : outdoor;
+    const underground = !!game.map.data.underground;
+    const ambient = underground ? UNDERGROUND : indoor ? this.indoorAmbient(outdoor) : outdoor;
     const sprite = game.player.sprite;
     const toScreen = (x: number, y: number) => ({ x: (x - cam.worldView.x) * cam.zoom, y: (y - cam.worldView.y) * cam.zoom });
-    const lantern = indoor ? null : toScreen(sprite.x, sprite.y - 20);
+    const lantern = indoor && !underground ? null : toScreen(sprite.x, sprite.y - 20);
     this.lighting.update(ambient, lantern, cam.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)));
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock);
