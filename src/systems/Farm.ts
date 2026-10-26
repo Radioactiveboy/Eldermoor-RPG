@@ -1,4 +1,5 @@
 import type { ItemId } from './Inventory';
+import { SaveGame } from './SaveGame';
 
 export type CropKind = 'carrot' | 'cabbage' | 'turnip';
 
@@ -29,6 +30,15 @@ class FarmState {
     this.shaken.clear();
   }
 
+  toSave(): { picked: Array<[string, number]>; shaken: Array<[string, number]> } {
+    return { picked: [...this.picked], shaken: [...this.shaken] };
+  }
+
+  fromSave(data: ReturnType<FarmState['toSave']>): void {
+    this.picked = new Map(data.picked);
+    this.shaken = new Map(data.shaken);
+  }
+
   isRipe(tx: number, ty: number, nowHours: number): boolean {
     const at = this.picked.get(`${tx},${ty}`);
     return at === undefined || nowHours - at >= REGROW_HOURS;
@@ -48,3 +58,11 @@ class FarmState {
 }
 
 export const Farm = new FarmState();
+
+SaveGame.register('farm', {
+  save: () => Farm.toSave(),
+  load(data) {
+    Farm.reset();
+    if (data) Farm.fromSave(data as ReturnType<FarmState['toSave']>);
+  },
+});

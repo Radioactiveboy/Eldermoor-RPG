@@ -3,6 +3,8 @@ import { GameAudio } from '../audio/Audio';
 import { MAP_HEIGHT, MAP_SEED, MAP_WIDTH } from '../config';
 import { IsoMap } from '../world/IsoMap';
 import { generateMap } from '../world/MapGenerator';
+import { SaveData, SaveGame } from '../systems/SaveGame';
+import type { GameSceneData } from './GameScene';
 import { bodyStyle, makeButton, THEME, titleStyle } from '../ui/Widgets';
 import { openSettings } from './SettingsScene';
 
@@ -36,7 +38,8 @@ export class MainMenuScene extends Phaser.Scene {
     this.scale.on('resize', this.layout, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.layout, this));
 
-    this.input.keyboard!.on('keydown-ENTER', () => this.startGame());
+    // Enter carries on from the last save if there is one.
+    this.input.keyboard!.on('keydown-ENTER', () => this.startGame(SaveGame.read()));
     GameAudio.playMusic('menu');
     this.cameras.main.fadeIn(800, 0, 0, 0);
     this.uiCam.fadeIn(800, 0, 0, 0);
@@ -97,15 +100,24 @@ export class MainMenuScene extends Phaser.Scene {
       .text(0, -120, '~  an isometric adventure  ~', bodyStyle(18, THEME.dimText))
       .setOrigin(0.5);
 
-    const start = makeButton(this, 0, -10, 'Begin Journey', () => this.startGame());
-    const settings = makeButton(this, 0, 60, 'Settings', () => openSettings(this));
+    // With a saved game, Continue comes first, with where and when it was saved underneath.
+    const save = SaveGame.read();
+    const items: Phaser.GameObjects.GameObject[] = [];
+    let y = -10;
+    if (save) {
+      items.push(makeButton(this, 0, y - 20, 'Continue', () => this.startGame(save)));
+      items.push(this.add.text(0, y + 18, SaveGame.describe(save), bodyStyle(14, THEME.dimText)).setOrigin(0.5));
+      y += 70;
+    }
+    items.push(makeButton(this, 0, y, save ? 'New Journey' : 'Begin Journey', () => this.startGame()));
+    items.push(makeButton(this, 0, y + 70, 'Settings', () => openSettings(this)));
 
     this.soundHint = this.add
-      .text(0, 150, 'Click anywhere to enable sound', bodyStyle(16, THEME.dimText))
+      .text(0, y + 160, 'Click anywhere to enable sound', bodyStyle(16, THEME.dimText))
       .setOrigin(0.5);
     this.tweens.add({ targets: this.soundHint, alpha: 0.35, duration: 1200, yoyo: true, repeat: -1 });
 
-    this.ui = this.add.container(0, 0, [title, subtitle, start, settings, this.soundHint]);
+    this.ui = this.add.container(0, 0, [title, subtitle, ...items, this.soundHint]);
 
     // Gentle entrance.
     title.setAlpha(0).y -= 20;
@@ -131,17 +143,19 @@ export class MainMenuScene extends Phaser.Scene {
     );
 
     this.ui.setPosition(width / 2, height / 2);
-    this.ui.setScale(Math.min(1, width / 640, height / 560));
+    this.ui.setScale(Math.min(1, width / 640, height / 620));
   }
 
-  private startGame(): void {
+  /** Begins a new game, or carries on from a save. */
+  private startGame(save?: SaveData): void {
     if (this.leaving || !this.input.enabled) return;
     this.leaving = true;
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.uiCam.fadeOut(700, 0, 0, 0);
     this.uiCam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       // A new game begins at home, inside the cottage.
-      this.scene.start('Game', { newGame: true, area: 'home' });
+      const data: GameSceneData = save ? { load: save } : { newGame: true, area: 'home' };
+      this.scene.start('Game', data);
       this.scene.launch('UI');
     });
   }

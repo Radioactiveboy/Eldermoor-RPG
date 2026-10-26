@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { Inventory, InventoryEvent, itemDef } from '../systems/Inventory';
 import { QuestLog, QuestEvent } from '../systems/Quests';
+import { SaveGame } from '../systems/SaveGame';
 import { Ambient } from '../systems/TimeOfDay';
 import { DayNightOverlay, ScreenLight } from '../ui/DayNightOverlay';
 import { Minimap } from '../ui/Minimap';
@@ -77,6 +78,7 @@ export class UIScene extends Phaser.Scene {
     this.world.onHint = (text) => this.toasts.thought(text);
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
+    const offSave = SaveGame.onSave((save) => this.toasts.quest('Game saved', SaveGame.describe(save)));
 
     this.layout();
     this.scale.on('resize', this.layout, this);
@@ -84,6 +86,7 @@ export class UIScene extends Phaser.Scene {
       this.scale.off('resize', this.layout, this);
       off();
       offItems();
+      offSave();
       this.world.onHint = undefined;
       this.minimap?.destroy();
       this.minimap = undefined;
