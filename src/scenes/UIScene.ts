@@ -203,7 +203,7 @@ export class UIScene extends Phaser.Scene {
       this.promptLabel = focus.label;
     }
     const p = toScreen(focus.promptX, focus.promptY);
-    const bob = Math.sin(this.time.now / 260) * 3;
+    const bob = Math.sin(this.time.now / 260) * 2;
     this.prompt.setVisible(true).setPosition(Math.round(p.x), Math.round(p.y - 8 + bob));
   }
 
@@ -211,7 +211,7 @@ export class UIScene extends Phaser.Scene {
     const touch = this.sys.game.device.input.touch;
     const bg = this.add.graphics();
     const label = this.add
-      .text(0, 0, touch ? `Tap: ${text}` : text, { fontFamily: UI_FONT, fontSize: '15px', color: UI_COLORS.text })
+      .text(0, 0, touch ? `Tap: ${text}` : text, { fontFamily: UI_FONT, fontSize: '13px', color: UI_COLORS.text })
       .setOrigin(0, 0.5);
     const parts: Phaser.GameObjects.GameObject[] = [bg];
     let x = -label.width / 2;
@@ -219,28 +219,30 @@ export class UIScene extends Phaser.Scene {
       // A little key cap showing which key to press.
       const cap = this.add.graphics();
       cap.fillStyle(0xf3e9d2, 1);
-      cap.fillRoundedRect(-12, -12, 24, 24, 5);
+      cap.fillRoundedRect(-8, -8, 16, 16, 3);
       cap.fillStyle(0xb8a888, 1);
-      cap.fillRect(-12, 8, 24, 4);
-      const keyText = this.add.text(0, -1, 'E', { fontFamily: UI_FONT, fontSize: '15px', color: '#1c1712', fontStyle: 'bold' }).setOrigin(0.5);
+      cap.fillRect(-8, 5, 16, 3);
+      const keyText = this.add.text(0, -1, 'E', { fontFamily: UI_FONT, fontSize: '11px', color: '#1c1712', fontStyle: 'bold' }).setOrigin(0.5);
       const capC = this.add.container(0, 0, [cap, keyText]);
-      const total = 24 + 8 + label.width;
-      capC.x = -total / 2 + 12;
-      x = -total / 2 + 32;
+      const total = 16 + 6 + label.width;
+      capC.x = -total / 2 + 8;
+      x = -total / 2 + 22;
       parts.push(capC);
     }
     label.x = x;
-    const w = (touch ? label.width : label.width + 32) + 22;
+    const w = (touch ? label.width : label.width + 22) + 14;
+    const h = 24;
     bg.fillStyle(UI_COLORS.panel, 0.92);
-    bg.fillRoundedRect(-w / 2, -17, w, 34, 9);
-    bg.lineStyle(2, UI_COLORS.trim, 1);
-    bg.strokeRoundedRect(-w / 2, -17, w, 34, 9);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 6);
+    bg.lineStyle(1.5, UI_COLORS.trim, 1);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 6);
     // Little pointer down towards the thing it's about.
     bg.fillStyle(UI_COLORS.trim, 1);
-    bg.fillTriangle(-6, 17, 6, 17, 0, 24);
+    bg.fillTriangle(-4, h / 2, 4, h / 2, 0, h / 2 + 5);
     parts.push(label);
     const prompt = this.add.container(0, 0, parts).setVisible(false);
-    prompt.setSize(w, 34).setInteractive({ useHandCursor: true });
+    // Phones get a slightly bigger hit area than the bubble, so it's still easy to tap.
+    prompt.setSize(w + 12, h + 16).setInteractive({ useHandCursor: true });
     prompt.on('pointerup', () => this.world.interact());
     return prompt;
   }

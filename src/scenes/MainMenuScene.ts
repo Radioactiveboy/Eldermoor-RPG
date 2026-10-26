@@ -51,6 +51,7 @@ export class MainMenuScene extends Phaser.Scene {
     const b = map.getWorldBounds();
     const cam = this.cameras.main;
     cam.setBounds(b.x, b.y, b.width, b.height);
+    cam.setBackgroundColor(map.backgroundColor);
     cam.centerOn(b.centerX - b.width * 0.2, b.centerY);
     // Slow back-and-forth drift across the land.
     this.tweens.add({
