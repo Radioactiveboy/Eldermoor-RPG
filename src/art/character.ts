@@ -92,6 +92,10 @@ export interface Outfit {
   pack?: boolean;
   /** A tall walking staff in the right hand. */
   staff?: boolean;
+  /** Tips the staff with an iron spearhead (it's a spear, held a little higher). */
+  spear?: boolean;
+  /** A shirt of mail: grey rings showing at the shoulders and under the tunic's hem. */
+  mail?: boolean;
 }
 
 export const HERO_OUTFIT: Outfit = {
@@ -229,6 +233,8 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
       const w = Math.round(halfW * 2);
       const top = oy + 23 + b;
       c.shadedRect(left, top, w, 13, ...o.tunic);
+      // Mail shows below the tunic's hem.
+      if (o.mail) c.rect(left, top + 13, w, 2, (pose.stride + b) % 2 ? P.iron : P.ironLight);
       const beltY = oy + 32 + b;
       c.rect(left, beltY, w, 1, P.leatherDark);
       if (front) {
@@ -263,6 +269,16 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
       z: Z(6, 1) + 0.3,
       paint: () => {
         const x = Math.round(X(6, 1 - pose.stride));
+        if (o.spear) {
+          // A long ash shaft with a leaf-shaped iron head.
+          for (let y = oy + 6; y < feet - 1; y++) c.set(x, y, P.bark);
+          c.set(x, oy + 1, P.ironLight);
+          c.rect(x - 1, oy + 2, 3, 3, P.iron);
+          c.set(x, oy + 2, P.ironLight);
+          c.set(x, oy + 3, P.ironLight);
+          c.set(x, oy + 5, P.leatherDark);
+          return;
+        }
         for (let y = oy + 8; y < feet; y++) c.set(x, y, y < oy + 11 ? P.barkLight : P.bark);
         c.set(x - 1, oy + 9, P.barkDark);
       },

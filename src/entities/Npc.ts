@@ -2,8 +2,10 @@ import Phaser from 'phaser';
 import { DrawnDir, FEET_Y, FRAME_H } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
 import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
+import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { DROVER, PEDLAR, PILGRIM } from '../dialogue/travellers';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
+import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
 import type { Body, IsoMap } from '../world/IsoMap';
 
@@ -21,10 +23,19 @@ interface NpcDef {
   script: () => DialogueScript;
   /** Wanders up and down the road, up to this many steps either side of where it started. */
   wander?: number;
+  /** Strolls about anywhere within this many tiles of where it started (the militia on their rounds). */
+  roam?: number;
+  /** Talking distance, if not TALK_RANGE: stallholders are spoken to across their counters. */
+  talkRange?: number;
 }
 
 /** Travellers met before, who get a shorter hello next time. */
 const met = new Set<string>();
+
+/** A conversation that opens on one of several greetings, picked at random. */
+function anyOf(script: DialogueScript, starts: string[]): () => DialogueScript {
+  return () => ({ ...script, start: starts[Math.floor(Math.random() * starts.length)] });
+}
 
 /** A traveller's conversation: the long greeting the first time, the short one after. */
 function traveller(id: string, script: DialogueScript): () => DialogueScript {
@@ -44,12 +55,21 @@ const NPCS: Record<string, NpcDef> = {
   pedlar: { texture: 'folk-pedlar', script: traveller('pedlar', PEDLAR), wander: 7 },
   pilgrim: { texture: 'folk-pilgrim', script: traveller('pilgrim', PILGRIM), wander: 5 },
   drover: { texture: 'folk-drover', script: traveller('drover', DROVER), wander: 9 },
+  // The market's stallholders stand behind their counters.
+  baker: { texture: 'folk-baker', script: traveller('baker', BAKER), talkRange: 2.6 },
+  smith: { texture: 'folk-smith', script: traveller('smith', SMITH), talkRange: 2.6 },
+  tanner: { texture: 'folk-tanner', script: traveller('tanner', TANNER), talkRange: 2.6 },
+  // The village militia, walking their rounds of the square.
+  ...Object.fromEntries(
+    [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: anyOf(GUARD, ['greet', 'tired', 'bored']), roam: 5 }]),
+  ),
 };
 
 /**
- * Someone in the world who can be talked to. People who stay put (Mother)
- * block the tile they stand on; travellers stroll along the road, stopping to
- * look about, and are bumped into like any solid thing (see IsoMap.bodies).
+ * Someone in the world who can be talked to. People who stay put (Mother, the
+ * stallholders) block the tile they stand on; travellers stroll along the
+ * road and the militia about the square, stopping to look about, and are
+ * bumped into like any solid thing (see IsoMap.bodies).
  */
 export class Npc implements Body {
   readonly id: string;
@@ -68,8 +88,11 @@ export class Npc implements Body {
   private home = 0;
   /** Which side of the road they keep to: a nudge across it, in tiles. */
   private lane = 0;
+  /** Points to walk through, with the road index each one is at (-1 off the road). */
   private route: Array<{ point: Vec2; index: number }> = [];
   private wait = 0;
+  /** Where a roaming NPC started, which it never strays far from. */
+  private readonly origin: Vec2;
 
   constructor(scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number) {
     const def = NPCS[id];
@@ -79,6 +102,7 @@ export class Npc implements Body {
     this.map = map;
     this.gx = gx;
     this.gy = gy;
+    this.origin = { x: gx, y: gy };
     this.shadow = scene.add.image(0, 0, 'shadow');
     this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
     if (def.wander && map.data.road?.length) {
@@ -87,6 +111,10 @@ export class Npc implements Body {
       this.lane = (Math.random() - 0.5) * 0.6;
       this.facing = Math.floor(Math.random() * 8);
       this.wait = 1 + Math.random() * 3;
+      map.bodies.add(this);
+    } else if (def.roam) {
+      this.facing = Math.floor(Math.random() * 8);
+      this.wait = 1 + Math.random() * 4;
       map.bodies.add(this);
     } else {
       map.setOccupied(Math.floor(gx), Math.floor(gy), true);
@@ -112,6 +140,15 @@ export class Npc implements Body {
     return this.def.script();
   }
 
+  get talkRange(): number {
+    return this.def.talkRange ?? TALK_RANGE;
+  }
+
+  /** Walks about (along the road, or round the square) rather than standing in one place. */
+  private get moves(): boolean {
+    return this.road.length > 0 || !!this.def.roam;
+  }
+
   /** Turn to face a point (Mother is only drawn facing forward, so she just mirrors). */
   faceTowards(gx: number, gy: number): void {
     if (this.def.anim) {
@@ -128,12 +165,12 @@ export class Npc implements Body {
   }
 
   /**
-   * Stroll along the road: walk a few steps one way or the other, stop and
+   * Stroll along the road (or about the square): walk a few steps, stop and
    * look about, repeat. Stops to face the player when they come near, so
    * they're easy to talk to.
    */
   update(dt: number, player: Vec2, paused: boolean): void {
-    if (this.road.length === 0) return;
+    if (!this.moves) return;
     if (paused || this.distanceTo(player.x, player.y) < NOTICE_RANGE) {
       if (this.distanceTo(player.x, player.y) < NOTICE_RANGE) this.face({ x: player.x - this.gx, y: player.y - this.gy });
       this.sync(false);
@@ -162,12 +199,19 @@ export class Npc implements Body {
     this.gx = nx;
     this.gy = ny;
     this.face({ x: dx, y: dy });
-    if (dist - step < 0.02) this.roadIndex = this.route.shift()!.index;
+    if (dist - step < 0.02) {
+      const reached = this.route.shift()!.index;
+      if (reached >= 0) this.roadIndex = reached;
+    }
     this.sync(true);
   }
 
   /** Pick what to do next: usually a short walk along the road, sometimes just a look round. */
   private decide(): void {
+    if (this.def.roam) {
+      this.roamSomewhere(this.def.roam);
+      return;
+    }
     const span = this.def.wander ?? 0;
     const lo = Math.max(0, this.home - span);
     const hi = Math.min(this.road.length - 1, this.home + span);
@@ -183,6 +227,29 @@ export class Npc implements Body {
       this.route.push({ point: { x: p.x + this.lane, y: p.y + this.lane }, index: i });
     }
     this.wait = 2 + Math.random() * 4;
+  }
+
+  /**
+   * Walk to a random open spot near where they started, or now and then just
+   * stand and look about. Pauses are long: the militia are in no hurry.
+   */
+  private roamSomewhere(radius: number): void {
+    if (Math.random() < 0.35) {
+      this.facing = Math.floor(Math.random() * 8);
+      this.wait = 2 + Math.random() * 3;
+      return;
+    }
+    const from = { x: Math.floor(this.gx), y: Math.floor(this.gy) };
+    for (let tries = 0; tries < 8; tries++) {
+      const tx = Math.floor(this.origin.x + (Math.random() * 2 - 1) * radius);
+      const ty = Math.floor(this.origin.y + (Math.random() * 2 - 1) * radius);
+      if (!this.map.isWalkable(tx, ty) || (tx === from.x && ty === from.y)) continue;
+      const path = findPath(from, { x: tx, y: ty }, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 2000);
+      if (!path || path.length === 0 || path.length > radius * 3) continue;
+      this.route = path.map((p) => ({ point: { x: p.x + 0.5, y: p.y + 0.5 }, index: -1 }));
+      break;
+    }
+    this.wait = 3 + Math.random() * 5;
   }
 
   private nearestRoadIndex(gx: number, gy: number): number {
@@ -204,7 +271,7 @@ export class Npc implements Body {
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x, p.y);
-    const d = this.road.length > 0 ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy);
+    const d = this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy);
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
     if (this.def.anim) return;

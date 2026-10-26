@@ -48,6 +48,56 @@ export const FOLK: Record<string, Outfit> = {
     hair: 0xb4562a,
     staff: true,
   },
+  // Hilde the baker: flour-dusted apron over a rose dress, fair hair.
+  baker: {
+    cloak: null,
+    hood: false,
+    tunic: [0xece4d4, 0xc8bca6, 0xfffaf0],
+    shirt: [0xb0605a, 0x8a4440],
+    trouser: [0x8a4440, 0x6a3030],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xf2caa4, 0xd09e7c],
+    hair: 0xd8b060,
+    robe: true,
+  },
+  // Osric the smith: bald and black-bearded, in a scorched leather apron.
+  smith: {
+    cloak: null,
+    hood: false,
+    tunic: [0x3e2a20, 0x2a1c16, 0x56402e],
+    shirt: [0x6e6a62, 0x504c46],
+    trouser: [0x3a3032, 0x2a2224],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xd8a07a, 0xb07a5a],
+    hair: 0xd8a07a,
+    beard: 0x2a2024,
+  },
+  // Tamsin the tanner: red hair, a green jerkin and a short brown cloak.
+  tanner: {
+    cloak: [0x7a5434, 0x5a3c24, 0x96704a],
+    hood: false,
+    tunic: [0x4e6a3a, 0x3a5028, 0x6a8a4e],
+    shirt: [P.linen, P.linenDark],
+    trouser: [0x5a4634, 0x40322a],
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+    skin: [0xf0c8a6, 0xcc9c7c],
+    hair: 0xb04a24,
+  },
+  // The militia: kettle helm, mail under a blue-and-gold tabard, and a spear.
+  guard: {
+    cloak: null,
+    hood: false,
+    tunic: [0x2e4a7a, 0x22365a, 0x40629a],
+    shirt: [P.ironLight, P.iron],
+    trouser: [0x3a3032, 0x2a2224],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [P.skin, P.skinShade],
+    hair: 0x4a3020,
+    hat: [P.ironLight, P.iron, P.stoneLight],
+    staff: true,
+    spear: true,
+    mail: true,
+  },
 };
 
 /** Head and shoulders for the dialogue box. Frames: 0 mouth closed, 1 mouth open, 2 blinking. */

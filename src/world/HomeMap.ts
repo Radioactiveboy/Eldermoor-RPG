@@ -25,6 +25,7 @@ export function buildHomeMap(): MapData {
     props,
     spawn: { x: 6.5, y: 3.5 },
     indoor: true,
+    music: 'home',
     walls: {
       back: ['plain-0', 'plain-1', 'window-0', 'plain-0', 'plain-1', 'shelf-0', 'plain-1', 'window-1'].map((k) => `wall-back-${k}`),
       side: ['plain-1', 'shelf-1', 'window-0', 'plain-0', 'plain-1', 'door-0', 'window-1'].map((k) => `wall-side-${k}`),

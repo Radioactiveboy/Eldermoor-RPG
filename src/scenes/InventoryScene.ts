@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { BAG_SIZE, EQUIP_SLOTS, EquipSlot, Inventory, ItemDef, itemDef, ItemId } from '../systems/Inventory';
+import { BAG_SIZE, EQUIP_SLOTS, EquipSlot, Inventory, ItemDef, itemDef, itemEffects, ItemId } from '../systems/Inventory';
 import { bodyStyle, makeButton, makePanel, THEME, titleStyle } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
 
@@ -213,10 +213,11 @@ export class InventoryScene extends Phaser.Scene {
       this.makeSlot(x, y, stack?.id, stack?.count ?? 0, selected, () => this.select(stack ? { kind: 'bag', index: i } : undefined));
     });
     const used = Inventory.bag.filter((s) => s !== null).length;
-    const footer = this.add
-      .text(x0 + GRID_W / 2, y0 + GRID_H + 10, `${used} of ${BAG_SIZE} slots used`, bodyStyle(14, THEME.dimText))
-      .setOrigin(0.5, 0);
-    this.content.add(footer);
+    const footer = this.add.text(x0, y0 + GRID_H + 10, `${used} of ${BAG_SIZE} slots used`, bodyStyle(14, THEME.dimText));
+    // The purse, on the right.
+    const coins = this.add.text(x0 + GRID_W, y0 + GRID_H + 10, `${Inventory.coins} coins`, bodyStyle(14, THEME.goldText)).setOrigin(1, 0);
+    const coin = this.add.image(coins.x - coins.width - 12, coins.y + coins.height / 2, 'item-coin').setScale(1.4);
+    this.content.add([footer, coins, coin]);
   }
 
   /** The hero in the middle, worn items in slots down either side, totals underneath. */
@@ -282,7 +283,7 @@ export class InventoryScene extends Phaser.Scene {
     });
     this.content.add(desc);
     ty += desc.height + 10;
-    for (const line of this.effectLines(def)) {
+    for (const line of itemEffects(def)) {
       const t = this.add.text(x + pad, ty, line, bodyStyle(14, '#9fd66a'));
       this.content.add(t);
       ty += t.height + 2;
@@ -326,16 +327,6 @@ export class InventoryScene extends Phaser.Scene {
     });
     if (centred) t.setOrigin(0.5);
     this.content.add(t);
-  }
-
-  private effectLines(def: ItemDef): string[] {
-    const lines: string[] = [];
-    if (def.eat?.health) lines.push(`Eat: +${def.eat.health} health`);
-    if (def.eat?.stamina) lines.push(`Eat: +${def.eat.stamina} stamina`);
-    if (def.slot) lines.push(`Worn: ${EQUIP_SLOTS.find((s) => s.id === def.slot)!.label}`);
-    if (def.defence) lines.push(`Defence +${def.defence}`);
-    if (def.attack) lines.push(`Attack +${def.attack}`);
-    return lines;
   }
 
   private actionFor(def: ItemDef): { label: string; run: () => void } | undefined {

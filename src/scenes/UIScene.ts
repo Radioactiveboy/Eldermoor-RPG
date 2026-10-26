@@ -148,7 +148,7 @@ export class UIScene extends Phaser.Scene {
     const sprite = game.player.sprite;
     const toScreen = (x: number, y: number) => ({ x: (x - cam.worldView.x) * cam.zoom, y: (y - cam.worldView.y) * cam.zoom });
     const lantern = indoor ? null : toScreen(sprite.x, sprite.y - 20);
-    this.lighting.update(ambient, lantern, cam.zoom, this.roomLights(toScreen));
+    this.lighting.update(ambient, lantern, cam.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)));
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock);
     this.minimap!.update(sprite, cam.worldView, outdoor.color);
@@ -175,15 +175,18 @@ export class UIScene extends Phaser.Scene {
     return { color: Phaser.Display.Color.GetColor(mix.r, mix.g, mix.b), darkness: Math.max(0.6, outdoor.darkness) };
   }
 
-  /** The area's fires and candles, flickering, in screen pixels. */
-  private roomLights(toScreen: (x: number, y: number) => { x: number; y: number }): ScreenLight[] {
+  /**
+   * The area's fires, candles and lanterns, flickering, in screen pixels.
+   * @param lit how strongly they show: lanterns outdoors only glow as it gets dark
+   */
+  private roomLights(toScreen: (x: number, y: number) => { x: number; y: number }, lit: number): ScreenLight[] {
     const lights = this.world.map.data.lights ?? [];
     const t = this.time.now / 1000;
     const fires = lights.map((l, i) => {
       const p = gridToScreen(l.gx, l.gy);
       // Two out-of-step waves make a flicker that never visibly repeats.
       const wobble = (Math.sin(t * 9.3 + i * 2) * 0.6 + Math.sin(t * 23.7 + i) * 0.4) * l.flicker;
-      return { ...toScreen(p.x, p.y - l.z), radius: l.radius * (1 + wobble * 0.04), alpha: 0.85 + wobble * 0.12 };
+      return { ...toScreen(p.x, p.y - l.z), radius: l.radius * (1 + wobble * 0.04), alpha: (0.85 + wobble * 0.12) * lit };
     });
     // Fireflies, outdoors at night.
     const glows = (this.world.ambience?.lights() ?? []).map((l) => ({ ...toScreen(l.x, l.y), radius: l.radius, alpha: l.alpha }));

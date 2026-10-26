@@ -14,13 +14,15 @@ export const EQUIP_SLOTS: Array<{ id: EquipSlot; label: string }> = [
   { id: 'trinket', label: 'Trinket' },
 ];
 
+export type ItemCategory = 'Food' | 'Material' | 'Clothing' | 'Tool' | 'Weapon' | 'Armour';
+
 export interface ItemDef {
   name: string;
   /** A line or two of flavour, shown when the item is selected. */
   description: string;
   /** Icon texture (see art/items.ts). */
   icon: string;
-  category: 'Food' | 'Material' | 'Clothing' | 'Tool';
+  category: ItemCategory;
   /** How many fit in one satchel slot. */
   stack: number;
   /** Gear: where it's worn and what it adds. */
@@ -29,6 +31,8 @@ export interface ItemDef {
   attack?: number;
   /** Food: what eating it restores. */
   eat?: { health?: number; stamina?: number };
+  /** What it costs at a stall, in coins. Traders pay less to buy it (see systems/Shops.ts); no value means nobody will buy it. */
+  value?: number;
 }
 
 export const ITEMS = {
@@ -39,6 +43,7 @@ export const ITEMS = {
     category: 'Food',
     stack: 20,
     eat: { stamina: 15 },
+    value: 1,
   },
   cabbage: {
     name: 'Cabbage',
@@ -47,6 +52,7 @@ export const ITEMS = {
     category: 'Food',
     stack: 10,
     eat: { health: 4, stamina: 8 },
+    value: 2,
   },
   turnip: {
     name: 'Turnip',
@@ -55,6 +61,7 @@ export const ITEMS = {
     category: 'Food',
     stack: 20,
     eat: { stamina: 10 },
+    value: 1,
   },
   apple: {
     name: 'Apple',
@@ -63,6 +70,7 @@ export const ITEMS = {
     category: 'Food',
     stack: 20,
     eat: { health: 6, stamina: 6 },
+    value: 1,
   },
   bread: {
     name: 'Rye Bread',
@@ -71,6 +79,7 @@ export const ITEMS = {
     category: 'Food',
     stack: 10,
     eat: { health: 10, stamina: 25 },
+    value: 3,
   },
   pinecone: {
     name: 'Pinecone',
@@ -78,6 +87,7 @@ export const ITEMS = {
     icon: 'item-pinecone',
     category: 'Material',
     stack: 30,
+    value: 1,
   },
   stick: {
     name: 'Stout Stick',
@@ -85,6 +95,7 @@ export const ITEMS = {
     icon: 'item-stick',
     category: 'Material',
     stack: 30,
+    value: 1,
   },
   'wolf-pelt': {
     name: 'Wolf Pelt',
@@ -92,6 +103,7 @@ export const ITEMS = {
     icon: 'item-pelt',
     category: 'Material',
     stack: 10,
+    value: 12,
   },
   'walking-staff': {
     name: 'Walking Staff',
@@ -101,6 +113,7 @@ export const ITEMS = {
     stack: 1,
     slot: 'mainHand',
     attack: 2,
+    value: 5,
   },
   'straw-hat': {
     name: 'Straw Hat',
@@ -110,6 +123,7 @@ export const ITEMS = {
     stack: 1,
     slot: 'head',
     defence: 1,
+    value: 3,
   },
   tunic: {
     name: 'Linen Tunic',
@@ -119,6 +133,7 @@ export const ITEMS = {
     stack: 1,
     slot: 'body',
     defence: 1,
+    value: 4,
   },
   boots: {
     name: 'Leather Boots',
@@ -128,6 +143,7 @@ export const ITEMS = {
     stack: 1,
     slot: 'feet',
     defence: 1,
+    value: 6,
   },
   'river-stone': {
     name: 'River Stone Charm',
@@ -137,12 +153,120 @@ export const ITEMS = {
     stack: 1,
     slot: 'trinket',
   },
+  cheese: {
+    name: 'Wedge of Cheese',
+    description: 'Hard, crumbly and sharp, wrapped in a cloth. It keeps for weeks.',
+    icon: 'item-cheese',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 8, stamina: 12 },
+    value: 4,
+  },
+  'meat-pie': {
+    name: 'Mutton Pie',
+    description: 'Still warm from the oven, with gravy leaking through the crust.',
+    icon: 'item-pie',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 20, stamina: 30 },
+    value: 6,
+  },
+  'honey-cake': {
+    name: 'Honey Cake',
+    description: 'Sticky and sweet. The baker swears the honey is from her own hives.',
+    icon: 'item-honeycake',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 6, stamina: 40 },
+    value: 5,
+  },
+  'hunting-knife': {
+    name: 'Hunting Knife',
+    description: 'A plain blade with an antler grip. Made for skinning, but it will do in a pinch.',
+    icon: 'item-knife',
+    category: 'Weapon',
+    stack: 1,
+    slot: 'mainHand',
+    attack: 3,
+    value: 14,
+  },
+  'short-sword': {
+    name: 'Short Sword',
+    description: 'Good village steel, oiled and sharp. The smith says it has never been used, and it looks it.',
+    icon: 'item-sword',
+    category: 'Weapon',
+    stack: 1,
+    slot: 'mainHand',
+    attack: 5,
+    value: 40,
+  },
+  buckler: {
+    name: 'Oak Buckler',
+    description: 'A small round shield, rimmed with iron. Strapped to the forearm.',
+    icon: 'item-buckler',
+    category: 'Armour',
+    stack: 1,
+    slot: 'offHand',
+    defence: 2,
+    value: 16,
+  },
+  'iron-cap': {
+    name: 'Iron Cap',
+    description: 'A dented kettle helm like the militia wear. It rings when you knock on it.',
+    icon: 'item-ironcap',
+    category: 'Armour',
+    stack: 1,
+    slot: 'head',
+    defence: 2,
+    value: 18,
+  },
+  jerkin: {
+    name: 'Leather Jerkin',
+    description: 'Boiled leather, stiff and heavy, over a padded lining. Turns a bite or a blade.',
+    icon: 'item-jerkin',
+    category: 'Armour',
+    stack: 1,
+    slot: 'body',
+    defence: 3,
+    value: 28,
+  },
+  'wool-hood': {
+    name: 'Wool Hood',
+    description: 'Thick undyed wool with a short cape. Warm on a cold night.',
+    icon: 'item-hood',
+    category: 'Clothing',
+    stack: 1,
+    slot: 'head',
+    defence: 1,
+    value: 6,
+  },
+  'riding-boots': {
+    name: 'Riding Boots',
+    description: 'Tall boots of good oiled leather, laced to the knee.',
+    icon: 'item-ridingboots',
+    category: 'Clothing',
+    stack: 1,
+    slot: 'feet',
+    defence: 2,
+    value: 15,
+  },
 } satisfies Record<string, ItemDef>;
 
 export type ItemId = keyof typeof ITEMS;
 
 export function itemDef(id: ItemId): ItemDef {
   return ITEMS[id];
+}
+
+/** What an item does, one line each, for item details ("Eat: +15 stamina", "Defence +1"). */
+export function itemEffects(def: ItemDef): string[] {
+  const lines: string[] = [];
+  if (def.eat?.health) lines.push(`Eat: +${def.eat.health} health`);
+  if (def.eat?.stamina) lines.push(`Eat: +${def.eat.stamina} stamina`);
+  if (def.slot) lines.push(`Worn: ${EQUIP_SLOTS.find((s) => s.id === def.slot)!.label}`);
+  if (def.defence) lines.push(`Defence +${def.defence}`);
+  if (def.attack) lines.push(`Attack +${def.attack}`);
+  return lines;
 }
 
 export interface Stack {
@@ -157,11 +281,15 @@ export type InventoryEvent =
 type Listener = (e: InventoryEvent) => void;
 
 export const BAG_SIZE = 20;
+/** Coins the hero has saved up at the start. */
+const START_COINS = 15;
 
 class InventoryStore {
   /** Satchel slots; null is an empty slot. */
   bag: Array<Stack | null> = [];
   equipped: Partial<Record<EquipSlot, ItemId>> = {};
+  /** Money, in copper coins. Kept outside the satchel's slots. */
+  coins = START_COINS;
   private listeners: Listener[] = [];
 
   /** A new game: what the hero owns when they wake up. */
@@ -171,6 +299,7 @@ class InventoryStore {
     this.bag[0] = { id: 'bread', count: 2 };
     this.bag[1] = { id: 'walking-staff', count: 1 };
     this.bag[2] = { id: 'straw-hat', count: 1 };
+    this.coins = START_COINS;
     this.emit({ type: 'changed' });
   }
 
@@ -187,10 +316,39 @@ class InventoryStore {
 
   /** Room for `count` more of an item, topping up stacks before using empty slots. */
   canAdd(id: ItemId, count = 1): boolean {
+    return this.room(id) >= count;
+  }
+
+  /** How many more of an item would fit. */
+  room(id: ItemId): number {
     const max = itemDef(id).stack;
     let room = 0;
     for (const s of this.bag) room += s === null ? max : s.id === id ? max - s.count : 0;
-    return room >= count;
+    return room;
+  }
+
+  /** Takes `count` of an item out of the satchel (from the last stacks first), if there are that many. */
+  remove(id: ItemId, count: number): boolean {
+    if (this.count(id) < count) return false;
+    let left = count;
+    for (let i = this.bag.length - 1; i >= 0 && left > 0; i--) {
+      const s = this.bag[i];
+      if (s?.id !== id) continue;
+      const n = Math.min(left, s.count);
+      s.count -= n;
+      left -= n;
+      if (s.count === 0) this.bag[i] = null;
+    }
+    this.emit({ type: 'changed' });
+    return true;
+  }
+
+  /** Pays out or takes in coins. Returns false (changing nothing) if there isn't enough to pay. */
+  addCoins(n: number): boolean {
+    if (this.coins + n < 0) return false;
+    this.coins += n;
+    this.emit({ type: 'changed' });
+    return true;
   }
 
   /** Adds items if they all fit; returns false (adding nothing) if the satchel is too full. */
