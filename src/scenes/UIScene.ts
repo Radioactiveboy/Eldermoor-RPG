@@ -6,6 +6,7 @@ import { QuestLog, QuestEvent } from '../systems/Quests';
 import { SaveGame } from '../systems/SaveGame';
 import { Ambient } from '../systems/TimeOfDay';
 import { DayNightOverlay, ScreenLight } from '../ui/DayNightOverlay';
+import { LocationLabel } from '../ui/LocationLabel';
 import { Minimap } from '../ui/Minimap';
 import { QuestTracker } from '../ui/QuestTracker';
 import { SpeechBubbles } from '../ui/SpeechBubbles';
@@ -37,6 +38,8 @@ export class UIScene extends Phaser.Scene {
   private bars!: StatusBars;
   private wheel!: TimeWheel;
   private minimap?: Minimap;
+  /** Where the player is, under the minimap (shown and hidden with it). */
+  private location!: LocationLabel;
   private pauseButton!: Phaser.GameObjects.Container;
   private journalButton!: Phaser.GameObjects.Container;
   private satchelButton!: Phaser.GameObjects.Container;
@@ -63,6 +66,7 @@ export class UIScene extends Phaser.Scene {
     this.lighting = new DayNightOverlay(this);
     this.bars = new StatusBars(this);
     this.wheel = new TimeWheel(this);
+    this.location = new LocationLabel(this);
     this.pauseButton = this.makeIconButton((g) => {
       g.fillStyle(UI_COLORS.trim, 1);
       g.fillRect(-8, -9, 5, 18);
@@ -105,6 +109,7 @@ export class UIScene extends Phaser.Scene {
       this.minimap?.destroy();
       this.minimap = undefined;
       this.minimapOf = undefined;
+      this.location.destroy();
     });
   }
 
@@ -175,6 +180,7 @@ export class UIScene extends Phaser.Scene {
       this.minimap?.destroy();
       this.minimap = new Minimap(this, game.map);
       this.minimapOf = game.map;
+      this.location.setArea(game.area, game.map.data);
       this.showMinimap();
       this.layout();
     }
@@ -192,6 +198,7 @@ export class UIScene extends Phaser.Scene {
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock);
     this.minimap!.update(sprite, cam.worldView, outdoor.color);
+    this.location.update(game.player.gx, game.player.gy);
     this.tracker.update();
     this.bubbles.update([...game.npcs, ...game.speakers], toScreen, !game.inCombat);
     this.updatePrompt(toScreen);
@@ -208,17 +215,19 @@ export class UIScene extends Phaser.Scene {
     for (const button of [this.pauseButton, this.journalButton, this.satchelButton]) button.setVisible(show);
   }
 
-  /** M shows or hides the minimap, and it stays that way next time the game is opened. */
+  /** M shows or hides the minimap (or, indoors, just the place name), and it stays that way next time the game is opened. */
   private toggleMinimap(): void {
-    if (!this.minimap || this.combatMode || this.world.map.data.indoor) return;
+    if (!this.minimap || this.combatMode) return;
     Settings.set('showMinimap', !Settings.get().showMinimap);
     GameAudio.click();
     this.showMinimap();
   }
 
-  /** Outdoors only, never in a fight, and only if the player hasn't hidden it. */
+  /** Never in a fight, and only if the player hasn't hidden it. Indoors there's no map, only the place name. */
   private showMinimap(): void {
-    this.minimap?.setVisible(Settings.get().showMinimap && !this.combatMode && !this.world.map.data.indoor);
+    const show = Settings.get().showMinimap && !this.combatMode;
+    this.minimap?.setVisible(show && !this.world.map.data.indoor);
+    this.location.setVisible(show);
   }
 
   /** The daylight let in by the windows, warmed and dimmed, so the fire does most of the lighting. */
@@ -365,12 +374,17 @@ export class UIScene extends Phaser.Scene {
       if (this.minimap) {
         this.minimap.setScale(0.75);
         this.minimap.setPosition(width - MARGIN - this.minimap.width, height - MARGIN - this.minimap.height);
+        // The map sits at the bottom of the screen, so its place name goes on top (or in its place indoors).
+        if (this.world.map?.data.indoor) this.location.setPosition(width - MARGIN, height - MARGIN, false, true);
+        else this.location.setPosition(width - MARGIN - this.minimap.width / 2, height - MARGIN - this.minimap.height - 6, false);
       }
     } else {
       this.wheel.setPosition((width - this.wheel.width) / 2, MARGIN);
       if (this.minimap) {
         this.minimap.setScale(1);
         this.minimap.setPosition(width - MARGIN - this.minimap.width, MARGIN);
+        if (this.world.map?.data.indoor) this.location.setPosition(width - MARGIN, MARGIN, true, true);
+        else this.location.setPosition(width - MARGIN - this.minimap.width / 2, MARGIN + this.minimap.height + 6);
       }
     }
 
