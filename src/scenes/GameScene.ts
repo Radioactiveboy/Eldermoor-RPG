@@ -19,7 +19,7 @@ import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
 import { AREA_NAMES, SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops, SHOPS } from '../systems/Shops';
-import { TimeOfDay } from '../systems/TimeOfDay';
+import { clockText, TimeOfDay } from '../systems/TimeOfDay';
 import { buildCaveMap } from '../world/CaveMap';
 import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
@@ -287,7 +287,7 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.map, start.x, start.y);
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
-    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour));
+    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking));
     this.marketWasOpen = marketOpen(this.clock.hour);
     this.creatures = this.spawnCreatures();
     const hens = this.map.data.hens;
@@ -1064,6 +1064,10 @@ export class GameScene extends Phaser.Scene {
       this.search(sight);
       return;
     }
+    if (sight.locked) {
+      this.tryLockedDoor();
+      return;
+    }
     const flag = `saw-${sight.id}`;
     const first = !QuestLog.hasFlag(flag);
     QuestLog.setFlag(flag);
@@ -1092,6 +1096,27 @@ export class GameScene extends Phaser.Scene {
             'I would rather he heard it from me than found them like that.'
         : 'Found two dead ewes at the back of a wolves\' den in the hill, a bell on one scratched "BESS". Someone on the road ' +
             'must be missing them.',
+    );
+  }
+
+  /**
+   * The door at the back of the wolves' cave: it won't open, and the hero
+   * notes it in the diary the first time. A hint of things to come.
+   */
+  private tryLockedDoor(): void {
+    GameAudio.rattle();
+    if (QuestLog.hasFlag('found-cave-door')) {
+      this.onHint?.('Still locked fast. Whoever has the key to this, it is not me.');
+      return;
+    }
+    QuestLog.setFlag('found-cave-door');
+    this.onHint?.(
+      'A door, deep in the hill: old oak bound with iron, and a lock as big as my hand. It will not budge. ' +
+        'Someone went to a lot of trouble to keep something in. Or out.',
+    );
+    QuestLog.writeDiary(
+      'There is a door at the back of the wolves\' cave, set right into the rock. Old oak, iron straps, a great lock, ' +
+        'and no key anywhere. Who would build a door down there? I mean to find out what is behind it.',
     );
   }
 
@@ -1228,11 +1253,21 @@ export class GameScene extends Phaser.Scene {
     if (this.seat) this.standUp();
     const data: ConfirmSceneData = {
       question: door.ask!,
+      note: door.travelHours ? this.trekNote(door) : undefined,
       yes: 'Set off',
       no: 'Not yet',
       onAnswer: (yes) => (yes ? this.leaveThrough(door) : this.turnBack(door)),
     };
     this.scene.launch('Confirm', data);
+  }
+
+  /** "It's about 2 hours on foot: I'd get there around 14:00." And a warning if the market will be shut by then. */
+  private trekNote(door: Door): string {
+    const hours = door.travelHours!;
+    const arrive = this.clock.hour + hours;
+    let note = `It's about ${hours} hour${hours === 1 ? '' : 's'} on foot: I'd get there around ${clockText(arrive)}.`;
+    if (door.to === 'market' && !marketOpen(Phaser.Math.Wrap(arrive, 0, 24))) note += ' The market will be shut by then.';
+    return note;
   }
 
   /** Changed their mind at a road's end: step back off it, so the question isn't asked again straight away. */
@@ -1251,6 +1286,8 @@ export class GameScene extends Phaser.Scene {
     if (!door.auto && door.facing !== 'front' && !this.map.data.underground) GameAudio.door();
     this.cameras.main.fadeOut(door.auto ? 500 : 350, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      // The long road takes a while: the clock moves on before the next area is built, so it arrives at the right hour.
+      if (door.travelHours) this.clock.advance(door.travelHours);
       this.scene.restart({ area: door.to, entry: door.entry } satisfies GameSceneData);
     });
   }

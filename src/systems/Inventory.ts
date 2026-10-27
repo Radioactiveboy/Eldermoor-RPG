@@ -345,6 +345,8 @@ export type InventoryEvent =
 type Listener = (e: InventoryEvent) => void;
 
 export const BAG_SIZE = 20;
+/** How Sort lays out the satchel, by kind of thing. */
+const SORT_ORDER: ItemCategory[] = ['Weapon', 'Armour', 'Clothing', 'Tool', 'Food', 'Material'];
 /** Coins the hero has saved up at the start. */
 const START_COINS = 15;
 
@@ -453,6 +455,45 @@ class InventoryStore {
     if (s.count <= 0) this.bag[index] = null;
     this.emit({ type: 'changed' });
     return s.id;
+  }
+
+  /**
+   * Drops one satchel slot onto another: stacks of the same thing merge as
+   * far as they fit, anything else (or an empty slot) swaps places.
+   */
+  move(from: number, to: number): void {
+    const a = this.bag[from];
+    const b = this.bag[to];
+    if (from === to || !a || to < 0 || to >= this.bag.length) return;
+    const max = itemDef(a.id).stack;
+    if (b && b.id === a.id && b.count < max) {
+      const n = Math.min(a.count, max - b.count);
+      b.count += n;
+      a.count -= n;
+      if (a.count === 0) this.bag[from] = null;
+    } else {
+      this.bag[to] = a;
+      this.bag[from] = b;
+    }
+    this.emit({ type: 'changed' });
+  }
+
+  /** Tidies the satchel: like with like in as few stacks as will hold them, gear first and odds and ends last. */
+  sort(): void {
+    const totals = new Map<ItemId, number>();
+    for (const s of this.bag) if (s) totals.set(s.id, (totals.get(s.id) ?? 0) + s.count);
+    const ids = [...totals.keys()].sort((a, b) => {
+      const da = itemDef(a);
+      const db = itemDef(b);
+      return SORT_ORDER.indexOf(da.category) - SORT_ORDER.indexOf(db.category) || da.name.localeCompare(db.name);
+    });
+    const bag: Array<Stack | null> = [];
+    for (const id of ids) {
+      const max = itemDef(id).stack;
+      for (let left = totals.get(id)!; left > 0; left -= max) bag.push({ id, count: Math.min(left, max) });
+    }
+    this.bag = bag.concat(new Array(BAG_SIZE - bag.length).fill(null));
+    this.emit({ type: 'changed' });
   }
 
   /** Puts on the gear in a satchel slot; whatever was worn there goes back into that slot. */

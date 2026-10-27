@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FENCE, fenceKey } from '../art/farm';
 import { HUT_CHIMNEY } from '../art/henfarm';
+import { TREK_HOURS } from '../config';
 import type { CropKind } from '../systems/Farm';
 import { box, circle, fenceShapes } from './Collision';
 import { MapData, placeObject, Prop, Terrain } from './MapData';
@@ -81,6 +82,7 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   addGarden(data, home.x + 5, home.y - 2);
   addCave(data, { x: home.x + 4, y: home.y - 1 }, home.x + 7, 4);
   addHenFarm(data, home.x - 4, home.y - 23);
+  addFisherman(data, Math.round(lake.x));
   joinDiagonals(terrain, Terrain.Dirt, Terrain.Grass);
   // A lone wolf nosing about south of the cottage, in sight of the door.
   (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });
@@ -174,7 +176,7 @@ function addRoadToMarket(data: MapData): void {
     if (data.terrain[y][0] === Terrain.Dirt) {
       (data.doors ??= []).push({
         tx: 0, ty: y, to: 'market', entry: 'road', auto: true,
-        ask: 'Do you want to make the trek to Adowvale?',
+        ask: 'Do you want to make the trek to Adowvale?', travelHours: TREK_HOURS,
       });
     }
   }
@@ -364,6 +366,25 @@ function addHenFarm(data: MapData, x0: number, y0: number): void {
   data.hens = { pen, flock };
   // Iran keeps an eye on his hens from just outside the run, by the corner nearest his door.
   (data.npcs ??= []).push({ id: 'iran', gx: px1 - 0.5, gy: py0 - 0.5 });
+}
+
+/**
+ * Old Tobin's spot on the far shore of the lake, across the water from the
+ * cottage: a stool on the sand of the north shore at column x, his rod propped
+ * out over the water in front of him and his creel at his side. He faces the
+ * lake (+y), towards the cottage.
+ */
+function addFisherman(data: MapData, x: number): void {
+  let y = 1;
+  while (y < data.height - 1 && !(data.terrain[y][x] !== Terrain.Water && data.terrain[y + 1][x] === Terrain.Water)) y++;
+  for (let ty = y - 2; ty <= y; ty++) {
+    for (let tx = x - 2; tx <= x + 2; tx++) if (data.props[ty]?.[tx] === Prop.Tree || data.props[ty]?.[tx] === Prop.Rock) data.props[ty][tx] = Prop.None;
+  }
+  placeObject(data, { key: 'furn-stool', tx: x, ty: y, w: 1, h: 1 });
+  placeObject(data, { key: 'fish-rod', tx: x, ty: y + 1, w: 1, h: 1, blocks: [] });
+  placeObject(data, { key: 'fish-creel', tx: x + 1, ty: y, w: 1, h: 1, shapes: [box(0.25, 0.3, 0.75, 0.7)] });
+  (data.npcs ??= []).push({ id: 'fisherman', gx: x + 0.5, gy: y + 0.5, looking: { x: 0, y: 1 } });
+  (data.landmarks ??= []).push({ gx: x + 0.5, gy: y + 0.5, name: "Tobin's fishing spot", range: 4 });
 }
 
 /** A rectangle of split-rail fence; each piece joins up with the pieces beside it. Gates are left open. */

@@ -83,6 +83,8 @@ export interface Door {
    * Saying no turns the player back the way they came.
    */
   ask?: string;
+  /** In-game hours that pass on the way, as on the long road to Adowvale. */
+  travelHours?: number;
 }
 
 /**
@@ -100,6 +102,8 @@ export interface Sight {
   sign?: { heading: string; lines: string[] };
   /** Can be searched once for a random find (see systems/Loot.ts). */
   loot?: 'bones';
+  /** A door that won't open (yet): trying it rattles the lock, and the hero wonders what's behind it. */
+  locked?: boolean;
 }
 
 /** A warm light source that brightens its surroundings in the dark. */
@@ -153,6 +157,8 @@ export interface NpcSpawn {
   gy: number;
   /** A trader who keeps market hours: packs up and walks home in the evening, back in the morning. */
   commute?: Commute;
+  /** For someone who stays put: the grid direction they face when nobody is talking to them. */
+  looking?: { x: number; y: number };
 }
 
 /** How a stallholder gets between their stall and their front door (see systems/MarketHours.ts). */

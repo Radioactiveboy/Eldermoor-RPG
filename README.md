@@ -39,7 +39,9 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   Esc goes back from a sub-menu (choosing a target or an item)
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
-- **Hold T**: fast-forward the clock (60x) to watch the day/night cycle
+- **Hold T**: fast-forward the clock (60x) to watch the day/night cycle. A day lasts 24 real minutes
+  (an in-game hour a minute), and the trek along the old road between the Hollow and Adowvale takes
+  two hours each way (`TREK_HOURS` in `config.ts`); the question before setting off says when you'd arrive
 - **Sleeping and saving**: use your straw bed at home and choose how long to sleep
   (until morning, midday, evening or night; or press 1-4). You wake rested, and the game
   is saved. **Continue** on the title screen, or **Load Last Save** in the pause menu,
@@ -63,7 +65,8 @@ src/
   config.ts               Tile size, map size/seed, player speed, zoom limits
   iso/IsoMath.ts          Grid <-> isometric screen conversion, depth sorting
   world/MapData.ts        Terrain + prop types, walkability table
-  world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
+  world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest,
+                          and Old Tobin fishing on the far shore of the lake)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
   world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses,
                           militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
@@ -76,7 +79,8 @@ src/
   world/BakedLayer.ts     Bakes the ground into textures of at most 2048px, so big maps fit on phones
   world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
-                          stalagmites, a pool, three wolves, the drover's lost ewes, and bone piles to search
+                          stalagmites, a pool, three wolves, the drover's lost ewes, bone piles to search, and
+                          a locked door in the back wall (a hint of a quest to come)
   world/Drips.ts          Water dripping from the cave's stalactites
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
   world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
@@ -107,7 +111,8 @@ src/
                           beehive skeps and water lilies
   art/henfarm.ts          Farmer Iran's hut, the hen coop and trough, and the hens and rooster
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
-                          boulders, bones and the dead ewes
+                          boulders, bones, the dead ewes and the locked door
+  art/fishing.ts          Old Tobin's rod, float and creel
   art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker
   art/gear.ts             How worn gear looks on the hero's sprite (hat, staff): add an entry to dress new items
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
@@ -227,6 +232,9 @@ src/
 
 ## Good next steps
 
+The locked door at the back of the wolves' cave: trying it sets the
+`found-cave-door` flag and writes in the diary, and Old Tobin the fisherman
+then has a story about men digging in the hill long ago. Nothing opens it yet.
 Inside Saint Elda's monastery, where the travellers say moonpetal grows (the
 `heard-of-monastery` flag is set once one tells you). The grounds outside are
 built (`world/MonasteryMap.ts`); the gatehouse is shut, and Brother Wystan the

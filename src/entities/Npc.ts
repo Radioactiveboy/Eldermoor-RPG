@@ -6,6 +6,7 @@ import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
 import { FeedStage, iranScript } from '../dialogue/iran';
 import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
+import { fishermanScript } from '../dialogue/fisherman';
 import { GARDENER, NOVICE, PORTER, SILENT } from '../dialogue/monastery';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
@@ -39,6 +40,8 @@ interface NpcDef {
   roam?: number;
   /** Talking distance, if not TALK_RANGE: stallholders are spoken to across their counters. */
   talkRange?: number;
+  /** Sits where they are (on a stool, say) rather than standing. */
+  sits?: boolean;
 }
 
 /** Travellers met before, who get a shorter hello next time. */
@@ -116,6 +119,16 @@ const NPCS: Record<string, NpcDef> = {
       return iranScript(feedStage(), first);
     },
   },
+  // Old Tobin, on his stool on the far shore of the lake, watching his float.
+  fisherman: {
+    texture: 'folk-fisherman',
+    sits: true,
+    script: () => {
+      const first = !met.has('fisherman');
+      met.add('fisherman');
+      return fishermanScript(first, QuestLog.hasFlag('found-cave-door'));
+    },
+  },
   // The market's stallholders stand behind their counters, while the market is open.
   baker: { texture: 'folk-baker', script: traveller('baker', BAKER), offDuty: BAKER, talkRange: 2.6 },
   smith: { texture: 'folk-smith', script: traveller('smith', SMITH), offDuty: SMITH, talkRange: 2.6 },
@@ -176,11 +189,15 @@ export class Npc implements Body {
   speech?: string;
   private speechLeft = 0;
 
+  /** For someone who stays put: the way they look when nobody is talking to them (the fisherman, at his float). */
+  private readonly looking?: Vec2;
+
   /**
    * @param commute for a trader, their walk home (see MapData.Commute)
    * @param hour the hour of the day now, so a trader who has gone home isn't there to begin with
+   * @param looking for someone who stays put, the grid direction they face when left alone
    */
-  constructor(scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number, commute?: Commute, hour = 12) {
+  constructor(scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number, commute?: Commute, hour = 12, looking?: Vec2) {
     const def = NPCS[id];
     if (!def) throw new Error(`Unknown NPC: ${id}`);
     this.id = id;
@@ -191,6 +208,8 @@ export class Npc implements Body {
     this.origin = { x: gx, y: gy };
     this.commute = commute;
     this.hour = hour;
+    this.looking = looking;
+    if (looking) this.face(looking);
     this.shadow = scene.add.image(0, 0, 'shadow');
     this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
     if (def.wander && map.data.road?.length) {
@@ -297,7 +316,14 @@ export class Npc implements Body {
       this.keepHours(dt, paused);
       return;
     }
-    if (!this.moves) return;
+    if (!this.moves) {
+      // Once the player has gone, back to what they were doing.
+      if (this.looking && !paused && this.distanceTo(player.x, player.y) > NOTICE_RANGE) {
+        this.face(this.looking);
+        this.sync(false);
+      }
+      return;
+    }
     if (paused || this.distanceTo(player.x, player.y) < NOTICE_RANGE) {
       if (this.distanceTo(player.x, player.y) < NOTICE_RANGE) this.face({ x: player.x - this.gx, y: player.y - this.gy });
       this.sync(false);
@@ -499,7 +525,8 @@ export class Npc implements Body {
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x, p.y);
-    const d = this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy);
+    // Seated, drawn in front of the seat (as the player is).
+    const d = (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.def.sits ? 2 : 0);
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
     if (this.def.anim) return;
@@ -507,6 +534,7 @@ export class Npc implements Body {
     const names: DrawnDir[] = ['s', 'se', 'e', 'ne', 'n'];
     const mirrored = this.facing > 4;
     this.sprite.setFlipX(mirrored);
-    this.sprite.play(`${this.def.texture}-${moving ? 'walk' : 'idle'}-${names[mirrored ? 8 - this.facing : this.facing]}`, true);
+    const pose = moving ? 'walk' : this.def.sits ? 'sit' : 'idle';
+    this.sprite.play(`${this.def.texture}-${pose}-${names[mirrored ? 8 - this.facing : this.facing]}`, true);
   }
 }

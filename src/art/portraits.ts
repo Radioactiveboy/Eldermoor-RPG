@@ -1091,6 +1091,79 @@ const herbwife: Painter = (c, fr) => {
   finish(c);
 };
 
+/** Old Tobin the fisherman: deep-lined and sun-browned, a big white beard, a sagging oilcloth hat, a darned jersey, a briar pipe. */
+const fisherman: Painter = (c, fr) => {
+  const skin = ramp(0xd09a76);
+  const hair = ramp(0xd8d4cc);
+  const beard = ramp(0xe4e0d8);
+  const jersey = ramp(0x56687a);
+  const oilcloth = ramp(0x6a5e3a);
+  const hairTex = strands((x, y) => (x - CX) * 0.8 + y * 0.3, 40, 41);
+  // Wispy white hair showing under the hat at the sides.
+  blob(c, CX, 46, 23, 17, hair, 0, hairTex);
+  neck(c, skin, 8, 62);
+  shoulders(c, jersey, 74, 13, false);
+  // A knitted jersey: ribbed, with a rolled collar and a darn in a paler wool.
+  for (let y = 74; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const here = c.get(x, y);
+      if (here === null || x % 3 !== 0) continue;
+      c.set(x, y, mix(here, jersey[0], 0.4));
+    }
+  }
+  blob(c, CX, 76, 15, 4, jersey, 0.12, (x) => (x % 3 === 0 ? -0.1 : 0));
+  for (let y = 86; y < 92; y++) for (let x = CX + 14; x < CX + 20; x++) if ((x + y) % 2 === 0) c.set(x, y, 0x8a9aaa);
+  ears(c, skin, 17.5);
+  const shape = { skin, width: 17.5, jaw: 8, top: 27, chin: 70, shadowAbove: 34 };
+  face(c, shape);
+  eyes(c, { iris: 0x4a6a7a, blink: fr.blink, skin, tired: true, look: -1 });
+  brows(c, 0xbab6ae, 'heavy', 3);
+  nose(c, skin, 2);
+  wrinkles(c, skin, true);
+  blush(c, 0xc0604a, 0.6);
+  mouth(c, { skin, lip: 0x9a5a4a, open: fr.open, curve: 0, half: 4, y: EYE_Y + 16 });
+  // A big white beard, down over the collar, with a moustache over the mouth.
+  const beardTex = strands((x, y) => x * 0.6 + y * 0.4, undefined, 43);
+  for (let y = EYE_Y + 8; y < 88; y++) {
+    for (let x = CX - 22; x <= CX + 22; x++) {
+      const dx = Math.abs(x + 0.5 - CX);
+      const w = (faceHalf(shape, Math.min(y, 69)) ?? 10) + 2 - Math.max(0, y - 72) * 0.5;
+      const lowest = 80 + 7 * (1 - (dx / 16) ** 2);
+      if (dx > w || y > lowest) continue;
+      if (y < EYE_Y + 8 + Math.max(0, 14 - dx) * 0.6) continue;
+      if (y >= EYE_Y + 15 && y <= EYE_Y + (fr.open ? 19 : 17) && dx < 4) continue;
+      c.set(x, y, tone(beard, lightness((x - CX) / 22, (y - 70) / 34, 0.05) + beardTex(x, y), x, y));
+    }
+  }
+  // A briar pipe in the corner of his mouth.
+  for (let i = 0; i < 9; i++) {
+    c.set(CX + 5 + i, EYE_Y + 17 + Math.round(i * 0.25), i % 2 ? 0x4a2e1e : 0x6a4630);
+    c.set(CX + 5 + i, EYE_Y + 18 + Math.round(i * 0.25), 0x2e1c14);
+  }
+  blob(c, CX + 15, EYE_Y + 15, 2.6, 3.4, ramp(0x7a5034), 0.05);
+  c.set(CX + 14, EYE_Y + 12, 0x241812);
+  c.set(CX + 15, EYE_Y + 12, 0x241812);
+  c.set(CX + 16, EYE_Y + 12, 0xd8452a);
+  // The oilcloth hat: a soft round crown and a wide brim that droops all round.
+  blob(c, CX, 23, 18, 12, oilcloth, 0.1, (x, y) => (hash(x, y) > 0.9 ? 0.15 : 0), (_x, y) => y < 33);
+  for (let y = 28; y <= 42; y++) {
+    for (let x = 0; x < S; x++) {
+      const nx = (x + 0.5 - CX) / 37;
+      const droop = nx * nx * 7;
+      const ny = (y + 0.5 - 32 - droop) / 4.2;
+      if (nx * nx + ny * ny > 1) continue;
+      const shine = Math.abs(nx + 0.35) < 0.08 && ny < 0;
+      c.set(x, y, shine ? oilcloth[4] : ny > 0.3 ? oilcloth[0] : tone(oilcloth, lightness(nx, -0.5, 0.06), x, y));
+    }
+  }
+  for (let x = CX - 17; x <= CX + 17; x++) c.set(x, 29, 0x3a3226);
+  // A fly hooked into the band.
+  c.set(CX - 10, 28, 0xc8434a);
+  c.set(CX - 11, 27, 0xe6b54a);
+  c.set(CX - 9, 27, 0x4a6a3a);
+  finish(c);
+};
+
 /** How one of Saint Elda's brothers looks: they share the tonsure and the habit, and differ in the rest. */
 interface MonkLook {
   skin: number;
@@ -1193,7 +1266,7 @@ const novice = monk({ skin: 0xf0c49a, hair: 0xb4562a, habit: 0x8a7a64, iris: 0x4
 
 const PAINTERS: Record<string, Painter> = {
   mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
-  porter, gardener, silent, novice,
+  fisherman, porter, gardener, silent, novice,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TOWNHOUSE_CHIMNEY } from '../art/market';
+import { TREK_HOURS } from '../config';
 import { box, circle, Shape } from './Collision';
 import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
@@ -112,7 +113,7 @@ export function buildMarketMap(gateOpen = false): MapData {
     entries: { road: entry },
     doors: ROAD_ROWS.map((ty) => ({
       tx: W - 1, ty, to: 'world' as const, entry: 'market', auto: true,
-      ask: 'Do you want to make the trek home to Adowvale Hollow?',
+      ask: 'Do you want to make the trek home to Adowvale Hollow?', travelHours: TREK_HOURS,
     })),
     landmarks: [{ gx: 15, gy: 14, name: 'The market square', range: 10 }],
     lights: [],

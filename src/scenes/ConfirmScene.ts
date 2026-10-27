@@ -4,6 +4,8 @@ import { drawPanel, UI_COLORS, UI_FONT } from '../ui/theme';
 
 export interface ConfirmSceneData {
   question: string;
+  /** A smaller line under the question, e.g. how long a trek takes. */
+  note?: string;
   yes?: string;
   no?: string;
   /** Called once with the answer, as the box closes. */
@@ -67,6 +69,13 @@ export class ConfirmScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0);
     let y = PAD + question.height + 8;
+    const note = data.note
+      ? this.add
+          .text(0, y - 4, data.note, { fontFamily: UI_FONT, fontSize: '12px', color: TEXT, align: 'center', wordWrap: { width: W - PAD * 2 } })
+          .setOrigin(0.5, 0)
+          .setAlpha(0.8)
+      : undefined;
+    if (note) y += note.height + 4;
     const options = [
       this.makeOption(1, data.yes ?? 'Yes', y, () => answer(true)),
       this.makeOption(2, data.no ?? 'No', y + ROW, () => answer(false)),
@@ -79,7 +88,7 @@ export class ConfirmScene extends Phaser.Scene {
     frame.fillStyle(UI_COLORS.panel, 1);
     frame.fillRoundedRect(-W / 2, 0, W, this.boxH, 8);
     drawPanel(frame, -W / 2, 0, W, this.boxH);
-    this.box = this.add.container(0, 0, [frame, question, ...options]);
+    this.box = this.add.container(0, 0, [frame, question, ...(note ? [note] : []), ...options]);
 
     const kb = this.input.keyboard!;
     for (const key of ['ONE', 'NUMPAD_ONE', 'Y', 'ENTER', 'E']) kb.on(`keydown-${key}`, () => answer(true));

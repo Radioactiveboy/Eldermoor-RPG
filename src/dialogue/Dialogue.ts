@@ -30,7 +30,7 @@ export interface DialogueScript {
 
 export type SpeakerId =
   | 'mother' | 'pedlar' | 'pilgrim' | 'drover' | 'baker' | 'smith' | 'tanner' | 'guard' | 'iran'
-  | 'tollguard' | 'carter' | 'herbwife' | 'porter' | 'gardener' | 'silent' | 'novice';
+  | 'tollguard' | 'carter' | 'herbwife' | 'fisherman' | 'porter' | 'gardener' | 'silent' | 'novice';
 
 export interface Speaker {
   name: string;
@@ -53,6 +53,7 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   tollguard: { name: 'Toll Guard', portrait: 'portrait-tollguard', voice: { pitch: 140, spread: 0.08, wave: 'sawtooth' } },
   carter: { name: 'Odo the Carter', portrait: 'portrait-carter', voice: { pitch: 175, spread: 0.18, wave: 'triangle' } },
   herbwife: { name: 'Ness the Herb-gatherer', portrait: 'portrait-herbwife', voice: { pitch: 310, spread: 0.12, wave: 'sine' } },
+  fisherman: { name: 'Old Tobin', portrait: 'portrait-fisherman', voice: { pitch: 120, spread: 0.12, wave: 'triangle' } },
   porter: { name: 'Brother Wystan', portrait: 'portrait-porter', voice: { pitch: 145, spread: 0.06, wave: 'sine' } },
   gardener: { name: 'Brother Cuthbert', portrait: 'portrait-gardener', voice: { pitch: 185, spread: 0.16, wave: 'triangle' } },
   silent: { name: 'Brother Aldo', portrait: 'portrait-silent', voice: { pitch: 120, spread: 0.04, wave: 'sine' } },

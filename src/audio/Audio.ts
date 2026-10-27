@@ -460,6 +460,16 @@ class AudioEngine {
     this.thump(0.4);
   }
 
+  /** A locked door tried: two dull knocks as it catches on the bolt, and the lock clinking. */
+  rattle(): void {
+    this.thump(0);
+    this.thump(0.16);
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.noise(t + 0.02, 0.05, 'highpass', 4200, 5200, 0.8, 0.14);
+    this.noise(t + 0.18, 0.05, 'highpass', 3800, 4800, 0.8, 0.12);
+  }
+
   /** Leaves and stalks rustling: picking crops, shaking a tree. */
   rustle(): void {
     if (!this.unlocked) return;
