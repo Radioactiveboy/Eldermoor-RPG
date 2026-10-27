@@ -39,7 +39,9 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   Esc goes back from a sub-menu (choosing a target or an item)
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
-- **Hold T**: fast-forward the clock (60x) to watch the day/night cycle
+- **Hold T**: fast-forward the clock (60x) to watch the day/night cycle. A day lasts 24 real minutes
+  (an in-game hour a minute), and the trek along the old road between the Hollow and Adowvale takes
+  two hours each way (`TREK_HOURS` in `config.ts`); the question before setting off says when you'd arrive
 - **Sleeping and saving**: use your straw bed at home and choose how long to sleep
   (until morning, midday, evening or night; or press 1-4). You wake rested, and the game
   is saved. **Continue** on the title screen, or **Load Last Save** in the pause menu,

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FENCE, fenceKey } from '../art/farm';
 import { HUT_CHIMNEY } from '../art/henfarm';
+import { TREK_HOURS } from '../config';
 import type { CropKind } from '../systems/Farm';
 import { box, circle, fenceShapes } from './Collision';
 import { MapData, placeObject, Prop, Terrain } from './MapData';
@@ -174,7 +175,7 @@ function addRoadToMarket(data: MapData): void {
     if (data.terrain[y][0] === Terrain.Dirt) {
       (data.doors ??= []).push({
         tx: 0, ty: y, to: 'market', entry: 'road', auto: true,
-        ask: 'Do you want to make the trek to Adowvale?',
+        ask: 'Do you want to make the trek to Adowvale?', travelHours: TREK_HOURS,
       });
     }
   }

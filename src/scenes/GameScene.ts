@@ -19,7 +19,7 @@ import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
 import { AREA_NAMES, SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops, SHOPS } from '../systems/Shops';
-import { TimeOfDay } from '../systems/TimeOfDay';
+import { clockText, TimeOfDay } from '../systems/TimeOfDay';
 import { buildCaveMap } from '../world/CaveMap';
 import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
@@ -1219,11 +1219,21 @@ export class GameScene extends Phaser.Scene {
     if (this.seat) this.standUp();
     const data: ConfirmSceneData = {
       question: door.ask!,
+      note: door.travelHours ? this.trekNote(door) : undefined,
       yes: 'Set off',
       no: 'Not yet',
       onAnswer: (yes) => (yes ? this.leaveThrough(door) : this.turnBack(door)),
     };
     this.scene.launch('Confirm', data);
+  }
+
+  /** "It's about 2 hours on foot: I'd get there around 14:00." And a warning if the market will be shut by then. */
+  private trekNote(door: Door): string {
+    const hours = door.travelHours!;
+    const arrive = this.clock.hour + hours;
+    let note = `It's about ${hours} hour${hours === 1 ? '' : 's'} on foot: I'd get there around ${clockText(arrive)}.`;
+    if (door.to === 'market' && !marketOpen(Phaser.Math.Wrap(arrive, 0, 24))) note += ' The market will be shut by then.';
+    return note;
   }
 
   /** Changed their mind at a road's end: step back off it, so the question isn't asked again straight away. */
@@ -1242,6 +1252,8 @@ export class GameScene extends Phaser.Scene {
     if (!door.auto && door.facing !== 'front' && !this.map.data.underground) GameAudio.door();
     this.cameras.main.fadeOut(door.auto ? 500 : 350, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      // The long road takes a while: the clock moves on before the next area is built, so it arrives at the right hour.
+      if (door.travelHours) this.clock.advance(door.travelHours);
       this.scene.restart({ area: door.to, entry: door.entry } satisfies GameSceneData);
     });
   }
