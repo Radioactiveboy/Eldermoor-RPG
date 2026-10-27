@@ -10,13 +10,17 @@ export const EWES = [
   { id: 'bramble', tx: 14, ty: 11, art: 'cave-ewe-1' },
 ] as const;
 
+/** The back-wall segment with the locked door in it, at the far end of the cave. */
+export const CAVE_DOOR_X = 12;
+
 /**
  * The wolves' den: a cave in the hill north of the cottage. The mouth is in
  * the left-hand wall, with daylight showing through it; inside it's dark but
  * for the hero's lantern. Stalactites hang from the walls and the unseen roof,
  * stalagmites and columns rise from the gravelly floor, and a still pool lies
  * in the corner. Three wolves have made it their den, and at the back lie
- * Bess and Bramble, the drover's two lost ewes.
+ * Bess and Bramble, the drover's two lost ewes. In the back wall, past the
+ * wolves, someone long ago set a stout wooden door into the rock, and locked it.
  */
 export function buildCaveMap(): MapData {
   const terrain: Terrain[][] = [];
@@ -39,7 +43,7 @@ export function buildCaveMap(): MapData {
     underground: true,
     music: 'cave',
     walls: {
-      back: Array.from({ length: CAVE_W }, (_, i) => `cave-wall-back-${(i * 3 + 1) % 4}`),
+      back: Array.from({ length: CAVE_W }, (_, i) => (i === CAVE_DOOR_X ? 'cave-wall-back-door' : `cave-wall-back-${(i * 3 + 1) % 4}`)),
       side: Array.from({ length: CAVE_H }, (_, i) => (i === 2 ? 'cave-wall-side-mouth' : `cave-wall-side-${(i * 3 + 2) % 4}`)),
       corner: 'cave-corner',
       height: 120,
@@ -53,7 +57,10 @@ export function buildCaveMap(): MapData {
       { id: 'cave-wolf-2', kind: 'wolf', gx: 9.5, gy: 6.5 },
       { id: 'cave-wolf-3', kind: 'wolf', gx: 13, gy: 9.5 },
     ],
-    sights: EWES.map((e) => ({ id: e.id, gx: e.tx + 0.5, gy: e.ty + 0.5, label: 'Examine', z: 22 })),
+    sights: [
+      ...EWES.map((e) => ({ id: e.id, gx: e.tx + 0.5, gy: e.ty + 0.5, label: 'Examine', z: 22 })),
+      { id: 'cave-door', gx: CAVE_DOOR_X + 0.5, gy: 0.15, label: 'Try the door', z: 66, locked: true },
+    ],
     drips: [],
   };
 

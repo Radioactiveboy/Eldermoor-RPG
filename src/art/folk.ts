@@ -140,6 +140,19 @@ export const FOLK: Record<string, Outfit> = {
     staff: true,
     pack: true,
   },
+  // Old Tobin the fisherman: a sagging oilcloth hat, a white beard, a darned blue-grey jersey and patched breeches.
+  fisherman: {
+    cloak: null,
+    hood: false,
+    tunic: [0x56687a, 0x3e4e5e, 0x72869a],
+    shirt: [0x56687a, 0x3e4e5e],
+    trouser: [0x5e5040, 0x463c30],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xd09a76, 0xa87656],
+    hair: 0xd8d4cc,
+    hat: [0x6a5e3a, 0x4e4428, 0x847650],
+    beard: 0xe4e0d8,
+  },
   // Farmer Iran: a battered straw hat, a grey beard and an undyed wool smock.
   iran: {
     cloak: null,

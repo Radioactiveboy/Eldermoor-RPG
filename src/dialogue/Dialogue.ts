@@ -30,7 +30,7 @@ export interface DialogueScript {
 
 export type SpeakerId =
   | 'mother' | 'pedlar' | 'pilgrim' | 'drover' | 'baker' | 'smith' | 'tanner' | 'guard' | 'iran'
-  | 'tollguard' | 'carter' | 'herbwife';
+  | 'tollguard' | 'carter' | 'herbwife' | 'fisherman';
 
 export interface Speaker {
   name: string;
@@ -53,4 +53,5 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   tollguard: { name: 'Toll Guard', portrait: 'portrait-tollguard', voice: { pitch: 140, spread: 0.08, wave: 'sawtooth' } },
   carter: { name: 'Odo the Carter', portrait: 'portrait-carter', voice: { pitch: 175, spread: 0.18, wave: 'triangle' } },
   herbwife: { name: 'Ness the Herb-gatherer', portrait: 'portrait-herbwife', voice: { pitch: 310, spread: 0.12, wave: 'sine' } },
+  fisherman: { name: 'Old Tobin', portrait: 'portrait-fisherman', voice: { pitch: 120, spread: 0.12, wave: 'triangle' } },
 };

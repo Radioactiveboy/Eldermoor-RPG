@@ -175,13 +175,73 @@ function stalactites(along: number, salt: number): Shader {
   };
 }
 
-function caveWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', index: number, mouth = false): void {
+/** Old timbers and iron, for the door at the back of the cave. */
+const DOOR_WOOD = { dark: 0x3a2618, base: 0x5a3d26, light: 0x734f31, rot: 0x2a1c14 };
+const DOOR_IRON = { dark: 0x24222a, base: 0x3c3a44, light: 0x6a6876, rust: 0x6a3a22 };
+
+/**
+ * A low, arched door of heavy planks set into the rock: banded with iron,
+ * shut with a big lock, its foot green with damp. Nobody has opened it in a
+ * long time. Returns null outside the door, so the rock shows round it.
+ */
+function lockedDoor(H: number): Shader {
+  const HALF = 9;
+  const SIDES = 50;
+  return (u, v) => {
+    const dx = u * 32 - 16;
+    const y = v * H;
+    const ax = Math.abs(dx);
+    const archTop = (w: number) => H - SIDES - 9 * Math.sqrt(Math.max(0, 1 - (dx / w) ** 2));
+    // A deep shadow where the rock was cut back for it, then a timber frame.
+    if (ax >= HALF + 2 && ax < HALF + 3.5 && y > archTop(HALF + 3.5)) return ROCK.deep;
+    if (ax >= HALF + 2 || y < archTop(HALF + 2)) return null;
+    if (ax >= HALF || y < archTop(HALF) + 2) {
+      const lit = dx < 0 || y < archTop(HALF) + 1;
+      return hash(Math.floor(dx), Math.floor(y / 3)) < 0.15 ? DOOR_WOOD.rot : lit ? DOOR_WOOD.base : DOOR_WOOD.dark;
+    }
+    const lx = dx + HALF;
+    // Iron straps across the planks, studded with rivets.
+    for (const band of [H - 42, H - 13]) {
+      if (y >= band && y < band + 3) {
+        if (y === band && Math.round(lx) % 4 === 1) return DOOR_IRON.light;
+        if (hash(Math.floor(lx), band) < 0.18) return DOOR_IRON.rust;
+        return y === band + 2 ? DOOR_IRON.dark : DOOR_IRON.base;
+      }
+    }
+    // The lock plate and its keyhole, and an iron ring below it.
+    const lockX = 4.5;
+    const lockY = H - 31;
+    if (Math.abs(dx - lockX) < 2.6 && y >= lockY - 3 && y < lockY + 4) {
+      if (Math.abs(dx - lockX) < 0.6 && y >= lockY - 1 && y < lockY + 2) return ROCK.deep;
+      return y === lockY - 3 ? DOOR_IRON.light : dx - lockX > 1.5 ? DOOR_IRON.dark : DOOR_IRON.base;
+    }
+    const ring = Math.hypot(dx - lockX, y - (lockY + 8));
+    if (ring > 1.6 && ring < 3) return y < lockY + 8 ? DOOR_IRON.light : DOOR_IRON.dark;
+    // Upright planks, each with a dark seam and its own grain; moss and rot creeping up from the floor.
+    const plank = Math.floor(lx / 4.5);
+    const inPlank = lx - plank * 4.5;
+    if (inPlank < 0.8) return DOOR_WOOD.rot;
+    if (y > H - 6 && noise(lx / 2, y / 2 + plank) > 0.45) return ROCK.moss;
+    const grain = noise(lx * 1.5 + plank * 9, y / 9);
+    if (grain > 0.78) return DOOR_WOOD.dark;
+    return inPlank < 1.8 || (plank % 2 === 0 && grain < 0.3) ? DOOR_WOOD.light : DOOR_WOOD.base;
+  };
+}
+
+/**
+ * One segment of the cave's walls.
+ * @param mouth the side-wall segment with the way out, onto daylight
+ * @param door a back-wall segment with the locked door in it
+ */
+function caveWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', index: number, mouth = false, door = false): void {
   const m = new IsoModel();
   const H = CAVE_WALL_HEIGHT;
-  const face = rockFace(index, H, side === 'back' ? 1 : 7, mouth);
+  const rock = rockFace(index, H, side === 'back' ? 1 : 7, mouth);
+  const planks = door ? lockedDoor(H) : undefined;
+  const face: Shader = planks ? (u, v) => planks(u, v) ?? rock(u, v) : rock;
   if (side === 'back') {
     m.quad({ x: 0, y: 0, z: H }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, face);
-    m.quad({ x: 0, y: 0.18, z: H - 18 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: -54 }, stalactites(index, 3));
+    if (!door) m.quad({ x: 0, y: 0.18, z: H - 18 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: -54 }, stalactites(index, 3));
   } else {
     // In shade: one step darker.
     const shade: Record<number, number> = { [ROCK.light]: ROCK.mid, [ROCK.mid]: ROCK.base, [ROCK.base]: ROCK.dark, [ROCK.wet]: ROCK.light };
@@ -520,6 +580,7 @@ export function generateCave(scene: Phaser.Scene): void {
     caveWall(scene, `cave-wall-side-${i}`, 'side', i);
   }
   caveWall(scene, 'cave-wall-side-mouth', 'side', 1, true);
+  caveWall(scene, 'cave-wall-back-door', 'back', 2, false, true);
   caveCorner(scene);
   const put = (key: string, art: { canvas: PixelCanvas; anchorX: number; anchorY: number }) =>
     register(scene, key, art.canvas, art.anchorX, art.anchorY);
