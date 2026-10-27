@@ -52,16 +52,21 @@ export class TimeOfDay {
 
   /** "HH:MM" on a 24-hour clock. */
   get clockText(): string {
-    const minutes = Math.floor(this.hour * 60);
-    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
-    const mm = String(minutes % 60).padStart(2, '0');
-    return `${hh}:${mm}`;
+    return clockText(this.hour);
   }
 
   /** The world's ambient light colour right now. See {@link ambientAt}. */
   get ambient(): Ambient {
     return ambientAt(this.hour);
   }
+}
+
+/** An hour of the day (wrapped into 0-24) as "HH:MM" on a 24-hour clock. */
+export function clockText(hour: number): string {
+  const minutes = Math.floor(Phaser.Math.Wrap(hour, 0, 24) * 60);
+  const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
+  const mm = String(minutes % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
 
 export interface Ambient {

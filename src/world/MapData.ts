@@ -83,6 +83,8 @@ export interface Door {
    * Saying no turns the player back the way they came.
    */
   ask?: string;
+  /** In-game hours that pass on the way, as on the long road to Adowvale. */
+  travelHours?: number;
 }
 
 /**
