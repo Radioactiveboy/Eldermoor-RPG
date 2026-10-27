@@ -22,10 +22,22 @@ const SLOT_FILL = 0x0d0a10;
 
 type Selection = { kind: 'bag'; index: number } | { kind: 'slot'; slot: EquipSlot } | undefined;
 
+/** A satchel item being pressed on, which becomes a drag once the pointer moves far enough. */
+interface Drag {
+  index: number;
+  startX: number;
+  startY: number;
+  ghost?: Phaser.GameObjects.Image;
+}
+
+/** How far (in screen pixels) a press has to move before it's a drag rather than a tap. */
+const DRAG_START = 8;
+
 /**
  * The satchel (everything carried, in a grid of slots) and the equipment
  * screen (what's worn, around a portrait of the hero), as two tabs of one
- * window. Select an item to read about it and eat, equip or take it off.
+ * window. Select an item to read about it and eat, equip or take it off;
+ * drag items around the satchel to rearrange them, or Sort to tidy up.
  * Opens with I / C or the HUD's satchel button.
  */
 export class InventoryScene extends Phaser.Scene {
@@ -38,6 +50,11 @@ export class InventoryScene extends Phaser.Scene {
   private panelW = 0;
   private panelH = 0;
   private closing = false;
+  private drag?: Drag;
+  /** Where each satchel slot sits in the window, for working out what a dragged item was dropped on. */
+  private bagSlots: Array<{ x: number; y: number }> = [];
+  private bagIcons: Array<Phaser.GameObjects.Image | undefined> = [];
+  private dropMarker?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super('Inventory');
@@ -51,9 +68,11 @@ export class InventoryScene extends Phaser.Scene {
     this.tab = data.tab ?? 'satchel';
     this.selection = undefined;
     this.closing = false;
+    this.drag = undefined;
 
     this.dim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.55).setOrigin(0).setInteractive();
     this.dim.on('pointerup', (p: Phaser.Input.Pointer) => {
+      if (this.drag?.ghost) return;
       // Clicking outside the window closes it.
       const local = this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
       if (Math.abs(local.x) > this.panelW / 2 + 10 || Math.abs(local.y) > this.panelH / 2 + 10) this.close();
@@ -71,6 +90,10 @@ export class InventoryScene extends Phaser.Scene {
     const off = Inventory.onChange((e) => {
       if (e.type === 'changed') this.build();
     });
+    this.input.on('pointermove', this.onDragMove, this);
+    this.input.on('pointerup', this.onDragEnd, this);
+    this.input.on('pointerupoutside', this.onDragEnd, this);
+
     this.narrow = this.scale.width < NARROW;
     this.build();
     this.scale.on('resize', this.onResize, this);
@@ -98,6 +121,7 @@ export class InventoryScene extends Phaser.Scene {
   private showTab(tab: InventoryTab): void {
     if (tab === this.tab) return;
     GameAudio.pageTurn();
+    this.cancelDrag();
     this.tab = tab;
     this.selection = undefined;
     this.build();
@@ -107,6 +131,9 @@ export class InventoryScene extends Phaser.Scene {
 
   private build(): void {
     this.window?.destroy();
+    this.bagSlots = [];
+    this.bagIcons = [];
+    this.dropMarker = undefined;
     this.panelW = this.narrow ? GRID_W + PAD * 2 : GRID_W + DETAILS_W + PAD * 3;
     this.panelH = this.narrow ? 690 : 420;
     const top = -this.panelH / 2;
@@ -137,6 +164,8 @@ export class InventoryScene extends Phaser.Scene {
 
     this.window = this.add.container(0, 0, [panel, blocker, ...tabs, close, this.content]);
     this.layout();
+    // Rebuilt mid-drag: keep the lifted item's slot looking empty.
+    if (this.drag?.ghost) this.bagIcons[this.drag.index]?.setAlpha(0.25);
   }
 
   private layout(): void {
@@ -175,8 +204,16 @@ export class InventoryScene extends Phaser.Scene {
     return out;
   }
 
-  /** One square slot, optionally holding an item, that can be selected. */
-  private makeSlot(x: number, y: number, id: ItemId | undefined, count: number, selected: boolean, onClick: () => void): void {
+  /** One square slot, optionally holding an item, that can be selected (and, given onPress, dragged). */
+  private makeSlot(
+    x: number,
+    y: number,
+    id: ItemId | undefined,
+    count: number,
+    selected: boolean,
+    onClick: () => void,
+    onPress?: (p: Phaser.Input.Pointer) => void,
+  ): Phaser.GameObjects.Image | undefined {
     const g = this.add.graphics();
     const draw = (hover: boolean) => {
       g.clear();
@@ -187,8 +224,9 @@ export class InventoryScene extends Phaser.Scene {
     };
     draw(false);
     this.content.add(g);
+    let icon: Phaser.GameObjects.Image | undefined;
     if (id) {
-      const icon = this.add.image(x + SLOT / 2, y + SLOT / 2, itemDef(id).icon).setScale(2.5);
+      icon = this.add.image(x + SLOT / 2, y + SLOT / 2, itemDef(id).icon).setScale(2.5);
       this.content.add(icon);
       if (count > 1) {
         const n = this.add
@@ -200,11 +238,15 @@ export class InventoryScene extends Phaser.Scene {
     const hit = this.add.zone(x + SLOT / 2, y + SLOT / 2, SLOT, SLOT).setInteractive({ useHandCursor: true });
     hit.on('pointerover', () => draw(true));
     hit.on('pointerout', () => draw(false));
+    if (onPress) hit.on('pointerdown', onPress);
     hit.on('pointerup', () => {
+      // A drag is dropped by onDragEnd, not taken as a click.
+      if (this.drag?.ghost) return;
       GameAudio.click();
       onClick();
     });
     this.content.add(hit);
+    return icon;
   }
 
   private buildSatchel(x0: number, y0: number): void {
@@ -212,10 +254,44 @@ export class InventoryScene extends Phaser.Scene {
       const x = x0 + (i % COLS) * (SLOT + GAP);
       const y = y0 + Math.floor(i / COLS) * (SLOT + GAP);
       const selected = this.selection?.kind === 'bag' && this.selection.index === i;
-      this.makeSlot(x, y, stack?.id, stack?.count ?? 0, selected, () => this.select(stack ? { kind: 'bag', index: i } : undefined));
+      const press = stack ? (p: Phaser.Input.Pointer) => (this.drag = { index: i, startX: p.x, startY: p.y }) : undefined;
+      this.bagSlots[i] = { x, y };
+      this.bagIcons[i] = this.makeSlot(x, y, stack?.id, stack?.count ?? 0, selected, () => this.select(stack ? { kind: 'bag', index: i } : undefined), press);
     });
+    this.dropMarker = this.add.graphics();
+    this.content.add(this.dropMarker);
     const used = Inventory.bag.filter((s) => s !== null).length;
-    const footer = this.add.text(x0, y0 + GRID_H + 10, `${used} of ${BAG_SIZE} slots used`, bodyStyle(14, THEME.dimText));
+    const footer = this.add.text(x0, y0 + GRID_H + 10, `${used} / ${BAG_SIZE} slots`, bodyStyle(14, THEME.dimText));
+    // A small button to tidy the satchel, between the count and the purse.
+    const sortW = 64;
+    const sortH = 26;
+    const sortX = x0 + GRID_W / 2 + 4;
+    const sortY = footer.y + footer.height / 2;
+    const sortBg = this.add.graphics();
+    const drawSort = (hover: boolean) => {
+      sortBg.clear();
+      sortBg.fillStyle(hover ? THEME.panelLight : THEME.panel, 0.92);
+      sortBg.fillRoundedRect(sortX - sortW / 2, sortY - sortH / 2, sortW, sortH, 7);
+      sortBg.lineStyle(1, THEME.gold, hover ? 1 : 0.5);
+      sortBg.strokeRoundedRect(sortX - sortW / 2, sortY - sortH / 2, sortW, sortH, 7);
+    };
+    drawSort(false);
+    const sortLabel = this.add.text(sortX, sortY, 'Sort', bodyStyle(14, THEME.text)).setOrigin(0.5);
+    const sortHit = this.add.zone(sortX, sortY, sortW, sortH).setInteractive({ useHandCursor: true });
+    sortHit.on('pointerover', () => {
+      drawSort(true);
+      sortLabel.setColor(THEME.goldText);
+    });
+    sortHit.on('pointerout', () => {
+      drawSort(false);
+      sortLabel.setColor(THEME.text);
+    });
+    sortHit.on('pointerup', () => {
+      GameAudio.rustle();
+      this.selection = undefined;
+      Inventory.sort();
+    });
+    this.content.add([sortBg, sortLabel, sortHit]);
     // The purse, on the right.
     const coins = this.add.text(x0 + GRID_W, y0 + GRID_H + 10, `${Inventory.coins} coins`, bodyStyle(14, THEME.goldText)).setOrigin(1, 0);
     const coin = this.add.image(coins.x - coins.width - 12, coins.y + coins.height / 2, 'item-coin').setScale(1.4);
@@ -271,7 +347,10 @@ export class InventoryScene extends Phaser.Scene {
     const id = sel?.kind === 'bag' ? Inventory.bag[sel.index]?.id : sel?.kind === 'slot' ? Inventory.equipped[sel.slot] : undefined;
     if (!id) {
       if (sel?.kind === 'slot') this.buildEmptySlot(x, y, w, sel.slot);
-      else this.addText(x + w / 2, y + h / 2, 'Choose something to look at it more closely.', w - 40, THEME.dimText, true);
+      else {
+        const hint = this.tab === 'satchel' ? '\n\nDrag things between slots to rearrange your satchel.' : '';
+        this.addText(x + w / 2, y + h / 2, `Choose something to look at it more closely.${hint}`, w - 40, THEME.dimText, true);
+      }
       return;
     }
     const def = itemDef(id);
@@ -346,6 +425,64 @@ export class InventoryScene extends Phaser.Scene {
     return undefined;
   }
 
+  // ------------------------------------------------------------ dragging
+
+  private onDragMove(p: Phaser.Input.Pointer): void {
+    const d = this.drag;
+    if (!d) return;
+    if (!p.isDown) return this.cancelDrag();
+    if (!d.ghost) {
+      if (Phaser.Math.Distance.Between(p.x, p.y, d.startX, d.startY) < DRAG_START) return;
+      const stack = Inventory.bag[d.index];
+      if (!stack) return this.cancelDrag();
+      // Lift the item: a copy follows the pointer and its slot looks empty.
+      d.ghost = this.add
+        .image(p.x, p.y, itemDef(stack.id).icon)
+        .setScale(2.8 * this.window.scale)
+        .setDepth(10)
+        .setAlpha(0.9);
+      this.bagIcons[d.index]?.setAlpha(0.25);
+      GameAudio.click();
+    }
+    d.ghost.setPosition(p.x, p.y);
+    const over = this.slotAt(p);
+    this.dropMarker?.clear();
+    if (over >= 0 && over !== d.index) {
+      const { x, y } = this.bagSlots[over];
+      this.dropMarker?.lineStyle(3, THEME.gold, 1).strokeRoundedRect(x - 2, y - 2, SLOT + 4, SLOT + 4, 8);
+    }
+  }
+
+  private onDragEnd(p: Phaser.Input.Pointer): void {
+    const d = this.drag;
+    this.drag = undefined;
+    if (!d?.ghost) return;
+    d.ghost.destroy();
+    const to = this.slotAt(p);
+    if (to < 0 || to === d.index || !Inventory.bag[d.index]) {
+      // Dropped somewhere that isn't another slot: it goes back where it was.
+      this.build();
+      return;
+    }
+    GameAudio.pickup();
+    this.selection = { kind: 'bag', index: to };
+    Inventory.move(d.index, to);
+  }
+
+  private cancelDrag(): void {
+    if (!this.drag) return;
+    const lifted = !!this.drag.ghost;
+    this.drag.ghost?.destroy();
+    this.drag = undefined;
+    if (lifted) this.build();
+  }
+
+  /** Which satchel slot is under the pointer, or -1. */
+  private slotAt(p: Phaser.Input.Pointer): number {
+    const local = this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
+    return this.bagSlots.findIndex((s) => s && local.x >= s.x && local.x < s.x + SLOT && local.y >= s.y && local.y < s.y + SLOT);
+  }
+
   // ------------------------------------------------------------ actions
 
   private select(selection: Selection): void {
@@ -379,6 +516,7 @@ export class InventoryScene extends Phaser.Scene {
   private close(): void {
     if (this.closing) return;
     this.closing = true;
+    this.cancelDrag();
     GameAudio.bookClose();
     this.tweens.add({ targets: this.window, scale: this.window.scale * 0.92, alpha: 0, duration: 160, ease: 'Cubic.easeIn' });
     this.tweens.add({
