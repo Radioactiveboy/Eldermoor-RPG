@@ -6,6 +6,7 @@ import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
 import { FeedStage, iranScript } from '../dialogue/iran';
 import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
+import { GARDENER, NOVICE, PORTER, SILENT } from '../dialogue/monastery';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
@@ -125,6 +126,11 @@ const NPCS: Record<string, NpcDef> = {
   // Travellers on the Lord's Road across the plains.
   carter: { texture: 'folk-carter', script: traveller('carter', CARTER), wander: 14 },
   herbwife: { texture: 'folk-herbwife', script: traveller('herbwife', HERBWIFE), wander: 10 },
+  // The brothers outside Saint Elda's: the porter stays by his gate, the others potter about the grounds.
+  porter: { texture: 'folk-porter', script: traveller('porter', PORTER) },
+  gardener: { texture: 'folk-gardener', script: traveller('gardener', GARDENER), roam: 4 },
+  silent: { texture: 'folk-silent', script: traveller('silent', SILENT), roam: 6 },
+  novice: { texture: 'folk-novice', script: traveller('novice', NOVICE), wander: 12 },
   // The village militia, walking their rounds of the square, day and night.
   ...Object.fromEntries(
     [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),

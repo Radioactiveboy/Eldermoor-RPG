@@ -25,6 +25,7 @@ import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
 import { buildHutMap } from '../world/HutMap';
 import { buildMarketMap, TOLL, tollGateShape } from '../world/MarketMap';
+import { buildMonasteryMap } from '../world/MonasteryMap';
 import { buildPlainsMap } from '../world/PlainsMap';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
@@ -168,6 +169,7 @@ function buildArea(area: AreaId): MapData {
   if (area === 'home') return buildHomeMap();
   if (area === 'market') return buildMarketMap(QuestLog.hasFlag('paid-toll'));
   if (area === 'plains') return buildPlainsMap();
+  if (area === 'monastery') return buildMonasteryMap();
   if (area === 'cave') return buildCaveMap();
   if (area === 'hut') return buildHutMap();
   return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
@@ -269,7 +271,7 @@ export class GameScene extends Phaser.Scene {
     this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
     const areaParam = new URLSearchParams(window.location.search).get('area');
-    if (data.newGame && (['market', 'world', 'cave', 'hut', 'plains'] as const).some((a) => a === areaParam)) this.area = areaParam as AreaId;
+    if (data.newGame && (['market', 'world', 'cave', 'hut', 'plains', 'monastery'] as const).some((a) => a === areaParam)) this.area = areaParam as AreaId;
     this.busy = false;
     this.walkingTo = undefined;
     this.focus = undefined;
@@ -335,6 +337,13 @@ export class GameScene extends Phaser.Scene {
       QuestLog.writeDiary(
         "Went out through Lord Morten's gate onto Adowvale Plains. I have never seen so much sky. Deer grazing in the long " +
           'grass, the road running off to a crossroads, and not a wall in sight.',
+      );
+    }
+    if (this.area === 'monastery' && !this.visited.has('monastery')) {
+      this.time.delayedCall(1000, () => this.onHint?.('Bells, and bees, and somewhere beyond the wall, men singing. This must be Saint Elda\'s.'));
+      QuestLog.writeDiary(
+        "Followed the Lord's Road east to Saint Elda's monastery. Grey walls, a great shut gate, and the brothers' gardens and fish " +
+          'ponds spread out in front. The moonpetal is somewhere inside. I have to find a way in.',
       );
     }
     if (this.area === 'cave') this.enteredCave();
