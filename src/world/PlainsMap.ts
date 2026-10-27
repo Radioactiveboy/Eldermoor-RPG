@@ -4,19 +4,21 @@ import { CreatureSpawn, MapData, placeObject, Prop, Terrain } from './MapData';
 import { tollGateShape } from './MarketMap';
 import { joinDiagonals, paintPath, smoothLine, spaced, Vec } from './MapGenerator';
 
-export const PLAINS_W = 72;
-export const PLAINS_H = 72;
+export const PLAINS_W = 120;
+export const PLAINS_H = 120;
 
 /** Where the Lord's Road meets the roads west and north. */
-const CROSSROADS = { x: 36, y: 35 };
+const CROSSROADS = { x: 60, y: 62 };
+/** Where the Lord's Road leaves the east edge, for Saint Elda's monastery. */
+const EAST_ROAD_Y = 50;
 
 /**
  * Adowvale Plains, beyond Lord Morten's toll gate north of the village: the
- * biggest place yet, rolling open grass full of wildflowers, with copses of
- * trees, a reedy mere and woods thickening at the edges. The Lord's Road comes
- * in through the gate at the south edge and runs up to a crossroads, where it
- * turns east towards Saint Elda's monastery and two older roads go off west and
- * north. Deer graze in herds, hares sit up in the grass, and boar root in the
+ * biggest place yet, miles of rolling open grass full of wildflowers, with
+ * copses of trees, a reedy mere, a smaller pond and woods thickening at the
+ * edges. The Lord's Road comes in through the gate at the south edge and runs
+ * up to a crossroads, where it turns east and off the map to the grounds of
+ * Saint Elda's monastery, and two older roads go off west and north. Deer graze in herds, hares sit up in the grass, and boar root in the
  * thickets; the game comes back each time the plains are visited. A carter and
  * a herb-gatherer walk the road.
  */
@@ -31,20 +33,23 @@ export function buildPlainsMap(): MapData {
     props.push(new Array(W).fill(Prop.None));
   }
 
-  // The mere, out in the grass east of the road, with a sandy, trodden rim.
-  const mere = { x: 53, y: 53, r: 5.2 };
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const wobble = Math.sin(x * 0.9) * 0.7 + Math.cos(y * 0.8) * 0.7;
-      const d = Math.hypot(x + 0.5 - mere.x, (y + 0.5 - mere.y) * 1.2) + wobble;
-      if (d < mere.r) terrain[y][x] = Terrain.Water;
-      else if (d < mere.r + 1.3) terrain[y][x] = Terrain.Sand;
+  // The mere, out in the grass east of the road, and a smaller pond up in the north-west, each with a sandy, trodden rim.
+  const mere = { x: 88, y: 88, r: 7 };
+  const pond = { x: 30, y: 30, r: 3.6 };
+  for (const water of [mere, pond]) {
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const wobble = Math.sin(x * 0.9) * 0.7 + Math.cos(y * 0.8) * 0.7;
+        const d = Math.hypot(x + 0.5 - water.x, (y + 0.5 - water.y) * 1.2) + wobble;
+        if (d < water.r) terrain[y][x] = Terrain.Water;
+        else if (d < water.r + 1.3) terrain[y][x] = Terrain.Sand;
+      }
     }
   }
   joinDiagonals(terrain, Terrain.Water, Terrain.Sand);
 
   // The roads: the Lord's Road from the gate up to the crossroads and on east, and the old roads west and north.
-  const gateX = 36;
+  const gateX = 60;
   const wander = (from: Vec, to: Vec, legs: number, sway: number): Vec[] => {
     const points: Vec[] = [from];
     for (let i = 1; i < legs; i++) {
@@ -58,10 +63,15 @@ export function buildPlainsMap(): MapData {
     return points;
   };
   const cross = { x: CROSSROADS.x + 0.5, y: CROSSROADS.y + 0.5 };
-  const south = smoothLine([{ x: gateX, y: H + 2 }, { x: gateX, y: H - 3 }, ...wander({ x: gateX + 0.3, y: H - 7 }, { x: cross.x, y: cross.y + 4 }, 4, 2), cross]);
-  const east = smoothLine([cross, ...wander({ x: cross.x + 4, y: cross.y - 0.5 }, { x: W - 4, y: 30 }, 5, 2), { x: W + 2, y: 30 }]);
-  const west = smoothLine([cross, ...wander({ x: cross.x - 4, y: cross.y + 0.5 }, { x: 4, y: 41 }, 5, 2), { x: -3, y: 41 }]);
-  const north = smoothLine([cross, ...wander({ x: cross.x + 0.5, y: cross.y - 4 }, { x: 41, y: 4 }, 4, 2), { x: 41, y: -3 }]);
+  const south = smoothLine([{ x: gateX, y: H + 2 }, { x: gateX, y: H - 3 }, ...wander({ x: gateX + 0.3, y: H - 8 }, { x: cross.x, y: cross.y + 5 }, 7, 2.5), cross]);
+  const east = smoothLine([
+    cross,
+    ...wander({ x: cross.x + 5, y: cross.y - 0.5 }, { x: W - 5, y: EAST_ROAD_Y + 0.5 }, 9, 2.5),
+    { x: W - 1.5, y: EAST_ROAD_Y + 0.5 },
+    { x: W + 2, y: EAST_ROAD_Y + 0.5 },
+  ]);
+  const west = smoothLine([cross, ...wander({ x: cross.x - 5, y: cross.y + 0.5 }, { x: 4, y: 70 }, 9, 2.5), { x: -3, y: 70 }]);
+  const north = smoothLine([cross, ...wander({ x: cross.x + 0.5, y: cross.y - 5 }, { x: 68, y: 4 }, 9, 2.5), { x: 68, y: -3 }]);
   const lordsRoad = (t: number) => 1.15 + 0.25 * Math.sin(t * 13.1 + 0.7) + 0.12 * Math.sin(t * 31.3);
   const oldRoad = (t: number) => 0.8 + 0.18 * Math.sin(t * 17.9 + 2.1) + 0.1 * Math.sin(t * 43.7);
   paintPath(terrain, south, lordsRoad);
@@ -80,9 +90,9 @@ export function buildPlainsMap(): MapData {
 
   // Woods thick along the edges, copses out in the grass, and here and there a lone oak or a boulder.
   const copses: Array<{ x: number; y: number; r: number }> = [];
-  while (copses.length < 13) {
-    const c = { x: rnd.realInRange(6, W - 6), y: rnd.realInRange(6, H - 10), r: rnd.realInRange(1.8, 3.6) };
-    if (nearRoad(c.x, c.y, c.r + 3) || Math.hypot(c.x - mere.x, c.y - mere.y) < mere.r + c.r + 2) continue;
+  for (let tries = 0; copses.length < 34 && tries < 2000; tries++) {
+    const c = { x: rnd.realInRange(6, W - 6), y: rnd.realInRange(6, H - 10), r: rnd.realInRange(1.8, 4.4) };
+    if (nearRoad(c.x, c.y, c.r + 3) || [mere, pond].some((w) => Math.hypot(c.x - w.x, c.y - w.y) < w.r + c.r + 2)) continue;
     if (copses.some((o) => Math.hypot(o.x - c.x, o.y - c.y) < o.r + c.r + 4)) continue;
     copses.push(c);
   }
@@ -121,14 +131,12 @@ export function buildPlainsMap(): MapData {
       { gx: cross.x, gy: cross.y, name: 'The crossroads', range: 7 },
       { gx: gateX, gy: H - 1, name: 'The toll gate', range: 6 },
       { gx: mere.x, gy: mere.y, name: 'The mere', range: mere.r + 4 },
+      { gx: pond.x, gy: pond.y, name: 'The reed pond', range: pond.r + 4 },
+      { gx: W - 1, gy: EAST_ROAD_Y + 0.5, name: "The road to Saint Elda's", range: 6 },
     ],
     musings: [
-      {
-        x0: W - 5, y0: 26, x1: W, y1: 34,
-        text: "The Lord's Road runs on east, to Saint Elda's monastery. A day's walk, they say. I should set out with a full satchel.",
-      },
-      { x0: 0, y0: 37, x1: 5, y1: 45, text: 'The old road west goes on towards Harrowford and its broken bridge. Nothing for me that way.' },
-      { x0: 37, y0: 0, x1: 45, y1: 5, text: 'North, the road climbs towards the Greyfells, where the wolves come down from. Not today.' },
+      { x0: 0, y0: 66, x1: 5, y1: 74, text: 'The old road west goes on towards Harrowford and its broken bridge. Nothing for me that way.' },
+      { x0: 64, y0: 0, x1: 72, y1: 5, text: 'North, the road climbs towards the Greyfells, where the wolves come down from. Not today.' },
     ],
   };
 
@@ -144,6 +152,13 @@ export function buildPlainsMap(): MapData {
   for (let x = gate.tx + 1; x <= gate.tx + 2; x++) {
     data.doors!.push({ tx: x, ty: gate.ty, to: 'market', entry: 'gate', auto: true, ask: 'Do you want to go back through the toll gate to Adowvale?' });
   }
+
+  // The Lord's Road runs off the east edge, on to the grounds of Saint Elda's monastery.
+  for (let y = EAST_ROAD_Y - 3; y <= EAST_ROAD_Y + 3; y++) {
+    if (terrain[y][W - 1] !== Terrain.Dirt) continue;
+    data.doors!.push({ tx: W - 1, ty: y, to: 'monastery', entry: 'plains', auto: true, ask: "Do you want to follow the Lord's Road east to Saint Elda's monastery?" });
+  }
+  data.entries!.monastery = { x: W - 2.6, y: EAST_ROAD_Y + 0.5 };
 
   // A signpost on the corner of the crossroads.
   const sign = { tx: CROSSROADS.x + 2, ty: CROSSROADS.y + 2 };
@@ -172,17 +187,22 @@ export function buildPlainsMap(): MapData {
       placed++;
     }
   };
-  herd('deer-west', 'deer', 18, 52, 3, 2.5);
-  herd('deer-north', 'deer', 26, 16, 4, 3);
-  herd('deer-east', 'deer', 58, 18, 3, 2.5);
-  herd('hare-gate', 'hare', 46, 62, 2, 4);
-  herd('hare-cross', 'hare', 26, 30, 2, 4);
-  herd('hare-mere', 'hare', 62, 42, 2, 4);
-  herd('hare-north', 'hare', 50, 10, 1, 3);
+  herd('deer-west', 'deer', 24, 88, 3, 2.5);
+  herd('deer-north', 'deer', 42, 22, 4, 3);
+  herd('deer-east', 'deer', 96, 26, 3, 2.5);
+  herd('deer-far-east', 'deer', 100, 70, 4, 3);
+  herd('deer-south-west', 'deer', 30, 104, 3, 2.5);
+  herd('deer-pond', 'deer', 20, 40, 2, 2.5);
+  herd('hare-gate', 'hare', 76, 104, 2, 4);
+  herd('hare-cross', 'hare', 44, 52, 2, 4);
+  herd('hare-mere', 'hare', 102, 80, 2, 4);
+  herd('hare-north', 'hare', 82, 14, 1, 3);
+  herd('hare-west', 'hare', 14, 60, 2, 4);
+  herd('hare-road', 'hare', 84, 44, 2, 4);
   // Boar keep to the thickets: each roots about at the edge of a copse.
   copses
-    .filter((c) => Math.hypot(c.x - gateX, c.y - H) > 18)
-    .slice(0, 3)
+    .filter((c) => Math.hypot(c.x - gateX, c.y - H) > 24)
+    .slice(0, 6)
     .forEach((c, i) => herd(`boar-${i}`, 'boar', c.x + c.r + 1, c.y, 1, 1.2));
   data.creatures = game;
 

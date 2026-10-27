@@ -48,6 +48,7 @@ export const AREA_NAMES: Record<AreaId, string> = {
   cave: "The wolves' cave",
   hut: "Farmer Iran's hut",
   plains: 'Adowvale Plains',
+  monastery: "Saint Elda's Monastery",
 };
 
 type Listener = (save: SaveData) => void;

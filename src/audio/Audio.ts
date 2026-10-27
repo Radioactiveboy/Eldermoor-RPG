@@ -9,7 +9,7 @@ import { Settings, SettingsData } from '../settings/Settings';
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave';
+export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave' | 'monastery';
 
 interface TrackDef {
   bpm: number;
@@ -127,6 +127,23 @@ const TRACKS: Record<TrackName, TrackDef> = {
     scale: [64, 65, 67, 69, 71, 72, 74],
     melodyChance: 0.1,
     padCutoff: 380,
+  },
+  // Outside Saint Elda's: slow and still like plainchant, open fifths in D dorian with a wandering line over them.
+  monastery: {
+    bpm: 52,
+    chords: [
+      [38, 45, 50], // D5
+      [36, 43, 48], // C5
+      [38, 45, 50],
+      [41, 48, 53], // F5
+      [43, 50, 55], // G5
+      [38, 45, 50],
+    ],
+    barsPerChord: 2,
+    arp: [0, -1, -1, 2, -1, -1, 1, -1],
+    scale: [62, 64, 65, 67, 69, 71, 72, 74],
+    melodyChance: 0.5,
+    padCutoff: 650,
   },
 };
 

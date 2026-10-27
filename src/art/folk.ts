@@ -191,6 +191,55 @@ export const FOLK: Record<string, Outfit> = {
     robe: true,
     child: true,
   },
+  // The brothers of Saint Elda's, in plain wool habits. Brother Wystan, the porter: an old man's grey-brown habit.
+  porter: {
+    cloak: null,
+    hood: false,
+    tunic: [0x5a4636, 0x42322a, 0x76604a],
+    shirt: [0x5a4636, 0x42322a],
+    trouser: [0x42322a, 0x30241e],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xe2b896, 0xbe9476],
+    hair: 0xd8d4d0,
+    robe: true,
+    staff: true,
+  },
+  // Brother Cuthbert, the gardener, his habit hitched up for digging.
+  gardener: {
+    cloak: null,
+    hood: false,
+    tunic: [0x6a5240, 0x4e3c2e, 0x866a54],
+    shirt: [0x6a5240, 0x4e3c2e],
+    trouser: [0x4e3c2e, 0x3a2c22],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xe6a882, 0xc0866a],
+    hair: 0xb08a4a,
+  },
+  // Brother Aldo, who has taken a vow of silence: a dark grey habit with the hood up.
+  silent: {
+    cloak: [0x4e4a46, 0x383432, 0x66625c],
+    hood: true,
+    tunic: [0x4e4a46, 0x383432, 0x66625c],
+    shirt: [0x4e4a46, 0x383432],
+    trouser: [0x383432, 0x2a2624],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xb88262, 0x946048],
+    hair: 0x2a2024,
+    beard: 0x2a2024,
+    robe: true,
+  },
+  // Brother Tobin, a novice, in an undyed habit.
+  novice: {
+    cloak: null,
+    hood: false,
+    tunic: [0x8a7a64, 0x6a5c4a, 0xa6967e],
+    shirt: [0x8a7a64, 0x6a5c4a],
+    trouser: [0x6a5c4a, 0x4e4436],
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+    skin: [P.skin, P.skinShade],
+    hair: 0xb4562a,
+    robe: true,
+  },
 };
 
 export function generateFolk(scene: Phaser.Scene): void {

@@ -1164,7 +1164,110 @@ const fisherman: Painter = (c, fr) => {
   finish(c);
 };
 
-const PAINTERS: Record<string, Painter> = { mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife, fisherman };
+/** How one of Saint Elda's brothers looks: they share the tonsure and the habit, and differ in the rest. */
+interface MonkLook {
+  skin: number;
+  /** The ring of hair left round the tonsure. */
+  hair: number;
+  habit: number;
+  iris: number;
+  brow: BrowShape;
+  /** 1 smiles, 0 is solemn. */
+  smile: number;
+  /** Lines round the eyes. */
+  old?: boolean;
+  /** Face width and jaw, for thin or round faces. */
+  width?: number;
+  jaw?: number;
+  beard?: number;
+  /** A smudge of garden earth on the cheek. */
+  muddy?: boolean;
+}
+
+/**
+ * A brother of Saint Elda's: the crown of the head shaved in a tonsure with a
+ * ring of hair round it, a plain wool habit with its hood down in a roll at
+ * the neck, and a little wooden cross on a cord.
+ */
+function monk(look: MonkLook): Painter {
+  return (c, fr) => {
+    const skin = ramp(look.skin);
+    const hair = ramp(look.hair);
+    const habit = ramp(look.habit);
+    const width = look.width ?? 17;
+    const jaw = look.jaw ?? 8;
+    shoulders(c, habit, 74, 12);
+    // The hood, down, in a thick roll round the neck.
+    blob(c, CX, 74, 27, 9, habit, -0.05, (x) => Math.sin((x - CX) * 0.5) * 0.06);
+    neck(c, skin, 8, 62, 72);
+    // The shaven crown, then the ring of hair round it.
+    blob(c, CX, 42, width + 3, 21, skin, 0.08);
+    const hairTex = strands((x, y) => (x - CX) * 0.9 + y * 0.3, undefined, 41);
+    for (let y = 20; y < 58; y++) {
+      for (let x = CX - width - 4; x <= CX + width + 4; x++) {
+        const dx = x + 0.5 - CX;
+        const nx = dx / (width + 3.5);
+        const ny = (y + 0.5 - 42) / 21.5;
+        if (nx * nx + ny * ny > 1) continue;
+        const band = 29 + (dx / (width + 3)) ** 2 * 9;
+        if (y < band || (y > band + 6 && Math.abs(dx) < width - 2)) continue;
+        c.set(x, y, tone(hair, lightness(nx, ny, 0.02) + hairTex(x, y), x, y));
+      }
+    }
+    ears(c, skin, width);
+    const shape = { skin, width, jaw, top: 35, chin: 70 };
+    face(c, shape);
+    eyes(c, { iris: look.iris, blink: fr.blink, skin, tired: look.old });
+    brows(c, look.hair, look.brow, 2);
+    nose(c, skin, look.old ? 1 : 0);
+    if (look.old) wrinkles(c, skin, true);
+    blush(c, 0xc8706a, look.muddy ? 0.7 : 0.35);
+    mouth(c, { skin, lip: 0x9a5a52, open: fr.open, curve: look.smile, half: 4, y: EYE_Y + 16 });
+    if (look.muddy) {
+      for (const [dx, dy] of [[-12, 9], [-11, 10], [-13, 10], [-10, 9], [-12, 11]]) c.set(CX + dx, EYE_Y + dy, P.dirt);
+    }
+    if (look.beard !== undefined) {
+      const beard = ramp(look.beard);
+      const tex = strands((x, y) => x * 0.9 + y * 0.1, undefined, 43);
+      for (let y = EYE_Y + 10; y < 80; y++) {
+        for (let x = CX - 20; x <= CX + 20; x++) {
+          const dx = Math.abs(x + 0.5 - CX);
+          const w = (faceHalf(shape, Math.min(y, 69)) ?? 8) + 1;
+          if (dx > w + 1 || y > 73 + 5 * (1 - (dx / 16) ** 2)) continue;
+          // A full beard: up the jaw to the ears, and a moustache over the lip.
+          if (y < EYE_Y + 13 - Math.max(0, dx - 8) * 0.5 && !(dx < 7 && y >= EYE_Y + 12)) continue;
+          if (y >= EYE_Y + 15 && y <= EYE_Y + (fr.open ? 19 : 17) && dx < 4.5) continue;
+          c.set(x, y, tone(beard, lightness((x - CX) / 22, (y - 68) / 30, 0.05) + tex(x, y), x, y));
+        }
+      }
+    }
+    // A little wooden cross on a cord.
+    for (let i = 0; i < 12; i++) {
+      c.set(CX - 10 + Math.round(i * 0.8), 80 + i, P.leatherDark);
+      c.set(CX + 10 - Math.round(i * 0.8), 80 + i, P.leatherDark);
+    }
+    for (let y = 90; y < S - 1; y++) {
+      c.set(CX, y, P.barkLight);
+      c.set(CX + 1, y, P.bark);
+    }
+    for (let x = CX - 3; x <= CX + 4; x++) c.set(x, 92, x > CX ? P.bark : P.barkLight);
+    finish(c);
+  };
+}
+
+/** Brother Wystan, the porter: old and thin, white-haired, solemn, keeping the gate. */
+const porter = monk({ skin: 0xe2b896, hair: 0xd8d4d0, habit: 0x5a4636, iris: 0x5a6a7a, brow: 'heavy', smile: 0, old: true, width: 15.5, jaw: 7 });
+/** Brother Cuthbert, the gardener: round and cheerful, sandy-haired, earth on his cheek. */
+const gardener = monk({ skin: 0xe6a882, hair: 0xb08a4a, habit: 0x6a5240, iris: 0x4a7a4a, brow: 'arched', smile: 1, width: 19, jaw: 11, muddy: true });
+/** Brother Aldo, under a vow of silence: dark, bearded, with a knowing look. */
+const silent = monk({ skin: 0xb88262, hair: 0x2a2024, habit: 0x4e4a46, iris: 0x3a2a20, brow: 'flat', smile: 0, beard: 0x2a2024 });
+/** Brother Tobin, a novice: young, freckled, eager, with a mop of red at the sides. */
+const novice = monk({ skin: 0xf0c49a, hair: 0xb4562a, habit: 0x8a7a64, iris: 0x4a6a8a, brow: 'worried', smile: 1, width: 16, jaw: 7 });
+
+const PAINTERS: Record<string, Painter> = {
+  mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
+  fisherman, porter, gardener, silent, novice,
+};
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */
 export function generatePortraits(scene: Phaser.Scene): void {

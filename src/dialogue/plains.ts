@@ -134,7 +134,7 @@ export const CARTER: DialogueScript = {
     monks: {
       speaker: 'carter',
       lines: [
-        "Saint Elda's monastery. A day's walk east from the crossroads, on a hill above a lake. Brothers mostly, and a few old sisters.",
+        "Saint Elda's monastery, at the end of the Lord's Road, east from the crossroads. Brothers mostly, and a few old sisters.",
         "They've walls round a garden you wouldn't believe. Every herb you can name, and some you can't.",
       ],
       next: 'ask',

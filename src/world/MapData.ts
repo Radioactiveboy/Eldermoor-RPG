@@ -29,7 +29,7 @@ export enum Prop {
  * The places the player can be. Each is its own map; doors lead between them.
  * ('market' is the village of Adowvale, round its market square: the id is kept so old saves still load.)
  */
-export type AreaId = 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains';
+export type AreaId = 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains' | 'monastery';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see

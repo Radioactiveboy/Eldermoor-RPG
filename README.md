@@ -50,7 +50,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
-  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, or `?area=plains` on Adowvale Plains)
+  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=plains` on Adowvale Plains, or
+  `?area=monastery` outside Saint Elda's monastery)
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
   game sends it running, and in a fight it may bolt rather than stand
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
@@ -69,8 +70,12 @@ src/
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
   world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses,
                           militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
-  world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map, open grass, copses, a mere, the
-                          Lord's Road to a crossroads, deer, hares and boar, and two travellers
+  world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map (120x120), open grass, copses, a mere
+                          and a pond, the Lord's Road to a crossroads and on east to the monastery, deer, hares
+                          and boar, and two travellers
+  world/MonasteryMap.ts   The grounds outside Saint Elda's monastery, east of the plains: the wall and its barred
+                          gatehouse with the chapel and bell tower showing over it, the Saint's statue, wayside
+                          shrines, vegetable beds, beehives, fish ponds with benches, and four of the brothers
   world/BakedLayer.ts     Bakes the ground into textures of at most 2048px, so big maps fit on phones
   world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
@@ -102,6 +107,8 @@ src/
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
   art/tollgate.ts         Lord Morten's toll gate (shut and open), the palisade, the guards' booth and his banner
+  art/monastery.ts        Saint Elda's: the wall, gatehouse, chapel, bell tower, shrines, statue, bean rows,
+                          beehive skeps and water lilies
   art/henfarm.ts          Farmer Iran's hut, the hen coop and trough, and the hens and rooster
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
                           boulders, bones, the dead ewes and the locked door
@@ -155,7 +162,7 @@ src/
   a chord progression and an arpeggio pattern, played by simple synth voices
   (harp pluck, pad, drone, flute, and optionally a frame drum and tambourine).
   There is a calm `menu` track, a livelier `world` track, a sad `home` one, a
-  tense `battle` one and a bouncing `market` dance; add more by adding entries
+  tense `battle` one, a bouncing `market` dance and a slow, chant-like `monastery` one; add more by adding entries
   to `TRACKS`. Each map names its track (`MapData.music`). Recorded music can
   replace it later without changing the scenes.
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;
@@ -228,8 +235,10 @@ src/
 The locked door at the back of the wolves' cave: trying it sets the
 `found-cave-door` flag and writes in the diary, and Old Tobin the fisherman
 then has a story about men digging in the hill long ago. Nothing opens it yet.
-Saint Elda's monastery, east of the plains' crossroads, where the travellers
-say moonpetal grows (the `heard-of-monastery` flag is set once one tells you).
+Inside Saint Elda's monastery, where the travellers say moonpetal grows (the
+`heard-of-monastery` flag is set once one tells you). The grounds outside are
+built (`world/MonasteryMap.ts`); the gatehouse is shut, and Brother Wystan the
+porter (`dialogue/monastery.ts`) is the one to change when the way in is written.
 The village herbalist (the next step of "Medicine for Mother"; Hilde the baker
 mentions Old Maud), more villagers and buildings to go into,
 more beasts and weapons, a reward for the wolf pelt, cooking with the garden's
