@@ -285,7 +285,7 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.map, start.x, start.y);
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
-    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour));
+    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking));
     this.marketWasOpen = marketOpen(this.clock.hour);
     this.creatures = this.spawnCreatures();
     const hens = this.map.data.hens;
@@ -1055,6 +1055,10 @@ export class GameScene extends Phaser.Scene {
       this.search(sight);
       return;
     }
+    if (sight.locked) {
+      this.tryLockedDoor();
+      return;
+    }
     const flag = `saw-${sight.id}`;
     const first = !QuestLog.hasFlag(flag);
     QuestLog.setFlag(flag);
@@ -1083,6 +1087,27 @@ export class GameScene extends Phaser.Scene {
             'I would rather he heard it from me than found them like that.'
         : 'Found two dead ewes at the back of a wolves\' den in the hill, a bell on one scratched "BESS". Someone on the road ' +
             'must be missing them.',
+    );
+  }
+
+  /**
+   * The door at the back of the wolves' cave: it won't open, and the hero
+   * notes it in the diary the first time. A hint of things to come.
+   */
+  private tryLockedDoor(): void {
+    GameAudio.rattle();
+    if (QuestLog.hasFlag('found-cave-door')) {
+      this.onHint?.('Still locked fast. Whoever has the key to this, it is not me.');
+      return;
+    }
+    QuestLog.setFlag('found-cave-door');
+    this.onHint?.(
+      'A door, deep in the hill: old oak bound with iron, and a lock as big as my hand. It will not budge. ' +
+        'Someone went to a lot of trouble to keep something in. Or out.',
+    );
+    QuestLog.writeDiary(
+      'There is a door at the back of the wolves\' cave, set right into the rock. Old oak, iron straps, a great lock, ' +
+        'and no key anywhere. Who would build a door down there? I mean to find out what is behind it.',
     );
   }
 

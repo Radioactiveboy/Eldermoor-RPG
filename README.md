@@ -64,7 +64,8 @@ src/
   config.ts               Tile size, map size/seed, player speed, zoom limits
   iso/IsoMath.ts          Grid <-> isometric screen conversion, depth sorting
   world/MapData.ts        Terrain + prop types, walkability table
-  world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest)
+  world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest,
+                          and Old Tobin fishing on the far shore of the lake)
   world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
   world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses,
                           militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
@@ -73,7 +74,8 @@ src/
   world/BakedLayer.ts     Bakes the ground into textures of at most 2048px, so big maps fit on phones
   world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
-                          stalagmites, a pool, three wolves, the drover's lost ewes, and bone piles to search
+                          stalagmites, a pool, three wolves, the drover's lost ewes, bone piles to search, and
+                          a locked door in the back wall (a hint of a quest to come)
   world/Drips.ts          Water dripping from the cave's stalactites
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
   world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
@@ -102,7 +104,8 @@ src/
   art/tollgate.ts         Lord Morten's toll gate (shut and open), the palisade, the guards' booth and his banner
   art/henfarm.ts          Farmer Iran's hut, the hen coop and trough, and the hens and rooster
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
-                          boulders, bones and the dead ewes
+                          boulders, bones, the dead ewes and the locked door
+  art/fishing.ts          Old Tobin's rod, float and creel
   art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker
   art/gear.ts             How worn gear looks on the hero's sprite (hat, staff): add an entry to dress new items
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
@@ -222,6 +225,9 @@ src/
 
 ## Good next steps
 
+The locked door at the back of the wolves' cave: trying it sets the
+`found-cave-door` flag and writes in the diary, and Old Tobin the fisherman
+then has a story about men digging in the hill long ago. Nothing opens it yet.
 Saint Elda's monastery, east of the plains' crossroads, where the travellers
 say moonpetal grows (the `heard-of-monastery` flag is set once one tells you).
 The village herbalist (the next step of "Medicine for Mother"; Hilde the baker
