@@ -11,6 +11,7 @@ const PANEL_H = 480;
 const KEY_CONTROLS: Array<[string, string]> = [
   ['WASD / arrows', 'Walk'],
   ['Shift', 'Sprint'],
+  ['Hold Ctrl', 'Sneak: slower, but beasts notice you later'],
   ['Click', 'Walk to a spot, or go and use something'],
   ['E / Enter', 'Talk, open doors, sit, sleep, pick, shake trees'],
   ['J', 'Journal'],
@@ -28,6 +29,7 @@ const TOUCH_CONTROLS: Array<[string, string]> = [
   ['Tap a prompt', 'Do what it says'],
   ['Book button', 'Journal'],
   ['Satchel button', 'Satchel and equipment'],
+  ['Footprints button', 'Sneak on or off'],
   ['II button', 'Pause'],
 ];
 

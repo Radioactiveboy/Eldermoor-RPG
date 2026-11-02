@@ -15,6 +15,10 @@ export const PLAYER_RADIUS = 0.25; // in tiles, used for collision
 export const CAMERA_ZOOM = { min: 0.5, max: 3, default: 2 };
 
 export const SPRINT_MULTIPLIER = 1.6; // hold Shift to sprint
+/** Hold Ctrl (or tap the boot button) to sneak: slower, and beasts have to be this much closer to notice you. */
+export const SNEAK = { speed: 0.5, notice: 0.5 };
+/** Sprinting is noisy: beasts notice you from this much further off. */
+export const SPRINT_NOTICE = 1.2;
 export const STAMINA = { max: 100, drainPerSecond: 28, regenPerSecond: 18, regenDelay: 0.8, sprintMinimum: 15 };
 export const HEALTH = { max: 100, regenPerSecond: 1 };
 

@@ -23,6 +23,8 @@ export class Player {
   private facing = 0;
   /** Sitting on a seat, or crouched working (picking crops). Either way the player stays put. */
   pose: 'stand' | 'sit' | 'work' = 'stand';
+  /** Creeping along low and slow (hold Ctrl). Only changes how the hero looks; GameScene sets the pace. */
+  sneaking = false;
   /** Screen-pixel nudge for the sprite, for lunges and flinches in a fight. */
   readonly offset = { x: 0, y: 0 };
 
@@ -216,6 +218,10 @@ export class Player {
     this.sprite.setFlipX(mirrored);
     const anim = this.pose === 'stand' ? (moving ? 'walk' : 'idle') : this.pose;
     this.sprite.play(`player-${anim}-${drawn}`, true);
+    // Sneaking: hunched lower, with slow, careful steps.
+    const low = this.sneaking && this.pose === 'stand';
+    this.sprite.setScale(1, low ? 0.88 : 1);
+    this.sprite.anims.timeScale = low ? 0.6 : 1;
 
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
