@@ -143,7 +143,9 @@ export function buildDeepDenMap(): MapData {
     terrain.push(new Array(W).fill(Terrain.Cave));
     props.push(new Array(W).fill(Prop.None));
   }
-  for (const [x, y] of [[9, 2], [10, 2], [9, 3], [10, 3], [11, 3], [10, 4]]) terrain[y][x] = Terrain.Water;
+  for (let y = 1; y <= 5; y++) {
+    for (let x = 8; x <= 12; x++) if (Math.hypot((x + 0.5 - 10.3) / 2, (y + 0.5 - 3.2) / 1.6) < 1) terrain[y][x] = Terrain.Water;
+  }
   const crevice = { x: 1.2, y: 5.5 };
   const data: MapData = {
     width: W,

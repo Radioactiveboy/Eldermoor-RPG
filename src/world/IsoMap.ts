@@ -54,6 +54,8 @@ const BLEND_LEVEL: Partial<Record<Terrain, number>> = {
   [Terrain.Dirt]: 1,
   [Terrain.Sand]: 1,
   [Terrain.Water]: 2,
+  // A cave's rock floor is what a pool underground lies in, as sand is for the lake.
+  [Terrain.Cave]: 1,
 };
 
 /** Stable pseudo-random number per tile, so variants don't change between loads. */
@@ -338,7 +340,12 @@ export class IsoMap {
     const wet = layer(2, 13);
     if (!shore && !wet) return plain;
     // What lies between the grass and the water here: the tile's own dirt or sand, else its neighbours'.
-    let ground: 'dirt' | 'sand' = t === Terrain.Dirt ? 'dirt' : 'sand';
+    let ground: 'dirt' | 'sand' | 'cave' = t === Terrain.Dirt ? 'dirt' : t === Terrain.Cave ? 'cave' : 'sand';
+    if (t === Terrain.Water) {
+      let cave = false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) cave ||= this.terrainAt(tx + dx, ty + dy) === Terrain.Cave;
+      if (cave) ground = 'cave';
+    }
     if (t === Terrain.Grass) {
       let sand = false;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sand ||= this.terrainAt(tx + dx, ty + dy) === Terrain.Sand;

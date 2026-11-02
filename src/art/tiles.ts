@@ -172,10 +172,10 @@ function highlight(): PixelCanvas {
 }
 
 /** The ground variants that blend into each other, kept so their edges can be painted from them (see blendTileKey). */
-const groundArt: Record<BlendGround, PixelCanvas[]> = { grass: [], dirt: [], sand: [], water: [] };
+const groundArt: Record<BlendGround, PixelCanvas[]> = { grass: [], dirt: [], sand: [], water: [], cave: [] };
 
-/** Ground that blends softly into its neighbours: dirt or sand over grass, and water over sand. */
-export type BlendGround = 'grass' | 'dirt' | 'sand' | 'water';
+/** Ground that blends softly into its neighbours: dirt or sand over grass, and water over sand or a cave's rock floor. */
+export type BlendGround = 'grass' | 'dirt' | 'sand' | 'water' | 'cave';
 
 /** How many wobbly shapes an edge can take along one side of a tile. */
 export const EDGE_VARIANTS = 4;
@@ -233,7 +233,7 @@ function blendField(layer: BlendLayer, u: number, v: number): number {
  * foam along the water's edge is made as its own texture (the key plus
  * '-foam') so it can lap back and forth. Made the first time it's needed and kept.
  */
-export function blendTileKey(scene: Phaser.Scene, ground: 'dirt' | 'sand', shore: BlendLayer, wet: BlendLayer | undefined, variant: number): string {
+export function blendTileKey(scene: Phaser.Scene, ground: 'dirt' | 'sand' | 'cave', shore: BlendLayer, wet: BlendLayer | undefined, variant: number): string {
   const layerKey = (l?: BlendLayer) => (l ? `${l.mask}-${l.edges.join('')}` : 'x');
   const key = `tile-blend-${ground}-${layerKey(shore)}-${layerKey(wet)}-${variant}`;
   if (scene.textures.exists(key)) return key;
@@ -241,7 +241,7 @@ export function blendTileKey(scene: Phaser.Scene, ground: 'dirt' | 'sand', shore
   const grassSrc = groundArt.grass[variant];
   const groundSrc = groundArt[ground][variant];
   const waterSrc = groundArt.water[variant];
-  const rim = ground === 'dirt' ? P.dirtDark : P.sandDark;
+  const rim = ground === 'dirt' ? P.dirtDark : ground === 'cave' ? CAVE_RIM : P.sandDark;
   const foam = wet ? new PixelCanvas(TILE_WIDTH, TILE_HEIGHT) : undefined;
   const c = paintDiamond(variant + 1, (c, x, y, u, v) => {
     const r = rnd();
@@ -267,6 +267,9 @@ export function blendTileKey(scene: Phaser.Scene, ground: 'dirt' | 'sand', shore
   foam?.toTexture(scene, `${key}-foam`);
   return key;
 }
+
+/** Wet rock round the edge of a pool underground. */
+const CAVE_RIM = 0x2e2936;
 
 export function generateTiles(scene: Phaser.Scene): void {
   const kinds: Array<[string, (seed: number) => PixelCanvas]> = [
