@@ -31,7 +31,8 @@ export interface DialogueScript {
 export type SpeakerId =
   | 'mother' | 'pedlar' | 'pilgrim' | 'drover' | 'baker' | 'smith' | 'tanner' | 'guard' | 'iran'
   | 'tollguard' | 'carter' | 'herbwife' | 'fisherman' | 'porter' | 'gardener' | 'silent' | 'novice'
-  | 'prior' | 'anselm' | 'cook' | 'scribe' | 'leofric';
+  | 'prior' | 'anselm' | 'cook' | 'scribe' | 'leofric'
+  | 'landlord' | 'nell' | 'rosie' | 'harlan' | 'fenwick' | 'sigrun' | 'ada' | 'cobb' | 'pell';
 
 export interface Speaker {
   name: string;
@@ -64,4 +65,13 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   cook: { name: 'Brother Hob', portrait: 'portrait-cook', voice: { pitch: 160, spread: 0.2, wave: 'triangle' } },
   scribe: { name: 'Brother Edmund', portrait: 'portrait-scribe', voice: { pitch: 220, spread: 0.12, wave: 'sine' } },
   leofric: { name: 'Brother Leofric', portrait: 'portrait-leofric', voice: { pitch: 190, spread: 0.14, wave: 'triangle' } },
+  landlord: { name: 'Godric the Landlord', portrait: 'portrait-landlord', voice: { pitch: 135, spread: 0.14, wave: 'sawtooth' } },
+  nell: { name: 'Nell', portrait: 'portrait-nell', voice: { pitch: 320, spread: 0.16, wave: 'triangle' } },
+  rosie: { name: 'Rosie', portrait: 'portrait-rosie', voice: { pitch: 370, spread: 0.18, wave: 'triangle' } },
+  harlan: { name: 'Old Harlan', portrait: 'portrait-harlan', voice: { pitch: 140, spread: 0.24, wave: 'triangle' } },
+  fenwick: { name: 'Master Fenwick', portrait: 'portrait-fenwick', voice: { pitch: 175, spread: 0.08, wave: 'sine' } },
+  sigrun: { name: 'Sigrun the Sellsword', portrait: 'portrait-sigrun', voice: { pitch: 240, spread: 0.06, wave: 'square' } },
+  ada: { name: 'Ada', portrait: 'portrait-ada', voice: { pitch: 290, spread: 0.14, wave: 'triangle' } },
+  cobb: { name: 'Cobb', portrait: 'portrait-cobb', voice: { pitch: 150, spread: 0.18, wave: 'triangle' } },
+  pell: { name: 'Pell the Minstrel', portrait: 'portrait-pell', voice: { pitch: 260, spread: 0.22, wave: 'sine' } },
 };

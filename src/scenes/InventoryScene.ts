@@ -420,7 +420,7 @@ export class InventoryScene extends Phaser.Scene {
     const sel = this.selection;
     if (sel?.kind === 'slot') return { label: 'Take off', run: () => this.unequip(sel.slot) };
     if (sel?.kind !== 'bag') return undefined;
-    if (def.eat) return { label: 'Eat', run: () => this.eat(sel.index) };
+    if (def.eat) return { label: def.drink ? 'Drink' : 'Eat', run: () => this.eat(sel.index) };
     if (def.slot) return { label: 'Wear', run: () => this.equip(sel.index) };
     return undefined;
   }

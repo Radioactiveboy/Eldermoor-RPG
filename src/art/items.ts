@@ -28,6 +28,73 @@ function icon(draw: (c: PixelCanvas) => void): PixelCanvas {
   return c;
 }
 
+/** A wooden tankard with iron hoops and a frothing head (creamy for ale, golden for cider). */
+const tankard = (foam: number, foamShade: number) => () =>
+  icon((c) => {
+    // Staves, hoops, the handle, and froth spilling over the rim.
+    for (let y = 5; y < 14; y++) {
+      for (let x = 4; x < 11; x++) c.set(x, y, x < 5 ? P.barkLight : x > 9 ? P.barkDark : (x % 2 ? P.bark : 0x8a5a34));
+    }
+    c.rect(4, 7, 7, 1, P.iron);
+    c.rect(4, 12, 7, 1, P.iron);
+    c.rect(4, 14, 7, 1, P.barkDark);
+    c.rect(11, 7, 2, 1, P.barkDark);
+    c.rect(12, 8, 1, 4, P.barkDark);
+    c.rect(11, 11, 2, 1, P.barkDark);
+    c.ellipse(7.5, 4.5, 4, 1.8, foam, foamShade);
+    c.set(4, 6, foam);
+    c.set(10, 6, foamShade);
+    c.set(6, 3, 0xffffff);
+  });
+
+/** A drinking horn of golden mead, banded with brass. */
+const mead = () =>
+  icon((c) => {
+    for (let i = 0; i < 11; i++) {
+      const w = Math.max(1, Math.round(4 - i * 0.3));
+      for (let k = 0; k < w; k++) c.set(3 + i, 12 - Math.round(i * 0.6) - k, k === 0 ? 0xf0e0c0 : 0xd8c8a0);
+    }
+    c.rect(5, 9, 1, 3, P.gold);
+    c.rect(10, 6, 1, 3, P.gold);
+    c.ellipse(13, 5, 2, 1.4, 0xe8b030, 0xb07a18);
+    c.set(13, 4, 0xfff0a0);
+  });
+
+/** A pewter cup of red wine, steam rising. */
+const wine = () =>
+  icon((c) => {
+    c.rect(5, 6, 6, 5, P.stoneLight);
+    c.rect(10, 6, 1, 5, P.stone);
+    c.rect(7, 11, 2, 2, P.stone);
+    c.rect(5, 13, 6, 1, P.stoneDark);
+    c.ellipse(8, 6, 3, 1, 0x7a1e2e, 0x5a1420);
+    c.set(7, 3, P.linen);
+    c.set(8, 2, P.linenDark);
+    c.set(9, 4, P.linen);
+  });
+
+/** A wooden bowl of brown stew with a spoon in it. */
+const stew = () =>
+  icon((c) => {
+    c.ellipse(8, 10, 6.5, 3.5, P.bark, P.barkDark, P.barkLight);
+    c.ellipse(8, 8.5, 5.5, 2, 0x7a4a2a, 0x5a3420);
+    for (const [x, y] of [[6, 8], [9, 9], [10, 8], [7, 9]]) c.set(x, y, x % 2 ? 0x9ab04a : 0xd89a5a);
+    for (let i = 0; i < 6; i++) c.set(11 + Math.floor(i / 2), 7 - i, P.plankLight);
+    c.set(5, 5, P.linen);
+    c.set(6, 4, P.linenDark);
+  });
+
+/** A long pink rat's tail, curled. */
+const ratTail = () =>
+  icon((c) => {
+    const pts: Array<[number, number]> = [[3, 12], [4, 13], [6, 13], [8, 12], [9, 10], [9, 8], [8, 6], [7, 5], [8, 4], [10, 3], [12, 3], [13, 4]];
+    pts.forEach(([x, y], i) => {
+      c.set(x, y, i < 3 ? 0x8a6a6a : 0xd89a9a);
+      if (i < 4) c.set(x, y - 1, 0xb07a7a);
+    });
+    c.rect(2, 11, 2, 2, 0x5a4a44);
+  });
+
 const carrot = () =>
   icon((c) => {
     // A tapering root, drawn on the diagonal, with feathery leaves at the top.
@@ -427,6 +494,12 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-tusk', tusk],
     ['item-whitehide', whiteHide],
     ['item-moonpetal', moonpetalIcon],
+    ['item-ale', tankard(0xf6eedc, 0xd8ccb0)],
+    ['item-cider', tankard(0xf0dc8a, 0xc8b060)],
+    ['item-mead', mead],
+    ['item-wine', wine],
+    ['item-stew', stew],
+    ['item-rattail', ratTail],
   ];
   for (const [key, make] of icons) make().toTexture(scene, key);
 }

@@ -33,6 +33,8 @@ export interface ItemDef {
   attack?: number;
   /** Food: what eating it restores. */
   eat?: { health?: number; stamina?: number };
+  /** Drunk rather than eaten (ale, mead): "Drink" in the satchel, and a gulp instead of a crunch. */
+  drink?: boolean;
   /** What it costs at a stall, in coins. Traders pay less to buy it (see systems/Shops.ts); no value means nobody will buy it. */
   value?: number;
 }
@@ -329,6 +331,64 @@ export const ITEMS = {
     defence: 1,
     value: 22,
   },
+  // From the Crooked Tankard, Adowvale's inn (see systems/Tavern.ts).
+  ale: {
+    name: 'Tankard of Ale',
+    description: "Godric's own brown ale, with a head on it like a sheep's fleece. Bitter, cold, and very welcome.",
+    icon: 'item-ale',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 3, stamina: 30 },
+    drink: true,
+    value: 2,
+  },
+  cider: {
+    name: 'Flagon of Cider',
+    description: 'Cloudy and sharp, from the orchards south of the village. It goes straight to your knees.',
+    icon: 'item-cider',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 5, stamina: 22 },
+    drink: true,
+    value: 2,
+  },
+  mead: {
+    name: 'Horn of Mead',
+    description: 'Golden honey wine, sweet and strong. Godric keeps it for weddings, wakes and paying customers.',
+    icon: 'item-mead',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 10, stamina: 35 },
+    drink: true,
+    value: 4,
+  },
+  'spiced-wine': {
+    name: 'Cup of Spiced Wine',
+    description: 'Red wine warmed by the fire with cloves and honey. It smells of feast days.',
+    icon: 'item-wine',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 14, stamina: 20 },
+    drink: true,
+    value: 5,
+  },
+  stew: {
+    name: 'Bowl of Stew',
+    description: "Mutton, barley and leeks, thick enough to stand a spoon in. Nell swears there's no rat in it.",
+    icon: 'item-stew',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 28, stamina: 25 },
+    value: 4,
+  },
+  'rat-tail': {
+    name: 'Rat Tail',
+    description: "Long, scaly and frankly disgusting. Proof of a job done, if anyone asks.",
+    icon: 'item-rattail',
+    category: 'Material',
+    stack: 30,
+    value: 1,
+  },
 } satisfies Record<string, ItemDef>;
 
 export type ItemId = keyof typeof ITEMS;
@@ -340,8 +400,9 @@ export function itemDef(id: ItemId): ItemDef {
 /** What an item does, one line each, for item details ("Eat: +15 stamina", "Defence +1"). */
 export function itemEffects(def: ItemDef): string[] {
   const lines: string[] = [];
-  if (def.eat?.health) lines.push(`Eat: +${def.eat.health} health`);
-  if (def.eat?.stamina) lines.push(`Eat: +${def.eat.stamina} stamina`);
+  const verb = def.drink ? 'Drink' : 'Eat';
+  if (def.eat?.health) lines.push(`${verb}: +${def.eat.health} health`);
+  if (def.eat?.stamina) lines.push(`${verb}: +${def.eat.stamina} stamina`);
   if (def.slot) lines.push(`Worn: ${EQUIP_SLOTS.find((s) => s.id === def.slot)!.label}`);
   if (def.defence) lines.push(`Defence +${def.defence}`);
   if (def.attack) lines.push(`Attack +${def.attack}`);

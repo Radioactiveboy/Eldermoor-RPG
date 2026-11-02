@@ -50,8 +50,16 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
-  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=plains` on Adowvale Plains, or
-  `?area=monastery` outside Saint Elda's monastery)
+  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=plains` on Adowvale Plains,
+  `?area=monastery` outside Saint Elda's monastery, `?area=tavern` in the Crooked Tankard's taproom, or
+  `?area=cellar` in its cellar)
+- **The Crooked Tankard**, Adowvale's inn on the north side of the square: buy a drink across the bar
+  from Godric the landlord (drunk there and then), or food and drink to take away. Sit at a table and a
+  maid comes over to take your order, fetches it from the bar and brings it back. It's quiet by day and
+  busy of an evening, when the regulars come in (play dice with Ada, pay Pell for a song, buy Old Harlan a
+  drink and he'll tell you about the door under the hill). Godric lets rooms upstairs for a night, three
+  nights or a week; your room's door is the only one along the passage that opens, and its bed is a save
+  point until checkout (11:00) on the last morning. He also has rats in his cellar
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
   game sends it running, and in a fight it may bolt rather than stand
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
@@ -78,6 +86,8 @@ src/
                           shrines, vegetable beds, beehives, fish ponds with benches, and four of the brothers
   world/BakedLayer.ts     Bakes the ground into textures of at most 2048px, so big maps fit on phones
   world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
+  world/TavernMap.ts      The Crooked Tankard: the taproom (bar, hearth, tables, stairs, cellar trapdoor), the
+                          passage upstairs with four rooms to let, a room, and the cellar with its rats
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
                           stalagmites, a pool, three wolves, the drover's lost ewes, bone piles to search, and
                           a locked door in the back wall (a hint of a quest to come)
@@ -89,7 +99,8 @@ src/
   systems/Pathfinding.ts  8-direction A* on the tile grid
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
-  systems/Shops.ts        The market traders: stock, what they buy, prices
+  systems/Shops.ts        The market traders (and Godric at the Tankard): stock, what they buy, prices
+  systems/Tavern.ts       The Crooked Tankard's menu and prices, and the room the hero has let (until when)
   systems/Loot.ts         Random finds: what searching a pile of bones can turn up, and how likely each is
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
@@ -106,6 +117,9 @@ src/
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
   art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
+  art/tavern.ts           The Crooked Tankard inside: bar counter pieces, kegs, bottle shelf, stairs, trapdoor,
+                          notice board, laid tables, washstand, sacks and the passage's runner
+  art/rats.ts             The cellar rats
   art/tollgate.ts         Lord Morten's toll gate (shut and open), the palisade, the guards' booth and his banner
   art/monastery.ts        Saint Elda's: the wall, gatehouse, chapel, bell tower, shrines, statue, bean rows,
                           beehive skeps and water lilies

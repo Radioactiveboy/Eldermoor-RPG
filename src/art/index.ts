@@ -15,6 +15,7 @@ import { generateMonastery } from './monastery';
 import { generateNpcs } from './npc';
 import { generatePortraits } from './portraits';
 import { generateProps } from './props';
+import { generateTavern } from './tavern';
 import { generateTiles } from './tiles';
 import { generateTollGate } from './tollgate';
 
@@ -42,4 +43,5 @@ export function generateArt(scene: Phaser.Scene): void {
   generateFishing(scene);
   generateMonastery(scene);
   generateAbbey(scene);
+  generateTavern(scene);
 }

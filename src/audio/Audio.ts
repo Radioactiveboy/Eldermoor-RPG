@@ -9,7 +9,7 @@ import { Settings, SettingsData } from '../settings/Settings';
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave' | 'monastery';
+export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave' | 'monastery' | 'tavern';
 
 interface TrackDef {
   bpm: number;
@@ -144,6 +144,26 @@ const TRACKS: Record<TrackName, TrackDef> = {
     scale: [62, 64, 65, 67, 69, 71, 72, 74],
     melodyChance: 0.5,
     padCutoff: 650,
+  },
+  // The Crooked Tankard: a rollicking jig in A dorian, with the drum thumping on every beat like boots on the boards.
+  tavern: {
+    bpm: 126,
+    chords: [
+      [45, 52, 57], // Am
+      [43, 50, 55], // G
+      [45, 52, 57], // Am
+      [50, 54, 57], // D
+      [45, 52, 57], // Am
+      [43, 50, 55], // G
+      [41, 48, 53], // F
+      [40, 47, 52], // E
+    ],
+    barsPerChord: 1,
+    arp: [0, 2, 1, 3, 2, 1, 4, 2],
+    scale: [69, 71, 72, 74, 76, 78, 79, 81],
+    melodyChance: 0.55,
+    padCutoff: 1000,
+    drums: 'X.jX.jXj',
   },
 };
 
@@ -502,6 +522,46 @@ class AudioEngine {
     const t = this.ctx!.currentTime;
     this.noise(t, 0.08, 'highpass', 1500, 900, 0.7, 0.3);
     this.noise(t + 0.16, 0.07, 'highpass', 1400, 800, 0.7, 0.22);
+  }
+
+  /** A swallow of something to drink: a low glug, then another. */
+  gulp(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t0 = ctx.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const t = t0 + i * 0.22;
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(260, t);
+      o.frequency.exponentialRampToValueAtTime(110, t + 0.12);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.25, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      o.connect(g).connect(this.sfxBus);
+      o.start(t);
+      o.stop(t + 0.16);
+    }
+  }
+
+  /** A rat's thin squeak. */
+  squeak(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(2600, t);
+    o.frequency.linearRampToValueAtTime(3400, t + 0.05);
+    o.frequency.exponentialRampToValueAtTime(2200, t + 0.12);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.07, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.16);
   }
 
   /** A single pop from the fire. */
