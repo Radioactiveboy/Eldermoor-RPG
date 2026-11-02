@@ -63,6 +63,11 @@ export interface MapObject {
    * tiles it blocks, like a fence. Each shape must lie inside one tile.
    */
   shapes?: Shape[];
+  /**
+   * Tall enough to hide someone (the rock walls in the Wolf Mother's den): it
+   * turns see-through while the hero is behind it.
+   */
+  fades?: boolean;
 }
 
 /**

@@ -20,6 +20,8 @@ const PROP_SHAPES: Record<string, Shape[]> = {
 const OUTSKIRTS_MARGIN = 192;
 /** Tiles past the map's edge over which the outskirts fade into the mist. */
 const OUTSKIRTS_FADE = 7;
+/** How see-through a tall rock gets with the hero behind it. */
+const FADED_ALPHA = 0.35;
 /** Tint the outskirts fade towards: a dark, misty blue-green. */
 const OUTSKIRTS_FOG = 0x3a4a4c;
 
@@ -75,6 +77,8 @@ export class IsoMap {
   readonly foam = new Map<number, string>();
   /** Sprites of the standing objects, so their art can be changed (a stall covered over at night). */
   private readonly objectSprites = new Map<MapObject, Phaser.GameObjects.Sprite>();
+  /** Objects that turn see-through with the hero behind them, and where they are on screen. */
+  private readonly fading: Array<{ sprite: Phaser.GameObjects.Sprite; bounds: Phaser.Geom.Rectangle }> = [];
   /** People and animals walking about; characters bump into them. */
   readonly bodies = new Set<Body>();
   /** Collision outlines on each tile, in grid space. Undefined means open ground. */
@@ -459,6 +463,22 @@ export class IsoMap {
     sprite.setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY).setFlipX(!!obj.flipX).setDepth(depth);
     if (obj.anim) sprite.play(obj.anim);
     this.objectSprites.set(obj, sprite);
+    if (obj.fades) this.fading.push({ sprite, bounds: sprite.getBounds() });
+  }
+
+  /**
+   * Turns see-through anything tall (`fades`) that stands in front of someone
+   * at screen position (x, y), feet first, drawn at `depth`, so they can be
+   * seen behind it; and solid again once they are clear.
+   */
+  updateFading(x: number, y: number, depth: number, dt: number): void {
+    const body = new Phaser.Geom.Rectangle(x - 14, y - 50, 28, 52);
+    for (const f of this.fading) {
+      const hides = f.sprite.depth > depth && Phaser.Geom.Rectangle.Overlaps(f.bounds, body);
+      const target = hides ? FADED_ALPHA : 1;
+      const step = dt * 4;
+      f.sprite.alpha = f.sprite.alpha < target ? Math.min(target, f.sprite.alpha + step) : Math.max(target, f.sprite.alpha - step);
+    }
   }
 
   /** Show a placed object with different art of the same footprint, e.g. 'mkt-stall-baker-closed'. */

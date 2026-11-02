@@ -272,6 +272,32 @@ function caveWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', index
   register(scene, key, r.canvas, r.anchorX, r.anchorY);
 }
 
+/**
+ * A block of solid cave wall standing out in the cave, a whole tile across,
+ * so that a row of them makes a wall between chambers. It is the same rock as
+ * the walls round the edge, and rises into the dark the same way; anyone
+ * behind it shows through (see `fades` on MapObject).
+ */
+function rockWall(scene: Phaser.Scene, key: string, index: number): void {
+  const m = new IsoModel();
+  const H = CAVE_WALL_HEIGHT - 10;
+  const solid = (face: Shader): Shader => (u, v) => face(u, v) ?? ROCK.deep;
+  const lit = solid(rockFace(index * 1.37, H, 3 + index));
+  const shade: Record<number, number> = { [ROCK.light]: ROCK.mid, [ROCK.mid]: ROCK.base, [ROCK.base]: ROCK.dark, [ROCK.wet]: ROCK.light };
+  const dark = solid(rockFace(index * 2.11 + 5, H, 9 + index));
+  m.box(0, 0, 0, 1, 1, H, {
+    top: ROCK.deep,
+    left: lit,
+    right: (u, v) => {
+      const c = dark(u, v)!;
+      return shade[c] ?? c;
+    },
+  });
+  const r = m.render(false);
+  fadeTop(r.canvas, 46);
+  register(scene, key, r.canvas, r.anchorX, r.anchorY);
+}
+
 /** Where the two back walls meet: a bulge of rock. */
 function caveCorner(scene: Phaser.Scene): void {
   const m = new IsoModel();
@@ -405,35 +431,6 @@ function boulder(seed: number, big: boolean): { canvas: PixelCanvas; anchorX: nu
   for (let i = 0; i < 7; i++) c.set(28 + i, 28 + Math.floor(i / 2), ROCK.darker);
   c.outline(ROCK.deep);
   return { canvas: c, anchorX: 32, anchorY: 42 - TILE_HEIGHT / 2 };
-}
-
-/**
- * A crag: a great knuckle of rock heaved up from the floor, taller than a
- * man, its top lost in the dark. Rows of them wall the den's chambers off
- * from each other.
- */
-function crag(seed: number): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
-  const c = new PixelCanvas(68, 86);
-  const rnd = seededRandom(seed);
-  const lumps: Array<[number, number, number, number]> = [];
-  for (let i = 0; i < 5; i++) {
-    const t = i / 4;
-    lumps.push([34 + (rnd() - 0.5) * 14, 74 - t * 48 - rnd() * 6, (22 - t * 8) * (0.85 + rnd() * 0.3), 13 - t * 3]);
-  }
-  lumps.sort((a, b) => a[1] - b[1]);
-  for (const [x, y, rx, ry] of lumps) c.ellipse(x, y, rx, ry, ROCK.base, ROCK.dark, ROCK.light);
-  for (let y = 0; y < c.height; y++) {
-    for (let x = 0; x < c.width; x++) {
-      const col = c.get(x, y);
-      if (col === null) continue;
-      const r = rnd();
-      if (r < 0.07) c.set(x, y, col === ROCK.dark ? ROCK.darker : ROCK.mid);
-      else if (r > 0.985 && col === ROCK.light) c.set(x, y, ROCK.wet);
-    }
-  }
-  c.outline(ROCK.deep);
-  fadeTop(c, 30);
-  return { canvas: c, anchorX: 34, anchorY: 74 - TILE_HEIGHT / 2 };
 }
 
 /** The Wolf Mother's bed: a trampled hollow of old straw and moulted white fur, ringed with gnawed bones. */
@@ -652,6 +649,7 @@ export function generateCave(scene: Phaser.Scene): void {
   caveWall(scene, 'cave-wall-back-crevice', 'back', 3, false, false, true);
   caveWall(scene, 'cave-wall-side-crevice', 'side', 2, false, false, true);
   caveCorner(scene);
+  for (let i = 0; i < 4; i++) rockWall(scene, `cave-rockwall-${i}`, i);
   const put = (key: string, art: { canvas: PixelCanvas; anchorX: number; anchorY: number }) =>
     register(scene, key, art.canvas, art.anchorX, art.anchorY);
   put('cave-stalagmites-0', stalagmites(2));
@@ -668,8 +666,5 @@ export function generateCave(scene: Phaser.Scene): void {
   put('cave-bones-1', bones(5));
   put('cave-entrance', caveEntrance());
   put('den-entrance', caveEntrance(4, 118, 9));
-  put('cave-crag-0', crag(3));
-  put('cave-crag-1', crag(8));
-  put('cave-crag-2', crag(14));
   put('den-lair', lair());
 }

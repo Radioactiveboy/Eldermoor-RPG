@@ -476,6 +476,7 @@ export class GameScene extends Phaser.Scene {
       this.clock.update(dt);
     }
     this.updateCreatures(dt);
+    this.map.updateFading(this.player.sprite.x, this.player.sprite.y, this.player.sprite.depth, dt);
     this.updateHens(dt);
     this.siblings?.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
     this.checkRoadExits();

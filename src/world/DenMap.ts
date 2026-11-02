@@ -8,9 +8,9 @@ export const DEN_CREVICE_X = 24;
 
 /**
  * The Wolf Mother's den: an old cave system in a rocky knoll on Adowvale
- * Plains, far bigger than the wolves' cave at home. Ridges of crags split it
+ * Plains, far bigger than the wolves' cave at home. Walls of rock split it
  * into four chambers. The mouth opens into the first, a wide hall in the
- * daylight; a gap in the crags leads east into a long hall where her wolves
+ * daylight; a gap in the rock leads east into a long hall where her wolves
  * lie up, and another south into a gallery round a black pool. Through the
  * gallery, and only through it, is her lair, under a crack in the roof where
  * a little daylight falls on her bed of bones and white fur.
@@ -84,21 +84,22 @@ export function buildDenMap(): MapData {
 
   const add = (key: string, tx: number, ty: number, extra: Partial<MapObject> = {}) =>
     placeObject(data, { key, tx, ty, w: 1, h: 1, ...extra });
-  const crag = (tx: number, ty: number) => {
+  // A block of solid rock wall; it turns see-through while the hero is behind it.
+  const rock = (tx: number, ty: number) => {
     if (props[ty]?.[tx] !== Prop.None) return;
-    add(`cave-crag-${(tx * 7 + ty * 3) % 3}`, tx, ty, { shapes: [circle(0.5, 0.5, 0.48)] });
+    add(`cave-rockwall-${(tx * 7 + ty * 3) % 4}`, tx, ty, { fades: true });
   };
   const boulder = (tx: number, ty: number, r = 0.42) => {
     if (props[ty]?.[tx] !== Prop.None) return;
     add(`cave-boulder-${(tx + ty) % 3}`, tx, ty, { shapes: [circle(0.5, 0.5, r)] });
   };
 
-  // The ridges of crags between the chambers, each with a gap to pass through.
-  for (let y = 0; y <= 12; y++) if (y < 4 || y > 6) crag(12, y);
-  for (let x = 0; x < W; x++) if (x < 5 || x > 7) crag(x, 12);
-  for (let y = 13; y < H; y++) if (y < 17 || y > 19) crag(15, y);
+  // Walls of rock between the chambers, each with a gap to pass through.
+  for (let y = 0; y <= 12; y++) if (y < 4 || y > 6) rock(12, y);
+  for (let x = 0; x < W; x++) if (x < 5 || x > 7) rock(x, 12);
+  for (let y = 13; y < H; y++) if (y < 17 || y > 19) rock(15, y);
   // A spur half across the east hall, and rubble along the near edges where the cave closes in.
-  for (const [x, y] of [[19, 0], [19, 1], [18, 1]]) crag(x, y);
+  for (const [x, y] of [[19, 0], [19, 1], [18, 1]]) rock(x, y);
   for (let x = 0; x < W; x += 3) boulder(x, H - 1);
   for (let y = 0; y < H; y += 3) boulder(W - 1, y);
 
