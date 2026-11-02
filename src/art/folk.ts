@@ -240,6 +240,69 @@ export const FOLK: Record<string, Outfit> = {
     hair: 0xb4562a,
     robe: true,
   },
+  // Within the walls. Prior Benedict, who rules the house: a black habit, iron-grey hair and a staff of office.
+  prior: {
+    cloak: [0x2a262c, 0x1c181e, 0x3e3842],
+    hood: false,
+    hoodDown: true,
+    tunic: [0x2e2a30, 0x201c22, 0x423c46],
+    shirt: [0x2e2a30, 0x201c22],
+    trouser: [0x201c22, 0x18141a],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xe0b896, 0xbc9274],
+    hair: 0x8a8690,
+    robe: true,
+    staff: true,
+  },
+  // Brother Anselm, the infirmarian and herbalist: an old man in a green-grey habit with a long white beard.
+  anselm: {
+    cloak: null,
+    hood: false,
+    tunic: [0x5e6a52, 0x46503c, 0x7a866a],
+    shirt: [0x5e6a52, 0x46503c],
+    trouser: [0x46503c, 0x343c2c],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xe6bc9a, 0xc29878],
+    hair: 0xe8e4dc,
+    beard: 0xeeeae2,
+    robe: true,
+  },
+  // Brother Hob, the cook: a stout man with his sleeves rolled and an apron over his habit.
+  cook: {
+    cloak: null,
+    hood: false,
+    tunic: [0xe4dccc, 0xc0b6a2, 0xf6f0e4],
+    shirt: [0x6a5240, 0x4e3c2e],
+    trouser: [0x6a5240, 0x4e3c2e],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xeaa886, 0xc6866a],
+    hair: 0x5a3a26,
+    robe: true,
+  },
+  // Brother Edmund, the scribe: a thin young man in a dark habit, ink on his fingers.
+  scribe: {
+    cloak: null,
+    hood: false,
+    tunic: [0x3e3a4a, 0x2c2a36, 0x56506a],
+    shirt: [0x3e3a4a, 0x2c2a36],
+    trouser: [0x2c2a36, 0x201e28],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xf0caa8, 0xcca686],
+    hair: 0x2e2420,
+    robe: true,
+  },
+  // Brother Leofric, mending in the infirmary after the wolves caught him on the road.
+  leofric: {
+    cloak: null,
+    hood: false,
+    tunic: [0x6a5444, 0x4e3e32, 0x86705c],
+    shirt: [P.linen, P.linenDark],
+    trouser: [0x4e3e32, 0x3a2e24],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xd8a07a, 0xb07a5a],
+    hair: 0x6a3a22,
+    robe: true,
+  },
 };
 
 export function generateFolk(scene: Phaser.Scene): void {

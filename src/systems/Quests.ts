@@ -36,6 +36,8 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'talk', text: 'Speak with Mother' },
       { id: 'leave', text: 'Head out into the village' },
       { id: 'find', text: 'Find a healer or herbalist with moonpetal tincture' },
+      { id: 'moonpetal', text: "Gather moonpetal in Saint Elda's cloister garden" },
+      { id: 'willow', text: 'Find willow bark for the tincture' },
       { id: 'return', text: 'Bring the medicine home to Mother' },
     ],
     xp: 200,
@@ -54,6 +56,22 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'tell', text: 'Tell Wil what became of his ewes' },
     ],
     xp: 150,
+  },
+  'wolf-mother': {
+    id: 'wolf-mother',
+    title: 'The Wolf Mother',
+    giver: 'Brother Wystan',
+    summary:
+      "Wolves have been harrying the brothers of Saint Elda on the Lord's Road, and the Prior has barred the gate to all guests " +
+      'until they stop. Brother Wystan says they are led by a great white she-wolf, the Wolf Mother, from an old den out on ' +
+      'Adowvale Plains. If I put an end to her, the gate will be opened to me.',
+    objectives: [
+      { id: 'talk', text: 'Speak with Brother Wystan' },
+      { id: 'den', text: "Find the Wolf Mother's den on Adowvale Plains" },
+      { id: 'slay', text: 'Slay the Wolf Mother' },
+      { id: 'return', text: 'Tell Brother Wystan the road is safe' },
+    ],
+    xp: 250,
   },
   'chicken-feed': {
     id: 'chicken-feed',

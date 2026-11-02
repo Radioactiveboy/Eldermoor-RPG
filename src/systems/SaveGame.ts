@@ -49,6 +49,13 @@ export const AREA_NAMES: Record<AreaId, string> = {
   hut: "Farmer Iran's hut",
   plains: 'Adowvale Plains',
   monastery: "Saint Elda's Monastery",
+  abbey: "Within Saint Elda's walls",
+  chapel: "Saint Elda's chapel",
+  infirmary: 'The infirmary',
+  scriptorium: 'The scriptorium',
+  refectory: 'The refectory',
+  den: "The Wolf Mother's den",
+  deepden: 'Beneath the den',
 };
 
 type Listener = (save: SaveData) => void;

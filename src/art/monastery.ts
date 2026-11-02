@@ -22,14 +22,14 @@ const hash = (a: number, b: number) => {
 /** Saint Elda's blue, on the brothers' banners and the gate's roundel. */
 export const ELDA = { blue: 0x3a5a8a, blueDark: 0x2a4066, blueLight: 0x5a7eb0 };
 
-const SLATE = { base: 0x56586a, dark: 0x3e3f4e, light: 0x70728a };
+export const SLATE = { base: 0x56586a, dark: 0x3e3f4e, light: 0x70728a };
 
 /**
  * Old rubble stone laid in rough courses, weathered and patched with moss
  * (more of it towards the ground). `width` is the face's length in tiles so
  * stones keep the same size on long and short faces.
  */
-function rubble(width: number, height: number, seed: number, mossy = 0.12): Shader {
+export function rubble(width: number, height: number, seed: number, mossy = 0.12): Shader {
   return (u, v) => {
     const y = v * height;
     const row = Math.floor(y / 7);
@@ -43,7 +43,7 @@ function rubble(width: number, height: number, seed: number, mossy = 0.12): Shad
 }
 
 /** Flat coping stones along the top of a wall. */
-const coping = { top: P.stoneLight, left: lipped(P.stone, P.stoneLight, 0.3), right: P.stoneDark };
+export const coping = { top: P.stoneLight, left: lipped(P.stone, P.stoneLight, 0.3), right: P.stoneDark };
 
 /** A tile of the monastery's wall along x, its face to +y. Some sections have ivy climbing them. */
 function wall(seed: number, ivy: boolean): IsoModel {
@@ -78,7 +78,7 @@ function wallPier(): IsoModel {
  * between two buttresses, its oak doors barred shut, Saint Elda's star carved
  * in a roundel above, and a little bellcote on top with its bell.
  */
-function gatehouse(): IsoModel {
+function gatehouse(open = false): IsoModel {
   const m = new IsoModel();
   const H = 84;
   // The front, from x 0.6 to 3.4: stone, with the archway and doors cut into it.
@@ -94,6 +94,18 @@ function gatehouse(): IsoModel {
     const spring = 38;
     const inside = arch(half, spring, 60);
     const ring = !inside && arch(half + 0.14, spring, 66);
+    if (inside && open) {
+      // The doors swung back against the passage walls, and through it a glimpse of the sunny court within.
+      const ax = Math.abs(x);
+      if (ax > half - 0.16) return Math.floor(y / 4) % 3 === 0 ? P.barkDark : x < 0 ? P.plank : P.plankDark;
+      if (y < 5) return Math.floor(x * 8) % 2 ? P.stone : P.stoneLight;
+      if (ax < half * 0.6 && y < 30) {
+        if (y < 9) return Math.floor(x * 10 + y / 3) % 2 ? P.stoneLight : 0xb4b2bc;
+        if (y < 13) return P.grassLight;
+        return Math.floor(y / 5) % 2 ? 0xb4b2bc : P.stoneLight;
+      }
+      return y > 30 ? P.ink : ax > half * 0.6 + 0.08 ? P.stoneDark : P.mortar;
+    }
     if (inside) {
       // The two leaves of the door, planked, with iron straps and studs, and a ring handle.
       const leaf = x < 0 ? x + half : x;
@@ -156,7 +168,7 @@ function gatehouse(): IsoModel {
 }
 
 /** Roof slates, row upon row, a little uneven. */
-function slates(): Shader {
+export function slates(): Shader {
   return (u, v) => {
     const row = Math.floor(v * 14);
     const lv = (v * 14) % 1;
@@ -415,6 +427,7 @@ export function generateMonastery(scene: Phaser.Scene): void {
   put('mon-wall-ivy', wall(17, true));
   put('mon-wall-pier', wallPier());
   put('mon-gate', gatehouse());
+  put('mon-gate-open', gatehouse(true));
   put('mon-chapel', chapel());
   put('mon-tower', tower());
   put('mon-shrine-0', shrine(0));

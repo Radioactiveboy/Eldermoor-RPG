@@ -107,6 +107,23 @@ export const ITEMS = {
     stack: 10,
     value: 12,
   },
+  'white-hide': {
+    name: "The Wolf Mother's Hide",
+    description:
+      'A great white pelt, thick as a fleece and pale as frost, from the she-wolf who ruled the old den on the plains. ' +
+      'There is not another like it in the shire.',
+    icon: 'item-whitehide',
+    category: 'Material',
+    stack: 1,
+    value: 90,
+  },
+  moonpetal: {
+    name: 'Moonpetal',
+    description: "Pale, star-shaped flowers from Saint Elda's cloister garden. They smell of rain, and glow faintly in the dark. Half of Mother's tincture.",
+    icon: 'item-moonpetal',
+    category: 'Material',
+    stack: 10,
+  },
   venison: {
     name: 'Venison',
     description: 'A haunch of red deer, wrapped in dock leaves. Rich and dark; Hilde would make a pie of it.',

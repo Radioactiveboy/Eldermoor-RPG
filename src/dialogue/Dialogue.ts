@@ -30,7 +30,8 @@ export interface DialogueScript {
 
 export type SpeakerId =
   | 'mother' | 'pedlar' | 'pilgrim' | 'drover' | 'baker' | 'smith' | 'tanner' | 'guard' | 'iran'
-  | 'tollguard' | 'carter' | 'herbwife' | 'fisherman' | 'porter' | 'gardener' | 'silent' | 'novice';
+  | 'tollguard' | 'carter' | 'herbwife' | 'fisherman' | 'porter' | 'gardener' | 'silent' | 'novice'
+  | 'prior' | 'anselm' | 'cook' | 'scribe' | 'leofric';
 
 export interface Speaker {
   name: string;
@@ -58,4 +59,9 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   gardener: { name: 'Brother Cuthbert', portrait: 'portrait-gardener', voice: { pitch: 185, spread: 0.16, wave: 'triangle' } },
   silent: { name: 'Brother Aldo', portrait: 'portrait-silent', voice: { pitch: 120, spread: 0.04, wave: 'sine' } },
   novice: { name: 'Brother Tobin', portrait: 'portrait-novice', voice: { pitch: 240, spread: 0.2, wave: 'triangle' } },
+  prior: { name: 'Prior Benedict', portrait: 'portrait-prior', voice: { pitch: 125, spread: 0.05, wave: 'sine' } },
+  anselm: { name: 'Brother Anselm', portrait: 'portrait-anselm', voice: { pitch: 150, spread: 0.1, wave: 'sine' } },
+  cook: { name: 'Brother Hob', portrait: 'portrait-cook', voice: { pitch: 160, spread: 0.2, wave: 'triangle' } },
+  scribe: { name: 'Brother Edmund', portrait: 'portrait-scribe', voice: { pitch: 220, spread: 0.12, wave: 'sine' } },
+  leofric: { name: 'Brother Leofric', portrait: 'portrait-leofric', voice: { pitch: 190, spread: 0.14, wave: 'triangle' } },
 };

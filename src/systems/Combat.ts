@@ -238,6 +238,19 @@ export const FOES = {
     xp: 40,
     packs: true,
   },
+  // The great white she-wolf who leads the wolves on the Lord's Road, from her den on the plains (see world/DenMap.ts).
+  wolfmother: {
+    name: 'Wolf Mother',
+    maxHp: 64,
+    ac: 13,
+    toHit: 5,
+    damage: { count: 2, sides: 6, bonus: 2 },
+    quickness: 3,
+    verb: 'savages',
+    xp: 180,
+    packs: true,
+    stubborn: true,
+  },
   // Plains game (see world/PlainsMap.ts): it would rather run than fight, so bring it down quickly.
   deer: {
     name: 'Red Deer',

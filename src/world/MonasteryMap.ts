@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
-import { box, circle } from './Collision';
-import { MapData, placeObject, Prop, Terrain } from './MapData';
+import { box, circle, Shape } from './Collision';
+import { Door, MapData, placeObject, Prop, Terrain } from './MapData';
 import { addFence, joinDiagonals, paintPath, smoothLine, spaced } from './MapGenerator';
 import type { CropKind } from '../systems/Farm';
+import { abbeyBuilding } from '../art/abbey';
 
 export const MONASTERY_W = 64;
 export const MONASTERY_H = 60;
@@ -13,6 +14,25 @@ const WALL_Y = 8;
 const GATE_X = 30;
 /** Where the Lord's Road comes in from the plains, at the west edge. */
 const ROAD_Y = 44;
+/** Where the precinct wall has a square tower standing in it (each two tiles wide, astride the wall). */
+const WALL_TOWERS = [8, 26, 36, 54];
+
+/** The gatehouse's outline: shut, the whole width; open, only the buttresses either side of the arch. */
+export function monasteryGateShape(open: boolean): { shapes: Shape[]; blocks: Array<[number, number]> } {
+  return open
+    ? { shapes: [box(0.1, 0.2, 1, 0.95), box(3, 0.2, 3.9, 0.95)], blocks: [[0, 0], [3, 0]] }
+    : {
+        shapes: [box(0.1, 0.2, 1, 0.95), box(1, 0.25, 2, 0.75), box(2, 0.25, 3, 0.75), box(3, 0.2, 3.9, 0.95)],
+        blocks: [[0, 0], [1, 0], [2, 0], [3, 0]],
+      };
+}
+
+/** The tiles in the gate's arch, which lead inside once it's open. */
+export function monasteryGateDoors(): Door[] {
+  return [GATE_X + 1, GATE_X + 2].map((tx) => ({
+    tx, ty: WALL_Y, to: 'abbey' as const, entry: 'gate', label: 'Go through the gate', facing: 'front' as const,
+  }));
+}
 
 /**
  * The grounds outside Saint Elda's monastery, at the east end of the Lord's
@@ -23,9 +43,13 @@ const ROAD_Y = 44;
  * vegetable beds, a row of beehives, wayside shrines with candles burning,
  * and fish ponds with lilies and benches beside them. Four of the brothers
  * are out: the porter at the gate, the gardener, a silent brother walking
- * among the shrines and a novice sweeping the road. Inside the walls is for later.
+ * among the shrines and a novice sweeping the road. Over the wall rise the
+ * roofs, gables, towers and turrets of the brothers' house.
+ *
+ * The gate stays barred until the hero has dealt with the Wolf Mother for
+ * Brother Wystan (`open`); then it stands open and leads inside (see AbbeyMap.ts).
  */
-export function buildMonasteryMap(): MapData {
+export function buildMonasteryMap(open = false): MapData {
   const W = MONASTERY_W;
   const H = MONASTERY_H;
   const rnd = new Phaser.Math.RandomDataGenerator(['saint-elda']);
@@ -110,7 +134,7 @@ export function buildMonasteryMap(): MapData {
     spawn: entry,
     music: 'monastery',
     decor: 0.38,
-    entries: { plains: entry },
+    entries: { plains: entry, gate: { x: GATE_X + 2, y: WALL_Y + 1.6 } },
     doors: [],
     npcs: [],
     sights: [],
@@ -121,29 +145,34 @@ export function buildMonasteryMap(): MapData {
       { gx: court.x, gy: court.y, name: "Saint Elda's statue", range: court.r },
       ...ponds.map((p) => ({ gx: p.x, gy: p.y, name: p.name, range: p.r + 3 })),
     ],
-    musings: [
-      {
-        x0: GATE_X, y0: WALL_Y + 1, x1: GATE_X + 4, y1: WALL_Y + 2,
-        text: 'Barred from the inside. Beyond the wall a bell is ringing, and men are singing, very slowly.',
-      },
-    ],
+    musings: open
+      ? []
+      : [
+          {
+            x0: GATE_X, y0: WALL_Y + 1, x1: GATE_X + 4, y1: WALL_Y + 2,
+            text: 'Barred from the inside. Beyond the wall a bell is ringing, and men are singing, very slowly.',
+          },
+        ],
   };
   const clear = (x0: number, y0: number, x1: number, y1: number) => {
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (props[y]?.[x] !== undefined && props[y][x] !== Prop.Blocked) props[y][x] = Prop.None;
   };
 
   // The wall, right across, with a buttress every so often and ivy here and there, and the gatehouse in the middle.
+  const towerAt = (x: number) => WALL_TOWERS.some((t) => x === t || x === t + 1);
   for (let x = 0; x < W; x++) {
     props[WALL_Y][x] = Prop.None;
-    if (x >= GATE_X && x < GATE_X + 4) continue;
+    if ((x >= GATE_X && x < GATE_X + 4) || towerAt(x)) continue;
     const pier = x === 0 || x === W - 1 || x === GATE_X - 1 || x === GATE_X + 4 || x % 9 === 4;
     const key = pier ? 'mon-wall-pier' : rnd.frac() < 0.22 ? 'mon-wall-ivy' : `mon-wall-${rnd.between(0, 2)}`;
     placeObject(data, { key, tx: x, ty: WALL_Y, w: 1, h: 1, shapes: [pier ? box(0.15, 0.2, 0.85, 0.8) : box(0, 0.3, 1, 0.7)] });
   }
-  placeObject(data, {
-    key: 'mon-gate', tx: GATE_X, ty: WALL_Y, w: 4, h: 1,
-    shapes: [box(0.1, 0.2, 1, 0.95), box(1, 0.25, 2, 0.75), box(2, 0.25, 3, 0.75), box(3, 0.2, 3.9, 0.95)],
-  });
+  placeObject(data, { key: open ? 'mon-gate-open' : 'mon-gate', tx: GATE_X, ty: WALL_Y, w: 4, h: 1, ...monasteryGateShape(open) });
+  if (open) data.doors!.push(...monasteryGateDoors());
+  for (const t of WALL_TOWERS) {
+    clear(t - 1, WALL_Y - 2, t + 2, WALL_Y);
+    placeObject(data, { key: 'abbey-wall-tower', tx: t, ty: WALL_Y - 1, w: 2, h: 2 });
+  }
   data.sights!.push({
     id: 'monastery-gate', gx: gateMid, gy: WALL_Y + 0.9, label: 'Read the carving', z: 92,
     sign: { heading: 'Carved over the gate', lines: ['PAX INTRANTIBUS', 'SALUS EXEUNTIBUS', '', '"Peace to all who enter,', 'and health to all who leave."'] },
@@ -154,14 +183,30 @@ export function buildMonasteryMap(): MapData {
     data.lights!.push({ gx: x + 0.5, gy: WALL_Y + 1.5, z: 50, radius: 140, flicker: 0.5 });
   }
 
-  // Inside the walls, seen over the top: the chapel, the bell tower and the brothers' house.
-  clear(6, 1, 14, 5);
-  placeObject(data, { key: 'mon-chapel', tx: 7, ty: 2, w: 7, h: 3 });
-  clear(39, 2, 42, 6);
-  placeObject(data, { key: 'mon-tower', tx: 40, ty: 4, w: 2, h: 2 });
-  clear(48, 2, 52, 6);
-  placeObject(data, { key: 'bld-house-slate-back', tx: 49, ty: 3, w: 3, h: 3 });
-  data.chimneys = [{ gx: 49.62, gy: 3.72, z: 150 }];
+  // Inside the walls, seen over the top: the ranges of the brothers' house round their cloister, the chapel
+  // with its bell-cote, the bell tower, and turrets at the corners. (The same buildings as inside: see AbbeyMap.ts.)
+  data.chimneys = [];
+  const building = (key: string, tx: number, ty: number) => {
+    const b = abbeyBuilding(key);
+    clear(tx - 1, ty - 1, tx + b.w, Math.min(ty + b.h, WALL_Y - 1));
+    placeObject(data, { key, tx, ty, w: b.w, h: b.h });
+    for (const c of b.chimneys) data.chimneys!.push({ gx: tx + c.gx, gy: ty + c.gy, z: c.z });
+  };
+  const standing = (key: string, tx: number, ty: number, w = 1, h = 1) => {
+    clear(tx - 1, ty - 1, tx + w, Math.min(ty + h, WALL_Y - 1));
+    placeObject(data, { key, tx, ty, w, h });
+  };
+  building('abbey-refectory', 3, 3);
+  standing('abbey-turret-short', 11, 5);
+  building('abbey-chapel', 12, 1);
+  standing('mon-tower', 21, 3, 2, 2);
+  building('abbey-dorter', 23, 1);
+  standing('abbey-turret', 33, 4);
+  building('abbey-infirmary', 35, 3);
+  standing('abbey-turret-short', 42, 5);
+  building('abbey-scriptorium', 44, 2);
+  building('abbey-lodging', 52, 3);
+  standing('abbey-turret', 57, 5);
 
   // Saint Elda on her plinth in the middle of the forecourt.
   clear(court.x - 2, court.y - 2, court.x + 1, court.y + 1);

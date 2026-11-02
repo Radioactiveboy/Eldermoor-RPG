@@ -2,6 +2,7 @@ import type { TrackName } from '../audio/Audio';
 import type { HenKind } from '../art/henfarm';
 import type { FoeKind } from '../systems/Combat';
 import type { CropKind } from '../systems/Farm';
+import type { ItemId } from '../systems/Inventory';
 import type { Shape } from './Collision';
 
 export enum Terrain {
@@ -29,7 +30,12 @@ export enum Prop {
  * The places the player can be. Each is its own map; doors lead between them.
  * ('market' is the village of Adowvale, round its market square: the id is kept so old saves still load.)
  */
-export type AreaId = 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains' | 'monastery';
+export type AreaId =
+  | 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains' | 'monastery'
+  // Inside Saint Elda's walls: the grounds, and the rooms off them.
+  | 'abbey' | 'chapel' | 'infirmary' | 'scriptorium' | 'refectory'
+  // The Wolf Mother's den on the plains, and the passage beyond its crevice.
+  | 'den' | 'deepden';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -57,6 +63,11 @@ export interface MapObject {
    * tiles it blocks, like a fence. Each shape must lie inside one tile.
    */
   shapes?: Shape[];
+  /**
+   * Tall enough to hide someone (the rock walls in the Wolf Mother's den): it
+   * turns see-through while the hero is behind it.
+   */
+  fades?: boolean;
 }
 
 /**
@@ -104,6 +115,10 @@ export interface Sight {
   loot?: 'bones';
   /** A door that won't open (yet): trying it rattles the lock, and the hero wonders what's behind it. */
   locked?: boolean;
+  /** Something growing that can be picked once (the moonpetal in the cloister garden): the item, and the art it's left as. */
+  gather?: { item: ItemId; picked: string };
+  /** Just a thought on looking closely (a carving, a grave). */
+  thought?: string;
 }
 
 /** A warm light source that brightens its surroundings in the dark. */
