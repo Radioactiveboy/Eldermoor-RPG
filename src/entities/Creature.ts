@@ -13,6 +13,8 @@ import type { Body, IsoMap } from '../world/IsoMap';
  */
 const WAYS: Record<FoeKind, { shy: boolean; notice: number; leash: number; speed: number }> = {
   wolf: { shy: false, notice: 3.5, leash: 4, speed: 1.5 },
+  // She keeps close to her lair, and sees you coming from further off.
+  wolfmother: { shy: false, notice: 4.5, leash: 2.5, speed: 1.4 },
   boar: { shy: false, notice: 2.6, leash: 4, speed: 1.2 },
   deer: { shy: true, notice: 0, leash: 7, speed: 1.3 },
   hare: { shy: true, notice: 0, leash: 5, speed: 1.8 },
@@ -68,8 +70,9 @@ export class Creature implements Body {
     this.home = { x: gx, y: gy };
     this.ways = WAYS[kind];
     const art = CREATURE_ART[kind];
-    this.shadow = scene.add.image(0, 0, 'shadow').setScale(kind === 'hare' ? 0.7 : 1.4, kind === 'hare' ? 0.6 : 1);
-    this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h);
+    const scale = art.scale ?? 1;
+    this.shadow = scene.add.image(0, 0, 'shadow').setScale((kind === 'hare' ? 0.7 : 1.4) * scale, (kind === 'hare' ? 0.6 : 1) * scale);
+    this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale);
     this.sprite.play({ key: `${kind}-sniff`, startFrame: Math.floor(Math.random() * 4) });
     this.sprite.setFlipX(Math.random() < 0.5);
     this.timer = 1 + Math.random() * 3;

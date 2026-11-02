@@ -1264,9 +1264,20 @@ const silent = monk({ skin: 0xb88262, hair: 0x2a2024, habit: 0x4e4a46, iris: 0x3
 /** Brother Tobin, a novice: young, freckled, eager, with a mop of red at the sides. */
 const novice = monk({ skin: 0xf0c49a, hair: 0xb4562a, habit: 0x8a7a64, iris: 0x4a6a8a, brow: 'worried', smile: 1, width: 16, jaw: 7 });
 
+/** Prior Benedict: lean and grave, iron-grey, in the black habit of the head of the house. */
+const prior = monk({ skin: 0xe0b896, hair: 0x8a8690, habit: 0x2e2a30, iris: 0x4a5a6a, brow: 'stern', smile: 0, old: true, width: 16, jaw: 8 });
+/** Brother Anselm, the herbalist: very old and kindly, with a long white beard. */
+const anselm = monk({ skin: 0xe6bc9a, hair: 0xe8e4dc, habit: 0x5e6a52, iris: 0x6a8a5a, brow: 'arched', smile: 1, old: true, beard: 0xeeeae2 });
+/** Brother Hob, the cook: broad, red-faced and cheerful. */
+const cook = monk({ skin: 0xeaa886, hair: 0x5a3a26, habit: 0x6a5240, iris: 0x5a4a3a, brow: 'flat', smile: 1, width: 20, jaw: 12 });
+/** Brother Edmund, the scribe: young and thin, a little anxious, dark-haired. */
+const scribe = monk({ skin: 0xf0caa8, hair: 0x2e2420, habit: 0x3e3a4a, iris: 0x3a4a6a, brow: 'worried', smile: 0, width: 15, jaw: 6 });
+/** Brother Leofric, bitten on the road: young, stubbled, a little pale. */
+const leofric = monk({ skin: 0xd8a07a, hair: 0x6a3a22, habit: 0x6a5444, iris: 0x5a4a3a, brow: 'worried', smile: 0, width: 17, jaw: 9, beard: 0x5a3220 });
+
 const PAINTERS: Record<string, Painter> = {
   mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
-  fisherman, porter, gardener, silent, novice,
+  fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */

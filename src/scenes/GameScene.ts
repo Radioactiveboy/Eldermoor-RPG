@@ -25,7 +25,10 @@ import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
 import { buildHutMap } from '../world/HutMap';
 import { buildMarketMap, TOLL, tollGateShape } from '../world/MarketMap';
-import { buildMonasteryMap } from '../world/MonasteryMap';
+import { buildMonasteryMap, monasteryGateDoors, monasteryGateShape } from '../world/MonasteryMap';
+import { buildAbbeyMap, MOONPETAL } from '../world/AbbeyMap';
+import { buildChapelMap, buildInfirmaryMap, buildRefectoryMap, buildScriptoriumMap } from '../world/AbbeyRooms';
+import { buildDeepDenMap, buildDenMap } from '../world/DenMap';
 import { buildPlainsMap } from '../world/PlainsMap';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
@@ -99,6 +102,9 @@ export interface Channel {
   onCancel?: () => void;
 }
 
+/** The wolves of the den at home: once they're all gone, Brother Wystan hears of it. */
+const CAVE_WOLVES = ['cave-wolf-1', 'cave-wolf-2', 'cave-wolf-3'];
+
 /** Coins Wil pays for news of his ewes. */
 const SHEEP_REWARD = 30;
 /** Other beasts this close (in tiles) to the one that starts a fight join in. */
@@ -125,6 +131,22 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
     'Somewhere a cart rattles over the cobbles. Two women are arguing about the price of eggs.',
     'Clang, clang, clang. The smith is at it again.',
   ],
+  pew: [
+    'The candles gutter and steady. Somewhere behind the altar a brother is humming, very low.',
+    'The light through the windows lies in blue and gold on the floor.',
+  ],
+  'cloister-bench': [
+    'Bees go about the herbs. Somewhere a bell rings once, and stops.',
+    'The moonpetal by the pond nods in the breeze. Brother Anselm is talking to his sage.',
+  ],
+  'abbey-bench': [
+    'A brother crosses the court with an armful of books, nods, and is gone.',
+    'The well bucket creaks in the wind. The whole place smells of lavender and woodsmoke.',
+  ],
+  'refectory-bench': [
+    'The pottage smells of leeks. It always smells of leeks, Brother Hob says, and he is proud of it.',
+    'Someone has carved a very small wolf into the table. It looks a bit like her.',
+  ],
   // The same bench after the traders have gone home.
   'market-bench-closed': [
     'The stalls are covered over for the night. The square is quiet without the traders.',
@@ -136,6 +158,7 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
 /** What's left of each kind of beast once it's slain. */
 const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   wolf: [['wolf-pelt', 1]],
+  wolfmother: [['white-hide', 1]],
   deer: [['venison', 2], ['deer-hide', 1]],
   hare: [['hare-pelt', 1]],
   boar: [['boar-tusk', 2]],
@@ -144,6 +167,10 @@ const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
 /** What the hero thinks over a beast they've brought down, and when one gets away. */
 const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
   wolf: { slain: 'It lies still now. The pelt might be worth something in the village.', fled: 'It ran off into the trees. I doubt it will come back.' },
+  wolfmother: {
+    slain: 'The Wolf Mother is dead. Even lying still she is enormous, and her hide is as white as new snow. Brother Wystan will want to hear of this.',
+    fled: 'She is gone into the dark.',
+  },
   deer: { slain: 'Venison for the pot, and a fine hide. Tamsin will want that.', fled: 'Gone, white rump bobbing away over the grass. I need to be quicker.' },
   hare: { slain: 'A hare. Not much eating on it, but the pelt is soft.', fled: 'Gone in a flash. Hares are quicker than they look.' },
   boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and so is my hide.', fled: 'It crashed off into the thicket. Good riddance.' },
@@ -169,7 +196,14 @@ function buildArea(area: AreaId): MapData {
   if (area === 'home') return buildHomeMap();
   if (area === 'market') return buildMarketMap(QuestLog.hasFlag('paid-toll'));
   if (area === 'plains') return buildPlainsMap();
-  if (area === 'monastery') return buildMonasteryMap();
+  if (area === 'monastery') return buildMonasteryMap(QuestLog.hasFlag('monastery-open'));
+  if (area === 'abbey') return buildAbbeyMap();
+  if (area === 'chapel') return buildChapelMap();
+  if (area === 'infirmary') return buildInfirmaryMap();
+  if (area === 'scriptorium') return buildScriptoriumMap();
+  if (area === 'refectory') return buildRefectoryMap();
+  if (area === 'den') return buildDenMap();
+  if (area === 'deepden') return buildDeepDenMap();
   if (area === 'cave') return buildCaveMap();
   if (area === 'hut') return buildHutMap();
   return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
@@ -271,7 +305,10 @@ export class GameScene extends Phaser.Scene {
     this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
     const areaParam = new URLSearchParams(window.location.search).get('area');
-    if (data.newGame && (['market', 'world', 'cave', 'hut', 'plains', 'monastery'] as const).some((a) => a === areaParam)) this.area = areaParam as AreaId;
+    const testAreas: AreaId[] = ['market', 'world', 'cave', 'hut', 'plains', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium', 'refectory', 'den', 'deepden'];
+    if (data.newGame && testAreas.some((a) => a === areaParam)) this.area = areaParam as AreaId;
+    // Saves from before the wolves at home counted for anything: if they're all dead, note it.
+    if (CAVE_WOLVES.every((id) => this.defeatedFoes.has(id))) QuestLog.setFlag('cleared-cave');
     this.busy = false;
     this.walkingTo = undefined;
     this.focus = undefined;
@@ -295,6 +332,7 @@ export class GameScene extends Phaser.Scene {
     const children = (this.map.data.children ?? []).map((c) => new Child(this, this.map, c.id, c.gx, c.gy));
     this.siblings = children.length > 0 ? new Siblings(children, SIBLING_BANTER, () => this.siblingHello()) : undefined;
     this.syncCrops();
+    this.syncGathered();
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
     this.drips = this.map.data.drips ? new Drips(this, this.map.data) : undefined;
 
@@ -347,6 +385,21 @@ export class GameScene extends Phaser.Scene {
       );
     }
     if (this.area === 'cave') this.enteredCave();
+    if (this.area === 'den') this.enteredDen();
+    if (this.area === 'abbey' && !this.visited.has('abbey')) {
+      this.time.delayedCall(1000, () => this.onHint?.('Inside at last. Flagstones, a well, and the smell of herbs and woodsmoke. It is so quiet in here.'));
+      QuestLog.writeDiary(
+        "Went in through the gate of Saint Elda's at last. Inside the walls it is like another country: a court with the Saint's well, " +
+          'a cloister round a garden, and brothers going quietly about everywhere. Brother Anselm keeps the moonpetal in the garden.',
+      );
+    }
+    if (this.area === 'deepden' && !this.visited.has('deepden')) {
+      this.time.delayedCall(1000, () => this.onHint?.('The crevice opens out into a cold chamber. The air moves here, as if it comes from somewhere further down.'));
+      QuestLog.writeDiary(
+        "Squeezed through a crevice at the back of the Wolf Mother's den and came out in a cold, empty cave. The passage runs on down " +
+          'into the dark. Something about the place makes the hair on my neck stand up. I will come back better prepared.',
+      );
+    }
     if (this.area === 'hut' && !this.visited.has('hut')) {
       this.time.delayedCall(900, () => this.onHint?.('Warm, smoky, and loud. Iran was not exaggerating about the children.'));
     }
@@ -379,6 +432,17 @@ export class GameScene extends Phaser.Scene {
   /** People besides the NPCs who can say things in speech bubbles (Iran's children), for the HUD. */
   get speakers(): Speaker[] {
     return this.siblings?.speakers ?? [];
+  }
+
+  /** Into the Wolf Mother's den: Brother Wystan's errand moves on, and the first time the hero takes it in. */
+  private enteredDen(): void {
+    QuestLog.complete('wolf-mother', 'den');
+    if (this.visited.has('den')) return;
+    this.time.delayedCall(1000, () => this.onHint?.('This is no hill-hole like the cave at home. It goes on and on, and the whole place reeks of wolf.'));
+    QuestLog.writeDiary(
+      "Found the old den on the plains, in a knoll of grey rock up a track the wolves have trodden. It is far bigger than the " +
+        'cave at home, chamber after chamber, and full of bones. Somewhere in here is the Wolf Mother.',
+    );
   }
 
   /** Into the wolves' den: the first time, the hero takes it in; on Wil's errand, that step is done. */
@@ -591,6 +655,31 @@ export class GameScene extends Phaser.Scene {
             'walk east of the crossroads. Brother Anselm keeps it dried. If anyone can help Mother, it is them.',
         );
         break;
+      case 'start-wolf-quest':
+        if (QuestLog.has('wolf-mother')) return;
+        QuestLog.start('wolf-mother', ['talk']);
+        QuestLog.writeDiary(
+          "Brother Wystan will not open the gate: the Prior has barred it while wolves harry the brothers on the Lord's Road. " +
+            'They are led by a great white she-wolf, the Wolf Mother, from an old den north of the road. I said I would put an end to her.',
+        );
+        break;
+      case 'finish-wolf-quest':
+        this.openMonasteryGate();
+        break;
+      case 'anselm-moonpetal':
+        if (QuestLog.hasFlag('may-pick-moonpetal')) return;
+        QuestLog.setFlag('may-pick-moonpetal');
+        QuestLog.complete('mother-medicine', 'find');
+        QuestLog.writeDiary(
+          "Brother Anselm says Mother's tincture is moonpetal and white willow bark steeped together. His dried moonpetal is all gone, " +
+            'but the fresh is flowering round the cloister pond and he has let me pick it. The willow bark I must find for myself.',
+        );
+        break;
+      case 'hob-bread':
+        if (QuestLog.hasFlag('fed-by-hob')) return;
+        QuestLog.setFlag('fed-by-hob');
+        this.give('bread', 1);
+        break;
       case 'finish-sheep-quest':
         // He may hear the news without having asked: the ewes were found first.
         QuestLog.start('lost-sheep', ['talk', 'cave', 'find']);
@@ -724,8 +813,9 @@ export class GameScene extends Phaser.Scene {
     this.player.setPath([]);
     // Only beasts that hunt in packs (wolves) bring the rest of the pack with them.
     const pack = FOES[first.kind].packs;
+    // (The Wolf Mother and her wolves are one pack.)
     const foes = this.creatures.filter(
-      (c) => c === first || (pack && c.active && c.kind === first.kind && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
+      (c) => c === first || (pack && c.active && FOES[c.kind].packs && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
     );
     const hunted = first.huntable;
     foes.forEach((c) => c.engage());
@@ -768,6 +858,8 @@ export class GameScene extends Phaser.Scene {
       if (this.area === 'cave' && this.creatures.every((c) => !c.active || foes.includes(c))) {
         this.time.delayedCall(2600, () => this.onHint?.('The den is quiet now. Only the dripping water, and something pale at the back of the cave.'));
       }
+      if (CAVE_WOLVES.every((id) => this.defeatedFoes.has(id))) QuestLog.setFlag('cleared-cave');
+      if (result.slain.includes('den-mother')) this.slewWolfMother();
       if (foes.some((c) => c.id === 'cottage-wolf')) {
         QuestLog.writeDiary(
           'A grey wolf was nosing around the cottage when I stepped out. It went for me, and I had to fight it off. ' +
@@ -776,6 +868,49 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.release();
+  }
+
+  /**
+   * The Wolf Mother is dead: Brother Wystan's errand moves on (even if he
+   * never asked; he'll hear of it when the hero next speaks to him).
+   */
+  private slewWolfMother(): void {
+    QuestLog.setFlag('slew-wolf-mother');
+    QuestLog.complete('wolf-mother', 'den');
+    QuestLog.complete('wolf-mother', 'slay');
+    QuestLog.writeDiary(
+      QuestLog.has('wolf-mother')
+        ? 'Killed the Wolf Mother in her lair, on a bed of bones under a crack in the roof. She was as big as a pony and as white as frost, ' +
+            'and she nearly had me. I took her hide. Brother Wystan should hear that the road is safe.'
+        : 'Killed a great white she-wolf in an old den out on the plains, on a bed of bones. I have never seen a wolf so big. I took her hide; ' +
+            'there cannot be another like it.',
+    );
+  }
+
+  /**
+   * Brother Wystan keeps his word: the Wolf Mother's errand is done, the gate
+   * swings open as the conversation ends, and it stays open from then on (the
+   * flag is saved, and the monastery is built with it open).
+   */
+  private openMonasteryGate(): void {
+    if (QuestLog.hasFlag('monastery-open')) return;
+    QuestLog.start('wolf-mother', ['talk', 'den', 'slay']);
+    QuestLog.complete('wolf-mother', 'return');
+    QuestLog.setFlag('monastery-open');
+    QuestLog.writeDiary(
+      'Told Brother Wystan the Wolf Mother is dead. The old man went quite pale, and then he took a key from his belt and opened ' +
+        "the gate of Saint Elda for me with his own hands. It is open to me now, he says, now and always.",
+    );
+    this.afterTalk = () => {
+      const gate = this.map.data.objects?.find((o) => o.key === 'mon-gate');
+      if (!gate) return;
+      const open = monasteryGateShape(true);
+      GameAudio.door();
+      this.map.reshapeObject(gate, 'mon-gate-open', open.shapes, open.blocks);
+      this.map.data.doors!.push(...monasteryGateDoors());
+      this.map.data.musings = [];
+      this.time.delayedCall(200, () => this.onHint?.('The great doors swing back. Beyond them, a sunny court, a well, and a cloister. I can go in.'));
+    };
   }
 
   /** Beaten: black out, and come round at home with a little health. */
@@ -809,6 +944,7 @@ export class GameScene extends Phaser.Scene {
     for (const sight of this.map.data.sights ?? []) {
       // A pile already searched has nothing more to give.
       if (sight.loot && QuestLog.hasFlag(`searched-${sight.id}`)) continue;
+      if (sight.gather && QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
       list.push(this.sightInteraction(sight));
     }
     for (const bed of this.map.data.beds ?? []) list.push(this.bedInteraction(bed));
@@ -1068,6 +1204,14 @@ export class GameScene extends Phaser.Scene {
       this.tryLockedDoor();
       return;
     }
+    if (sight.gather) {
+      this.gather(sight);
+      return;
+    }
+    if (sight.thought) {
+      this.onHint?.(sight.thought);
+      return;
+    }
     const flag = `saw-${sight.id}`;
     const first = !QuestLog.hasFlag(flag);
     QuestLog.setFlag(flag);
@@ -1118,6 +1262,52 @@ export class GameScene extends Phaser.Scene {
       'There is a door at the back of the wolves\' cave, set right into the rock. Old oak, iron straps, a great lock, ' +
         'and no key anywhere. Who would build a door down there? I mean to find out what is behind it.',
     );
+  }
+
+  /**
+   * Pick something growing (the moonpetal by the cloister pond), once. It's
+   * Brother Anselm's, so not before he has said the hero may. Picking all of
+   * it moves Mother's errand on.
+   */
+  private gather(sight: Sight): void {
+    const { item } = sight.gather!;
+    if (!QuestLog.hasFlag('may-pick-moonpetal')) {
+      this.onHint?.('Pale flowers like little stars, shining faintly. Moonpetal! But these are Brother Anselm\'s. I should ask him before I pick any.');
+      return;
+    }
+    if (!Inventory.canAdd(item)) {
+      this.onHint?.('My satchel is full.');
+      return;
+    }
+    GameAudio.rustle();
+    this.startChannel(
+      {
+        label: 'Gathering',
+        seconds: PICK_SECONDS,
+        onDone: () => {
+          QuestLog.setFlag(`gathered-${sight.id}`);
+          this.give(item, 1);
+          this.syncGathered();
+          if (!MOONPETAL.every((m) => QuestLog.hasFlag(`gathered-${m.id}`))) return;
+          QuestLog.complete('mother-medicine', 'moonpetal');
+          this.onHint?.('Three blooms of moonpetal, wrapped in a dock leaf. Now for the willow bark.');
+          QuestLog.writeDiary(
+            "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. That is half of Mother's " +
+              'tincture. Now I need white willow bark. Brother Anselm says it grows by water.',
+          );
+        },
+      },
+      { x: sight.gx, y: sight.gy },
+    );
+  }
+
+  /** Shows anything already gathered (the moonpetal) as picked. */
+  private syncGathered(): void {
+    for (const sight of this.map.data.sights ?? []) {
+      if (!sight.gather || !QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
+      const obj = this.map.data.objects?.find((o) => o.tx === Math.floor(sight.gx) && o.ty === Math.floor(sight.gy));
+      if (obj) this.map.setObjectArt(obj, sight.gather.picked);
+    }
   }
 
   /** Rummage through something (a pile of bones) for a random find. Each can only be searched once. */

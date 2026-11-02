@@ -11,6 +11,8 @@ export const PLAINS_H = 120;
 const CROSSROADS = { x: 60, y: 62 };
 /** Where the Lord's Road leaves the east edge, for Saint Elda's monastery. */
 const EAST_ROAD_Y = 50;
+/** The back corner of the rocky knoll with the Wolf Mother's den in it; its mouth is at the front corner. */
+const DEN = { x: 98, y: 27 };
 
 /**
  * Adowvale Plains, beyond Lord Morten's toll gate north of the village: the
@@ -20,7 +22,9 @@ const EAST_ROAD_Y = 50;
  * up to a crossroads, where it turns east and off the map to the grounds of
  * Saint Elda's monastery, and two older roads go off west and north. Deer graze in herds, hares sit up in the grass, and boar root in the
  * thickets; the game comes back each time the plains are visited. A carter and
- * a herb-gatherer walk the road.
+ * a herb-gatherer walk the road. North of the road near the east edge, up a
+ * wolf-trodden track, is a rocky knoll with an old den in it, where the white
+ * Wolf Mother lairs (see DenMap.ts); two of her wolves watch the track.
  */
 export function buildPlainsMap(): MapData {
   const W = PLAINS_W;
@@ -140,6 +144,43 @@ export function buildPlainsMap(): MapData {
     ],
   };
 
+  // The Wolf Mother's den: a track trodden by wolves winds up from the Lord's Road to a rocky knoll.
+  const denMouth = { x: DEN.x + 3, y: DEN.y + 3 };
+  const roadAt = east.reduce((best, p) => (Math.abs(p.x - (denMouth.x + 1)) < Math.abs(best.x - (denMouth.x + 1)) ? p : best));
+  const track = smoothLine([
+    { x: roadAt.x, y: roadAt.y },
+    { x: denMouth.x + 2, y: roadAt.y - 6 },
+    { x: denMouth.x - 1.5, y: denMouth.y + 9 },
+    { x: denMouth.x + 1.5, y: denMouth.y + 4 },
+    { x: denMouth.x + 0.5, y: denMouth.y + 1.5 },
+    { x: denMouth.x + 0.5, y: denMouth.y + 0.5 },
+  ]);
+  for (const p of track) {
+    for (let y = Math.floor(p.y - 1.6); y <= p.y + 1.6; y++) for (let x = Math.floor(p.x - 1.6); x <= p.x + 1.6; x++) if (props[y]?.[x] !== undefined) props[y][x] = Prop.None;
+  }
+  paintPath(terrain, track, (t) => 0.55 + 0.15 * Math.sin(t * 19.1) + 0.08 * Math.sin(t * 43.3 + 1));
+  for (let y = DEN.y - 2; y <= DEN.y + 6; y++) for (let x = DEN.x - 2; x <= DEN.x + 6; x++) if (props[y]?.[x] !== undefined) props[y][x] = Prop.None;
+  for (let y = DEN.y; y < DEN.y + 4; y++) for (let x = DEN.x; x < DEN.x + 4; x++) terrain[y][x] = Terrain.Grass;
+  const denBlocks: Array<[number, number]> = [];
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (x !== 3 || y !== 3) denBlocks.push([x, y]);
+  placeObject(data, { key: 'den-entrance', tx: DEN.x, ty: DEN.y, w: 4, h: 4, blocks: denBlocks });
+  terrain[denMouth.y][denMouth.x] = Terrain.Dirt;
+  data.doors!.push({ tx: denMouth.x, ty: denMouth.y, to: 'den', entry: 'mouth', label: 'Enter the den', facing: 'front', ask: 'Do you want to go down into the den?' });
+  data.entries!.den = { x: denMouth.x + 0.5, y: denMouth.y + 1.6 };
+  data.landmarks!.push({ gx: denMouth.x, gy: denMouth.y, name: 'The old den', range: 7 });
+  // Bones by the track, picked clean, and a thought on first coming up it.
+  for (const [dx, dy, v] of [[-2, 3, 0], [2, 5, 1]] as const) {
+    const tx = denMouth.x + dx;
+    const ty = denMouth.y + dy;
+    props[ty][tx] = Prop.None;
+    placeObject(data, { key: `cave-bones-${v}`, tx, ty, w: 1, h: 1, flat: true });
+    data.sights!.push({ id: `plains-bones-${tx},${ty}`, gx: tx + 0.5, gy: ty + 0.5, label: 'Search the bones', z: 18, loot: 'bones' });
+  }
+  data.musings!.push({
+    x0: denMouth.x - 2, y0: denMouth.y + 5, x1: denMouth.x + 3, y1: denMouth.y + 8,
+    text: 'Paw prints in the mud, big ones and small ones, all going one way: up the track to that knoll. And a smell of wolf, rank and close.',
+  });
+
   // Lord Morten's gate at the south edge, standing open, back to Adowvale.
   const gate = { tx: gateX - 2, ty: H - 1 };
   placeObject(data, { key: 'toll-gate-open', tx: gate.tx, ty: gate.ty, w: 4, h: 1, ...tollGateShape(true) });
@@ -189,7 +230,7 @@ export function buildPlainsMap(): MapData {
   };
   herd('deer-west', 'deer', 24, 88, 3, 2.5);
   herd('deer-north', 'deer', 42, 22, 4, 3);
-  herd('deer-east', 'deer', 96, 26, 3, 2.5);
+  herd('deer-east', 'deer', 84, 24, 3, 2.5);
   herd('deer-far-east', 'deer', 100, 70, 4, 3);
   herd('deer-south-west', 'deer', 30, 104, 3, 2.5);
   herd('deer-pond', 'deer', 20, 40, 2, 2.5);
@@ -204,6 +245,11 @@ export function buildPlainsMap(): MapData {
     .filter((c) => Math.hypot(c.x - gateX, c.y - H) > 24)
     .slice(0, 6)
     .forEach((c, i) => herd(`boar-${i}`, 'boar', c.x + c.r + 1, c.y, 1, 1.2));
+  // Two of the Wolf Mother's wolves, watching the track up to her den. Once killed, they stay gone.
+  for (const [i, along] of [[1, 0.35], [2, 0.6]] as const) {
+    const p = track[Math.floor(track.length * along)];
+    game.push({ id: `plains-wolf-${i}`, kind: 'wolf', gx: Math.floor(p.x) + 0.5, gy: Math.floor(p.y) + 0.5 });
+  }
   data.creatures = game;
 
   // Folk on the Lord's Road, a long way apart.

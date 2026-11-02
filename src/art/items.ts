@@ -335,6 +335,31 @@ const deerHide = () =>
     for (const [x, y] of [[11, 6], [13, 9], [7, 10]]) c.set(x, y, 0xe6d2ae);
   });
 
+/** The Wolf Mother's great white hide, rolled and tied, with a frosty sheen. */
+const whiteHide = () =>
+  icon((c) => {
+    c.ellipse(8, 8, 7, 5, 0xdfe4ec, 0x9aa4b8, 0xffffff);
+    c.ellipse(3.5, 8, 2.4, 4, 0x9aa4b8, 0x9aa4b8);
+    c.ellipse(3.5, 8, 1.3, 2.4, 0xf4f6fa, 0xf4f6fa);
+    c.rect(9, 3, 1, 11, P.leatherDark);
+    c.rect(12, 3, 1, 11, P.leatherDark);
+    for (let i = 0; i < 4; i++) c.set(14.6 - i * 0.2, 11 + i, i > 2 ? 0x9aa4b8 : 0xdfe4ec);
+    c.set(7, 6, 0x7ad8ff);
+  });
+
+/** A little bunch of moonpetal: pale star flowers on slender green stems, tied with a thread. */
+const moonpetalIcon = () =>
+  icon((c) => {
+    for (const [x, t] of [[5, 4], [8, 2], [11, 4]] as const) {
+      for (let y = t + 2; y < 15; y++) c.set(x + Math.round((y - 10) * (x - 8) * -0.12), y, y > 11 ? 0x3e6a52 : 0x5a8a6a);
+    }
+    for (const [x, y] of [[5, 4], [8, 2], [11, 4]] as const) {
+      for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]) c.set(x + dx, y + dy, 0xf4f8ff);
+      c.set(x, y, 0x7ab8ff);
+    }
+    c.rect(6, 11, 5, 1, P.linen);
+  });
+
 /** A small folded hare pelt. */
 const harePelt = () =>
   icon((c) => {
@@ -400,6 +425,8 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-deerhide', deerHide],
     ['item-harepelt', harePelt],
     ['item-tusk', tusk],
+    ['item-whitehide', whiteHide],
+    ['item-moonpetal', moonpetalIcon],
   ];
   for (const [key, make] of icons) make().toTexture(scene, key);
 }

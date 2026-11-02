@@ -7,7 +7,8 @@ import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/traveller
 import { FeedStage, iranScript } from '../dialogue/iran';
 import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
-import { GARDENER, NOVICE, PORTER, SILENT } from '../dialogue/monastery';
+import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
+import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
@@ -67,6 +68,20 @@ function sheepStage(): SheepStage {
   if (!quest) return QuestLog.hasFlag('saw-bess') && QuestLog.hasFlag('saw-bramble') ? 'found-first' : 'none';
   if (quest.completed) return 'done';
   return quest.done.has('find') ? 'found' : 'active';
+}
+
+/** How Brother Wystan's errand to kill the Wolf Mother stands (see the 'wolf-mother' quest). */
+function wolfStage(): WolfStage {
+  const quest = QuestLog.get('wolf-mother');
+  if (quest?.completed) return 'done';
+  if (QuestLog.hasFlag('slew-wolf-mother')) return 'slain';
+  return quest ? 'active' : 'none';
+}
+
+/** Where the hero is with the moonpetal, for Brother Anselm. */
+function herbStage(): HerbStage {
+  if (QuestLog.isDone('mother-medicine', 'moonpetal')) return 'picked';
+  return QuestLog.hasFlag('may-pick-moonpetal') ? 'asked' : 'none';
 }
 
 /** The militia grumble about their feet by day; after hours, they tell you the market is shut. */
@@ -140,10 +155,31 @@ const NPCS: Record<string, NpcDef> = {
   carter: { texture: 'folk-carter', script: traveller('carter', CARTER), wander: 14 },
   herbwife: { texture: 'folk-herbwife', script: traveller('herbwife', HERBWIFE), wander: 10 },
   // The brothers outside Saint Elda's: the porter stays by his gate, the others potter about the grounds.
-  porter: { texture: 'folk-porter', script: traveller('porter', PORTER) },
+  porter: {
+    texture: 'folk-porter',
+    script: () => {
+      const first = !met.has('porter');
+      met.add('porter');
+      return porterScript(wolfStage(), first, QuestLog.hasFlag('cleared-cave'), Inventory.count('white-hide') > 0);
+    },
+  },
   gardener: { texture: 'folk-gardener', script: traveller('gardener', GARDENER), roam: 4 },
   silent: { texture: 'folk-silent', script: traveller('silent', SILENT), roam: 6 },
   novice: { texture: 'folk-novice', script: traveller('novice', NOVICE), wander: 12 },
+  // Within the walls: the Prior at his prayers, Anselm among his herbs, and the brothers at their work.
+  prior: { texture: 'folk-prior', script: traveller('prior', PRIOR) },
+  anselm: {
+    texture: 'folk-anselm',
+    roam: 3,
+    script: () => {
+      const first = !met.has('anselm');
+      met.add('anselm');
+      return anselmScript(herbStage(), first);
+    },
+  },
+  leofric: { texture: 'folk-leofric', sits: true, script: traveller('leofric', LEOFRIC) },
+  scribe: { texture: 'folk-scribe', sits: true, script: traveller('scribe', SCRIBE) },
+  cook: { texture: 'folk-cook', roam: 2, script: () => cookScript(QuestLog.hasFlag('fed-by-hob')) },
   // The village militia, walking their rounds of the square, day and night.
   ...Object.fromEntries(
     [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),

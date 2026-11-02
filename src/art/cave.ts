@@ -233,12 +233,28 @@ function lockedDoor(H: number): Shader {
  * @param mouth the side-wall segment with the way out, onto daylight
  * @param door a back-wall segment with the locked door in it
  */
-function caveWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', index: number, mouth = false, door = false): void {
+/**
+ * A low, narrow split in the foot of the rock, just wide enough to crawl into
+ * on hands and knees, black inside with a faint breath of colder air. Returns
+ * null outside it.
+ */
+function crevice(H: number): Shader {
+  return (u, v) => {
+    const dx = u * 32 - 16 + noise(v * 9, 31) * 3 - 1.5;
+    const up = H - v * H; // pixels up from the floor
+    const half = 7 * Math.max(0, 1 - up / 36) + noise(up / 4, 37) * 1.4;
+    if (up > 36 || Math.abs(dx) > half + 1.5) return null;
+    if (Math.abs(dx) > half) return ROCK.darker;
+    return up < 2 ? ROCK.dark : Math.abs(dx) > half - 1.2 ? ROCK.deep : 0x050406;
+  };
+}
+
+function caveWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', index: number, mouth = false, door = false, crack = false): void {
   const m = new IsoModel();
   const H = CAVE_WALL_HEIGHT;
   const rock = rockFace(index, H, side === 'back' ? 1 : 7, mouth);
-  const planks = door ? lockedDoor(H) : undefined;
-  const face: Shader = planks ? (u, v) => planks(u, v) ?? rock(u, v) : rock;
+  const cut = door ? lockedDoor(H) : crack ? crevice(H) : undefined;
+  const face: Shader = cut ? (u, v) => cut(u, v) ?? rock(u, v) : rock;
   if (side === 'back') {
     m.quad({ x: 0, y: 0, z: H }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, face);
     if (!door) m.quad({ x: 0, y: 0.18, z: H - 18 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: -54 }, stalactites(index, 3));
@@ -391,6 +407,59 @@ function boulder(seed: number, big: boolean): { canvas: PixelCanvas; anchorX: nu
   return { canvas: c, anchorX: 32, anchorY: 42 - TILE_HEIGHT / 2 };
 }
 
+/**
+ * A crag: a great knuckle of rock heaved up from the floor, taller than a
+ * man, its top lost in the dark. Rows of them wall the den's chambers off
+ * from each other.
+ */
+function crag(seed: number): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
+  const c = new PixelCanvas(68, 86);
+  const rnd = seededRandom(seed);
+  const lumps: Array<[number, number, number, number]> = [];
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4;
+    lumps.push([34 + (rnd() - 0.5) * 14, 74 - t * 48 - rnd() * 6, (22 - t * 8) * (0.85 + rnd() * 0.3), 13 - t * 3]);
+  }
+  lumps.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, rx, ry] of lumps) c.ellipse(x, y, rx, ry, ROCK.base, ROCK.dark, ROCK.light);
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      const col = c.get(x, y);
+      if (col === null) continue;
+      const r = rnd();
+      if (r < 0.07) c.set(x, y, col === ROCK.dark ? ROCK.darker : ROCK.mid);
+      else if (r > 0.985 && col === ROCK.light) c.set(x, y, ROCK.wet);
+    }
+  }
+  c.outline(ROCK.deep);
+  fadeTop(c, 30);
+  return { canvas: c, anchorX: 34, anchorY: 74 - TILE_HEIGHT / 2 };
+}
+
+/** The Wolf Mother's bed: a trampled hollow of old straw and moulted white fur, ringed with gnawed bones. */
+function lair(): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
+  const c = new PixelCanvas(76, 40);
+  const rnd = seededRandom(23);
+  c.ellipse(38, 20, 32, 13, ROCK.darker);
+  c.ellipse(38, 20, 26, 10, 0x6a5a3a);
+  for (let i = 0; i < 260; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = Math.sqrt(rnd());
+    const x = 38 + Math.cos(a) * r * 25;
+    const y = 20 + Math.sin(a) * r * 9.5;
+    c.set(x, y, rnd() < 0.45 ? 0xe8ecf2 : rnd() < 0.5 ? 0x9c8a5a : 0x7a6a44);
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + rnd();
+    const x = 38 + Math.cos(a) * 30;
+    const y = 20 + Math.sin(a) * 12;
+    const len = 4 + rnd() * 5;
+    for (let t = 0; t <= len; t++) c.set(x + t, y + t * 0.3, BONE.base);
+    c.set(x - 1, y, BONE.dark);
+  }
+  return { canvas: c, anchorX: 38, anchorY: 20 - TILE_HEIGHT / 2 };
+}
+
 // ---------------------------------------------------------------- remains
 
 /**
@@ -477,20 +546,19 @@ function bones(seed: number): { canvas: PixelCanvas; anchorX: number; anchorY: n
  * heather on top, and a dark arched opening at its front corner, over the
  * one tile of the footprint that's open (2, 2) so the player can walk into it.
  */
-function caveEntrance(): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
-  const S = 3;
-  const MAXH = 92;
+function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
+  const peak = S * 0.42;
   // Height of the mound at grid point (x, y) of the footprint, in pixels.
   const height = (x: number, y: number): number => {
     const edge = Math.min(x, y, S - x, S - y);
     if (edge <= 0) return 0;
-    const dx = x - 1.25;
-    const dy = y - 1.25;
-    const r = Math.hypot(dx, dy) / 1.85;
-    let h = MAXH * Math.max(0, 1 - r * r) + (noise(x * 4, y * 4) - 0.5) * 14;
+    const dx = x - peak;
+    const dy = y - peak;
+    const r = Math.hypot(dx, dy) / (S * 0.62);
+    let h = MAXH * Math.max(0, 1 - r * r) + (noise(x * 4 + salt, y * 4) - 0.5) * 14 + (S > 3 ? (noise(x * 1.6 + salt, y * 1.6) - 0.5) * 26 : 0);
     h *= Math.min(1, edge / 0.35);
     // The open tile in front of the mouth, with a steep rock face round it.
-    const open = Math.min(x - 2, y - 2);
+    const open = Math.min(x - (S - 1), y - (S - 1));
     if (open > 0) return 0;
     h *= Math.min(1, -open / 0.08);
     return Math.max(0, h);
@@ -541,9 +609,9 @@ function caveEntrance(): { canvas: PixelCanvas; anchorX: number; anchorY: number
   }
 
   // The mouth: a dark arch in the rock face behind the open tile.
-  const m = at(2, 2, 0);
+  const m = at(S - 1, S - 1, 0);
   const mw = 25;
-  const mh = 46;
+  const mh = S > 3 ? 52 : 46;
   for (let y = m.y - mh - 3; y <= m.y + 2; y++) {
     for (let x = m.x - mw - 3; x <= m.x + mw + 3; x++) {
       const nx = (x - m.x) / mw;
@@ -566,7 +634,7 @@ function caveEntrance(): { canvas: PixelCanvas; anchorX: number; anchorY: number
     for (let k = 0; k < len; k++) c.set(x + Math.sin(k * 0.6 + i) * 0.8, y0 + k, k > len - 3 ? P.leaf : i % 3 === 0 ? P.barkDark : P.leafDark);
   }
   // A few loose stones at its foot.
-  for (const [gx, gy] of [[2.15, 2.9], [2.85, 2.15], [1.9, 2.95]] as const) {
+  for (const [gx, gy] of [[S - 0.85, S - 0.1], [S - 0.15, S - 0.85], [S - 1.1, S - 0.05]] as const) {
     const p = at(gx, gy, 0);
     c.ellipse(p.x, p.y - 1, 3.5, 2.2, ROCK.mid, ROCK.dark, ROCK.light);
   }
@@ -581,6 +649,8 @@ export function generateCave(scene: Phaser.Scene): void {
   }
   caveWall(scene, 'cave-wall-side-mouth', 'side', 1, true);
   caveWall(scene, 'cave-wall-back-door', 'back', 2, false, true);
+  caveWall(scene, 'cave-wall-back-crevice', 'back', 3, false, false, true);
+  caveWall(scene, 'cave-wall-side-crevice', 'side', 2, false, false, true);
   caveCorner(scene);
   const put = (key: string, art: { canvas: PixelCanvas; anchorX: number; anchorY: number }) =>
     register(scene, key, art.canvas, art.anchorX, art.anchorY);
@@ -597,4 +667,9 @@ export function generateCave(scene: Phaser.Scene): void {
   put('cave-bones-0', bones(2));
   put('cave-bones-1', bones(5));
   put('cave-entrance', caveEntrance());
+  put('den-entrance', caveEntrance(4, 118, 9));
+  put('cave-crag-0', crag(3));
+  put('cave-crag-1', crag(8));
+  put('cave-crag-2', crag(14));
+  put('den-lair', lair());
 }

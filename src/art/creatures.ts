@@ -216,9 +216,14 @@ export const WOLF_FRAME = { snarl: 8, bite: 9, hurt: 10, dead: 11 } as const;
 /** Every beast's sheet has the wolf's frame order: 0-1 standing, 2-5 walking, 6-7 head down, then these. */
 export const CREATURE_FRAME = WOLF_FRAME;
 
-/** Each beast's frame size and the pixel row its feet stand on, by kind (see systems/Combat.ts FOES). */
-export const CREATURE_ART: Record<'wolf' | 'deer' | 'hare' | 'boar', { w: number; h: number; feetY: number }> = {
+/**
+ * Each beast's frame size and the pixel row its feet stand on, by kind (see
+ * systems/Combat.ts FOES), and how much bigger than its frame it's shown.
+ */
+export const CREATURE_ART: Record<'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar', { w: number; h: number; feetY: number; scale?: number }> = {
   wolf: { w: WOLF_W, h: WOLF_H, feetY: WOLF_FEET_Y },
+  // The Wolf Mother: the grey wolf's frames, half as big again, in a coat as white as frost.
+  wolfmother: { w: WOLF_W, h: WOLF_H, feetY: WOLF_FEET_Y, scale: 1.5 },
   deer: { w: 48, h: 46, feetY: 43 },
   hare: { w: 26, h: 22, feetY: 19 },
   boar: { w: 48, h: 32, feetY: 29 },
@@ -521,8 +526,28 @@ const BOAR_FRAMES: Array<BeastPose | 'dead'> = [
   'dead',
 ];
 
-/** Paints a beast's frames side by side into 'creature-<kind>', with its idle, walk and graze animations. */
-function sheet<T>(scene: Phaser.Scene, kind: keyof typeof CREATURE_ART, frames: Array<T | 'dead'>, draw: (c: PixelCanvas, pose: T) => void, dead: (c: PixelCanvas) => void, rates: { walk: number }): void {
+/** The Wolf Mother's coat: the grey wolf's colours swapped for white fur with blue-grey shadows, and ice-blue eyes. */
+const WHITE_COAT: Record<number, number> = {
+  [FUR_DARK]: 0x9aa4b8,
+  [FUR]: 0xdfe4ec,
+  [FUR_LIGHT]: 0xf4f6fa,
+  [FUR_PALE]: 0xffffff,
+  [EYE]: 0x7ad8ff,
+};
+
+/**
+ * Paints a beast's frames side by side into 'creature-<kind>', with its idle, walk and graze animations.
+ * @param recolor colours to swap after drawing (the Wolf Mother's white coat)
+ */
+function sheet<T>(
+  scene: Phaser.Scene,
+  kind: keyof typeof CREATURE_ART,
+  frames: Array<T | 'dead'>,
+  draw: (c: PixelCanvas, pose: T) => void,
+  dead: (c: PixelCanvas) => void,
+  rates: { walk: number },
+  recolor?: Record<number, number>,
+): void {
   const { w, h } = CREATURE_ART[kind];
   const key = `creature-${kind}`;
   const canvas = new PixelCanvas(w * frames.length, h);
@@ -530,6 +555,14 @@ function sheet<T>(scene: Phaser.Scene, kind: keyof typeof CREATURE_ART, frames: 
     const frame = new PixelCanvas(w, h);
     if (pose === 'dead') dead(frame);
     else draw(frame, pose);
+    if (recolor) {
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const col = frame.get(x, y);
+          if (col !== null && recolor[col] !== undefined) frame.set(x, y, recolor[col]);
+        }
+      }
+    }
     frame.outline();
     canvas.blit(frame, i * w, 0);
   });
@@ -543,6 +576,7 @@ function sheet<T>(scene: Phaser.Scene, kind: keyof typeof CREATURE_ART, frames: 
 
 export function generateCreatures(scene: Phaser.Scene): void {
   sheet(scene, 'wolf', FRAMES, drawWolf, drawDeadWolf, { walk: 9 });
+  sheet(scene, 'wolfmother', FRAMES, drawWolf, drawDeadWolf, { walk: 8 }, WHITE_COAT);
   sheet(scene, 'deer', DEER_FRAMES, drawDeer, drawDeadDeer, { walk: 8 });
   sheet(scene, 'hare', HARE_FRAMES, drawHare, drawDeadHare, { walk: 10 });
   sheet(scene, 'boar', BOAR_FRAMES, drawBoar, drawDeadBoar, { walk: 9 });

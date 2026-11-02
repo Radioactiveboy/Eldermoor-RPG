@@ -74,6 +74,11 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     banner: 'A wolf attacks!',
     flee: 'yelps, tucks its tail and bolts for the trees!',
   },
+  wolfmother: {
+    start: 'A great white she-wolf rises from her bed of bones, twice the size of any wolf you have seen. Her eyes are like ice.',
+    banner: 'The Wolf Mother!',
+    flee: 'turns and lopes away into the dark!',
+  },
   deer: {
     start: 'You close in on the red deer. It wheels round to face you and lowers its antlers!',
     banner: 'The hunt is on!',
@@ -158,7 +163,7 @@ export class CombatScene extends Phaser.Scene {
       sprite: creature.sprite,
       offset: creature.offset,
       pos: () => ({ x: creature.gx, y: creature.gy }),
-      height: CREATURE_ART[creature.kind].feetY - 3,
+      height: (CREATURE_ART[creature.kind].feetY - 3) * (CREATURE_ART[creature.kind].scale ?? 1),
       creature,
     }));
     this.actors = [this.hero, ...this.foes];
@@ -194,9 +199,13 @@ export class CombatScene extends Phaser.Scene {
 
   private async run(): Promise<void> {
     const first = this.foes[0];
+    // The Wolf Mother comes with her pack, but it's her fight.
+    const mother = this.foes.find((f) => f.creature!.kind === 'wolfmother');
     this.world.player.faceTowards(first.pos().x, first.pos().y);
     this.log(
-      this.foes.length > 1
+      mother
+        ? `${FOE_TEXT.wolfmother.start}${this.foes.length > 1 ? ' Her wolves fan out round you.' : ''}`
+        : this.foes.length > 1
         ? this.world.map.data.underground
           ? 'Eyes shine in the lantern light. Wolves pad out of the dark, hackles raised. You are surrounded!'
           : 'Wolves slink out of the grass, hackles raised. You are surrounded!'
@@ -208,7 +217,7 @@ export class CombatScene extends Phaser.Scene {
     await Promise.all(this.foes.map((f, i) => f.creature!.moveTo(spots[i].x, spots[i].y, 650)));
     this.world.player.faceTowards(first.pos().x, first.pos().y);
     this.world.frameFight(this.actors.map((a) => a.pos()));
-    this.banner(this.foes.length > 1 ? 'Wolves attack!' : FOE_TEXT[first.creature!.kind].banner);
+    this.banner(mother ? FOE_TEXT.wolfmother.banner : this.foes.length > 1 ? 'Wolves attack!' : FOE_TEXT[first.creature!.kind].banner);
     await this.wait(900);
 
     if (!Inventory.equipped.mainHand) {
