@@ -61,8 +61,9 @@ export const MENU: Partial<Record<ItemId, { price: number; served: string; thoug
 
 /** Drinks served across the bar, in the order Godric lists them. */
 export const BAR_DRINKS: ItemId[] = ['ale', 'cider', 'mead', 'spiced-wine'];
-/** What the maids bring to the tables. */
-export const TABLE_MENU: ItemId[] = ['ale', 'cider', 'mead', 'stew', 'bread', 'cheese'];
+/** What the maids bring to the tables, asked for as "something to drink" or "something to eat". */
+export const TABLE_DRINKS: ItemId[] = ['ale', 'cider', 'mead'];
+export const TABLE_FOOD: ItemId[] = ['stew', 'bread', 'cheese'];
 
 class TavernStore {
   /** The room let to the hero (1..ROOM_COUNT), if any. */

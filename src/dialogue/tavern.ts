@@ -1,6 +1,6 @@
 import { HERO_NAME } from '../config';
 import { itemDef, ItemId } from '../systems/Inventory';
-import { BAR_DRINKS, MENU, RENT_OPTIONS, TABLE_MENU } from '../systems/Tavern';
+import { BAR_DRINKS, MENU, RENT_OPTIONS, TABLE_DRINKS, TABLE_FOOD } from '../systems/Tavern';
 import type { DialogueChoice, DialogueScript, SpeakerId } from './Dialogue';
 
 /**
@@ -231,11 +231,15 @@ export function landlordNews(flags: { paidToll: boolean; slewWolfMother: boolean
 
 /** A tavern maid. At a table, she takes an order; anywhere else, she has a word and tells you to sit down. */
 export function maidScript(who: 'nell' | 'rosie', seated: boolean, coins: number): DialogueScript {
-  const orderChoices: DialogueChoice[] = TABLE_MENU.map((id) => ({
-    text: `${itemDef(id).name}, ${coinText(price(id))}`,
-    action: coins >= price(id) ? `order:${id}` : undefined,
-    next: coins >= price(id) ? 'coming' : 'short',
-  }));
+  // The menu is asked for in two short lists (drink, then food) rather than one long one.
+  const orderChoices = (items: ItemId[]): DialogueChoice[] => [
+    ...items.map((id) => ({
+      text: `${itemDef(id).name}, ${coinText(price(id))}`,
+      action: coins >= price(id) ? `order:${id}` : undefined,
+      next: coins >= price(id) ? 'coming' : 'short',
+    })),
+    { text: 'Something else.', next: 'order' },
+  ];
   const nell = who === 'nell';
   return {
     start: seated ? 'order' : 'chat',
@@ -243,7 +247,21 @@ export function maidScript(who: 'nell' | 'rosie', seated: boolean, coins: number
       order: {
         speaker: who,
         lines: [nell ? "What can I get you, love? Stew's good tonight. Well, it's hot." : 'Hello again! What are you having?'],
-        choices: [...orderChoices, { text: 'Nothing just now, thanks.', next: 'later' }],
+        choices: [
+          { text: 'Something to drink.', next: 'drink' },
+          { text: 'Something to eat.', next: 'food' },
+          { text: 'Nothing just now, thanks.', next: 'later' },
+        ],
+      },
+      drink: {
+        speaker: who,
+        lines: [nell ? "Ale, cider or mead. Godric keeps the wine for himself, mostly." : 'We have ale, cider and mead tonight!'],
+        choices: orderChoices(TABLE_DRINKS),
+      },
+      food: {
+        speaker: who,
+        lines: [nell ? "There's stew in the pot, bread and cheese if you'd rather." : 'Stew, bread or cheese. The stew is my favourite!'],
+        choices: orderChoices(TABLE_FOOD),
       },
       coming: {
         speaker: who,
