@@ -406,31 +406,98 @@ function fadeTop(c: PixelCanvas, rows: number): void {
   }
 }
 
-/** A tumbled boulder of cave rock (no moss down here). Big ones fill most of a tile. */
+/**
+ * A tumbled block of cave rock (no moss down here): an angular chunk broken
+ * into flat facets, lit from above and the left, with the layers of the rock
+ * running across it, cracks, a wet glint or two, and a few broken flakes
+ * lying at its foot. Big ones fill most of a tile.
+ */
 function boulder(seed: number, big: boolean): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
-  const c = new PixelCanvas(64, 50);
-  const rnd = seededRandom(seed);
-  const s = big ? 1 : 0.7;
-  const lumps: Array<[number, number, number, number]> = [
-    [30, 34, 20 * s, 14 * s],
-    [22 + rnd() * 4, 36, 12 * s, 9 * s],
-    [42, 38, 11 * s, 8 * s],
-    [34, 26 + (big ? -6 : 2), 13 * s, 10 * s],
-  ];
-  for (const [x, y, rx, ry] of lumps) c.ellipse(x, y, rx, ry, ROCK.base, ROCK.dark, ROCK.light);
-  for (let y = 0; y < 50; y++) {
-    for (let x = 0; x < 64; x++) {
-      const col = c.get(x, y);
-      if (col === null) continue;
+  const c = new PixelCanvas(64, 54);
+  const rnd = seededRandom(seed * 13 + 5);
+  const s = big ? 1 : 0.72;
+  const cx = 32;
+  const base = 44;
+  // An irregular outline: a broad foot, sides that lean in, and a broken, uneven top.
+  const pts: Array<[number, number]> = [];
+  const K = 9;
+  for (let i = 0; i < K; i++) {
+    const a = Math.PI * (1 - i / (K - 1)); // left, over the top, to the right
+    const rx = (20 + rnd() * 4) * s;
+    const up = (24 + rnd() * 8) * s;
+    const j = 0.78 + rnd() * 0.3;
+    pts.push([cx + Math.cos(a) * rx * (i === 0 || i === K - 1 ? 1 : j), base - 4 * s - Math.sin(a) * up * j]);
+  }
+  // Round the foot back under, flattened as the rock sits on the floor.
+  pts.push([cx + 14 * s, base + 3 * s], [cx - 4 * s, base + 4 * s], [cx - 16 * s, base + 2 * s]);
+  const inside = (x: number, y: number) => {
+    let hit = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i];
+      const [xj, yj] = pts[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+    }
+    return hit;
+  };
+  // The facets: each pixel belongs to the nearest of a few points, and each facet faces its own way.
+  const seeds: Array<{ x: number; y: number; col: number }> = [];
+  for (let i = 0; i < 7; i++) {
+    const x = cx + (rnd() - 0.5) * 34 * s;
+    const y = base - 4 - rnd() * 28 * s;
+    // Facing up and to the left catches the light; facing down and right is in shade.
+    const lit = (cx - x) / (20 * s) * 0.5 + (base - 10 * s - y) / (14 * s) * 0.7 + (rnd() - 0.5) * 0.6;
+    seeds.push({ x, y, col: lit > 0.8 ? ROCK.light : lit > 0.15 ? ROCK.mid : lit > -0.45 ? ROCK.base : ROCK.dark });
+  }
+  const tilt = (rnd() - 0.5) * 0.5;
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      if (!inside(x + 0.5, y + 0.5)) continue;
+      let best = Infinity;
+      let next = Infinity;
+      let col = ROCK.base;
+      for (const f of seeds) {
+        const d = Math.hypot(x - f.x, (y - f.y) * 1.3);
+        if (d < best) {
+          next = best;
+          best = d;
+          col = f.col;
+        } else if (d < next) next = d;
+      }
+      // Creases between facets.
+      if (next - best < 1.1) col = col === ROCK.light ? ROCK.mid : ROCK.darker;
+      // The rock's layers, running across at a slant.
+      const band = (y + x * tilt + noise(x / 7, seed) * 3) % 6;
+      if (band < 0.9 && col !== ROCK.darker) col = col === ROCK.light ? ROCK.mid : col === ROCK.mid ? ROCK.base : ROCK.dark;
+      // Grit, and the odd wet glint where the light catches.
       const r = rnd();
-      if (r < 0.06) c.set(x, y, col === ROCK.dark ? ROCK.darker : ROCK.mid);
-      else if (r > 0.985 && col === ROCK.light) c.set(x, y, ROCK.wet);
+      if (r < 0.05) col = col === ROCK.dark ? ROCK.darker : col === ROCK.light ? ROCK.wet : ROCK.mid;
+      c.set(x, y, col);
     }
   }
-  // A crack across the top.
-  for (let i = 0; i < 7; i++) c.set(28 + i, 28 + Math.floor(i / 2), ROCK.darker);
+  // In shadow where it meets the floor.
+  for (let x = 0; x < c.width; x++) {
+    let bottom = -1;
+    for (let y = c.height - 1; y >= 0; y--) if (c.get(x, y) !== null) { bottom = y; break; }
+    for (let y = bottom; y > bottom - 3 && y >= 0; y--) if (c.get(x, y) !== null) c.set(x, y, bottom - y === 0 ? ROCK.deep : ROCK.darker);
+  }
+  // A crack running down from the top.
+  let kx = cx + (rnd() - 0.5) * 10 * s;
+  for (let y = Math.round(base - 26 * s); y < base - 2; y++) {
+    kx += (rnd() - 0.5) * 1.6;
+    if (c.get(Math.round(kx), y) !== null && rnd() < 0.85) c.set(Math.round(kx), y, ROCK.deep);
+  }
   c.outline(ROCK.deep);
-  return { canvas: c, anchorX: 32, anchorY: 42 - TILE_HEIGHT / 2 };
+  // Flakes broken off it, lying at its foot.
+  for (let i = 0; i < 3; i++) {
+    const fx = cx + (rnd() < 0.5 ? -1 : 1) * (18 + rnd() * 8) * s;
+    const fy = base + 2 + rnd() * 4;
+    const w = 2 + Math.floor(rnd() * 3);
+    for (let dx = 0; dx < w; dx++) {
+      c.set(fx + dx, fy, ROCK.mid);
+      c.set(fx + dx, fy + 1, ROCK.darker);
+    }
+  }
+  return { canvas: c, anchorX: 32, anchorY: base - 2 - TILE_HEIGHT / 2 };
 }
 
 /** The Wolf Mother's bed: a trampled hollow of old straw and moulted white fur, ringed with gnawed bones. */
