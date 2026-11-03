@@ -116,11 +116,27 @@ export function limb(
   return out;
 }
 
+/** A frame's size, and the pixel row the ground (body-space y = 0, z = 0) falls on. */
+export interface FrameSpec {
+  w: number;
+  h: number;
+  feetY: number;
+  /** Body-space height under which the light falls off towards the ground. */
+  groundShade?: number;
+}
+
+/** The folk's frame (see character.ts). */
+const PERSON: FrameSpec = { w: FRAME_W, h: FRAME_H, feetY: FEET_Y };
+/** How far in front of the frame the rays start, in pixels: further than any solid reaches. */
+const NEAR = 120;
+
 /**
  * Renders one frame: casts a ray through each pixel into the turned model,
  * finds the nearest solid, lights it and snaps the light to the colour's tones.
  */
-function renderFrame(model: Model, angleDeg: number): PixelCanvas {
+export function renderFrame(model: Model, angleDeg: number, spec: FrameSpec = PERSON): PixelCanvas {
+  const { w: FRAME_W, h: FRAME_H, feetY: FEET_Y } = spec;
+  const ground = spec.groundShade ?? 4;
   const c = new PixelCanvas(FRAME_W, FRAME_H);
   const a = (angleDeg * Math.PI) / 180;
   const cosA = Math.cos(a);
@@ -151,7 +167,7 @@ function renderFrame(model: Model, angleDeg: number): PixelCanvas {
     for (let px = 0; px < FRAME_W; px++) {
       const u = px + 0.5 - FRAME_W / 2;
       const v = FEET_Y + 0.5 - (py + 0.5);
-      const origin: Vec3 = [u - dir[0] * 60 + up[0] * v, up[1] * v - dir[1] * 60, up[2] * v - dir[2] * 60];
+      const origin: Vec3 = [u - dir[0] * NEAR + up[0] * v, up[1] * v - dir[1] * NEAR, up[2] * v - dir[2] * NEAR];
       const o = toBody(origin);
       let best = Infinity;
       let hitSolid: Solid | undefined;
@@ -174,7 +190,7 @@ function renderFrame(model: Model, angleDeg: number): PixelCanvas {
       const hit: Hit = { x: hx, y: hy, z: hz, nx: n[0], ny: n[1], nz: n[2] };
       const tones = typeof s.material === 'function' ? s.material(hit) : s.material;
       const nw = toWorld(n);
-      c.set(px, py, light(tones, nw, hy, dir, s.soft));
+      c.set(px, py, light(tones, nw, hy, dir, s.soft, ground));
     }
   }
 
@@ -187,13 +203,13 @@ function renderFrame(model: Model, angleDeg: number): PixelCanvas {
     const py = Math.floor(FEET_Y + 0.5 - vUp);
     if (!c.inside(px, py)) continue;
     const along = -(w[0] * dir[0] + w[1] * dir[1] + w[2] * dir[2]);
-    if (60 - along <= depth[py * FRAME_W + px] + 0.9) c.set(px, py, d.color);
+    if (NEAR - along <= depth[py * FRAME_W + px] + 0.9) c.set(px, py, d.color);
   }
   return c;
 }
 
 /** The colour a surface shows, lit: the light and normal pick one of its tones. */
-function light(tones: Tones, n: Vec3, y: number, view: Vec3, soft = false): number {
+function light(tones: Tones, n: Vec3, y: number, view: Vec3, soft = false, ground = 4): number {
   const [base, shade, lit] = tones;
   const diffuse = Math.max(0, n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2]);
   // Edges turned side-on to the viewer and towards the light catch a rim of it.
@@ -201,7 +217,7 @@ function light(tones: Tones, n: Vec3, y: number, view: Vec3, soft = false): numb
   let k = soft ? 0.42 + diffuse * 0.6 : 0.12 + diffuse;
   if (facing < 0.3 && n[0] < -0.2) k += 0.25;
   // Darker towards the ground, where less light reaches.
-  if (y < 4) k -= (4 - y) * 0.06;
+  if (y < ground) k -= ((ground - y) / ground) * 0.24;
   if (k > 0.9) return lit;
   if (k > 0.52) return base;
   if (k > 0.3) return shade;
