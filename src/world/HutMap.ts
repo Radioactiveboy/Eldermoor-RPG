@@ -60,5 +60,7 @@ export function buildHutMap(): MapData {
   add('stool', 1, 2);
   add('stool', 4, 2);
   add('chest', 0, 5, 1, 1, { flipX: true });
+  // Iran's pan over the fire: cook here (see systems/Crafting.ts).
+  data.sights = [...(data.sights ?? []), { id: 'hut-hearth', gx: 3, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'hut-hearth' }];
   return data;
 }

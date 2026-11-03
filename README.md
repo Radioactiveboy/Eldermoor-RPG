@@ -62,6 +62,15 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   drink and he'll tell you about the door under the hill). Godric lets rooms upstairs for a night, three
   nights or a week; your room's door is the only one along the passage that opens, and its bed is a save
   point until checkout (11:00) on the last morning. He also has rats in his cellar
+- **Brewing and cooking**: walk up to a hearth (the cottage, Farmer Iran's hut, the Crooked Tankard, the
+  monastery refectory) and press E to **Cook**, or to Old Maud's brewing bench in the Tankard's cellar to
+  **Brew**. Drag ingredients from the satchel into the three bowls (or click them, or click a recipe in the
+  book to fill them), choose how many, and press Cook / Brew. Stir the pot to hurry a brew along; take food
+  off the fire while the bar is in the golden band and it's done to a turn (a little bonus XP). Unknown
+  combinations show a "?" and are written into the recipe book once made. Wolves, hares and boar now leave
+  meat to cook. Mother's tincture (moonpetal + white willow bark) is brewed at the bench and taken home to her
+- Add `?give=moonpetal,willow-bark,raw-hare:3` to the URL on a new game to start with those things in the
+  satchel (handy for testing the stations)
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
   game sends it running, and in a fight it may bolt rather than stand
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
@@ -103,6 +112,7 @@ src/
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
   systems/Shops.ts        The market traders (and Godric at the Tankard): stock, what they buy, prices
   systems/Tavern.ts       The Crooked Tankard's menu and prices, and the room the hero has let (until when)
+  systems/Crafting.ts     Brewing and cooking: the recipes, the stations, and which recipes have been found
   systems/Loot.ts         Random finds: what searching a pile of bones can turn up, and how likely each is
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
@@ -152,6 +162,7 @@ src/
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
   scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
+  scenes/StationScene.ts  Brewing bench and hearth window: drag ingredients in, recipe book, progress bar, result popup
   scenes/SleepScene.ts    "How long to sleep?" box, opened from a bed
   scenes/CombatScene.ts   Turn-based fights over the world: turn order, skill hotbar and tooltips, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera

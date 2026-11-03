@@ -10,6 +10,7 @@ import { generateHenFarm } from './henfarm';
 import { generateHero } from './hero3d';
 import { generateInterior } from './interior';
 import { generateItemIcons } from './items';
+import { generateStationArt } from './stations';
 import { generateMarket } from './market';
 import { generateMonastery } from './monastery';
 import { generateNpcs } from './npc';
@@ -36,6 +37,7 @@ export function generateArt(scene: Phaser.Scene): void {
   generateInterior(scene);
   generateFarm(scene);
   generateItemIcons(scene);
+  generateStationArt(scene);
   generateCritters(scene);
   generateMarket(scene);
   generateCave(scene);

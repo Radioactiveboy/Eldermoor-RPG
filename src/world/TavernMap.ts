@@ -144,6 +144,7 @@ export function buildTavernMap(): MapData {
   add('furn-barrels', 11, 5, { shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
   add('furn-chest', 0, 6, { flipX: true });
 
+  data.sights!.push({ id: 'tavern-hearth', gx: 2, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'tavern-hearth' });
   data.sights!.push(
     {
       id: 'tavern-board', gx: 0.35, gy: 3.5, label: 'Read the notices', z: 56,
@@ -287,6 +288,9 @@ export function buildCellarMap(): MapData {
   add('mkt-crates', 7, 8, crate);
   add('furn-barrels', 7, 4, barrels);
   add('tav-sacks', 8, 4, sack);
+  // Old Maud's brewing bench, Godric's grandmother's, along the back wall: where the hero brews (see systems/Crafting.ts).
+  add('tav-brewbench', 10, 0, { w: 2 });
+  data.lights!.push({ gx: 10.5, gy: 0.8, z: 30, radius: 90, flicker: 0.6 });
 
   const rats: CreatureSpawn[] = [
     [11.5, 2.6], [10.4, 3.4], [12.2, 3.6],
@@ -296,6 +300,7 @@ export function buildCellarMap(): MapData {
   data.sights!.push(
     { id: 'cellar-keg', gx: 6.3, gy: 1.2, label: 'Look', z: 30, thought: "A keg gnawed clean through at the bottom. The floor round it is sticky with Godric's best ale. No wonder he's cross." },
     { id: 'cellar-hole', gx: 0.3, gy: 7.5, label: 'Look', z: 14, thought: 'A hole in the bottom of the wall, gnawed smooth by teeth. It goes back a long way. Something squeaks in there, then goes quiet.' },
+    { id: 'cellar-bench', gx: 11, gy: 1.15, label: 'Brew at the bench', z: 52, station: 'cellar-bench' },
   );
   return data;
 }

@@ -250,6 +250,52 @@ function runner(len: number): IsoModel {
   return m;
 }
 
+/**
+ * Old Maud's brewing bench in the cellar, two tiles along the back wall: a
+ * scrubbed workbench with a copper still over a little brazier, its pipe
+ * running to a glass flask, a stone mortar and pestle, a rack of bottles,
+ * bunches of herbs drying, and a candle. Where the hero brews (see
+ * systems/Crafting.ts).
+ */
+function brewingBench(): IsoModel {
+  const m = new IsoModel();
+  const H = 24;
+  const wood = { top: planks(3, P.plankLight, P.plank, P.logLight, 2), left: lipped(P.plank, P.plankLight), right: P.plankDark };
+  // Legs and the top, with a shelf underneath full of jars.
+  for (const x of [0.08, 1.84]) m.box(x, 0.18, 0, 0.08, 0.64, H - 3, { top: P.plank, left: P.plankDark, right: P.plankDark });
+  m.box(0.1, 0.22, 6, 1.8, 0.56, 3, { top: P.plankDark, left: P.plankDark, right: P.plankDark });
+  for (const [x, col] of [[0.3, 0x3a6a3a], [0.5, 0x6a3a22], [0.7, P.glassLight], [1.3, 0x8a2a2a], [1.55, 0x2a4a6a]] as Array<[number, number]>) {
+    m.cylinder(x, 0.55, 9, 0.07, 7, (u) => (u < 0.35 ? col + 0x202020 : col), P.barkLight);
+  }
+  m.box(0.04, 0.12, H - 3, 1.92, 0.76, 3, wood);
+  // The brazier, glowing, and the copper pot of the still over it.
+  m.box(0.22, 0.32, H, 0.36, 0.36, 5, { top: P.ember, left: P.iron, right: P.ironLight });
+  const copper: Shader = (u, v) => (v < 0.12 ? 0xe8a060 : u < 0.3 ? 0xd88a4a : u > 0.72 ? 0x8a4a22 : 0xb86a32);
+  m.cylinder(0.4, 0.5, H + 5, 0.2, 13, copper, 0xc87a3a);
+  // Its domed head, and the copper pipe running across to the flask.
+  m.cylinder(0.4, 0.5, H + 18, 0.11, 6, copper, 0xe8a060);
+  m.box(0.45, 0.47, H + 21, 0.62, 0.05, 2, { top: 0xe8a060, left: 0xb86a32, right: 0x8a4a22 });
+  m.box(1.04, 0.47, H + 6, 0.05, 0.05, 17, { top: 0xe8a060, left: 0xb86a32, right: 0x8a4a22 });
+  // The round glass flask catching the drips, a pale blue-green glow inside.
+  const glass: Shader = (u, v) => (v < 0.25 ? (u < 0.4 ? P.glassLight : P.glass) : u < 0.3 ? 0xd8fff4 : u > 0.75 ? 0x4a9aa8 : 0x8ad8cc);
+  m.cylinder(1.08, 0.52, H, 0.15, 10, glass, 0xc8f4ec);
+  m.cylinder(1.08, 0.52, H + 10, 0.05, 5, (u) => (u < 0.4 ? P.glassLight : P.glass), P.glassLight);
+  // The stone mortar with its pestle.
+  m.cylinder(1.5, 0.42, H, 0.14, 7, (u) => (u < 0.35 ? P.stoneLight : u > 0.75 ? P.stoneDark : P.stone), P.mortar);
+  m.box(1.53, 0.38, H + 5, 0.05, 0.05, 10, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
+  // A couple of stoppered bottles at the back and a candle.
+  m.cylinder(1.78, 0.28, H, 0.06, 12, (u) => (u < 0.35 ? 0x5a8a5a : 0x3a6a3a), P.barkLight);
+  m.cylinder(1.66, 0.22, H, 0.05, 9, (u) => (u < 0.35 ? 0xaa4a4a : 0x8a2a2a), P.barkLight);
+  m.box(1.78, 0.62, H, 0.07, 0.07, 7, { top: P.fireYellow, left: P.flowerWhite, right: P.linenDark });
+  m.box(1.8, 0.64, H + 7, 0.03, 0.03, 3, { top: P.fireYellow, left: P.fireOrange, right: P.fireYellow });
+  // Bunches of herbs hanging from a rail along the wall behind.
+  m.box(0.1, 0.06, H + 40, 1.8, 0.04, 2, { top: P.bark, left: P.barkDark, right: P.barkDark });
+  for (const [x, col] of [[0.3, P.leafDark], [0.75, 0x8a9a5a], [1.2, P.leaf], [1.62, 0x9a8a5a]] as Array<[number, number]>) {
+    m.box(x, 0.06, H + 26, 0.12, 0.06, 14, { top: col, left: (_u, v) => (v < 0.2 ? P.strawDark : col), right: P.leafDeep });
+  }
+  return m;
+}
+
 function put(scene: Phaser.Scene, key: string, model: IsoModel, outline = true): void {
   const r = model.render(outline);
   const tex = r.canvas.toTexture(scene, key);
@@ -270,4 +316,5 @@ export function generateTavern(scene: Phaser.Scene): void {
   put(scene, 'tav-sidetable', sideTable());
   put(scene, 'tav-sacks', sacks());
   put(scene, 'tav-runner', runner(8), false);
+  put(scene, 'tav-brewbench', brewingBench());
 }

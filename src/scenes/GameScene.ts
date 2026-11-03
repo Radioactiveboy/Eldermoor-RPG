@@ -11,7 +11,7 @@ import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
 import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
-import { Inventory, ItemId, itemDef } from '../systems/Inventory';
+import { Inventory, ItemId, itemDef, ITEMS } from '../systems/Inventory';
 import { marketOpen } from '../systems/MarketHours';
 import { findPath, GridPoint } from '../systems/Pathfinding';
 import { rollLoot } from '../systems/Loot';
@@ -46,6 +46,8 @@ import type { DialogueSceneData } from './DialogueScene';
 import type { CombatResult, CombatSceneData } from './CombatScene';
 import type { SleepSceneData } from './SleepScene';
 import type { ConfirmSceneData } from './ConfirmScene';
+import type { StationSceneData } from './StationScene';
+import { Crafting, Recipe } from '../systems/Crafting';
 
 type MoveKeys = Record<
   'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'sneak' | 'fastForward',
@@ -181,24 +183,24 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
 
 /** What's left of each kind of beast once it's slain. */
 const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
-  wolf: [['wolf-pelt', 1]],
-  wolfmother: [['white-hide', 1]],
+  wolf: [['wolf-pelt', 1], ['wolf-meat', 1]],
+  wolfmother: [['white-hide', 1], ['wolf-meat', 2]],
   deer: [['venison', 2], ['deer-hide', 1]],
-  hare: [['hare-pelt', 1]],
-  boar: [['boar-tusk', 2]],
+  hare: [['hare-pelt', 1], ['raw-hare', 1]],
+  boar: [['boar-tusk', 2], ['boar-meat', 2]],
   rat: [['rat-tail', 1]],
 };
 
 /** What the hero thinks over a beast they've brought down, and when one gets away. */
 const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
-  wolf: { slain: 'It lies still now. The pelt might be worth something in the village.', fled: 'It ran off into the trees. I doubt it will come back.' },
+  wolf: { slain: 'It lies still now. The pelt might be worth something in the village, and the meat will do for the pot, if I cook it well.', fled: 'It ran off into the trees. I doubt it will come back.' },
   wolfmother: {
     slain: 'The Wolf Mother is dead. Even lying still she is enormous, and her hide is as white as new snow. Brother Wystan will want to hear of this.',
     fled: 'She is gone into the dark.',
   },
   deer: { slain: 'Venison for the pot, and a fine hide. Tamsin will want that.', fled: 'Gone, white rump bobbing away over the grass. I need to be quicker.' },
-  hare: { slain: 'A hare. Not much eating on it, but the pelt is soft.', fled: 'Gone in a flash. Hares are quicker than they look.' },
-  boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and so is my hide.', fled: 'It crashed off into the thicket. Good riddance.' },
+  hare: { slain: 'A hare. The pelt is soft, and it would roast nicely over a hearth.', fled: 'Gone in a flash. Hares are quicker than they look.' },
+  boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and there is a feast of meat on it.', fled: 'It crashed off into the thicket. Good riddance.' },
   rat: { slain: 'Rats. Big ones, too. I will take a tail or two to show Godric.', fled: 'It shot off into a hole in the wall. It will be back.' },
 };
 
@@ -361,11 +363,17 @@ export class GameScene extends Phaser.Scene {
       Farm.reset();
       Shops.reset();
       Tavern.reset();
+      Crafting.reset();
       this.defeatedFoes.clear();
       this.visited.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
       const hourParam = new URLSearchParams(window.location.search).get('hour');
       if (hourParam !== null && !Number.isNaN(Number(hourParam))) this.clock.setHour(Number(hourParam));
+      // Handy for testing the brewing and cooking: ?give=moonpetal,willow-bark,raw-hare:3 puts things in the satchel.
+      for (const part of (new URLSearchParams(window.location.search).get('give') ?? '').split(',').filter(Boolean)) {
+        const [id, n] = part.split(':');
+        if (id in ITEMS) Inventory.add(id as ItemId, Math.max(1, Number(n) || 1));
+      }
     }
     this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
@@ -731,6 +739,44 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Brew at a bench or cook at a hearth (see scenes/StationScene.ts). */
+  private openStation(station: string): void {
+    if (!this.takeControls()) return;
+    if (this.seat) this.standUp();
+    this.scene.launch('Station', { station } satisfies StationSceneData);
+    const ui = this.scene.get('Station');
+    const made = (recipe: Recipe) => this.madeAtStation(recipe);
+    ui.events.on('station-made', made);
+    ui.events.once('station-closed', () => {
+      ui.events.off('station-made', made);
+      this.release();
+    });
+  }
+
+  /** Something brewed or cooked: Mother's tincture moves her errand on. */
+  private madeAtStation(recipe: Recipe): void {
+    if (recipe.makes !== 'fever-tincture' || !QuestLog.has('mother-medicine') || QuestLog.isDone('mother-medicine', 'brew')) return;
+    QuestLog.complete('mother-medicine', 'moonpetal');
+    QuestLog.complete('mother-medicine', 'willow');
+    QuestLog.complete('mother-medicine', 'brew');
+    QuestLog.writeDiary(
+      "Brewed Mother's tincture at old Maud's bench in the Tankard's cellar: ground the willow bark, steeped the moonpetal, and strained it " +
+        'into a little flask. It glows, faintly, like the flowers did. Now home to Mother, as fast as my legs will carry me.',
+    );
+    this.time.delayedCall(400, () => this.onHint?.('It glows, just like the flowers. Now home to Mother, quickly!'));
+  }
+
+  /** Mother takes her tincture: the end of her errand. */
+  private gaveMotherTincture(): void {
+    if (!Inventory.remove('fever-tincture', 1)) return;
+    for (const step of ['leave', 'find', 'moonpetal', 'willow', 'brew', 'return']) QuestLog.complete('mother-medicine', step);
+    GameAudio.questChime();
+    QuestLog.writeDiary(
+      'Gave Mother the tincture, warm, by the fire. She made a face at the taste and said it was just as foul as her own mother\'s, ' +
+        'which she says is how you know it works. She slept the whole night through without coughing once. I sat up and listened to her breathe.',
+    );
+  }
+
   /** A trader's stall: buy and sell. Opened from the conversation with them (see dialogue/market.ts). */
   private openShop(shop: ShopId): void {
     this.busy = true;
@@ -855,6 +901,17 @@ export class GameScene extends Phaser.Scene {
       case 'finish-wolf-quest':
         this.openMonasteryGate();
         break;
+      case 'godric-brewing':
+        if (QuestLog.hasFlag('may-use-cellar')) return;
+        QuestLog.setFlag('may-use-cellar');
+        QuestLog.writeDiary(
+          "Godric says his grandmother Maud brewed cordials and cures for half the shire, and her bench is still down in his cellar, " +
+            'still and all. I may use it, if I can get past his rats. The trapdoor is by the end of the bar.',
+        );
+        return;
+      case 'give-tincture':
+        this.gaveMotherTincture();
+        return;
       case 'anselm-moonpetal':
         if (QuestLog.hasFlag('may-pick-moonpetal')) return;
         QuestLog.setFlag('may-pick-moonpetal');
@@ -1668,6 +1725,10 @@ export class GameScene extends Phaser.Scene {
       this.gather(sight);
       return;
     }
+    if (sight.station) {
+      this.openStation(sight.station);
+      return;
+    }
     if (sight.thought) {
       this.onHint?.(sight.thought);
       return;
@@ -1767,10 +1828,15 @@ export class GameScene extends Phaser.Scene {
     if (!MOONPETAL.every((m) => QuestLog.hasFlag(`gathered-${m.id}`))) return;
     QuestLog.complete('mother-medicine', 'moonpetal');
     const haveBark = QuestLog.isDone('mother-medicine', 'willow');
-    this.onHint?.(haveBark ? 'Three blooms of moonpetal, wrapped in a dock leaf. With the willow bark, that is all of it. Home to Mother!' : 'Three blooms of moonpetal, wrapped in a dock leaf. Now for the willow bark.');
+    this.onHint?.(
+      haveBark
+        ? "Three blooms of moonpetal, wrapped in a dock leaf. With the willow bark, that is all of it. Now to brew it, at the old bench in Godric's cellar."
+        : 'Three blooms of moonpetal, wrapped in a dock leaf. Now for the willow bark.',
+    );
     QuestLog.writeDiary(
       haveBark
-        ? "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. With the willow bark I cut on the plains, I have all of Mother's tincture. Home, and quickly."
+        ? "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. With the willow bark I cut on the plains, I have all of Mother's tincture. " +
+            "Brother Anselm says it wants brewing at a proper bench, and that Godric's grandmother's is still down in the Tankard's cellar."
         : "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. That is half of Mother's " +
             'tincture. Now I need white willow bark. Brother Anselm says it grows by water.',
     );
@@ -1781,13 +1847,15 @@ export class GameScene extends Phaser.Scene {
     const havePetal = QuestLog.isDone('mother-medicine', 'moonpetal');
     this.onHint?.(
       havePetal
-        ? 'Three long curls of white willow bark, bitter as sloes. With the moonpetal, that is all of it. Home to Mother!'
+        ? "Three long curls of white willow bark, bitter as sloes. With the moonpetal, that is all of it. Now to brew it, at the old bench in Godric's cellar."
         : 'Three long curls of white willow bark, bitter as sloes. Half of the tincture. Now for the moonpetal.',
     );
     QuestLog.writeDiary(
       'Found an old white willow up on the plains, past where the north road climbs into the upland, leaning out over a still pool. ' +
         'It must be older than the monastery. I cut three long strips of bark from the side away from the water, and begged its pardon. ' +
-        (havePetal ? "With Brother Anselm's moonpetal, that is the whole of Mother's tincture. Home, and quickly." : 'Now I need the moonpetal to go with it.'),
+        (havePetal
+          ? "With Brother Anselm's moonpetal, that is the whole of Mother's tincture. It only wants brewing now, at the old bench in the Tankard's cellar."
+          : 'Now I need the moonpetal to go with it.'),
     );
   }
 
@@ -1954,7 +2022,7 @@ export class GameScene extends Phaser.Scene {
    * only the one let to the hero opens (and only while it's paid for).
    */
   private doorAllowed(door: Door): boolean {
-    if (door.id === 'cellar' && !QuestLog.has('cellar-rats')) {
+    if (door.id === 'cellar' && !QuestLog.has('cellar-rats') && !QuestLog.hasFlag('may-use-cellar')) {
       GameAudio.rattle();
       this.onHint?.("The trapdoor is bolted, and Godric is watching me over the bar. Not without asking him first.");
       return false;

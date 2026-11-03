@@ -197,6 +197,10 @@ export class JournalScene extends Phaser.Scene {
         w.heading('Current Tasks');
         w.para(`Day ${game.clock.day}, ${game.clock.clockText}`, { italic: true, color: INK_FADED, size: 14 });
         if (active.length === 0) {
+          if (QuestLog.all.length > 0) {
+            w.para('Every errand done, for now. Mother is mending, and the shire is mine to wander.', { italic: true });
+            return;
+          }
           w.para('Nothing written here yet.', { italic: true });
           w.checkbox('Speak with Mother. She is resting by the hearth.', false);
           return;

@@ -207,6 +207,7 @@ export function buildRefectoryMap(): MapData {
         add('mkt-bench', x, 4, { shapes: [box(0.08, 0.35, 0.92, 0.7)] });
         if (x % 2 === 0) data.seats!.push({ name: 'refectory-bench', gx: x + 0.5, gy: 4.55, faceX: 0, faceY: -1, standX: x + 0.5, standY: 5.5 });
       }
+      data.sights!.push({ id: 'refectory-hearth', gx: 5, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'refectory-hearth' });
       data.sights!.push({
         id: 'refectory-board', gx: 0.3, gy: 2.5, label: 'Read the board', z: 30,
         sign: { heading: 'Chalked on a board', lines: ['MONDAY: pottage', 'TUESDAY: pottage', 'WEDNESDAY: pottage (with leeks)', 'FRIDAY: carp', '', '(Underneath: "MORE LEEKS. -H.")'] },

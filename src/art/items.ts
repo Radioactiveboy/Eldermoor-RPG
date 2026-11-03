@@ -471,6 +471,192 @@ function sword(c: Ctx, length: number, width: number): void {
 
 // ------------------------------------------------------------ painters
 
+/**
+ * A cut of meat, raw or cooked. `shape` is a hare's leg (with its bone), a
+ * flat slab, or a round joint with its rind; `flesh` is light, mid and dark.
+ * Raw meat is wet and marbled with fat; cooked meat is browned, with grill
+ * marks and a glaze.
+ */
+function meat(c: Ctx, shape: 'leg' | 'slab' | 'joint', cooked: boolean, flesh: [string, string, string]): void {
+  const [light, mid, dark] = flesh;
+  if (shape === 'leg') {
+    // The bone, sticking out at the top right.
+    c.beginPath();
+    c.moveTo(80, 50);
+    c.lineTo(102, 22);
+    c.strokeStyle = INK;
+    c.lineWidth = 13;
+    c.lineCap = 'round';
+    c.stroke();
+    c.strokeStyle = cooked ? '#e8d8b0' : '#f4ecd8';
+    c.lineWidth = 7;
+    c.stroke();
+    for (const [x, y] of [
+      [100, 15],
+      [109, 23],
+    ]) {
+      c.beginPath();
+      c.arc(x, y, 7, 0, Math.PI * 2);
+      fillInk(c, cooked ? '#e0cca0' : '#f8f0e0', 3);
+    }
+  }
+  const outline = (): void => {
+    if (shape === 'leg') {
+      c.beginPath();
+      c.moveTo(86, 46);
+      c.bezierCurveTo(96, 66, 84, 104, 54, 106);
+      c.bezierCurveTo(24, 108, 14, 82, 24, 62);
+      c.bezierCurveTo(36, 40, 70, 30, 86, 46);
+      c.closePath();
+    } else if (shape === 'slab') {
+      smooth(c, [
+        [22, 54],
+        [52, 36],
+        [92, 40],
+        [112, 62],
+        [104, 92],
+        [70, 104],
+        [30, 98],
+        [16, 76],
+      ]);
+    } else {
+      smooth(c, [
+        [26, 50],
+        [64, 28],
+        [104, 48],
+        [112, 84],
+        [84, 110],
+        [40, 110],
+        [14, 84],
+      ]);
+    }
+  };
+  outline();
+  drop(c, () => {
+    c.fillStyle = dark;
+    c.fill();
+  });
+  outline();
+  clipped(c, () => {
+    c.fillStyle = rad(c, 50, 58, 64, [
+      [0, light],
+      [0.5, mid],
+      [1, dark],
+    ]);
+    c.fillRect(0, 0, 128, 128);
+    if (shape === 'joint') {
+      // The rind and a thick layer of fat along the bottom.
+      c.beginPath();
+      c.ellipse(64, 118, 70, 30, 0, 0, Math.PI * 2);
+      c.fillStyle = cooked ? '#c8782a' : '#f4e0d0';
+      c.fill();
+      c.beginPath();
+      c.ellipse(64, 124, 70, 26, 0, 0, Math.PI * 2);
+      c.fillStyle = cooked ? '#8a4012' : '#e8c8b8';
+      c.fill();
+      if (cooked) {
+        // Scored crackling.
+        c.strokeStyle = 'rgba(60,20,4,0.7)';
+        c.lineWidth = 2;
+        for (let x = 20; x < 120; x += 12) {
+          c.beginPath();
+          c.moveTo(x, 92);
+          c.lineTo(x + 10, 112);
+          c.stroke();
+        }
+      }
+    }
+    if (cooked) {
+      // Grill marks and a crust darkening the edges.
+      c.strokeStyle = 'rgba(30,10,2,0.55)';
+      c.lineWidth = 5;
+      for (const d of [-24, -4, 16]) {
+        c.beginPath();
+        c.moveTo(30 + d, 40);
+        c.lineTo(70 + d, 96);
+        c.stroke();
+      }
+      c.fillStyle = rad(c, 56, 64, 56, [
+        [0.65, 'rgba(0,0,0,0)'],
+        [1, 'rgba(40,14,2,0.8)'],
+      ]);
+      c.fillRect(0, 0, 128, 128);
+    } else {
+      // Marbling of fat through the raw meat.
+      c.strokeStyle = 'rgba(255,235,225,0.6)';
+      c.lineWidth = 2.2;
+      const r = rng(shape.length * 7);
+      for (let i = 0; i < 5; i++) {
+        const x0 = 26 + r() * 50;
+        const y0 = 48 + r() * 40;
+        c.beginPath();
+        c.moveTo(x0, y0);
+        c.quadraticCurveTo(x0 + 14, y0 - 10 + r() * 20, x0 + 28 + r() * 10, y0 + r() * 10 - 5);
+        c.stroke();
+      }
+      if (shape === 'slab') {
+        // A ragged edge of grey fur, left on the wolf meat.
+        c.fillStyle = '#7a7478';
+        for (let i = 0; i < 14; i++) {
+          c.beginPath();
+          c.arc(20 + i * 7, 102 + Math.sin(i * 2.1) * 3, 6, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+    }
+  });
+  outline();
+  ink(c);
+  shine(c, 44, 56, 12, 7, -0.5, cooked ? 0.45 : 0.7);
+}
+
+/** A wooden bowl of something thick and hot, with chunks of what went into it and a spoon. */
+function bowl(c: Ctx, broth: [string, string, string], chunks: string[]): void {
+  steam(c, 58, 40, 16);
+  c.beginPath();
+  c.moveTo(80, 60);
+  c.lineTo(104, 18);
+  c.strokeStyle = INK;
+  c.lineWidth = 10;
+  c.lineCap = 'round';
+  c.stroke();
+  c.strokeStyle = lin(c, 80, 0, 104, 0, WOOD);
+  c.lineWidth = 5;
+  c.stroke();
+  c.beginPath();
+  c.moveTo(10, 62);
+  c.bezierCurveTo(12, 104, 40, 116, 64, 116);
+  c.bezierCurveTo(88, 116, 116, 104, 118, 62);
+  c.closePath();
+  drop(c, () => {
+    c.fillStyle = '#6a4020';
+    c.fill();
+  });
+  c.fillStyle = lin(c, 10, 0, 118, 0, WOOD);
+  c.fill();
+  ink(c);
+  ellipse(c, 64, 62, 54, 16);
+  fillInk(c, rad(c, 56, 58, 54, [
+    [0, broth[0]],
+    [0.6, broth[1]],
+    [1, broth[2]],
+  ]));
+  const spots: Pt[] = [
+    [38, 60],
+    [56, 66],
+    [76, 58],
+    [92, 66],
+    [48, 55],
+  ];
+  spots.forEach(([x, y], i) => {
+    roundRect(c, x - 7, y - 4.5, 14, 9, 3);
+    fillInk(c, chunks[i % chunks.length], 2);
+  });
+  ellipse(c, 80, 62, 8, 5, -0.4);
+  fillInk(c, '#a26a38', 2.5);
+  shine(c, 44, 56, 12, 3, 0, 0.35);
+}
+
 const PAINTERS: Record<string, (c: Ctx) => void> = {
   // ---------------------------------------------------------------- produce
   carrot: (c) =>
@@ -2433,6 +2619,137 @@ const PAINTERS: Record<string, (c: Ctx) => void> = {
     c.restore();
     shine(c, 44, 40, 14, 8, -0.6, 0.65);
   },
+
+  // ---------------------------------------------------- brewing and cooking
+
+  'fever-tincture': (c) => {
+    // A small round-bellied flask of pale, glowing moonpetal tincture, corked, with a sprig tied at the neck.
+    const flask = (): void => {
+      c.beginPath();
+      c.moveTo(54, 22);
+      c.lineTo(74, 22);
+      c.lineTo(74, 44);
+      c.bezierCurveTo(104, 52, 112, 82, 100, 100);
+      c.bezierCurveTo(90, 116, 38, 116, 28, 100);
+      c.bezierCurveTo(16, 82, 24, 52, 54, 44);
+      c.closePath();
+    };
+    flask();
+    drop(c, () => {
+      c.fillStyle = 'rgba(190,220,235,0.35)';
+      c.fill();
+    });
+    flask();
+    clipped(c, () => {
+      c.fillStyle = rad(c, 64, 84, 50, [
+        [0, '#f4fff8'],
+        [0.35, '#a8e8e0'],
+        [0.8, '#4aa0b8'],
+        [1, '#2a5a7a'],
+      ]);
+      c.fillRect(0, 60, 128, 68);
+      // The meniscus.
+      ellipse(c, 64, 60, 40, 5);
+      c.fillStyle = 'rgba(230,255,250,0.7)';
+      c.fill();
+      // A few motes of moonpetal, still shining.
+      const r = rng(21);
+      for (let i = 0; i < 9; i++) {
+        c.beginPath();
+        c.arc(36 + r() * 56, 68 + r() * 36, 1.2 + r() * 2, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(255,255,240,0.9)';
+        c.fill();
+      }
+    });
+    flask();
+    ink(c);
+    // The cork.
+    roundRect(c, 50, 10, 28, 16, 4);
+    fillInk(c, lin(c, 50, 0, 78, 0, [
+      [0, '#8a6038'],
+      [0.5, '#c89860'],
+      [1, '#7a5030'],
+    ]), 3);
+    // A cord and a little sprig of willow leaves at the neck.
+    c.beginPath();
+    c.moveTo(52, 34);
+    c.lineTo(76, 34);
+    c.strokeStyle = '#d8c090';
+    c.lineWidth = 3;
+    c.stroke();
+    for (const [x, y, rot] of [
+      [84, 38, 0.6],
+      [88, 30, -0.1],
+    ]) {
+      ellipse(c, x, y, 10, 4, rot);
+      fillInk(c, '#8ab070', 2);
+    }
+    shine(c, 44, 72, 7, 16, 0.3, 0.7);
+  },
+
+  'raw-hare': (c) => meat(c, 'leg', false, ['#f0a8a0', '#d06a64', '#7a2a28']),
+  'wolf-meat': (c) => meat(c, 'slab', false, ['#c86058', '#8e2a28', '#4a1010']),
+  'boar-meat': (c) => meat(c, 'joint', false, ['#f0a090', '#c85a50', '#6a2018']),
+  'roast-hare': (c) => {
+    steam(c, 56, 34, 12);
+    meat(c, 'leg', true, ['#e8a858', '#a85a24', '#4a200a']);
+  },
+  'wolf-steak': (c) => {
+    steam(c, 60, 38, 14);
+    meat(c, 'slab', true, ['#b8703a', '#6a3014', '#2e1206']);
+  },
+  'venison-steak': (c) => {
+    steam(c, 60, 36, 14);
+    meat(c, 'slab', true, ['#a8582e', '#5a2210', '#2a0c04']);
+    // A sprig of rosemary laid over it.
+    c.beginPath();
+    c.moveTo(36, 66);
+    c.lineTo(90, 52);
+    c.strokeStyle = '#3a5a2a';
+    c.lineWidth = 3;
+    c.stroke();
+    for (let i = 0; i < 8; i++) {
+      const x = 40 + i * 6.5;
+      const y = 65 - i * 1.7;
+      ellipse(c, x, y - 4, 2, 6, 0.5);
+      c.fillStyle = '#5a8a40';
+      c.fill();
+      ellipse(c, x + 2, y + 4, 2, 6, -0.6);
+      c.fill();
+    }
+  },
+  'roast-boar': (c) => {
+    steam(c, 56, 30, 16);
+    meat(c, 'joint', true, ['#e8a050', '#a0501c', '#4a1e08']);
+  },
+  'boiled-egg': (c) => {
+    // Two halves of a boiled egg, the yolk bright.
+    for (const [x, rot] of [
+      [42, -0.25],
+      [86, 0.25],
+    ]) {
+      at(c, x, 76, rot, () => {
+        c.beginPath();
+        c.moveTo(-28, 0);
+        c.bezierCurveTo(-28, 30, 28, 30, 28, 0);
+        c.bezierCurveTo(28, -30, -28, -30, -28, 0);
+        drop(c, () => fillInk(c, rad(c, -8, -8, 36, [
+          [0, '#ffffff'],
+          [0.7, '#f0ece0'],
+          [1, '#c8bca0'],
+        ])));
+        ellipse(c, 0, 0, 13, 12);
+        fillInk(c, rad(c, -3, -3, 14, [
+          [0, '#ffe890'],
+          [0.6, '#f8b830'],
+          [1, '#d88a10'],
+        ]), 2.5);
+        shine(c, -4, -5, 5, 3, 0, 0.6);
+      });
+    }
+  },
+  'hare-stew': (c) => bowl(c, ['#b8783e', '#86481e', '#4a2410'], ['#f08a2a', '#f0e0b0', '#e0a0a0', '#f08a2a', '#c8a0f0']),
+  'hunters-pottage': (c) => bowl(c, ['#8a8a40', '#5a5a20', '#2e2e10'], ['#6a2a1a', '#8ac050', '#d8b070', '#6a2a1a', '#8ac050']),
 };
 
 /** Which painter makes each texture. */
@@ -2477,6 +2794,17 @@ const ICONS: Array<[string, string]> = [
   ['item-wine', 'spiced-wine'],
   ['item-stew', 'stew'],
   ['item-rattail', 'rat-tail'],
+  ['item-fever-tincture', 'fever-tincture'],
+  ['item-raw-hare', 'raw-hare'],
+  ['item-wolf-meat', 'wolf-meat'],
+  ['item-boar-meat', 'boar-meat'],
+  ['item-roast-hare', 'roast-hare'],
+  ['item-wolf-steak', 'wolf-steak'],
+  ['item-venison-steak', 'venison-steak'],
+  ['item-roast-boar', 'roast-boar'],
+  ['item-boiled-egg', 'boiled-egg'],
+  ['item-hare-stew', 'hare-stew'],
+  ['item-hunters-pottage', 'hunters-pottage'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {
