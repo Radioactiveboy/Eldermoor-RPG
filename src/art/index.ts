@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 import { generateAbbey } from './abbey';
 import { generateCave } from './cave';
-import { generateCharacter } from './character';
 import { generateCreatures } from './creatures';
 import { generateCritters } from './critters';
 import { generateFarm } from './farm';
 import { generateFishing } from './fishing';
 import { generateFolk } from './folk';
 import { generateHenFarm } from './henfarm';
+import { generateHero } from './hero3d';
 import { generateInterior } from './interior';
 import { generateItemIcons } from './items';
 import { generateMarket } from './market';
@@ -27,7 +27,7 @@ import { generateTollGate } from './tollgate';
 export function generateArt(scene: Phaser.Scene): void {
   generateTiles(scene);
   generateProps(scene);
-  generateCharacter(scene);
+  generateHero(scene);
   generateNpcs(scene);
   generateCreatures(scene);
   generateFolk(scene);
