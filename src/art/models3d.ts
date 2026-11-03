@@ -84,6 +84,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   baker: bakerModel,
   smith: smithModel,
   tanner: tannerModel,
+  guard: guardModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -308,5 +309,88 @@ export function tannerModel(pose: Pose3D): Model {
   // Freckles.
   for (const side of [-1, 1]) details.push({ x: side * 2.7, y: hy - 0.6, z: 4.6, color: 0xc88660 });
   details.push({ x: 0, y: hy - 2.4, z: 5, color: 0xb86a58 }); // mouth
+  return { solids, details };
+}
+
+/** Mail: rows of rings, light and dark by turns. */
+function mailRings(h: Hit, mail: Tones, ring: Tones): Tones {
+  return (Math.floor(h.x * 0.9 + h.z * 0.9) + Math.floor(h.y * 1.1)) % 2 ? mail : ring;
+}
+
+/**
+ * The village militia: a kettle helm with a wide brim, a shirt of mail, a
+ * blue tabard edged in gold over it, and a spear in the right hand.
+ */
+export function guardModel(pose: Pose3D): Model {
+  const tabard: Tones = [0x2e4a7a, 0x1e3256, 0x40629a];
+  const gold: Tones = [P.gold, 0xb08830, P.goldLight];
+  const mail: Tones = [P.ironLight, P.iron, 0x9a9aa6];
+  const ring: Tones = [P.iron, 0x34343c, P.ironLight];
+  const helm: Tones = [P.ironLight, P.iron, P.stoneLight];
+  const trouser: Tones = [0x3a3032, 0x241c1e, 0x50444a];
+  const skin: Tones = [P.skin, P.skinShade, 0xf4cfa8];
+  const hair: Tones = [0x4a3020, 0x2e1e14, 0x664430];
+  const boots: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const shaft: Tones = [P.bark, P.barkDark, P.barkLight];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    solids.push(...limb([side * 2.4, 13 - b * 0.5, 0], [side * 2.4, 3.6 + lift, swing * 2.4], 2, 1.7, trouser));
+    solids.push({ cx: side * 2.4, cy: 1.3 + lift, cz: 0.8 + swing * 2.4, rx: 1.8, ry: 1.4, rz: 2.6, material: boots });
+  }
+
+  // The tabard over the mail, front and back, to mid-thigh with a gold hem; mail shows at the sides.
+  const body = (h: Hit): Tones => {
+    if (Math.abs(h.y - (16 - b)) < 0.6) return [P.leatherDark, P.barkDark, P.leather];
+    if (Math.abs(h.nx) > 0.72) return mailRings(h, mail, ring);
+    if (h.y < 11.4) return gold;
+    return tabard;
+  };
+  for (let y = 10.5; y <= 14; y += 0.5) {
+    solids.push({ cx: 0, cy: y - b * 0.5, cz: s * 0.3 * (14 - y) / 3.5, rx: 4.9, ry: 0.8, rz: 3.8, material: body });
+  }
+  solids.push({ cx: 0, cy: 17 - b, cz: 0, rx: 4.8, ry: 3.6, rz: 3.6, material: body });
+  solids.push({ cx: 0, cy: 22 - b, cz: 0, rx: 5.4, ry: 4.8, rz: 3.9, material: body });
+
+  // Mail sleeves; the right hand (screen-left, facing us) holds the spear.
+  let spearHand: [number, number, number] = [0, 0, 0];
+  for (const side of [-1, 1]) {
+    const holding = side === -1;
+    const swing = holding ? 0 : -s * side * 2;
+    solids.push({ cx: side * 5.2, cy: 24.8 - b, cz: 0, rx: 2.5, ry: 2.3, rz: 2.5, material: (h) => mailRings(h, mail, ring) });
+    const elbow: [number, number, number] = [side * 6.6, 20.4 - b, holding ? 0.8 : swing * 0.5];
+    const hand: [number, number, number] = holding ? [side * 7.4, 19.4 - b, 1.8] : [side * 6.6, 16.6 - b, 0.8 + swing];
+    solids.push(...limb([side * 5.6, 24.2 - b, 0], elbow, 1.9, 1.7, (h) => mailRings(h, mail, ring)));
+    solids.push(...limb(elbow, hand, 1.7, 1.5, (h) => mailRings(h, mail, ring)));
+    solids.push({ cx: hand[0], cy: hand[1] - 0.8, cz: hand[2], rx: 1.6, ry: 1.7, rz: 1.6, material: skin });
+    if (holding) spearHand = hand;
+  }
+
+  // The spear, butt on the ground, planted ahead as they walk; an iron leaf at the top.
+  const [sx, , sz] = spearHand;
+  const top = 43.5 - b;
+  const pole = [...limb([sx, 0.5, sz - s * 0.6], [sx, top - 3, sz], 0.6, 0.6, shaft, 0.4), ...limb([sx, top - 3.4, sz], [sx, top, sz], 1.1, 0.4, helm, 0.4)];
+  solids.push(...pole.map((p) => ({ ...p, soft: true })));
+
+  // Head under a kettle helm: a wide brim round a rounded crown.
+  const hy = 32.4 - b;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0, rx: 2.2, ry: 2, rz: 2.2, material: skin });
+  const head = (h: Hit): Tones => {
+    if (h.nz < -0.2 || (Math.abs(h.nx) > 0.66 && h.y - hy > -2)) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: 5.3, rx: 0.9, ry: 1.1, rz: 0.9, material: skin });
+  solids.push({ cx: 0, cy: hy + 4.4, cz: 0, rx: 8.4, ry: 0.9, rz: 7.8, material: helm });
+  solids.push({ cx: 0, cy: hy + 5, cz: -0.2, rx: 5.6, ry: 4.2, rz: 5.4, material: helm });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: 5, color: P.eye });
+  // A gold emblem on the chest.
+  for (const [x, y] of [[0, 23], [0, 22], [-1, 22], [1, 22], [0, 21]]) details.push({ x, y: y - b, z: 3.9, color: P.gold });
   return { solids, details };
 }
