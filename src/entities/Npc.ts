@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DrawnDir, FEET_Y, FRAME_H } from '../art/character';
+import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
 import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
@@ -25,6 +25,8 @@ export const TALK_RANGE = 1.7;
 /** Travellers stop and turn to the player when they come this close. */
 const NOTICE_RANGE = 2.4;
 const WALK_SPEED = 1.3;
+/** People standing at their posts watch the player go by within this many tiles. */
+const WATCH_RANGE = 3.4;
 
 interface NpcDef {
   texture: string;
@@ -302,6 +304,13 @@ export class Npc implements Body {
 
   /** For someone who stays put: the way they look when nobody is talking to them (the fisherman, at his float). */
   private readonly looking?: Vec2;
+  /** The way someone who stays put faces when they're not looking at anything in particular. */
+  private restFacing = 0;
+  /** Seconds until they next glance aside, and how long the glance they're in has left. */
+  private glanceIn = 3 + Math.random() * 6;
+  private glanceLeft = 0;
+  /** How quickly they breathe, a little different for everyone so a crowd doesn't breathe as one. */
+  private readonly breath = 0.8 + Math.random() * 0.4;
   /** Only about between these hours (see NpcSpawn.hours). */
   private readonly hours?: [number, number];
   /** Out for now, outside their hours. */
@@ -333,6 +342,7 @@ export class Npc implements Body {
     this.looking = looking;
     this.hours = hours;
     if (looking) this.face(looking);
+    this.restFacing = this.facing;
     this.shadow = scene.add.image(0, 0, 'shadow');
     this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
     if (def.wander && map.data.road?.length) {
@@ -479,7 +489,7 @@ export class Npc implements Body {
       if (this.speechLeft <= 0) this.speech = undefined;
     }
     if (this.commute) {
-      this.keepHours(dt, paused);
+      this.keepHours(dt, paused, player);
       return;
     }
     if (this.hours && !paused && Npc.within(this.hours, hour) === this.off && !this.errand) {
@@ -500,11 +510,7 @@ export class Npc implements Body {
       return;
     }
     if (!this.moves) {
-      // Once the player has gone, back to what they were doing.
-      if (this.looking && !paused && this.distanceTo(player.x, player.y) > NOTICE_RANGE) {
-        this.face(this.looking);
-        this.sync(false);
-      }
+      if (!paused) this.standAbout(dt, player);
       return;
     }
     // (A maid at work doesn't stop to stare at someone sitting down.)
@@ -545,11 +551,44 @@ export class Npc implements Body {
   }
 
   /**
+   * For someone who stays put: keep an eye on the player while they're near,
+   * now and then glance aside, and otherwise face the way they always do (the
+   * fisherman at his float, a trader over their counter). Those sitting down
+   * stay as they're sat.
+   */
+  private standAbout(dt: number, player: Vec2): void {
+    if (this.def.anim) return;
+    const before = this.facing;
+    const near = this.distanceTo(player.x, player.y);
+    if (this.def.sits) {
+      // Once the player has gone, back to what they were doing.
+      if (this.looking && near > NOTICE_RANGE) this.facing = this.restFacing;
+    } else if (near < WATCH_RANGE) {
+      this.face({ x: player.x - this.gx, y: player.y - this.gy });
+      this.glanceLeft = 0;
+    } else if (this.glanceLeft > 0) {
+      this.glanceLeft -= dt;
+      if (this.glanceLeft <= 0) this.facing = this.restFacing;
+    } else {
+      this.facing = this.restFacing;
+      this.glanceIn -= dt;
+      if (this.glanceIn <= 0) {
+        // A look to one side, or now and then a little further round.
+        const turn = (Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.25 ? 2 : 1);
+        this.facing = (this.restFacing + turn + 8) % 8;
+        this.glanceLeft = 1.2 + Math.random() * 1.8;
+        this.glanceIn = 4 + Math.random() * 7;
+      }
+    }
+    if (this.facing !== before) this.sync(false);
+  }
+
+  /**
    * A trader's day: at closing time, cover the stall and walk home; at opening
    * time, come out of the front door and walk back to the stall. They don't
    * stop for the player on the way (it's been a long day), but will stop to talk.
    */
-  private keepHours(dt: number, paused: boolean): void {
+  private keepHours(dt: number, paused: boolean, player: Vec2): void {
     const c = this.commute!;
     const open = marketOpen(this.hour, c.late);
     if (paused) {
@@ -558,7 +597,10 @@ export class Npc implements Body {
     }
     switch (this.shift) {
       case 'open':
-        if (open) return;
+        if (open) {
+          this.standAbout(dt, player);
+          return;
+        }
         this.shift = 'packing';
         this.wait = PACKING_SECONDS;
         this.map.setObjectArt(c.stall, `${c.stall.key}-closed`);
@@ -586,7 +628,7 @@ export class Npc implements Body {
         } else {
           // Back behind the counter: uncover the goods.
           this.shift = 'open';
-          this.facing = 0;
+          this.facing = this.restFacing;
           this.map.setObjectArt(c.stall, c.stall.key);
           this.sync(false);
         }
@@ -752,11 +794,16 @@ export class Npc implements Body {
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
     if (this.def.anim) return;
-    // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored.
-    const names: DrawnDir[] = ['s', 'se', 'e', 'ne', 'n'];
-    const mirrored = this.facing > 4;
-    this.sprite.setFlipX(mirrored);
     const pose = moving ? 'walk' : this.def.sits ? 'sit' : 'idle';
-    this.sprite.play(`${this.def.texture}-${pose}-${names[mirrored ? 8 - this.facing : this.facing]}`, true);
+    // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored,
+    // unless the figure is modelled in 3D and has all eight drawn (see figure3d.ts).
+    const names: string[] = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
+    const allEight = this.sprite.scene.anims.exists(`${this.def.texture}-idle-w`);
+    const mirrored = !allEight && this.facing > 4;
+    this.sprite.setFlipX(mirrored);
+    const key = `${this.def.texture}-${pose}-${names[mirrored ? 8 - this.facing : this.facing]}`;
+    // Standing still, each breathes at their own pace, from wherever in the breath they happen to be.
+    if (pose === 'idle') this.sprite.play({ key, frameRate: IDLE_FRAME_RATE * this.breath, randomFrame: true }, true);
+    else this.sprite.play(key, true);
   }
 }

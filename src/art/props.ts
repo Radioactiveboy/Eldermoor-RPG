@@ -182,7 +182,8 @@ function shadow(w: number, h: number): PixelCanvas {
       const nx = (x + 0.5 - w / 2) / (w / 2);
       const ny = (y + 0.5 - h / 2) / (h / 2);
       const d = nx * nx + ny * ny;
-      if (d <= 1) c.set(x, y, 0x0b0812, d < 0.55 ? 110 : 70);
+      // Darkest right under the feet, where the light can't reach, fading out at the rim.
+      if (d <= 1) c.set(x, y, 0x0b0812, d < 0.25 ? 140 : d < 0.6 ? 105 : 60);
     }
   }
   return c;

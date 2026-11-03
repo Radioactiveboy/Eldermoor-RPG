@@ -88,6 +88,7 @@ export function generateNpcs(scene: Phaser.Scene): void {
   POSES.forEach((pose, i) => {
     const frame = new PixelCanvas(FRAME_W, FRAME_H);
     drawMother(frame, pose);
+    frame.shadeForm();
     frame.outline();
     sheet.blit(frame, i * FRAME_W, 0);
   });
