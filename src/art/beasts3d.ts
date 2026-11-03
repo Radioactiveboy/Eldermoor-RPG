@@ -52,6 +52,40 @@ export function chain(points: V3[], radii: number[], material: Material, step = 
   return out;
 }
 
+
+/** A body's profile along its length: [z, centre y, half-height, half-width] at points from back to front. */
+export type Spine = Array<[number, number, number, number]>;
+
+/** The profile's centre y, half-height and half-width at any z, eased between its points. */
+export function profile(spine: Spine): (z: number) => [number, number, number] {
+  return (z) => {
+    for (let i = 1; i < spine.length; i++) {
+      if (z <= spine[i][0]) {
+        const [z0, y0, h0, w0] = spine[i - 1];
+        const [z1, y1, h1, w1] = spine[i];
+        const t = Math.max(0, (z - z0) / (z1 - z0));
+        return [y0 + (y1 - y0) * t, h0 + (h1 - h0) * t, w0 + (w1 - w0) * t];
+      }
+    }
+    const l = spine[spine.length - 1];
+    return [l[1], l[2], l[3]];
+  };
+}
+
+/**
+ * A torso: thin slices along the spine read off its profile (sunk by `bob`),
+ * so its surface runs smooth from the haunch to the chest.
+ */
+export function torso(spine: Spine, bob: number, material: Material, depth = 2.6): Solid[] {
+  const at = profile(spine);
+  const out: Solid[] = [];
+  for (let z = spine[0][0]; z <= spine[spine.length - 1][0]; z += 0.5) {
+    const [y, ry, rx] = at(z);
+    out.push({ cx: 0, cy: y - bob, cz: z, rx, ry, rz: depth, material });
+  }
+  return out;
+}
+
 const add = (a: V3, b: V3, k = 1): V3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
 
 /** Every solid and detail made `k` times bigger (the Wolf Mother). */
@@ -168,8 +202,7 @@ export function wolfModel(pose: BeastPose, coat: WolfCoat = GREY_WOLF, dead = fa
 
   // The torso, hips to chest: the chest deep, the waist tucked up. Thin slices
   // along the spine, read off a profile, so its surface runs smooth.
-  const spine: Array<[number, number, number, number]> = [
-    // z, centre y, half-height, half-width
+  const spine: Spine = [
     [-9, 13.8, 3, 3.3],
     [-7.5, 13.7, 3.7, 4.3],
     [-4.5, 14.1, 3.3, 3.9],
@@ -178,22 +211,9 @@ export function wolfModel(pose: BeastPose, coat: WolfCoat = GREY_WOLF, dead = fa
     [4.5, 13.4, 4.8, 5],
     [6, 14.2, 3.8, 4.2],
   ];
-  const at = (z: number): [number, number, number] => {
-    for (let i = 1; i < spine.length; i++) {
-      if (z <= spine[i][0]) {
-        const [z0, y0, h0, w0] = spine[i - 1];
-        const [z1, y1, h1, w1] = spine[i];
-        const t = (z - z0) / (z1 - z0);
-        return [y0 + (y1 - y0) * t, h0 + (h1 - h0) * t, w0 + (w1 - w0) * t];
-      }
-    }
-    const l = spine[spine.length - 1];
-    return [l[1], l[2], l[3]];
-  };
-  for (let z = -9; z <= 6; z += 0.5) {
-    const [y, ry, rx] = at(z);
-    solids.push({ cx: 0, cy: y - b, cz: z, rx, ry, rz: 2.6, material: body });
-  }
+  const at = profile(spine);
+  solids.push(...torso(spine, b, body));
+
   // Legs. Fore: shoulder, elbow, a straight foreleg to the paw. Hind: thigh, stifle, back to the hock, the long foot.
   for (const [i, side] of [[0, 1], [1, -1]] as const) {
     const off = pose.legs[i];
@@ -324,6 +344,168 @@ export const WOLF_POSES: BeastPose[] = [
 
 /** The wolf's models are drawn this much bigger than their body-space units. */
 const WOLF_SIZE = 1.2;
+
+// --- Wild boar --------------------------------------------------------------
+
+const BOAR_DEEP = 0x1e1814;
+const BOAR_DARK = 0x3a2e26;
+const BOAR = 0x5c4a3c;
+const BOAR_LIGHT = 0x7e6852;
+const BOAR_GRIZZLE = 0x9c8670;
+const SNOUT = 0xb08478;
+const TUSK = 0xf0e6d0;
+
+/**
+ * A wild boar: a heavy, wedge-shaped body high at the shoulders and falling
+ * away to the rump, on short thick legs with dark hooves; a long head running
+ * down to a pink-brown disc of a snout, curling tusks, small pointed ears, a
+ * bristling black mane along the spine and a thin twist of a tail. Head poses
+ * map to the shared frames: 'sniff' roots at the ground, 'snarl' squares up
+ * with the mane raised, 'bite' is the charge, tusks first.
+ */
+export function boarModel(pose: BeastPose, dead = false): Model {
+  const DEEP: Tones = [BOAR_DEEP, BOAR_DEEP, BOAR_DARK];
+  const DARK: Tones = [BOAR_DARK, BOAR_DEEP, BOAR];
+  const COAT: Tones = [BOAR, BOAR_DARK, BOAR_LIGHT];
+  const LIGHT: Tones = [BOAR_LIGHT, BOAR, BOAR_GRIZZLE];
+  const b = pose.bob;
+  const lift = pose.lift ?? [0, 0, 0, 0];
+  const solids: Solid[] = [];
+  const details: Detail[] = [];
+
+  // Bristly brown-black coat, darkest along the back, grizzled on the flanks.
+  const coat = (h: Hit): Tones => {
+    const s = speck(h, 1.4);
+    if (h.ny > 0.7) return s < 0.3 ? COAT : DARK;
+    if (h.ny < -0.55) return DARK;
+    return s < 0.1 ? LIGHT : s > 0.94 ? DARK : COAT;
+  };
+
+  // The body: deep and high at the shoulder, sloping down to a rounded rump.
+  const spine: Spine = [
+    [-10.5, 11.6, 3.6, 4],
+    [-9, 11.8, 5, 5.6],
+    [-5, 12.3, 5.6, 6.2],
+    [0, 13, 6.2, 6.8],
+    [4, 13.6, 6.6, 6.8],
+    [7, 13.3, 6, 6],
+    [8.5, 13, 4.6, 4.8],
+  ];
+  const at = profile(spine);
+  solids.push(...torso(spine, b, coat, 3));
+
+  // Short thick legs, a dark hoof on each.
+  const legs: Array<[number, number, number]> = [
+    [0, 1, -7.5],
+    [1, -1, -7.5],
+    [2, 1, 5.5],
+    [3, -1, 5.5],
+  ];
+  for (const [i, side, z] of legs) {
+    const off = pose.legs[i];
+    const l = lift[i];
+    const x = side * 3.6;
+    const top: V3 = [x, 10 - b, z];
+    const knee: V3 = [x, 4.6 + l * 0.6, z + off * 0.5 + (z < 0 ? -0.6 : 0.3)];
+    const foot: V3 = [x, 1.3 + l, z + off];
+    solids.push(...chain([top, knee], [3, 1.9], coat));
+    solids.push(...chain([knee, foot], [1.8, 1.5], DARK));
+    solids.push({ cx: foot[0], cy: foot[1] - 0.3 + 0, cz: foot[2] + 0.4, rx: 1.5, ry: 1, rz: 1.6, material: DEEP });
+  }
+
+  // The tail: a thin twist hanging from the rump, a tuft at its end.
+  {
+    const root: V3 = [0, 13.4 - b, -11];
+    const up = pose.head === 'snarl' || pose.head === 'bite' ? 2.5 : 0;
+    solids.push(...chain([root, [0, 11 - b + up, -12.6], [0.4, 8.4 - b + up * 1.6, -12.4]], [0.8, 0.6, 0.55], DARK, 0.35));
+    solids.push({ cx: 0.4, cy: 7.8 - b + up * 1.6, cz: -12.3, rx: 0.9, ry: 1.2, rz: 0.9, material: DEEP });
+  }
+
+  // The mane: stiff black bristles along the spine, standing tall when it's roused.
+  const roused = !!pose.hackles || pose.head === 'snarl' || pose.head === 'bite';
+  for (let z = -6; z <= 9; z += 1.2) {
+    const [cy, ry] = at(Math.min(z, 8.5));
+    const t = (z + 6) / 15;
+    const tall = (roused ? 2.2 : 1.3) * (0.5 + t * 0.6);
+    solids.push({ cx: 0, cy: cy - b + ry + tall * 0.4, cz: z, rx: 1.2, ry: tall, rz: 0.8, material: DEEP });
+  }
+
+  // The head, by pose: where the skull sits and how far the snout points down (degrees).
+  const heads = {
+    up: { h: [0, 12.6 - b, 10.6] as V3, pitch: 24, earsBack: false },
+    sniff: { h: [0, 8.4 - b - (pose.nod ?? 0), 11] as V3, pitch: 52, earsBack: false },
+    snarl: { h: [0, 11.2 - b, 11] as V3, pitch: 30, earsBack: true },
+    bite: { h: [0, 9.6 - b, 12.6] as V3, pitch: 36, earsBack: true },
+    hurt: { h: [0, 13.6 - b, 9.6] as V3, pitch: 12, earsBack: true },
+  };
+  const hd = dead ? { h: [0, 11.6, 10.8] as V3, pitch: 16, earsBack: true } : heads[pose.head];
+  const H = hd.h;
+  const p = (hd.pitch * Math.PI) / 180;
+  const dir: V3 = [0, -Math.sin(p), Math.cos(p)];
+  const head = (h: Hit): Tones => (h.ny > 0.5 ? DARK : h.ny < -0.4 ? DARK : speck(h, 1) < 0.15 ? LIGHT : COAT);
+  // Neck into a big, long wedge of a head.
+  solids.push(...chain([[0, 12.6 - b, 7.5], H], [5, 4.2], coat));
+  solids.push({ cx: H[0], cy: H[1], cz: H[2], rx: 3.9, ry: 4.1, rz: 3.8, material: head });
+  const tip = add(H, dir, 8.2);
+  solids.push(...limb(add(H, dir, 2), tip, 3.2, 1.75, head));
+  // The snout's flat disc, with two nostrils.
+  const disc = add(tip, dir, 1.1);
+  solids.push({ cx: disc[0], cy: disc[1], cz: disc[2], rx: 2.1, ry: 1.8, rz: 0.8, material: [SNOUT, 0x8a6458, 0xcca094] });
+  for (const side of [-1, 1]) details.push({ ...vec(add(add(disc, dir, 0.8), [side * 0.8, 0, 0])), color: BOAR_DEEP });
+  // Tusks curling up and out of the lower jaw.
+  for (const side of [-1, 1]) {
+    const root = add(add(H, dir, 5.6), [side * 1.6, -1.6, 0]);
+    const curl = add(root, [side * 0.9, 2.1, 0.9]);
+    const end = add(curl, [side * 0.1, 1.2, -0.7]);
+    solids.push(...chain([root, curl, end], [0.65, 0.5, 0.3], [TUSK, 0xc8bca4, 0xffffff], 0.3));
+  }
+  // Small pointed ears, laid back when it's angry or hurt.
+  for (const side of [-1, 1]) {
+    const root = add(H, [side * 2.4, 3, -1.4]);
+    const end = hd.earsBack ? add(H, [side * 3.6, 4.4, -4.6]) : add(H, [side * 3.3, 6.2, -1.6]);
+    solids.push(...limb(root, end, 1.3, 0.35, DARK, 0.35));
+  }
+  // Small eyes, red-rimmed when roused; shut when hurt or dead.
+  const shut = dead || pose.head === 'hurt';
+  for (const side of [-1, 1]) {
+    const e = add(add(H, dir, 2.6), [side * 2.55, 1.4, 0]);
+    details.push({ ...vec(e), color: shut ? BOAR_DEEP : roused ? 0xc04a2a : 0x140c0c });
+  }
+  return { solids, details };
+}
+
+/** The boar's frames, in the order of {@link BEAST_FRAME}. */
+export const BOAR_POSES: BeastPose[] = [
+  { legs: STILL, bob: 0, head: 'up', tail: 0 },
+  { legs: STILL, bob: 0.6, head: 'up', tail: 0 },
+  { legs: [2, -2, -2, 2], bob: 0.6, head: 'up', tail: 0 },
+  { legs: [0, 0, 0, 0], lift: [0, 1.5, 1.5, 0], bob: 0, head: 'up', tail: 0 },
+  { legs: [-2, 2, 2, -2], bob: 0.6, head: 'up', tail: 0 },
+  { legs: [0, 0, 0, 0], lift: [1.5, 0, 0, 1.5], bob: 0, head: 'up', tail: 0 },
+  { legs: [0, 0, 1, 1], bob: 0.6, head: 'sniff', tail: 0 },
+  { legs: [0, 0, 1, 1], bob: 1, head: 'sniff', tail: 0, nod: 1 },
+  { legs: [-1, -1, 1, 1], bob: 0.4, head: 'snarl', tail: 0, hackles: true },
+  { legs: [-3, -3, 3, 3], lift: [0, 0, 1, 1], bob: 0, head: 'bite', tail: 0 },
+  { legs: [-1, 1, -2, -1], bob: 0.6, head: 'hurt', tail: 0 },
+  { legs: [-2, -1, 2, 3], bob: 0, head: 'up', tail: 0 },
+];
+
+export function boarSpec(): FrameSpec {
+  return { w: 56, h: 46, feetY: 36, groundShade: 3 };
+}
+
+export function boarSheet(): BeastSheet {
+  const models = BOAR_POSES.map((pose, i) => {
+    const dead = i === BEAST_FRAME.dead;
+    let m = shifted(boarModel(pose, dead), -1);
+    if (dead) m = onItsSide(m, 12.4, 5.4);
+    return scaled(m, BOAR_SIZE);
+  });
+  return { spec: boarSpec(), models };
+}
+
+/** The boar's models are drawn this much bigger than their body-space units. */
+const BOAR_SIZE = 1.15;
 
 // --- Sheets -----------------------------------------------------------------
 

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE as P } from './palette';
 import { PixelCanvas } from './PixelCanvas';
-import { BEAST_FRAME, generateBeast, GREY_WOLF, WHITE_WOLF, wolfSheet, wolfSpec } from './beasts3d';
+import { BEAST_FRAME, boarSheet, boarSpec, generateBeast, GREY_WOLF, WHITE_WOLF, wolfSheet, wolfSpec } from './beasts3d';
 import { drawDeadRat, drawRat, RAT_ART, RAT_FRAMES } from './rats';
 
 /**
@@ -68,7 +68,7 @@ export const CREATURE_ART: Record<
   wolfmother: { ...wolfSpec(WOLF_MOTHER_SIZE), eight: true, tall: 26 * WOLF_MOTHER_SIZE },
   deer: { w: 48, h: 46, feetY: 43 },
   hare: { w: 26, h: 22, feetY: 19 },
-  boar: { w: 48, h: 32, feetY: 29 },
+  boar: { ...boarSpec(), eight: true, tall: 24 },
   // The rats in the Crooked Tankard's cellar (see rats.ts).
   rat: { ...RAT_ART, scale: 1.3 },
 };
@@ -285,91 +285,6 @@ const HARE_FRAMES: Array<HarePose | 'dead'> = [
   'dead',
 ];
 
-// --- Wild boar --------------------------------------------------------------
-
-const BOAR_DARK = 0x2e2420;
-const BOAR = 0x4e3e34;
-const BOAR_LIGHT = 0x6e5a4a;
-const SNOUT = 0x9a7468;
-const TUSK = 0xf0e6d0;
-
-const boarCoat = (nx: number, ny: number) => (ny < -0.4 ? BOAR_DARK : ny > 0.55 ? BOAR_LIGHT : nx < -0.5 && ny < 0.1 ? BOAR_LIGHT : BOAR);
-
-function drawBoar(c: PixelCanvas, pose: BeastPose): void {
-  const F = CREATURE_ART.boar.feetY;
-  const b = pose.bob;
-  const lift = pose.lift ?? [0, 0, 0, 0];
-  const leg = (hx: number, dx: number, l: number, col: number) => {
-    line(c, hx, 21 + b, hx + dx, F - 1 - l, 3, col);
-    c.rect(hx + dx - 1, F - l, 3, 1, P.outline);
-  };
-  leg(13, pose.legs[0], lift[0], BOAR_DARK);
-  leg(29, pose.legs[2], lift[2], BOAR_DARK);
-  // A thin twist of tail.
-  line(c, 6, 13 + b, 4, 17 + b, 1, BOAR_DARK);
-  blob(c, 20, 16 + b, 14, 7.5, boarCoat);
-  // Bristles standing up along the spine, higher at the shoulders.
-  const bristle = pose.head === 'alert' || pose.head === 'charge' ? 2 : 1;
-  for (let x = 10; x <= 30; x += 2) c.rect(x, 9 + b - (x > 22 ? bristle : 0) - (x % 4 === 0 ? 1 : 0), 1, 2, BOAR_DARK);
-  drawBoarHead(c, pose);
-  leg(16, pose.legs[1], lift[1], BOAR);
-  leg(32, pose.legs[3], lift[3], BOAR);
-}
-
-function drawBoarHead(c: PixelCanvas, pose: BeastPose): void {
-  const b = pose.bob;
-  const down = pose.head === 'down';
-  const charge = pose.head === 'charge';
-  const hurt = pose.head === 'hurt';
-  const hx = charge ? 37 : down ? 36 : 35;
-  const hy = (down ? 22 : charge ? 18 : hurt ? 15 : 16) + b;
-  blob(c, hx - 2, hy - 1, 6, 5.5, boarCoat);
-  // A long wedge of a head down to the snout.
-  for (let i = 0; i < 8; i++) blob(c, hx + i * 0.9, hy + i * (down ? 0.55 : 0.25), 4 - i * 0.3, 3.2 - i * 0.18, (_nx, ny) => (ny < -0.3 ? BOAR_DARK : BOAR));
-  const sx = hx + 8;
-  const sy = hy + (down ? 4 : 2);
-  c.rect(sx, sy - 1, 2, 3, SNOUT);
-  c.set(sx + 1, sy, P.outline);
-  // Tusks curling up from the jaw.
-  c.set(sx - 2, sy + 1, TUSK);
-  c.set(sx - 1, sy, TUSK);
-  c.set(sx - 1, sy - 1, charge ? TUSK : BOAR);
-  // Small eye, and a pointed ear laid back.
-  if (hurt) c.rect(hx + 1, hy - 2, 2, 1, P.outline);
-  else {
-    c.set(hx + 2, hy - 2, 0xc04a2a);
-    c.set(hx + 1, hy - 2, P.outline);
-  }
-  ear(c, hx - 3, hy - 7, 4, charge || hurt ? -1.5 : -0.5, BOAR_DARK, BOAR_LIGHT);
-}
-
-function drawDeadBoar(c: PixelCanvas): void {
-  const F = CREATURE_ART.boar.feetY;
-  line(c, 14, F - 4, 18, F, 2, BOAR_DARK);
-  line(c, 28, F - 4, 32, F, 2, BOAR_DARK);
-  blob(c, 21, F - 6, 14, 5.5, boarCoat);
-  for (let x = 10; x <= 30; x += 2) c.rect(x, F - 12, 1, 2, BOAR_DARK);
-  for (let i = 0; i < 7; i++) blob(c, 35 + i, F - 5 + i * 0.3, 4 - i * 0.35, 3 - i * 0.2, (_nx, ny) => (ny < -0.3 ? BOAR_DARK : BOAR));
-  c.rect(42, F - 4, 2, 2, SNOUT);
-  c.set(40, F - 3, TUSK);
-  c.rect(36, F - 7, 2, 1, P.outline);
-}
-
-const BOAR_FRAMES: Array<BeastPose | 'dead'> = [
-  { legs: [0, 0, 0, 0], bob: 0, head: 'up' },
-  { legs: [0, 0, 0, 0], bob: 1, head: 'up' },
-  { legs: [2, -2, -2, 2], bob: 1, head: 'up' },
-  { legs: [0, 0, 0, 0], lift: [0, 2, 2, 0], bob: 0, head: 'up' },
-  { legs: [-2, 2, 2, -2], bob: 1, head: 'up' },
-  { legs: [0, 0, 0, 0], lift: [2, 0, 0, 2], bob: 0, head: 'up' },
-  { legs: [0, 0, 1, 1], bob: 1, head: 'down' },
-  { legs: [0, 0, 1, 1], bob: 2, head: 'down' },
-  { legs: [-1, -1, 1, 1], bob: 0, head: 'alert' },
-  { legs: [-3, -3, 3, 3], lift: [0, 0, 1, 1], bob: 0, head: 'charge' },
-  { legs: [-1, 1, -2, -1], bob: 1, head: 'hurt' },
-  'dead',
-];
-
 /**
  * Paints a beast's frames side by side into 'creature-<kind>', with its idle, walk and graze animations.
  * @param recolor colours to swap after drawing (the Wolf Mother's white coat)
@@ -414,6 +329,6 @@ export function generateCreatures(scene: Phaser.Scene): void {
   generateBeast(scene, 'wolfmother', wolfSheet(WHITE_WOLF, WOLF_MOTHER_SIZE), 8);
   sheet(scene, 'deer', DEER_FRAMES, drawDeer, drawDeadDeer, { walk: 8 });
   sheet(scene, 'hare', HARE_FRAMES, drawHare, drawDeadHare, { walk: 10 });
-  sheet(scene, 'boar', BOAR_FRAMES, drawBoar, drawDeadBoar, { walk: 9 });
+  generateBeast(scene, 'boar', boarSheet(), 9);
   sheet(scene, 'rat', RAT_FRAMES, drawRat, drawDeadRat, { walk: 12 });
 }
