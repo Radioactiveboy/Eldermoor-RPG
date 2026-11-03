@@ -674,6 +674,247 @@ export function deerSheet(): BeastSheet {
   return { spec: deerSpec(), models };
 }
 
+// --- Brown hare -------------------------------------------------------------
+
+const HARE_DARK = 0x5e4630;
+const HARE = 0x8e6c48;
+const HARE_LIGHT = 0xb48e64;
+const HARE_PALE = 0xe8dcc4;
+
+/**
+ * A brown hare: a crouched, rounded body with a big haunch and long hind feet
+ * folded under it, short forelegs, very long black-tipped ears and a dark eye.
+ * It sits up when it looks about ('up'), crouches to crop the grass ('sniff'),
+ * freezes with its ears straight up ('snarl'), and stretches out mid-leap
+ * ('bite'); `rise` lifts it off the ground in a bound.
+ */
+export function hareModel(pose: BeastPose, dead = false): Model {
+  const DARK: Tones = [HARE_DARK, 0x3e2e20, HARE];
+  const COAT: Tones = [HARE, HARE_DARK, HARE_LIGHT];
+  const PALE: Tones = [HARE_PALE, 0xbcae94, 0xfffaf0];
+  const b = pose.bob;
+  const air = pose.rise ?? 0;
+  const solids: Solid[] = [];
+  const details: Detail[] = [];
+  const sitting = pose.head === 'up' || pose.head === 'snarl';
+  const leaping = pose.head === 'bite';
+  const grazing = pose.head === 'sniff';
+
+  const coat = (h: Hit): Tones => {
+    if (h.ny < -0.4) return PALE;
+    if (h.ny > 0.55) return speck(h, 1) < 0.3 ? COAT : DARK;
+    return speck(h, 1) < 0.14 ? [HARE_LIGHT, HARE, HARE_PALE] : COAT;
+  };
+
+  // The body: hunched and upright when it sits, stretched flat in a leap.
+  const lean = sitting ? 30 : leaping ? -2 : grazing ? 14 : 10;
+  const a = (lean * Math.PI) / 180;
+  const along: V3 = [0, Math.sin(a), Math.cos(a)];
+  const base: V3 = [0, (sitting ? 6.6 : grazing ? 4.6 : 5.6) - b + air, sitting ? -1 : -3];
+  solids.push(...chain(
+    [base, add(base, along, 3), add(base, along, 6), add(base, along, 8.6)],
+    leaping ? [3.4, 3.2, 2.7, 2.2] : [3.9, 3.8, 3.2, 2.4],
+    coat,
+    0.4,
+  ));
+
+  // The haunch, and the long hind foot: folded under when still, kicked back in a leap.
+  for (const side of [-1, 1]) {
+    const hip: V3 = [side * 2.6, (sitting ? 6.2 : 5) - b + air, sitting ? -1.6 : -3.4];
+    solids.push({ cx: hip[0], cy: hip[1], cz: hip[2], rx: 2.6, ry: leaping ? 2.8 : 3.4, rz: leaping ? 2.8 : 3.2, material: coat });
+    const heel: V3 = leaping ? [side * 2.5, 2.6 + air * 0.7, -8] : [side * 2.7, 1.8 + air, -3.8];
+    const toe: V3 = leaping ? [side * 2.4, 0.9 + air * 0.4, -12] : [side * 2.5, 1 + air, 0.6];
+    solids.push(...chain([hip, heel, toe], [2.2, 1.3, 1], coat, 0.4));
+  }
+  // Short forelegs: tucked under when it sits, reaching forward in a leap.
+  for (const side of [-1, 1]) {
+    const top = add(base, along, sitting ? 5.6 : 6.6);
+    const paw: V3 = leaping
+      ? [side * 1.5, 1.6 + air * 0.5, 10.4]
+      : sitting ? [side * 1.5, 1.2, 2.8] : [side * 1.6, 1 + air, 5.6];
+    solids.push(...chain([[side * 1.6, top[1] - 1, top[2]], paw], [1.3, 0.9], coat, 0.4));
+  }
+  // A short tail: dark above, white beneath.
+  solids.push({ cx: 0, cy: base[1] + (sitting ? -1.4 : 0.6), cz: base[2] - 3.4, rx: 1.3, ry: 1.4, rz: 1.2, material: PALE });
+
+  // The head, on the end of the body, and the long black-tipped ears.
+  const H = add(base, along, sitting ? 10.6 : 10.2);
+  const hy = H[1] + (sitting ? 0.6 : 0);
+  const head: V3 = [0, hy, H[2]];
+  solids.push({ cx: 0, cy: hy, cz: H[2], rx: 2.3, ry: 2.3, rz: 2.5, material: coat });
+  solids.push(...limb([0, hy - 0.4, H[2] + 1.6], [0, hy - 1.2, H[2] + 4], 1.6, 1, coat));
+  details.push({ x: 0, y: hy - 1.4, z: H[2] + 4.6, color: 0x2a1c18 });
+  for (const side of [-1, 1]) {
+    const root: V3 = [side * 1.2, hy + 1.6, H[2] - 0.6];
+    const back = dead || pose.head === 'hurt';
+    const end: V3 = back
+      ? add(root, [side * 1.4, 1, -6.6])
+      : leaping
+      ? add(root, [side * 1.2, 3.4, -5.6])
+      : add(root, [side * (pose.head === 'snarl' ? 0.5 : 1.1), 7.4, grazing ? -2.6 : -1.4]);
+    const ear = limb(root, end, 1.1, 0.8, coat, 0.4);
+    ear.forEach((e, i) => solids.push(i > ear.length - 3 ? { ...e, material: [0x2a2018, 0x1a1410, HARE_DARK] as Tones } : e));
+  }
+  const shut = dead || pose.head === 'hurt';
+  for (const side of [-1, 1]) details.push({ ...vec(add(head, [side * 2.1, 0.9, 0.9])), color: shut ? HARE_DARK : 0x140c0c });
+  return { solids, details };
+}
+
+/** The hare's frames, in the order of {@link BEAST_FRAME}: it bounds rather than trots. */
+export const HARE_POSES: BeastPose[] = [
+  { legs: STILL, bob: 0, head: 'up', tail: 0 },
+  { legs: STILL, bob: 0.5, head: 'up', tail: 0 },
+  { legs: STILL, bob: 0, head: 'bite', tail: 0, rise: 0.5 },
+  { legs: STILL, bob: 0, head: 'bite', tail: 0, rise: 4 },
+  { legs: STILL, bob: 0, head: 'bite', tail: 0, rise: 2 },
+  { legs: STILL, bob: 0.6, head: 'sniff', tail: 0 },
+  { legs: STILL, bob: 0, head: 'sniff', tail: 0 },
+  { legs: STILL, bob: 0.6, head: 'sniff', tail: 0, nod: 1 },
+  { legs: STILL, bob: 0, head: 'snarl', tail: 0 },
+  { legs: STILL, bob: 0, head: 'bite', tail: 0, rise: 2 },
+  { legs: STILL, bob: 1, head: 'hurt', tail: 0 },
+  { legs: STILL, bob: 0, head: 'sniff', tail: 0 },
+];
+
+export function hareSpec(): FrameSpec {
+  return { w: 34, h: 30, feetY: 25, groundShade: 2.5 };
+}
+
+export function hareSheet(): BeastSheet {
+  const models = HARE_POSES.map((pose, i) => {
+    const dead = i === BEAST_FRAME.dead;
+    let m = shifted(hareModel(pose, dead), -2);
+    if (dead) m = onItsSide(m, 5, 3);
+    return m;
+  });
+  return { spec: hareSpec(), models };
+}
+
+// --- Cellar rat -------------------------------------------------------------
+
+const RAT_DEEP = 0x241e1c;
+const RAT_DARK = 0x3a3230;
+const RAT_FUR = 0x5a4e48;
+const RAT_LIGHT = 0x7a6c62;
+const RAT_PALE = 0x9c8e82;
+const PINK = 0xd09a96;
+const PINK_DARK = 0xa87470;
+const RAT_TOOTH = 0xe8d48a;
+
+/**
+ * A cellar rat: a low, greasy body on short legs, a long wedge of a head with
+ * a pink nose and whiskers, round ears, and a long bare tail that curls away
+ * behind. It rears up on its hind legs to bare its teeth ('snarl').
+ */
+export function ratModel(pose: BeastPose, dead = false): Model {
+  const DARK: Tones = [RAT_DARK, RAT_DEEP, RAT_FUR];
+  const COAT: Tones = [RAT_FUR, RAT_DARK, RAT_LIGHT];
+  const PALE: Tones = [RAT_PALE, RAT_LIGHT, 0xbcae9e];
+  const SKIN: Tones = [PINK, PINK_DARK, 0xe8bcb8];
+  const b = pose.bob;
+  const rear = pose.head === 'snarl';
+  const lift = pose.lift ?? [0, 0, 0, 0];
+  const solids: Solid[] = [];
+  const details: Detail[] = [];
+
+  const coat = (h: Hit): Tones => (h.ny < -0.4 ? PALE : h.ny > 0.55 ? DARK : speck(h, 0.9) < 0.14 ? PALE : COAT);
+
+  // The body, nose down to the floor, or tipped up when it rears.
+  const lean = rear ? 52 : pose.head === 'bite' ? -6 : 4;
+  const a = (lean * Math.PI) / 180;
+  const along: V3 = [0, Math.sin(a), Math.cos(a)];
+  const base: V3 = [0, (rear ? 3.6 : 3.2) - b, rear ? -1.6 : -4];
+  solids.push(...chain(
+    [base, add(base, along, 2.6), add(base, along, 5.4), add(base, along, 7.6)],
+    [2.9, 3.1, 2.4, 1.5],
+    coat,
+    0.4,
+  ));
+
+  // The long bare tail, curling away behind it.
+  {
+    const root = add(base, along, -1.6);
+    const swing = pose.tail;
+    const pts: V3[] = [root];
+    for (let i = 1; i <= 4; i++) {
+      // It trails on the floor, curling to one side as it goes.
+      pts.push([Math.sin(swing + i * 0.6) * i * 1.1, Math.max(0.7, root[1] - i * (rear ? 1.1 : 0.7)), root[2] - i * 2.3]);
+    }
+    solids.push(...chain(pts, [0.8, 0.65, 0.55, 0.45, 0.35], SKIN, 0.4));
+  }
+
+  // Four short legs with pink feet.
+  const legs: Array<[number, number, number]> = [[0, 1, -3.6], [1, -1, -3.6], [2, 1, 3.4], [3, -1, 3.4]];
+  for (const [i, side, z] of legs) {
+    const front = i >= 2;
+    if (rear && front) {
+      // Held up in front of its chest.
+      const paw = add(add(base, along, 7), [side * 1.6, -2.2, 0.6]);
+      solids.push(...chain([add(add(base, along, 6.4), [side * 2, 0, 0]), paw], [1, 0.7], coat, 0.35));
+      details.push({ ...vec(paw), color: PINK });
+      continue;
+    }
+    const off = pose.legs[i];
+    const l = lift[i];
+    const hip: V3 = [side * 2, (rear && !front ? 3 : 2.6) - b, z + (rear ? 1.6 : 0)];
+    const foot: V3 = [side * 2.1, 0.6 + l, z + off * 0.8 + (front ? 0.6 : -0.4)];
+    solids.push(...chain([hip, foot], [1.5, 0.8], coat, 0.35));
+    details.push({ ...vec([foot[0], foot[1] - 0.4, foot[2] + 0.4]), color: PINK_DARK });
+  }
+
+  // A long wedge of a head, round ears, pink nose and whiskers.
+  const H = add(base, along, rear ? 9.2 : 8.8);
+  const nod = pose.head === 'sniff' ? -1.4 - (pose.nod ?? 0) : 0;
+  const head: V3 = [0, H[1] + nod, H[2]];
+  solids.push({ cx: 0, cy: head[1], cz: head[2], rx: 1.9, ry: 1.8, rz: 2, material: coat });
+  const snout = add(head, [0, -0.9 + nod * 0.2, 4.4]);
+  solids.push(...limb(add(head, [0, -0.3, 1.2]), snout, 1.4, 0.55, coat, 0.35));
+  solids.push({ cx: snout[0], cy: snout[1], cz: snout[2] + 0.4, rx: 0.6, ry: 0.5, rz: 0.5, material: SKIN });
+  for (const side of [-1, 1]) {
+    solids.push({ cx: side * 1.6, cy: head[1] + 2.1, cz: head[2] - 0.8, rx: 1.4, ry: 1.4, rz: 0.6, material: side < 0 ? SKIN : [PINK_DARK, 0x7a5450, PINK] });
+    details.push({ ...vec(add(head, [side * 1.5, 0.7, 1.3])), color: dead || pose.head === 'hurt' ? RAT_DEEP : 0x140c0c });
+    for (const dy of [-0.8, 0.8]) details.push({ ...vec(add(snout, [side * 1.6, dy, 0.4])), color: RAT_PALE });
+  }
+  // Teeth bared when it rears or lunges.
+  if (rear || pose.head === 'bite') {
+    for (const side of [-1, 1]) details.push({ ...vec(add(snout, [side * 0.4, -1, -0.6])), color: RAT_TOOTH });
+  }
+  return { solids, details };
+}
+
+/** The rat's frames, in the order of {@link BEAST_FRAME}. */
+export const RAT_POSES: BeastPose[] = [
+  { legs: STILL, bob: 0, head: 'up', tail: 0 },
+  { legs: STILL, bob: 0.4, head: 'up', tail: 1 },
+  { legs: [1.4, -1.4, -1.4, 1.4], bob: 0.4, head: 'up', tail: 0 },
+  { legs: STILL, lift: [0, 1, 1, 0], bob: 0, head: 'up', tail: 1.5 },
+  { legs: [-1.4, 1.4, 1.4, -1.4], bob: 0.4, head: 'up', tail: 3 },
+  { legs: STILL, lift: [1, 0, 0, 1], bob: 0, head: 'up', tail: 4.5 },
+  { legs: STILL, bob: 0.4, head: 'sniff', tail: 0 },
+  { legs: STILL, bob: 0.4, head: 'sniff', tail: 0.8, nod: 1 },
+  { legs: STILL, bob: 0, head: 'snarl', tail: 2 },
+  { legs: [-1.4, -1.4, 1.6, 1.6], bob: 0, head: 'bite', tail: 1 },
+  { legs: [-1, 1, -1.4, -1], bob: 0.8, head: 'hurt', tail: 3 },
+  { legs: [-1, -0.6, 1, 1.6], bob: 0, head: 'up', tail: 1 },
+];
+
+export function ratSpec(): FrameSpec {
+  return { w: 32, h: 26, feetY: 21, groundShade: 2.5 };
+}
+
+export function ratSheet(): BeastSheet {
+  const models = RAT_POSES.map((pose, i) => {
+    const dead = i === BEAST_FRAME.dead;
+    let m = shifted(ratModel(pose, dead), -2);
+    if (dead) m = onItsSide(m, 3.4, 2.4);
+    return scaled(m, RAT_SIZE);
+  });
+  return { spec: ratSpec(), models };
+}
+
+/** The rats are drawn this much bigger than their body-space units (they're seen close to). */
+const RAT_SIZE = 1.25;
+
 // --- Sheets -----------------------------------------------------------------
 
 /** How a beast's frames are cut, and its 12 models (the last one dead). */
