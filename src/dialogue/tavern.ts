@@ -302,6 +302,12 @@ export function maidScript(who: 'nell' | 'rosie', seated: boolean, coins: number
   };
 }
 
+/** What the maids say to themselves (or the room) while they tidy between orders. */
+export const MAID_CHORES: Record<'nell' | 'rosie', string[]> = {
+  nell: ['Who spilled this? Every night.', 'Elbows off, Harlan, I need to wipe there.', 'There. Clean enough to eat off. Not that anyone does.', 'Mind your feet, I\'m sweeping.'],
+  rosie: ['La la la... where was I?', 'Ooh, a button! Is this anyone\'s?', 'Stack the cups, stack the cups...', 'Sticky. Why is it always sticky?'],
+};
+
 /** Old Harlan at the end of the bar, who knows a thing or two about the hill north of the lake, if someone buys him a drink. */
 export function harlanScript(first: boolean, coins: number, toldSecret: boolean, sawDoor: boolean): DialogueScript {
   return {
