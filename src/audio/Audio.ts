@@ -2,8 +2,9 @@ import { Settings, SettingsData } from '../settings/Settings';
 import { AmbientMix, SILENCE, Soundscape, Surface } from './Soundscape';
 
 /**
- * All game audio, generated live with the Web Audio API. There are no audio
- * files, so nothing to license: the music is composed here in code.
+ * All game audio, played with the Web Audio API. The music and UI sounds are
+ * composed live here in code; the world's background sounds are recordings
+ * (see audio/Soundscape.ts and public/audio/ambience/CREDITS.md).
  *
  * Browsers only allow sound after the player clicks or presses a key, so the
  * engine starts silent and unlocks itself on the first input. Asking for a
