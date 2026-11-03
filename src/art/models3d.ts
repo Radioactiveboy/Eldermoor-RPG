@@ -105,6 +105,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   pell: pellModel,
   fisherman: fishermanModel,
   leofric: leofricModel,
+  scribe: scribeModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -570,6 +571,8 @@ interface MonkLook {
   cowl?: Tones;
   /** Wounded: a bandage round the head and the left arm in a sling. */
   bandaged?: boolean;
+  /** Seated at a desk, hands forward on it, a quill in the right. */
+  writing?: boolean;
 
   /** A head pushed forward with age. */
   stooped?: boolean;
@@ -636,7 +639,7 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
     solids.push({ cx: side * 4.7, cy: 24.4 - b, cz: lean * 0.5, rx: 2.3, ry: 2.2, rz: 2.3, material: habit });
     const elbow: [number, number, number] = sit ? [side * 5.6, 19.6 - b, 2] : [side * 5.8, 20.4 - b, lean * 0.5 + (holding ? 0.8 : swing * 0.5)];
     // Seated, the hands rest on the knees.
-    const wrist: [number, number, number] = sit ? [side * 3.8, 13.4, 4.4] : holding ? [side * 6.8, 19.2 - b, 2] : [side * 6.1, 17.4 - b, 1 + lean * 0.5 + swing];
+    const wrist: [number, number, number] = sit && look.writing ? [side * 2.6, 17.6 - b, 6.6] : sit ? [side * 3.8, 13.4, 4.4] : holding ? [side * 6.8, 19.2 - b, 2] : [side * 6.1, 17.4 - b, 1 + lean * 0.5 + swing];
     solids.push(...limb([side * 5.2, 24 - b, lean * 0.5], elbow, 1.8, 1.9, habit));
     if (look.bandaged && side === 1) {
       // The left arm bound across the chest in a linen sling.
@@ -648,9 +651,16 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
     }
     if (look.rolled) solids.push(...limb(elbow, wrist, 1.5, 1.4, skin));
     else solids.push(...limb(elbow, wrist, 2, 2.4, habit));
-    const hand = { cx: wrist[0], cy: wrist[1] - 1.2, cz: wrist[2] + 0.2, rx: 1.4, ry: 1.6, rz: 1.4, material: skin };
+    const writing = sit && !!look.writing;
+    const hand = writing
+      ? { cx: wrist[0], cy: wrist[1] - 0.4, cz: wrist[2] + 2, rx: 1.4, ry: 1.3, rz: 1.6, material: skin }
+      : { cx: wrist[0], cy: wrist[1] - 1.2, cz: wrist[2] + 0.2, rx: 1.4, ry: 1.6, rz: 1.4, material: skin };
     solids.push(hand);
     if (holding) staffHand = [hand.cx, hand.cy, hand.cz];
+    if (sit && look.writing && side === -1) {
+      // A goose quill, its feather standing up from the hand.
+      solids.push(...limb([hand.cx, hand.cy - 0.6, hand.cz + 0.6], [hand.cx - 0.8, hand.cy + 4.6, hand.cz - 0.6], 0.5, 0.4, [0xf2eee4, 0xc6c0b2, 0xffffff], 0.3));
+    }
   }
   if (staffHand) {
     const [x, , z] = staffHand;
@@ -1338,5 +1348,19 @@ export function leofricModel(pose: Pose3D): Model {
   const hy = 32 - pose.bob;
   model.solids.push({ cx: 0, cy: hy + 2.6, cz: 0.2, rx: 5.7, ry: 1.3, rz: 5.5, material: [P.linen, P.linenDark, 0xfff6e6] });
   model.details.push({ x: -3.6, y: hy + 2.6, z: 4.4, color: 0xa0302a });
+  return model;
+}
+
+/** Brother Edmund, the scribe: a thin young man in a dark habit, at his desk with a quill, ink on his fingers. */
+export function scribeModel(pose: Pose3D): Model {
+  const model = monkModel(pose, {
+    habit: [0x3e3a4a, 0x2a2834, 0x56506a],
+    skin: [0xf0caa8, 0xc8a284, 0xffe2c4],
+    hair: [0x2e2420, 0x1c1614, 0x463a34],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    writing: true,
+  });
+  // Ink on his fingertips.
+  if (pose.sit) for (const side of [-1, 1]) model.details.push({ x: side * 2.6, y: 16.6 - pose.bob, z: 10, color: 0x22222e });
   return model;
 }
