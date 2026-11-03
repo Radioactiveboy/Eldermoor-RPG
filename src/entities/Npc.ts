@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DrawnDir, FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
+import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
 import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
@@ -746,11 +746,13 @@ export class Npc implements Body {
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
     if (this.def.anim) return;
-    // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored.
-    const names: DrawnDir[] = ['s', 'se', 'e', 'ne', 'n'];
-    const mirrored = this.facing > 4;
-    this.sprite.setFlipX(mirrored);
     const pose = moving ? 'walk' : this.def.sits ? 'sit' : 'idle';
+    // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored,
+    // unless the figure is modelled in 3D and has all eight drawn (see figure3d.ts).
+    const names: string[] = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
+    const allEight = this.sprite.scene.anims.exists(`${this.def.texture}-idle-w`);
+    const mirrored = !allEight && this.facing > 4;
+    this.sprite.setFlipX(mirrored);
     const key = `${this.def.texture}-${pose}-${names[mirrored ? 8 - this.facing : this.facing]}`;
     // Standing still, each breathes at their own pace, from wherever in the breath they happen to be.
     if (pose === 'idle') this.sprite.play({ key, frameRate: IDLE_FRAME_RATE * this.breath, randomFrame: true }, true);

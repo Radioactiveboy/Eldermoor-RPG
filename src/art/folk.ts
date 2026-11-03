@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { generateCharacter, Outfit } from './character';
+import { generateFigure3D } from './figure3d';
+import { MODELS_3D } from './models3d';
 import { PALETTE as P } from './palette';
 import { MORTEN } from './tollgate';
 
@@ -416,6 +418,8 @@ export const FOLK: Record<string, Outfit> = {
 
 export function generateFolk(scene: Phaser.Scene): void {
   for (const [id, outfit] of Object.entries(FOLK)) {
-    generateCharacter(scene, `folk-${id}`, outfit);
+    const model = MODELS_3D[id];
+    if (model) generateFigure3D(scene, `folk-${id}`, model);
+    else generateCharacter(scene, `folk-${id}`, outfit);
   }
 }

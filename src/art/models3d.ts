@@ -1,0 +1,84 @@
+import type { Tones } from './character';
+import { Detail, Hit, limb, Model, Pose3D, Solid } from './figure3d';
+import { PALETTE as P } from './palette';
+
+/**
+ * The people modelled in 3D (see figure3d.ts), one builder each: given a pose,
+ * the solids that make them up. They're switched over from the flat-part
+ * figures in folk.ts one at a time.
+ */
+
+/**
+ * Godric, landlord of the Crooked Tankard: a stout man in shirt sleeves rolled
+ * to the elbow, a maroon waistcoat, and a long white apron over maroon breeches.
+ */
+export function landlordModel(pose: Pose3D): Model {
+  const shirt: Tones = [0xe8dcc4, 0xbcae94, 0xfff8ea];
+  const apron: Tones = [0xece4d4, 0xbfb29a, 0xfffaf0];
+  const maroon: Tones = [0x7a2e2e, 0x521c1e, 0x9a4040];
+  const skin: Tones = [0xe8a888, 0xbf8064, 0xf8c4a4];
+  const hair: Tones = [0x7a5232, 0x553620, 0x96683e];
+  const boots: Tones = [P.barkDark, P.ink, P.bark];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  // Boots, stepping forward and back under the apron.
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    solids.push({ cx: side * 2.4, cy: 1.3 + (swing < 0 ? 0.8 : 0), cz: 0.9 + swing * 2.4, rx: 1.8, ry: 1.4, rz: 2.6, material: boots });
+  }
+
+  // Apron in front, breeches behind: a skirt widening towards the hem.
+  const front = (h: Hit): Tones => (h.nz > -0.15 ? apron : maroon);
+  for (let y = 3; y <= 15; y += 0.5) {
+    const t = (15 - y) / 12;
+    solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 5.2 + t * 1.3, ry: 0.8, rz: 4.2 + t * 0.8, material: front });
+  }
+
+  // Belly and chest: the apron's bib over the belly, the waistcoat above, open over the shirt.
+  const torso = (h: Hit): Tones => {
+    if (h.nz > 0.55 && Math.abs(h.nx) < 0.3 && h.y > 21 - b) return shirt;
+    if (h.y < 18.5 - b && h.nz > -0.15) return apron;
+    return maroon;
+  };
+  solids.push({ cx: 0, cy: 17.5 - b, cz: 0.5, rx: 5.6, ry: 4.4, rz: 4.7, material: torso });
+  solids.push({ cx: 0, cy: 22.5 - b, cz: 0, rx: 5.6, ry: 5, rz: 4, material: torso });
+
+  // Shoulders, then arms swinging opposite the legs; sleeves rolled to the elbow.
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 5.2, cy: 25 - b, cz: 0, rx: 2.6, ry: 2.4, rz: 2.6, material: shirt });
+    const elbow: [number, number, number] = [side * 6.6, 20.5 - b, swing * 0.5];
+    solids.push(...limb([side * 5.8, 24.5 - b, 0], elbow, 2, 1.8, shirt));
+    solids.push(...limb(elbow, [side * 6.8, 16.6 - b, 0.8 + swing], 1.6, 1.5, skin));
+    solids.push({ cx: side * 6.8, cy: 15.6 - b, cz: 1 + swing, rx: 1.8, ry: 1.9, rz: 1.8, material: skin });
+  }
+
+  // Neck and head: hair over the crown and back, a full beard over the jaw.
+  const hy = 33 - b;
+  solids.push({ cx: 0, cy: 27.5 - b, cz: 0, rx: 2.4, ry: 2, rz: 2.4, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (py > 2.4 || (h.nz < -0.35 && py > -3)) return hair;
+    // The beard: jaw and chin, leaving the cheeks and mouth.
+    if (py < -1.6 && h.nz > -0.3) return hair;
+    if (py < -0.4 && h.nz > -0.3 && Math.abs(h.nx) > 0.55) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.8, ry: 6.2, rz: 5.4, material: head });
+  // Nose and ears, which give the head its turn.
+  solids.push({ cx: 0, cy: hy + 0.2, cz: 5.6, rx: 1, ry: 1.2, rz: 1, material: skin });
+  for (const side of [-1, 1]) solids.push({ cx: side * 5.3, cy: hy - 0.2, cz: 0.4, rx: 0.8, ry: 1.2, rz: 0.9, material: skin });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2.1, y: hy + 1.4, z: 5.2, color: P.eye });
+  // Brass buttons down the waistcoat.
+  for (const y of [21, 23.5]) details.push({ x: 2.4, y: y - b, z: 3.8, color: P.gold });
+  return { solids, details };
+}
+
+/** Folk drawn from a 3D model instead of their outfit in folk.ts, by id. */
+export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
+  landlord: landlordModel,
+};
