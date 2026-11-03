@@ -81,4 +81,85 @@ export function landlordModel(pose: Pose3D): Model {
 /** Folk drawn from a 3D model instead of their outfit in folk.ts, by id. */
 export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   landlord: landlordModel,
+  baker: bakerModel,
 };
+
+/** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
+function dusted(h: Hit, amount = 0.14): boolean {
+  const n = Math.sin(Math.floor(h.x * 1.3) * 12.9898 + Math.floor(h.y * 1.3) * 78.233 + Math.floor(h.z * 1.3) * 37.719) * 43758.5453;
+  return n - Math.floor(n) > 1 - amount;
+}
+
+/**
+ * Hilde, Adowvale's baker: a rose dress with the sleeves pushed up, a long
+ * flour-dusted apron, and fair hair pinned up in a bun.
+ */
+export function bakerModel(pose: Pose3D): Model {
+  const dress: Tones = [0xb0605a, 0x844440, 0xc87a70];
+  const apron: Tones = [0xece4d4, 0xbfb29a, 0xfffaf0];
+  const flour: Tones = [0xfff8ee, 0xe0d6c4, 0xffffff];
+  const dressDusted: Tones = [0xc88a80, 0xa06a62, 0xdca096];
+  const skin: Tones = [0xf2caa4, 0xc89c7a, 0xffe0c0];
+  const hair: Tones = [0xd8b060, 0xa8843e, 0xf0d080];
+  const boots: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    solids.push({ cx: side * 2.1, cy: 1.2 + (swing < 0 ? 0.8 : 0), cz: 0.8 + swing * 2.2, rx: 1.6, ry: 1.3, rz: 2.3, material: boots });
+  }
+
+  // A full skirt to the ankles, the apron over its front; flour on both.
+  const skirt = (h: Hit): Tones => {
+    const front = h.nz > 0.1 && Math.abs(h.nx) < 0.75 && h.y < 15;
+    if (front) return dusted(h) ? flour : apron;
+    return dusted(h, 0.05) ? dressDusted : dress;
+  };
+  for (let y = 3; y <= 15; y += 0.5) {
+    const t = (15 - y) / 12;
+    solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 4.4 + t * 1.8, ry: 0.8, rz: 3.6 + t * 1.2, material: skirt });
+  }
+
+  // Bodice, the apron's bib over its front and the strings tied round the waist.
+  const bodice = (h: Hit): Tones => {
+    if (Math.abs(h.y - (16 - b)) < 0.6) return apron;
+    if (h.nz > 0.35 && Math.abs(h.nx) < 0.45 && h.y < 23 - b) return dusted(h) ? flour : apron;
+    return dress;
+  };
+  solids.push({ cx: 0, cy: 16.5 - b, cz: 0, rx: 4.3, ry: 3, rz: 3.5, material: bodice });
+  solids.push({ cx: 0, cy: 21.5 - b, cz: 0.2, rx: 4.8, ry: 4.8, rz: 3.7, material: bodice });
+
+  // Sleeves pushed up to the elbow, floury forearms.
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 4.5, cy: 24.5 - b, cz: 0, rx: 2.2, ry: 2.1, rz: 2.2, material: dress });
+    const elbow: [number, number, number] = [side * 5.8, 20.3 - b, swing * 0.5];
+    solids.push(...limb([side * 5, 24 - b, 0], elbow, 1.8, 1.6, dress));
+    solids.push(...limb(elbow, [side * 6, 16.8 - b, 0.8 + swing], 1.4, 1.3, (h) => (dusted(h) ? flour : skin)));
+    solids.push({ cx: side * 6, cy: 15.9 - b, cz: 1 + swing, rx: 1.6, ry: 1.7, rz: 1.6, material: skin });
+  }
+
+  // Head: fair hair swept back from the face into a bun.
+  const hy = 32.5 - b;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0, rx: 2, ry: 2, rz: 2, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (py > 2.2 || h.nz < -0.25) return hair;
+    if (Math.abs(h.nx) > 0.72 && py > -1.5) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.4, ry: 5.9, rz: 5.2, material: head });
+  solids.push({ cx: 0, cy: hy + 2, cz: -4.9, rx: 2.6, ry: 2.4, rz: 2.2, material: hair });
+  solids.push({ cx: 0, cy: hy - 0.2, cz: 5.2, rx: 0.8, ry: 1, rz: 0.8, material: skin });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) {
+    details.push({ x: side * 2, y: hy + 1.2, z: 5, color: P.eye });
+    // Rosy cheeks from the oven.
+    details.push({ x: side * 2.6, y: hy - 0.8, z: 4.7, color: 0xe08a7a });
+  }
+  details.push({ x: 0, y: hy - 2.4, z: 5, color: 0xb05a50 }); // mouth
+  return { solids, details };
+}
