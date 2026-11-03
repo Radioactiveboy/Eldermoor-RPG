@@ -93,6 +93,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   silent: silentModel,
   novice: noviceModel,
   prior: priorModel,
+  anselm: anselmModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -544,6 +545,11 @@ interface MonkLook {
   staff?: boolean;
   /** Tops the staff with a brass knob and makes it taller: a staff of office. */
   office?: boolean;
+  /** The beard grown long, down over the chest. */
+  longBeard?: boolean;
+  /** A leather pouch hanging at the belt. */
+  pouch?: boolean;
+
   /** A head pushed forward with age. */
   stooped?: boolean;
   /** The habit hitched up to the knee for work, showing breeches (in these tones) and boots. */
@@ -626,6 +632,8 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
   };
   solids.push({ cx: 0, cy: hy, cz: hz, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
   if (beard) solids.push({ cx: 0, cy: hy - 4.6, cz: hz + 2.6, rx: 3, ry: 2.4, rz: 2, material: beard });
+  if (beard && look.longBeard) solids.push(...limb([0, hy - 5.4, hz + 2.8], [0, 20.5 - b, hz + 3.4], 2.8, 1.2, beard));
+  if (look.pouch) solids.push({ cx: 3.4, cy: 14.6 - b, cz: 3, rx: 1.5, ry: 1.8, rz: 1.1, material: [P.leather, P.leatherDark, P.leatherLight] });
   solids.push({ cx: 0, cy: hy + 0.2, cz: hz + 5.2, rx: 0.9, ry: 1.1, rz: 0.9, material: skin });
   if (look.hoodUp) {
     // The cowl drawn up: a deep hood round the face, open at the front.
@@ -703,5 +711,19 @@ export function priorModel(pose: Pose3D): Model {
     boots: [P.leatherDark, P.barkDark, P.leather],
     staff: true,
     office: true,
+  });
+}
+
+/** Brother Anselm, the infirmarian and herbalist: an old man in a green-grey habit with a long white beard and a pouch of herbs. */
+export function anselmModel(pose: Pose3D): Model {
+  return monkModel(pose, {
+    habit: [0x5e6a52, 0x434c3a, 0x7a866a],
+    skin: [0xe6bc9a, 0xbc9476, 0xf8d6b6],
+    hair: [0xe8e4dc, 0xbab6ae, 0xfaf8f2],
+    beard: [0xeeeae2, 0xc2beb6, 0xfcfaf6],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    stooped: true,
+    longBeard: true,
+    pouch: true,
   });
 }
