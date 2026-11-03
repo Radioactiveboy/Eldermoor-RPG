@@ -1,6 +1,7 @@
 import type { Tones } from './character';
 import { Detail, Hit, limb, Model, Pose3D, Solid } from './figure3d';
 import { PALETTE as P } from './palette';
+import { MORTEN } from './tollgate';
 
 /**
  * The people modelled in 3D (see figure3d.ts), one builder each: given a pose,
@@ -85,6 +86,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   smith: smithModel,
   tanner: tannerModel,
   guard: guardModel,
+  tollguard: tollGuardModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -317,20 +319,65 @@ function mailRings(h: Hit, mail: Tones, ring: Tones): Tones {
   return (Math.floor(h.x * 0.9 + h.z * 0.9) + Math.floor(h.y * 1.1)) % 2 ? mail : ring;
 }
 
-/**
- * The village militia: a kettle helm with a wide brim, a shirt of mail, a
- * blue tabard edged in gold over it, and a spear in the right hand.
- */
+/** How a spearman is turned out: the militia, or Lord Morten's men at the toll gate. */
+interface SoldierLook {
+  tabard: Tones;
+  /** The tabard's hem. */
+  trim: Tones;
+  helm: Tones;
+  trouser: Tones;
+  skin: Tones;
+  hair: Tones;
+  boots: Tones;
+  beard?: Tones;
+  /** A cloak hanging from the shoulders. */
+  cloak?: Tones;
+  /** The badge on the chest: its colour, and its pixels (x, y offsets). */
+  badge: { color: number; at: Array<[number, number]> };
+}
+
+const MILITIA: SoldierLook = {
+  tabard: [0x2e4a7a, 0x1e3256, 0x40629a],
+  trim: [P.gold, 0xb08830, P.goldLight],
+  helm: [P.ironLight, P.iron, P.stoneLight],
+  trouser: [0x3a3032, 0x241c1e, 0x50444a],
+  skin: [P.skin, P.skinShade, 0xf4cfa8],
+  hair: [0x4a3020, 0x2e1e14, 0x664430],
+  boots: [P.leatherDark, P.barkDark, P.leather],
+  badge: { color: P.gold, at: [[0, 23], [0, 22], [-1, 22], [1, 22], [0, 21]] },
+};
+
+/** Lord Morten's toll guards: a blackened helm, mail under his crimson, a black cloak, and black beards. */
+const TOLL_GUARD: SoldierLook = {
+  tabard: [MORTEN.crimson, MORTEN.crimsonDark, MORTEN.crimsonLight],
+  trim: [MORTEN.black, 0x18141a, 0x3a343c],
+  helm: [0x4e4a56, 0x36323e, 0x6a6672],
+  trouser: [0x2a2224, 0x1d1620, 0x3a3034],
+  skin: [0xd8a482, 0xb07a5a, 0xecbc9a],
+  hair: [0x2a2024, 0x18121a, 0x3e3238],
+  boots: [P.barkDark, P.ink, P.bark],
+  beard: [0x2a2024, 0x18121a, 0x3e3238],
+  cloak: [MORTEN.black, 0x18141a, 0x3a343c],
+  // A black lozenge.
+  badge: { color: MORTEN.black, at: [[0, 23.5], [-1, 22.5], [0, 22.5], [1, 22.5], [-1, 21.5], [0, 21.5], [1, 21.5], [0, 20.5]] },
+};
+
+/** The village militia: a kettle helm with a wide brim, a shirt of mail, a blue tabard edged in gold, and a spear. */
 export function guardModel(pose: Pose3D): Model {
-  const tabard: Tones = [0x2e4a7a, 0x1e3256, 0x40629a];
-  const gold: Tones = [P.gold, 0xb08830, P.goldLight];
+  return soldierModel(pose, MILITIA);
+}
+
+/** Lord Morten's men at the toll gate. */
+export function tollGuardModel(pose: Pose3D): Model {
+  return soldierModel(pose, TOLL_GUARD);
+}
+
+/** A spearman in a kettle helm and a tabard over mail, spear in the right hand. */
+function soldierModel(pose: Pose3D, look: SoldierLook): Model {
+  const { tabard, helm, trouser, skin, hair, boots } = look;
+  const gold = look.trim;
   const mail: Tones = [P.ironLight, P.iron, 0x9a9aa6];
   const ring: Tones = [P.iron, 0x34343c, P.ironLight];
-  const helm: Tones = [P.ironLight, P.iron, P.stoneLight];
-  const trouser: Tones = [0x3a3032, 0x241c1e, 0x50444a];
-  const skin: Tones = [P.skin, P.skinShade, 0xf4cfa8];
-  const hair: Tones = [0x4a3020, 0x2e1e14, 0x664430];
-  const boots: Tones = [P.leatherDark, P.barkDark, P.leather];
   const shaft: Tones = [P.bark, P.barkDark, P.barkLight];
   const b = pose.bob;
   const s = pose.stride;
@@ -356,6 +403,14 @@ export function guardModel(pose: Pose3D): Model {
   solids.push({ cx: 0, cy: 17 - b, cz: 0, rx: 4.8, ry: 3.6, rz: 3.6, material: body });
   solids.push({ cx: 0, cy: 22 - b, cz: 0, rx: 5.4, ry: 4.8, rz: 3.9, material: body });
 
+  // A cloak hanging from the shoulders to the backs of the knees.
+  if (look.cloak) {
+    for (let y = 8; y <= 25; y += 0.5) {
+      const t = (25 - y) / 17;
+      solids.push({ cx: 0, cy: y - b * (1 - t), cz: -2.6 - t * 1.4 - Math.abs(s) * t, rx: 5.6 + t * 1.2, ry: 0.8, rz: 2.4, material: look.cloak });
+    }
+  }
+
   // Mail sleeves; the right hand (screen-left, facing us) holds the spear.
   let spearHand: [number, number, number] = [0, 0, 0];
   for (const side of [-1, 1]) {
@@ -379,8 +434,11 @@ export function guardModel(pose: Pose3D): Model {
   // Head under a kettle helm: a wide brim round a rounded crown.
   const hy = 32.4 - b;
   solids.push({ cx: 0, cy: 27 - b, cz: 0, rx: 2.2, ry: 2, rz: 2.2, material: skin });
+  const beard = look.beard;
   const head = (h: Hit): Tones => {
-    if (h.nz < -0.2 || (Math.abs(h.nx) > 0.66 && h.y - hy > -2)) return hair;
+    const py = h.y - hy;
+    if (beard && h.nz > -0.35 && (py < -1.6 || (py < 0 && Math.abs(h.nx) > 0.6))) return beard;
+    if (h.nz < -0.2 || (Math.abs(h.nx) > 0.66 && py > -2)) return hair;
     return skin;
   };
   solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
@@ -391,6 +449,6 @@ export function guardModel(pose: Pose3D): Model {
   const details: Detail[] = [];
   for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: 5, color: P.eye });
   // A gold emblem on the chest.
-  for (const [x, y] of [[0, 23], [0, 22], [-1, 22], [1, 22], [0, 21]]) details.push({ x, y: y - b, z: 3.9, color: P.gold });
+  for (const [x, y] of look.badge.at) details.push({ x, y: y - b, z: 3.9, color: look.badge.color });
   return { solids, details };
 }
