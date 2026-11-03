@@ -106,6 +106,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   fisherman: fishermanModel,
   leofric: leofricModel,
   scribe: scribeModel,
+  harlan: harlanModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1363,4 +1364,119 @@ export function scribeModel(pose: Pose3D): Model {
   // Ink on his fingertips.
   if (pose.sit) for (const side of [-1, 1]) model.details.push({ x: side * 2.6, y: 16.6 - pose.bob, z: 10, color: 0x22222e });
   return model;
+}
+
+/** How one of the Crooked Tankard's regulars is turned out (they sit at the tables of an evening). */
+interface RegularLook {
+  coat: Tones;
+  /** Sleeves, if not the coat's. */
+  sleeves?: Tones;
+  legs: Tones;
+  boots: Tones;
+  skin: Tones;
+  hair: Tones;
+  beard?: Tones;
+  /** A short grey stubble rather than a beard. */
+  stubble?: Tones;
+  /** The coat down to the knee rather than the hip. */
+  long?: boolean;
+  /** Hunched over his drink. */
+  hunched?: boolean;
+  /** A tankard in the right hand. */
+  tankard?: boolean;
+  /** Paint the coat (patches, trim, mail showing at the hem). */
+  coatPaint?: (h: Hit, base: Tones) => Tones;
+  /** Anything else: a hat, a kerchief, a cloak. */
+  extras?: (hy: number, hz: number, b: number) => Solid[];
+}
+
+/** A regular of the Crooked Tankard: a coat over breeches, seated (or standing), perhaps with a drink in hand. */
+function regularModel(pose: Pose3D, look: RegularLook): Model {
+  const { coat, legs, boots, skin, hair } = look;
+  const sleeves = look.sleeves ?? coat;
+  const b = pose.bob;
+  const s = pose.stride;
+  const sit = !!pose.sit;
+  const lean = look.hunched ? 1.2 : 0.3;
+  const paint = (h: Hit): Tones => (look.coatPaint ? look.coatPaint(h, coat) : coat);
+  const solids: Solid[] = [];
+
+  if (sit) {
+    solids.push(...seatedLegs(2.3, legs, boots));
+    // The coat's skirt over the thighs.
+    if (look.long) solids.push({ cx: 0, cy: 10.6, cz: 2.6, rx: 5, ry: 1.4, rz: 4.4, material: paint });
+  } else {
+    for (const side of [-1, 1]) {
+      const swing = s * side;
+      const lift = swing < 0 ? 0.9 : 0;
+      solids.push(...limb([side * 2.3, 12.5 - b * 0.5, 0], [side * 2.3, 3.6 + lift, swing * 2.4], 2, 1.7, legs));
+      solids.push({ cx: side * 2.3, cy: 1.3 + lift, cz: 0.8 + swing * 2.4, rx: 1.8, ry: 1.4, rz: 2.7, material: boots });
+    }
+    const hem = look.long ? 8 : 12;
+    for (let y = hem; y <= 15; y += 0.5) solids.push({ cx: 0, cy: y - b * 0.5, cz: s * 0.3, rx: 5 + (15 - y) * 0.1, ry: 0.8, rz: 3.9, material: paint });
+  }
+
+  solids.push({ cx: 0, cy: 14.6 - b * (sit ? 1 : 0.5), cz: 0, rx: 4.9, ry: 2.8, rz: 3.8, material: paint });
+  solids.push({ cx: 0, cy: 18 - b, cz: lean * 0.4, rx: 5, ry: 3.4, rz: 3.9, material: paint });
+  solids.push({ cx: 0, cy: 22.2 - b, cz: lean * 0.8, rx: 5.4, ry: 4.6, rz: 3.9, material: paint });
+
+  for (const side of [-1, 1]) {
+    const swing = sit ? 0 : -s * side * 2;
+    const drinking = !!look.tankard && side === -1;
+    solids.push({ cx: side * 4.9, cy: 24.6 - b, cz: lean, rx: 2.4, ry: 2.2, rz: 2.4, material: paint });
+    const elbow: [number, number, number] = sit ? [side * 5.6, 19.4 - b, 2] : [side * 6, 20.2 - b, lean + swing * 0.5];
+    const hand: [number, number, number] = drinking
+      ? [side * 4.2, 17.4 - b, 6]
+      : sit ? [side * 3.6, 12, 4.8] : [side * 6.2, 16.6 - b, 1 + lean + swing];
+    solids.push(...limb([side * 5.4, 24 - b, lean], elbow, 1.8, 1.6, sleeves));
+    solids.push(...limb(elbow, hand, 1.6, 1.5, sleeves));
+    solids.push({ cx: hand[0], cy: hand[1] - 0.6, cz: hand[2] + 0.4, rx: 1.5, ry: 1.5, rz: 1.6, material: skin });
+    if (drinking) {
+      // A pewter tankard, held on his knee or at his chest.
+      const pewter: Tones = [0x8a8a92, 0x5e5e66, 0xb0b0ba];
+      solids.push(...limb([hand[0] + 1.2, hand[1] - 1.6, hand[2] + 1.4], [hand[0] + 1.2, hand[1] + 2.2, hand[2] + 1.4], 1.6, 1.6, pewter, 0.4));
+      solids.push({ cx: hand[0] + 1.2, cy: hand[1] + 2.4, cz: hand[2] + 1.4, rx: 1.4, ry: 0.5, rz: 1.4, material: [0xe8d8b0, 0xc8b88e, 0xfff0c8] });
+    }
+  }
+
+  const hy = 31.8 - b - (look.hunched ? 0.6 : 0);
+  const hz = 0.4 + lean;
+  solids.push({ cx: 0, cy: 27 - b, cz: hz * 0.6, rx: 2.1, ry: 2, rz: 2.1, material: skin });
+  const beard = look.beard;
+  const stubble = look.stubble;
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    const jaw = h.nz > -0.35 && (py < -1.6 || (py < 0 && Math.abs(h.nx) > 0.6));
+    if (beard && jaw) return beard;
+    if (stubble && jaw) return dusted(h, 0.5) ? stubble : skin;
+    if (h.nz < -0.2 || Math.abs(h.nx) > 0.7 || py > 2.4) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: hz, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
+  if (beard) solids.push({ cx: 0, cy: hy - 4.6, cz: hz + 2.6, rx: 3.2, ry: 2.4, rz: 2, material: beard });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: hz + 5.2, rx: 1.1, ry: 1.2, rz: 1, material: skin });
+  if (look.extras) solids.push(...look.extras(hy, hz, b));
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: hz + 5, color: P.eye });
+  return { solids, details };
+}
+
+/** Old Harlan, at the end of the bar: hunched over his ale in a patched brown coat, grey-haired and stubbled. */
+export function harlanModel(pose: Pose3D): Model {
+  const patch: Tones = [0x7a6a4a, 0x5a4c34, 0x94845e];
+  return regularModel(pose, {
+    coat: [0x5a5040, 0x3e3628, 0x766a56],
+    sleeves: [0x5a5040, 0x3e3628, 0x766a56],
+    legs: [0x4e4234, 0x342a20, 0x645440],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xd8a086, 0xae7a62, 0xecb89e],
+    hair: [0xb8b0a8, 0x8c867e, 0xd4ccc4],
+    stubble: [0x9a948c, 0x76706a, 0xb4aea6],
+    long: true,
+    hunched: true,
+    tankard: true,
+    // Patches on the elbows and the front of the coat.
+    coatPaint: (h, base) => ((Math.abs(h.x + 2.6) < 1.2 && Math.abs(h.y - 19.4) < 1.4 && h.z > 2) || (Math.abs(Math.abs(h.x) - 5.6) < 1 && Math.abs(h.y - 20) < 1.2) ? patch : base),
+  });
 }
