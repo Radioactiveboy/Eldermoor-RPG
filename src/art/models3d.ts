@@ -110,6 +110,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   fenwick: fenwickModel,
   sigrun: sigrunModel,
   ada: adaModel,
+  cobb: cobbModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1572,6 +1573,32 @@ export function adaModel(pose: Pose3D): Model {
       // Her hair pinned up in a bun at the back.
       { cx: 0, cy: hy + 0.6, cz: hz - 5.4, rx: 2.4, ry: 2.2, rz: 1.8, material: hair },
       ...skirt,
+    ],
+  });
+}
+
+/** Cobb, a farmer in for his ale: a green smock belted over a homespun shirt, and a curly black beard. */
+export function cobbModel(pose: Pose3D): Model {
+  const belt: Tones = [0x3a2a1e, 0x261a12, 0x4e3a2a];
+  const buckle: Tones = [P.gold, 0xa8802e, P.goldLight];
+  const hair: Tones = [0x3a2a20, 0x261a14, 0x54402e];
+  return regularModel(pose, {
+    coat: [0x6a7a4a, 0x4e5c36, 0x869662],
+    sleeves: [0x9a8a6a, 0x766850, 0xb4a484],
+    legs: [0x4e4234, 0x3a3026, 0x645440],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xd89a74, 0xb47a58, 0xeeb490],
+    hair,
+    beard: hair,
+    tankard: true,
+    coatPaint: (h, base) => {
+      if (Math.abs(h.y - (15.6 - pose.bob)) < 0.7) return h.nz > 0.85 && Math.abs(h.x) < 0.8 ? buckle : belt;
+      return base;
+    },
+    // Curls: a fuller crown of hair, and the beard bushier at the chin.
+    extras: (hy, hz) => [
+      { cx: 0, cy: hy + 2.2, cz: hz - 0.8, rx: 5.9, ry: 4.2, rz: 5.4, material: (h: Hit) => (dusted(h, 0.35) ? [hair[2], hair[0], hair[2]] : hair) },
+      { cx: 0, cy: hy - 5.2, cz: hz + 2.8, rx: 3.6, ry: 2.6, rz: 2.2, material: (h: Hit) => (dusted(h, 0.3) ? [hair[2], hair[0], hair[2]] : hair) },
     ],
   });
 }
