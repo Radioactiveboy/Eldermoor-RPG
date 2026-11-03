@@ -101,6 +101,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   carter: carterModel,
   herbwife: herbwifeModel,
   nell: nellModel,
+  rosie: rosieModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1041,6 +1042,8 @@ interface MaidLook {
   hair: Tones;
   /** A long braid down the back, or the hair worn loose to the shoulders. */
   hairStyle: 'braid' | 'loose';
+  /** No apron: the dress is worn plain, with a belt at the waist. */
+  noApron?: boolean;
 }
 
 /**
@@ -1062,13 +1065,14 @@ function maidModel(pose: Pose3D, look: MaidLook): Model {
     solids.push({ cx: side * 2.1, cy: 1.2 + (swing < 0 ? 0.8 : 0), cz: 0.8 + swing * 2.2, rx: 1.6, ry: 1.3, rz: 2.3, material: boots });
   }
 
-  const front = (h: Hit) => h.nz > 0.1 && Math.abs(h.nx) < 0.75;
+  const front = (h: Hit) => !look.noApron && h.nz > 0.1 && Math.abs(h.nx) < 0.75;
   for (let y = 3; y <= 15; y += 0.5) {
     const t = (15 - y) / 12;
     solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 4.4 + t * 1.8, ry: 0.8, rz: 3.6 + t * 1.2, material: (h) => (front(h) && h.y > 4.5 ? apron : dress) });
   }
   const bodice = (h: Hit): Tones => {
-    if (Math.abs(h.y - (16 - b)) < 0.6) return apron;
+    if (Math.abs(h.y - (16 - b)) < 0.6) return look.noApron ? [P.leatherDark, P.barkDark, P.leather] : apron;
+    if (look.noApron) return h.z > 2 && Math.abs(h.x) < 1.8 - (25.5 - b - h.y) * 0.5 && h.y > 23 - b ? sleeves : dress;
     if (h.nz > 0.35 && Math.abs(h.nx) < 0.45 && h.y < 22.5 - b) return apron;
     return dress;
   };
@@ -1118,5 +1122,17 @@ export function nellModel(pose: Pose3D): Model {
     skin: [0xf0c4a0, 0xc69a7a, 0xffdcbc],
     hair: [0x9a4426, 0x6e2e18, 0xb85a36],
     hairStyle: 'braid',
+  });
+}
+
+/** Rosie, the other maid: a wine-red dress over a linen blouse, and fair hair worn loose. */
+export function rosieModel(pose: Pose3D): Model {
+  return maidModel(pose, {
+    dress: [0x8a3a4a, 0x642632, 0xa84e5e],
+    sleeves: [0xf0e8d8, 0xc4baa8, 0xfffaf0],
+    skin: [0xf4cca8, 0xcaa282, 0xffe2c4],
+    hair: [0xe0c070, 0xb09048, 0xf4dc90],
+    hairStyle: 'loose',
+    noApron: true,
   });
 }
