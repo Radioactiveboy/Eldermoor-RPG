@@ -102,6 +102,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   herbwife: herbwifeModel,
   nell: nellModel,
   rosie: rosieModel,
+  pell: pellModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1135,4 +1136,78 @@ export function rosieModel(pose: Pose3D): Model {
     hairStyle: 'loose',
     noApron: true,
   });
+}
+
+/**
+ * Pell the minstrel: a motley tunic, teal on one side and mustard on the
+ * other, a short mustard cape, plum hose and a plum cap with a feather, and
+ * his lute held ready across his chest.
+ */
+export function pellModel(pose: Pose3D): Model {
+  const teal: Tones = [0x2a6a6a, 0x1c4c4c, 0x3a8a8a];
+  const mustard: Tones = [0xd8b040, 0xa4842a, 0xecc860];
+  const plum: Tones = [0x8a2a4a, 0x641e36, 0xa8405e];
+  const skin: Tones = [0xecc0a0, 0xc29878, 0xfad6b8];
+  const hair: Tones = [0x6a3a22, 0x4a2816, 0x845036];
+  const wood: Tones = [0xc89050, 0x8e6432, 0xe2ac6a];
+  const boots: Tones = [P.leather, P.leatherDark, P.leatherLight];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+  const motley = (h: Hit): Tones => (h.x > 0 ? teal : mustard);
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    solids.push(...limb([side * 2.1, 13.5 - b * 0.5, 0], [side * 2.1, 3.4 + lift, swing * 2.4], 1.8, 1.5, plum));
+    // Soft boots, the toes a little pointed.
+    solids.push({ cx: side * 2.1, cy: 1.3 + lift, cz: 1.2 + swing * 2.4, rx: 1.5, ry: 1.3, rz: 2.8, material: boots });
+  }
+
+  // The tunic to the hips, motley, with a dagged hem.
+  solids.push({ cx: 0, cy: 13.6 - b * 0.5, cz: 0, rx: 4.5, ry: 2.6, rz: 3.4, material: (h) => (Math.floor(h.x + h.z + 20) % 3 === 0 && h.y < 12.4 ? plum : motley(h)) });
+  solids.push({ cx: 0, cy: 17 - b, cz: 0, rx: 4.2, ry: 3.4, rz: 3.3, material: (h) => (Math.abs(h.y - (16.2 - b)) < 0.6 ? [P.leatherDark, P.barkDark, P.leather] : motley(h)) });
+  solids.push({ cx: 0, cy: 21.8 - b, cz: 0, rx: 4.8, ry: 4.6, rz: 3.6, material: motley });
+  // A short cape over the shoulders.
+  for (let y = 19; y <= 25.5; y += 0.5) {
+    const t = (25.5 - y) / 6.5;
+    solids.push({ cx: 0, cy: y - b, cz: -2 - t * 1, rx: 5.4 + t * 0.8, ry: 0.8, rz: 2.6, material: mustard });
+  }
+
+  // The lute across his chest: the bowl at his belly, the neck up to his right.
+  solids.push({ cx: 1.4, cy: 17.4 - b, cz: 4.2, rx: 3.3, ry: 3.6, rz: 1.8, material: wood });
+  solids.push(...limb([0, 19.6 - b, 4.4], [-5.6, 25.4 - b, 3.8], 0.8, 0.7, [wood[1], darker(wood[1]), wood[0]], 0.4));
+  solids.push({ cx: -6, cy: 25.9 - b, cz: 3.6, rx: 1, ry: 1.1, rz: 0.8, material: [wood[1], darker(wood[1]), wood[0]] });
+
+  // Arms: the right (screen-left) at the neck fretting, the left strumming the bowl.
+  for (const side of [-1, 1]) {
+    solids.push({ cx: side * 4.5, cy: 24.6 - b, cz: 0, rx: 2.2, ry: 2.1, rz: 2.2, material: side > 0 ? teal : mustard });
+    const elbow: [number, number, number] = side < 0 ? [-5.8, 20.6 - b, 2] : [5.6, 19.8 - b, 1.2];
+    const hand: [number, number, number] = side < 0 ? [-4.6, 23.6 - b, 4.6] : [2.6, 17.6 - b, 5.4];
+    const sleeve = side > 0 ? teal : mustard;
+    solids.push(...limb([side * 5, 24 - b, 0], elbow, 1.6, 1.4, sleeve));
+    solids.push(...limb(elbow, hand, 1.4, 1.3, sleeve));
+    solids.push({ cx: hand[0], cy: hand[1], cz: hand[2], rx: 1.3, ry: 1.4, rz: 1.3, material: skin });
+  }
+
+  // Head: a soft plum cap set at an angle, with a feather.
+  const hy = 32.2 - b;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0, rx: 1.9, ry: 2, rz: 1.9, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (py > 2 || h.nz < -0.2 || (Math.abs(h.nx) > 0.68 && py > -2)) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.3, ry: 5.7, rz: 5.1, material: head, soft: true });
+  solids.push({ cx: 0, cy: hy - 0.4, cz: 5.1, rx: 0.8, ry: 1, rz: 0.8, material: skin });
+  solids.push({ cx: 0.8, cy: hy + 4.2, cz: -0.4, rx: 5.6, ry: 2.6, rz: 5.4, material: plum });
+  solids.push({ cx: 3.6, cy: hy + 4.6, cz: -1, rx: 2.6, ry: 1.8, rz: 2.8, material: plum });
+  solids.push(...limb([3.6, hy + 5.4, -2.4], [5.8, hy + 9.6, -4.4], 0.8, 0.4, [0xf0ece0, 0xc4beb0, 0xffffff], 0.35));
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 1.9, y: hy + 0.8, z: 5, color: P.eye });
+  for (const side of [-1, 1]) details.push({ x: side * 0.6, y: hy - 2.4, z: 4.9, color: 0xb86a58 }); // a smile
+  // The lute's sound-hole.
+  details.push({ x: 1.4, y: 18.2 - b, z: 6, color: 0x3a2414 });
+  return { solids, details };
 }
