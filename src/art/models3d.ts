@@ -99,6 +99,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   pilgrim: pilgrimModel,
   drover: droverModel,
   carter: carterModel,
+  herbwife: herbwifeModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -560,6 +561,8 @@ interface MonkLook {
   rolled?: boolean;
   /** A well-fed belly. */
   stout?: boolean;
+  /** The hood (when up) in its own colour: a cloak's hood over the habit or dress. */
+  cowl?: Tones;
 
   /** A head pushed forward with age. */
   stooped?: boolean;
@@ -655,14 +658,15 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
   if (look.hoodUp) {
     // The cowl drawn up: a deep hood round the face, open at the front.
     // The hood's crown and back sit behind the face; its rim frames it.
-    solids.push({ cx: 0, cy: hy + 0.8, cz: hz - 1.8, rx: 6.4, ry: 6.6, rz: 5.4, material: habit });
-    solids.push({ cx: 0, cy: hy + 5.6, cz: hz - 4.2, rx: 2, ry: 2.2, rz: 2, material: habit });
+    const hood = look.cowl ?? habit;
+    solids.push({ cx: 0, cy: hy + 0.8, cz: hz - 1.8, rx: 6.4, ry: 6.6, rz: 5.4, material: hood });
+    solids.push({ cx: 0, cy: hy + 5.6, cz: hz - 4.2, rx: 2, ry: 2.2, rz: 2, material: hood });
     for (let i = 0; i <= 12; i++) {
       const a = -Math.PI * 0.62 + (i / 12) * Math.PI * 1.24;
-      solids.push({ cx: Math.sin(a) * 4.8, cy: hy + 0.2 + Math.cos(a) * 5, cz: hz + 3, rx: 1.8, ry: 1.8, rz: 2, material: habit });
+      solids.push({ cx: Math.sin(a) * 4.8, cy: hy + 0.2 + Math.cos(a) * 5, cz: hz + 3, rx: 1.8, ry: 1.8, rz: 2, material: hood });
     }
     // Shadow under the hood, on the face.
-    solids.push({ cx: 0, cy: hy + 2.4, cz: hz + 3.9, rx: 3.6, ry: 1.2, rz: 1, material: [habit[1], darker(habit[1]), habit[1]] });
+    solids.push({ cx: 0, cy: hy + 2.4, cz: hz + 3.9, rx: 3.6, ry: 1.2, rz: 1, material: [hood[1], darker(hood[1]), hood[1]] });
   }
 
   const details: Detail[] = [];
@@ -994,4 +998,35 @@ export function carterModel(pose: Pose3D): Model {
   for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: 5.1, color: P.eye });
   for (const y of [22, 19.6]) details.push({ x: 0, y: y - b, z: 4.1, color: P.leatherDark });
   return { solids, details };
+}
+
+/** Ness the herb-gatherer: a sage-green hooded cloak over a brown dress, a staff, and her basket of herbs on her back. */
+export function herbwifeModel(pose: Pose3D): Model {
+  const cloak: Tones = [0x6a7a52, 0x4a5838, 0x86966a];
+  const wicker: Tones = [0xb08a4e, 0x7e6034, 0xcaa466];
+  const herbs: Tones = [0x5a8a3a, 0x3e6628, 0x7aaa52];
+  const model = monkModel(pose, {
+    habit: [0x7a5a46, 0x564030, 0x96745a],
+    skin: [0xd8a888, 0xae8064, 0xeac0a0],
+    hair: [0x6a625e, 0x4c4642, 0x847c78],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    hoodUp: true,
+    staff: true,
+    cowl: cloak,
+  });
+  const b = pose.bob;
+  const s = pose.stride;
+  // The cloak hangs from the shoulders behind her to the backs of the knees.
+  for (let y = 9; y <= 25; y += 0.5) {
+    const t = (25 - y) / 16;
+    model.solids.push({ cx: 0, cy: y - b * (1 - t), cz: -2.6 - t * 1.6 - Math.abs(s) * t, rx: 5.6 + t * 1.4, ry: 0.8, rz: 2.4, material: cloak });
+  }
+  for (const side of [-1, 1]) model.solids.push({ cx: side * 4.8, cy: 24.8 - b, cz: 0, rx: 2.6, ry: 2.4, rz: 2.6, material: cloak });
+  // The basket on her back, with greenery spilling over its rim.
+  const basket = (h: Hit): Tones => ((Math.floor(h.y * 0.9) + Math.floor((h.x + h.z) * 0.6)) % 2 ? wicker : [wicker[1], darker(wicker[1]), wicker[0]]);
+  model.solids.push({ cx: 0, cy: 21 - b, cz: -6.4, rx: 3.8, ry: 4.4, rz: 2.6, material: basket });
+  for (const [x, z] of [[-2, -6], [0.4, -7], [2.2, -5.8], [-0.6, -5.4]]) {
+    model.solids.push({ cx: x, cy: 25.6 - b, cz: z, rx: 1.6, ry: 1.4, rz: 1.6, material: herbs });
+  }
+  return model;
 }
