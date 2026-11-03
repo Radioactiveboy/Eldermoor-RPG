@@ -263,6 +263,8 @@ export interface MapData {
   npcs?: NpcSpawn[];
   crops?: CropPatch[];
   seats?: Seat[];
+  /** Spots where the tavern maids tidy up between orders (wiping a table, sweeping the hearth), and which way they face there. */
+  chores?: Array<{ x: number; y: number; face: { x: number; y: number } }>;
   beds?: Bed[];
   creatures?: CreatureSpawn[];
   /** Hens pottering about a pen (see entities/Hen.ts). */

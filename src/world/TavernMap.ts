@@ -78,6 +78,18 @@ export function buildTavernMap(): MapData {
     ],
     seats: [],
     sights: [],
+    // Where Nell and Rosie wipe, sweep and tidy between orders.
+    chores: [
+      { x: 2.5, y: 5.5, face: { x: 0, y: -1 } },
+      { x: 3.5, y: 3.5, face: { x: 0, y: 1 } },
+      { x: 6.5, y: 4.5, face: { x: 0, y: 1 } },
+      { x: 4.5, y: 6.5, face: { x: -1, y: 1 } },
+      { x: 8.5, y: 7.5, face: { x: 0, y: 1 } },
+      { x: 2.5, y: 1.6, face: { x: -1, y: -1 } },
+      { x: 7.5, y: 3.5, face: { x: 0, y: -1 } },
+      { x: 10.5, y: 5.5, face: { x: 1, y: 0 } },
+      { x: 9.5, y: 9.4, face: { x: -1, y: -1 } },
+    ],
   };
 
   const add = (key: string, tx: number, ty: number, extra: Partial<MapObject> = {}) => placeObject(data, { key, tx, ty, w: 1, h: 1, ...extra });
@@ -103,30 +115,31 @@ export function buildTavernMap(): MapData {
     add('furn-stool', x, 3, { shapes: stoolShape });
     if (x < 11) seat(x, 3, { x: 0, y: -1 }, { x: x + 0.5, y: 4.5 }, 'tavern-bar');
   }
-  // The tables, each with its stools, some of them the regulars'.
+  // The tables, each with its stools, some of them the regulars'. The hero's stools all face away from
+  // the room (towards the back walls), so they're seen sitting at the table rather than through it.
   add('tav-table-0', 2, 4, { w: 2 });
   add('furn-stool', 1, 4, { shapes: stoolShape }); // Sigrun's
   add('furn-stool', 4, 4, { shapes: stoolShape });
   seat(4, 4, { x: -1, y: 0 }, { x: 4.5, y: 3.5 });
 
   add('tav-table-1', 6, 5, { w: 2 });
-  add('furn-stool', 5, 5, { shapes: stoolShape });
   add('furn-stool', 8, 5, { shapes: stoolShape });
   add('furn-stool', 6, 6, { shapes: stoolShape });
-  seat(5, 5, { x: 1, y: 0 }, { x: 5.5, y: 4.5 });
+  add('furn-stool', 7, 6, { shapes: stoolShape });
   seat(8, 5, { x: -1, y: 0 }, { x: 8.5, y: 4.5 });
   seat(6, 6, { x: 0, y: -1 }, { x: 6.5, y: 7.5 });
+  seat(7, 6, { x: 0, y: -1 }, { x: 7.5, y: 7.5 });
 
   add('tav-table-2', 3, 7, { w: 2 });
-  add('furn-stool', 2, 7, { shapes: stoolShape });
+  add('furn-stool', 3, 8, { shapes: stoolShape });
   add('furn-stool', 5, 7, { shapes: stoolShape }); // Fenwick's
-  seat(2, 7, { x: 1, y: 0 }, { x: 2.5, y: 8.5 });
+  seat(3, 8, { x: 0, y: -1 }, { x: 2.5, y: 8.5 });
 
   add('tav-table-3', 8, 8, { w: 2 });
   add('furn-stool', 7, 8, { shapes: stoolShape }); // Ada's
   add('furn-stool', 10, 8, { shapes: stoolShape }); // Cobb's
-  add('furn-stool', 9, 7, { shapes: stoolShape });
-  seat(9, 7, { x: 0, y: 1 }, { x: 10.5, y: 6.5 });
+  add('furn-stool', 8, 9, { shapes: stoolShape });
+  seat(8, 9, { x: 0, y: -1 }, { x: 7.5, y: 9.5 });
 
   add('furn-barrels', 11, 5, { shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
   add('furn-chest', 0, 6, { flipX: true });

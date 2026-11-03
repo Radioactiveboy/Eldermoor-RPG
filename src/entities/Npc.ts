@@ -9,7 +9,7 @@ import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
-import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
+import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, MAID_CHORES, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
 import { ROOM_COUNT, Tavern } from '../systems/Tavern';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
@@ -18,7 +18,7 @@ import { Inventory } from '../systems/Inventory';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
 import type { Body, IsoMap } from '../world/IsoMap';
-import type { Commute } from '../world/MapData';
+import type { Commute, MapData } from '../world/MapData';
 
 /** How close (in tiles) the player must be to talk. */
 export const TALK_RANGE = 1.7;
@@ -45,6 +45,11 @@ interface NpcDef {
   talkRange?: number;
   /** Sits where they are (on a stool, say) rather than standing. */
   sits?: boolean;
+  /**
+   * A tavern maid: goes round the room tidying (the map's chores) between orders, and
+   * doesn't hover beside the hero while they sit; she comes over when it's time to ask.
+   */
+  bustles?: boolean;
 }
 
 /** Travellers met before, who get a shorter hello next time. */
@@ -56,7 +61,10 @@ const met = new Set<string>();
  * time it is), kept up to date by GameScene.
  */
 export const NpcWorld = {
+  /** The hero is sitting at a tavern table (so the maids take orders). */
   seated: false,
+  /** The hero is sitting anywhere (so the maids get on with their work rather than stop and stare). */
+  sitting: false,
   /** In-game hours since the start (TimeOfDay.elapsedHours). */
   now: 0,
   /** Hours from now until the clock next reads an hour (TimeOfDay.hoursUntil). */
@@ -229,9 +237,10 @@ const NPCS: Record<string, NpcDef> = {
   scribe: { texture: 'folk-scribe', sits: true, script: traveller('scribe', SCRIBE) },
   cook: { texture: 'folk-cook', roam: 2, script: () => cookScript(QuestLog.hasFlag('fed-by-hob')) },
   // The Crooked Tankard: Godric behind his bar, his maids going round the tables, and the regulars.
-  landlord: { texture: 'folk-landlord', script: landlord },
-  nell: { texture: 'folk-nell', roam: 3, script: () => maidScript('nell', NpcWorld.seated, Inventory.coins) },
-  rosie: { texture: 'folk-rosie', roam: 3, script: () => maidScript('rosie', NpcWorld.seated, Inventory.coins) },
+  // (Godric is spoken to across the bar, from in front of the stools.)
+  landlord: { texture: 'folk-landlord', script: landlord, talkRange: 3.2 },
+  nell: { texture: 'folk-nell', roam: 3, bustles: true, script: () => maidScript('nell', NpcWorld.seated, Inventory.coins) },
+  rosie: { texture: 'folk-rosie', roam: 3, bustles: true, script: () => maidScript('rosie', NpcWorld.seated, Inventory.coins) },
   harlan: {
     texture: 'folk-harlan',
     sits: true,
@@ -299,6 +308,8 @@ export class Npc implements Body {
   private off = false;
   /** Somewhere they've been sent (a maid fetching an order): walked to whatever's in the way, then `then` runs. */
   private errand?: { route: Vec2[]; then?: () => void };
+  /** For a maid, the spot she's on her way to tidy (see MapData.chores). */
+  private chore?: { x: number; y: number; face: Vec2 };
 
   /**
    * @param commute for a trader, their walk home (see MapData.Commute)
@@ -377,6 +388,7 @@ export class Npc implements Body {
     if (route.length > 0) route.pop();
     route.push(target);
     this.route = [];
+    this.chore = undefined;
     this.errand = { route, then };
   }
 
@@ -495,8 +507,10 @@ export class Npc implements Body {
       }
       return;
     }
-    if (paused || this.distanceTo(player.x, player.y) < NOTICE_RANGE) {
-      if (this.distanceTo(player.x, player.y) < NOTICE_RANGE) this.face({ x: player.x - this.gx, y: player.y - this.gy });
+    // (A maid at work doesn't stop to stare at someone sitting down.)
+    const noticed = this.distanceTo(player.x, player.y) < NOTICE_RANGE && !(this.def.bustles && NpcWorld.sitting);
+    if (paused || noticed) {
+      if (noticed) this.face({ x: player.x - this.gx, y: player.y - this.gy });
       this.sync(false);
       return;
     }
@@ -636,6 +650,11 @@ export class Npc implements Body {
 
   /** Pick what to do next: usually a short walk along the road, sometimes just a look round. */
   private decide(): void {
+    const chores = this.map.data.chores;
+    if (this.def.bustles && chores?.length) {
+      this.doChores(chores);
+      return;
+    }
     if (this.def.roam) {
       this.roamSomewhere(this.def.roam);
       return;
@@ -655,6 +674,35 @@ export class Npc implements Body {
       this.route.push({ point: { x: p.x + this.lane, y: p.y + this.lane }, index: i });
     }
     this.wait = 2 + Math.random() * 4;
+  }
+
+  /**
+   * A maid between orders: on reaching the spot she was making for, tidy it for
+   * a while (now and then saying something about it); then off to the next one.
+   */
+  private doChores(spots: NonNullable<MapData['chores']>): void {
+    const chore = this.chore;
+    this.chore = undefined;
+    if (chore && this.distanceTo(chore.x, chore.y) < 0.6) {
+      this.face(chore.face);
+      const lines = MAID_CHORES[this.id as 'nell' | 'rosie'];
+      if (lines && Math.random() < 0.35) this.say(lines[Math.floor(Math.random() * lines.length)], 3.5);
+      this.wait = 5 + Math.random() * 6;
+      return;
+    }
+    const from = { x: Math.floor(this.gx), y: Math.floor(this.gy) };
+    const options = spots.filter((s) => Math.hypot(s.x - this.gx, s.y - this.gy) > 1.5);
+    const spot = options[Math.floor(Math.random() * options.length)];
+    const path = spot && findPath(from, { x: Math.floor(spot.x), y: Math.floor(spot.y) }, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 3000);
+    if (!spot || !path) {
+      this.wait = 2;
+      return;
+    }
+    this.route = path.map((p) => ({ point: { x: p.x + 0.5, y: p.y + 0.5 }, index: -1 }));
+    if (this.route.length > 0) this.route[this.route.length - 1].point = { x: spot.x, y: spot.y };
+    else this.route.push({ point: { x: spot.x, y: spot.y }, index: -1 });
+    this.chore = spot;
+    this.wait = 0.3;
   }
 
   /**

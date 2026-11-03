@@ -378,6 +378,7 @@ export class GameScene extends Phaser.Scene {
     this.focus = undefined;
     this.channel = undefined;
     this.seat = undefined;
+    NpcWorld.sitting = false;
     this.inCombat = false;
     this.arrivalGrace = ARRIVAL_GRACE;
     this.afterTalk = undefined;
@@ -920,7 +921,31 @@ export class GameScene extends Phaser.Scene {
     }
     const service = { maid, seat, stage: 'coming' as const };
     this.service = service;
-    maid.goTo({ x: seat.standX, y: seat.standY }, () => this.maidArrives(service));
+    maid.goTo(this.serviceSpot(seat), () => this.maidArrives(service));
+  }
+
+  /**
+   * Where a maid stands to serve someone sitting: beside them, but never on the
+   * spot they'd step to on getting up (or she'd be in their way).
+   */
+  private serviceSpot(seat: Seat): Vec2 {
+    const sx = Math.floor(seat.gx);
+    const sy = Math.floor(seat.gy);
+    const stand = { x: Math.floor(seat.standX), y: Math.floor(seat.standY) };
+    let best: Vec2 | undefined;
+    let bestDist = Infinity;
+    for (let y = sy - 1; y <= sy + 1; y++) {
+      for (let x = sx - 1; x <= sx + 1; x++) {
+        if ((x === sx && y === sy) || (x === stand.x && y === stand.y)) continue;
+        if (!this.map.isWalkable(x, y) || this.map.blocked(x + 0.5, y + 0.5, PLAYER_RADIUS, false)) continue;
+        const d = Math.hypot(x + 0.5 - seat.standX, y + 0.5 - seat.standY);
+        if (d < bestDist) {
+          best = { x: x + 0.5, y: y + 0.5 };
+          bestDist = d;
+        }
+      }
+    }
+    return best ?? { x: seat.standX, y: seat.standY };
   }
 
   /** The maid is at the table: she takes the hero's order, unless they've got up and gone in the meantime. */
@@ -958,7 +983,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(2800, () => {
         if (this.service !== service) return;
         service.stage = 'bringing';
-        service.maid.goTo({ x: service.seat.standX, y: service.seat.standY }, () => this.deliver(service));
+        service.maid.goTo(this.serviceSpot(service.seat), () => this.deliver(service));
       });
     });
   }
@@ -1335,6 +1360,9 @@ export class GameScene extends Phaser.Scene {
   private interactionsNear(gx: number, gy: number): Interaction[] {
     const list: Interaction[] = [];
     if (this.seat) {
+      // On a stool at the bar, Godric is the one to talk to (walking off gets up).
+      const godric = this.seat.name === 'tavern-bar' ? this.someone('landlord') : undefined;
+      if (godric) return [this.npcInteraction(godric)];
       // Sitting: the only thing to do is get up.
       const head = this.player.sprite;
       list.push({
@@ -1388,7 +1416,8 @@ export class GameScene extends Phaser.Scene {
     return {
       key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
       promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
-      run: () => this.startConversation(npc),
+      // Godric can be called over from a stool at his bar without getting up.
+      run: () => this.startConversation(npc, npc.id === 'landlord' && this.seat?.name === 'tavern-bar'),
     };
   }
 
@@ -1758,6 +1787,7 @@ export class GameScene extends Phaser.Scene {
   private sitOn(seat: Seat): void {
     this.walkingTo = undefined;
     this.seat = seat;
+    NpcWorld.sitting = true;
     this.sitTimer = 0;
     // Sitting down at a tavern table: a maid will be over in a moment.
     if (seat.name === 'tavern-table') this.serviceTimer = Math.max(this.serviceTimer, SERVICE_FIRST);
@@ -1768,7 +1798,17 @@ export class GameScene extends Phaser.Scene {
     const seat = this.seat;
     if (!seat) return;
     this.seat = undefined;
-    this.player.standAt(seat.standX, seat.standY);
+    NpcWorld.sitting = false;
+    // Step off the seat, round anyone standing just there (a maid with a tray, say).
+    let spot = { x: seat.standX, y: seat.standY };
+    if (this.map.blocked(spot.x, spot.y, PLAYER_RADIUS)) {
+      const around = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => ({ x: Math.floor(seat.gx) + dx + 0.5, y: Math.floor(seat.gy) + dy + 0.5 })));
+      const free = around
+        .filter((p) => !this.map.blocked(p.x, p.y, PLAYER_RADIUS))
+        .sort((a, b) => Math.hypot(a.x - spot.x, a.y - spot.y) - Math.hypot(b.x - spot.x, b.y - spot.y))[0];
+      if (free) spot = free;
+    }
+    this.player.standAt(spot.x, spot.y);
   }
 
   /** Sitting for a little while brings on a passing thought. */
@@ -1990,7 +2030,8 @@ export class GameScene extends Phaser.Scene {
       const target = this.interactionAt(tile);
       if (this.seat) {
         if (target?.key === 'stand') return;
-        this.standUp();
+        const callingGodric = target?.key === 'npc:landlord' && this.seat.name === 'tavern-bar' && this.inRange(target);
+        if (!callingGodric) this.standUp();
       }
       if (target) {
         if (this.inRange(target) && !target.walkOnto) {
