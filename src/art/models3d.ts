@@ -92,6 +92,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   gardener: gardenerModel,
   silent: silentModel,
   novice: noviceModel,
+  prior: priorModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -541,6 +542,8 @@ interface MonkLook {
   hoodUp?: boolean;
   /** A tall staff in the right hand. */
   staff?: boolean;
+  /** Tops the staff with a brass knob and makes it taller: a staff of office. */
+  office?: boolean;
   /** A head pushed forward with age. */
   stooped?: boolean;
   /** The habit hitched up to the knee for work, showing breeches (in these tones) and boots. */
@@ -603,8 +606,10 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
   }
   if (staffHand) {
     const [x, , z] = staffHand;
-    const pole = limb([x, 0.4, z - s * 0.6], [x, 37 - b, z], 0.6, 0.6, shaft, 0.4);
+    const top = (look.office ? 41 : 37) - b;
+    const pole = limb([x, 0.4, z - s * 0.6], [x, top, z], 0.6, 0.6, shaft, 0.4);
     solids.push(...pole.map((p) => ({ ...p, soft: true })));
+    if (look.office) solids.push({ cx: x, cy: top + 1, cz: z, rx: 1.3, ry: 1.3, rz: 1.3, material: [P.gold, 0xb08830, P.goldLight] });
   }
 
   // The head: a ring of hair round a shaved crown, or the cowl drawn up over it.
@@ -687,4 +692,16 @@ export function noviceModel(pose: Pose3D): Model {
   const hy = 32 - pose.bob;
   for (const side of [-1, 1]) model.details.push({ x: side * 2.6, y: hy - 0.6, z: 4.8, color: 0xc88660 });
   return model;
+}
+
+/** Prior Benedict, who rules the house: iron-grey hair, a black habit, and his staff of office. */
+export function priorModel(pose: Pose3D): Model {
+  return monkModel(pose, {
+    habit: [0x2e2a30, 0x1c181e, 0x48424c],
+    skin: [0xe0b896, 0xb48c6c, 0xf4d0b0],
+    hair: [0x8a8690, 0x625e68, 0xa8a4ae],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    staff: true,
+    office: true,
+  });
 }
