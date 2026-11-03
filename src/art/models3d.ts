@@ -95,6 +95,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   prior: priorModel,
   anselm: anselmModel,
   cook: cookModel,
+  pedlar: pedlarModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -752,4 +753,79 @@ export function cookModel(pose: Pose3D): Model {
     rolled: true,
     stout: true,
   });
+}
+
+/**
+ * Bram the pedlar: a felt hat, a grizzled beard, a long mustard coat open over
+ * a russet tunic, and a heavy pack with a bedroll on top and a pan hung at its side.
+ */
+export function pedlarModel(pose: Pose3D): Model {
+  const coat: Tones = [0xa07a34, 0x74561e, 0xc29a4c];
+  const tunic: Tones = [0x7a3a2e, 0x562820, 0x9a4e3c];
+  const trouser: Tones = [0x5a4634, 0x3a2c22, 0x70583f];
+  const skin: Tones = [0xe6b48c, 0xbc8a68, 0xf6cca8];
+  const hair: Tones = [0x7a6656, 0x564638, 0x948070];
+  const beard: Tones = [0x9a8a7a, 0x706254, 0xb4a696];
+  const felt: Tones = [0x5e4a3a, 0x40322a, 0x786050];
+  const pack: Tones = [P.leather, P.leatherDark, P.leatherLight];
+  const wool: Tones = [P.wool, P.woolDark, 0xd8ccb4];
+  const iron: Tones = [P.iron, 0x34343c, P.ironLight];
+  const boots: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    solids.push(...limb([side * 2.3, 12 - b * 0.5, 0], [side * 2.3, 3.6 + lift, swing * 2.4], 2, 1.7, trouser));
+    solids.push({ cx: side * 2.3, cy: 1.3 + lift, cz: 0.8 + swing * 2.4, rx: 1.8, ry: 1.4, rz: 2.7, material: boots });
+  }
+
+  // The coat to the knee, open down the front over the tunic.
+  const open = (h: Hit) => h.z > 1.5 && Math.abs(h.x) < 1.6;
+  for (let y = 7; y <= 15; y += 0.5) {
+    const t = (15 - y) / 8;
+    solids.push({ cx: 0, cy: y - b * 0.5, cz: s * 0.4 * t - t * 0.3, rx: 4.9 + t * 1.2, ry: 0.8, rz: 3.8 + t * 0.6, material: (h) => (open(h) && h.y > 10 ? tunic : coat) });
+  }
+  const body = (h: Hit): Tones => {
+    if (open(h)) return Math.abs(h.y - (16.4 - b)) < 0.6 ? [P.leatherDark, P.barkDark, P.leather] : tunic;
+    return coat;
+  };
+  solids.push({ cx: 0, cy: 17 - b, cz: 0, rx: 4.7, ry: 3, rz: 3.7, material: body });
+  solids.push({ cx: 0, cy: 21.8 - b, cz: 0.3, rx: 5.2, ry: 4.6, rz: 3.8, material: body });
+
+  // The pack, the bedroll on top, a pan hanging at its side, and the straps over the shoulders.
+  solids.push({ cx: 0, cy: 21 - b, cz: -5.6, rx: 4.4, ry: 5.2, rz: 2.6, material: pack });
+  solids.push(...limb([-4.6, 27 - b, -5.4], [4.6, 27 - b, -5.4], 2, 2, wool));
+  solids.push({ cx: 4.4, cy: 18.5 - b, cz: -5.8, rx: 0.6, ry: 2.2, rz: 2.2, material: iron });
+  for (const side of [-1, 1]) solids.push(...limb([side * 3, 26 - b, -2.4], [side * 3.4, 25.4 - b, 2.8], 0.7, 0.7, pack));
+
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 4.8, cy: 24.6 - b, cz: 0.2, rx: 2.4, ry: 2.2, rz: 2.4, material: coat });
+    const elbow: [number, number, number] = [side * 6, 20.3 - b, swing * 0.5];
+    solids.push(...limb([side * 5.3, 24 - b, 0.2], elbow, 1.8, 1.7, coat));
+    solids.push(...limb(elbow, [side * 6.2, 17 - b, 0.8 + swing], 1.7, 1.8, coat));
+    solids.push({ cx: side * 6.2, cy: 15.8 - b, cz: 1 + swing, rx: 1.6, ry: 1.7, rz: 1.6, material: skin });
+  }
+
+  // Head: grizzled beard, and a felt hat with a round crown and a narrow brim.
+  const hy = 32.2 - b;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0.2, rx: 2.1, ry: 2, rz: 2.1, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (h.nz > -0.35 && (py < -1.6 || (py < 0 && Math.abs(h.nx) > 0.6))) return beard;
+    if (h.nz < -0.2 || Math.abs(h.nx) > 0.7) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
+  solids.push({ cx: 0, cy: hy - 4.6, cz: 2.8, rx: 3.2, ry: 2.4, rz: 2, material: beard });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: 5.4, rx: 1, ry: 1.2, rz: 1, material: skin });
+  solids.push({ cx: 0, cy: hy + 4.2, cz: 0.2, rx: 7.2, ry: 0.8, rz: 6.8, material: felt });
+  solids.push({ cx: 0, cy: hy + 5.4, cz: 0, rx: 5.2, ry: 3.6, rz: 5, material: (h) => (Math.abs(h.y - (hy + 4.8)) < 0.5 ? [P.leatherDark, P.barkDark, P.leather] : felt) });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 1, z: 5.1, color: P.eye });
+  return { solids, details };
 }
