@@ -1,7 +1,13 @@
 import Phaser from 'phaser';
 
-/** Largest texture a baked layer uses, in pixels a side: some phones can't hold anything bigger. */
-const CHUNK = 2048;
+/**
+ * Largest texture a baked layer uses, in pixels a side: some phones can't hold anything bigger.
+ * Deliberately not a power of two: WebGL lets a power-of-two texture wrap round, so a GPU that samples
+ * a hair past a piece's edge picks up the far side of it, and a thin dark line shows where two pieces meet.
+ */
+const CHUNK = 2000;
+
+const isPowerOfTwo = (n: number) => n > 0 && (n & (n - 1)) === 0;
 
 interface Stamp {
   key: string;
@@ -67,8 +73,11 @@ export class BakedLayer {
     const bottom = Math.ceil(area.bottom);
     for (let y0 = top; y0 < bottom; y0 += CHUNK) {
       for (let x0 = left; x0 < right; x0 += CHUNK) {
-        const w = Math.min(CHUNK, right - x0);
+        let w = Math.min(CHUNK, right - x0);
         const h = Math.min(CHUNK, bottom - y0);
+        // A last, smaller piece can still come out a power of two both ways: one more pixel stops it wrapping.
+        // That only happens at the right-hand end of a row, so the extra pixel never covers another piece.
+        if (isPowerOfTwo(w) && isPowerOfTwo(h)) w += 1;
         const rt = scene.add.renderTexture(x0, y0, w, h).setOrigin(0, 0).setDepth(depth);
         rt.beginDraw();
         for (const s of this.stamps) {
