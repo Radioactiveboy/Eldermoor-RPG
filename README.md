@@ -136,7 +136,7 @@ src/
   art/gear.ts             How worn gear looks on the hero's sprite (hat, staff): add an entry to dress new items
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
-                          the garden (farm.ts: soil, crops, fences), item icons (items.ts),
+                          the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
                           the grey wolf (creatures.ts), travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
   audio/Soundscape.ts     The world's background sounds: wind, water, birds, crickets, owls, crowds, bells, footsteps
@@ -217,7 +217,9 @@ src/
   actions (picking, shaking) run as a `Channel` with a progress bar; moving
   cancels them. To add a new kind of thing to use, add another case there.
 - **Items** are defined in `ITEMS` (`systems/Inventory.ts`) with an icon from
-  `art/items.ts`. `Inventory.add(id, n)` puts them in the satchel and the HUD
+  `art/items.ts` (painted with canvas gradients at 128px: add a painter to
+  `PAINTERS` and a line to `ICONS`, and size it on screen with `itemScale`).
+  `Inventory.add(id, n)` puts them in the satchel and the HUD
   shows "+n Name" over the hero. An item's `value` is its price at a stall.
 - **Trading.** Coins are kept in `Inventory.coins`. Each trader in `SHOPS`
   (`systems/Shops.ts`) has starting stock, the kinds of thing they'll buy, and

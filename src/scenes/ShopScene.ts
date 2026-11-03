@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { itemScale } from '../art/items';
 import { GameAudio } from '../audio/Audio';
 import { Inventory, ItemDef, itemDef, itemEffects, ItemId } from '../systems/Inventory';
 import { ShopDef, ShopId, Shops } from '../systems/Shops';
@@ -221,7 +222,7 @@ export class ShopScene extends Phaser.Scene {
     const px = this.narrow ? x + w : x + w - 30;
     const py = this.narrow ? y + 108 : y + 24;
     this.purseText = this.add.text(px, py, `${Inventory.coins}`, { ...titleStyle(this.narrow ? 20 : 26), shadow: undefined }).setOrigin(1, 0.5);
-    const coin = this.add.image(this.purseText.x - this.purseText.width - 16, py, 'item-coin').setScale(2);
+    const coin = this.add.image(this.purseText.x - this.purseText.width - 16, py, 'item-coin').setScale(itemScale(2));
     const label = this.add.text(px, py + 22, 'your purse', bodyStyle(12, THEME.dimText)).setOrigin(1, 0.5);
     if (this.narrow) label.setVisible(false);
     this.content.add([frame, portrait, name, this.remarkText, this.purseText, coin, label]);
@@ -296,7 +297,7 @@ export class ShopScene extends Phaser.Scene {
 
     // The price: what it costs on the stall, or what the trader would pay for it in the satchel.
     const price = side === 'shop' ? Shops.price(entry.id) : Shops.offer(this.shopId, entry.id);
-    const icon = this.add.image(x + SLOT / 2, y + SLOT / 2 + 2, itemDef(entry.id).icon).setScale(2.4);
+    const icon = this.add.image(x + SLOT / 2, y + SLOT / 2 + 2, itemDef(entry.id).icon).setScale(itemScale(2.4));
     // Things the trader won't buy are greyed out.
     if (price === 0) icon.setAlpha(0.35);
     this.content.add(icon);
@@ -343,7 +344,7 @@ export class ShopScene extends Phaser.Scene {
     const pad = 14;
     const buttonW = this.narrow ? 0 : 150;
     const textW = w - pad * 2 - 64 - (buttonW ? buttonW + 24 : 0);
-    const icon = this.add.image(x + pad + 26, y + pad + 26, def.icon).setScale(3.2);
+    const icon = this.add.image(x + pad + 26, y + pad + 26, def.icon).setScale(itemScale(3.2));
     const name = this.add.text(x + pad + 64, y + pad - 2, def.name, { ...titleStyle(18), shadow: undefined });
     const facts = [def.category, ...itemEffects(def)].join('  ·  ');
     const kind = this.add.text(name.x, name.y + name.height + 1, facts, { ...bodyStyle(13, '#9fd66a'), wordWrap: { width: textW } });
@@ -387,7 +388,7 @@ export class ShopScene extends Phaser.Scene {
     if (!d || !p.isDown) return;
     if (!d.ghost) {
       if (Math.hypot(p.x - d.startX, p.y - d.startY) < DRAG_START) return;
-      d.ghost = this.add.image(p.x, p.y, itemDef(d.id).icon).setScale(2.6 * this.window.scale).setAlpha(0.9).setDepth(50);
+      d.ghost = this.add.image(p.x, p.y, itemDef(d.id).icon).setScale(itemScale(2.6 * this.window.scale)).setAlpha(0.9).setDepth(50);
       this.tweens.add({ targets: d.ghost, scale: d.ghost.scale * 1.15, duration: 120, yoyo: true });
     }
     d.ghost.setPosition(p.x, p.y);
@@ -534,12 +535,12 @@ export class ShopScene extends Phaser.Scene {
     const block = this.add.zone(0, 0, w, h).setInteractive();
     const title = this.add.text(0, -h / 2 + 30, `${buying ? 'Buy' : 'Sell'} ${def.name}`, { ...titleStyle(21), shadow: undefined }).setOrigin(0.5);
     const rowY = -h / 2 + 92;
-    const icon = this.add.image(-w / 2 + 62, rowY, def.icon).setScale(3.6);
+    const icon = this.add.image(-w / 2 + 62, rowY, def.icon).setScale(itemScale(3.6));
     const qty = this.add.text(48, rowY, '', { ...titleStyle(30), shadow: undefined }).setOrigin(0.5);
     const minus = this.stepButton(-28, rowY, '−', () => this.setQty(pk.qty - 1));
     const plus = this.stepButton(124, rowY, '+', () => this.setQty(pk.qty + 1));
     const total = this.add.text(12, rowY + 112, '', bodyStyle(18, THEME.goldText)).setOrigin(0.5);
-    const coin = this.add.image(0, rowY + 112, 'item-coin').setScale(1.6);
+    const coin = this.add.image(0, rowY + 112, 'item-coin').setScale(itemScale(1.6));
 
     // A slider from 1 to the most that can change hands.
     const barX = -w / 2 + 40;
