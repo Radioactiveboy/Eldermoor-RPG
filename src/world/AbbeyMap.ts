@@ -190,19 +190,21 @@ export function buildAbbeyMap(): MapData {
     for (const x of [CLOISTER.x0, CLOISTER.x1]) if (!midY(y)) add('abbey-arcade', x, y, { flipX: true, shapes: [box(0.32, 0, 0.68, 1)] });
   }
 
-  // Herbs in the beds, in rows of one kind, and the moonpetal on the pond's rim.
+  // Herbs in the beds, in rows of one kind, and the moonpetal on the pond's rim. They're low and soft,
+  // so the hero (and the brothers) can wade through them rather than winding round the pond.
+  const WADE: Partial<MapObject> = { shapes: [], blocks: [] };
   beds.forEach(([x0, y0, x1, y1], i) => {
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         // Every other row is left as a path between the plants.
         if ((y - y0) % 2 === 1 || terrain[y][x] !== Terrain.Soil) continue;
-        add(`abbey-herbs-${(i + y) % 4}`, x, y, { shapes: [circle(0.5, 0.5, 0.3)] });
+        add(`abbey-herbs-${(i + y) % 4}`, x, y, WADE);
       }
     }
   });
   for (const m of MOONPETAL) {
     terrain[m.ty][m.tx] = Terrain.Stone;
-    add('abbey-moonpetal', m.tx, m.ty, { shapes: [circle(0.5, 0.5, 0.26)] });
+    add('abbey-moonpetal', m.tx, m.ty, WADE);
     data.sights!.push({ id: m.id, gx: m.tx + 0.5, gy: m.ty + 0.5, label: 'Gather moonpetal', z: 30, gather: { item: 'moonpetal', picked: 'abbey-moonpetal-picked' } });
     // It shines a little in the dark.
     data.lights!.push({ gx: m.tx + 0.5, gy: m.ty + 0.5, z: 22, radius: 60, flicker: 0 });

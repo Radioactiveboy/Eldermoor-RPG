@@ -27,10 +27,13 @@ export function monasteryGateShape(open: boolean): { shapes: Shape[]; blocks: Ar
       };
 }
 
-/** The tiles in the gate's arch, which lead inside once it's open. */
+/**
+ * The tiles in the gate's arch, which lead inside once it's open: like the toll
+ * gate, walking into the arch asks whether to go in (and saying no steps back).
+ */
 export function monasteryGateDoors(): Door[] {
   return [GATE_X + 1, GATE_X + 2].map((tx) => ({
-    tx, ty: WALL_Y, to: 'abbey' as const, entry: 'gate', label: 'Go through the gate', facing: 'front' as const,
+    tx, ty: WALL_Y, to: 'abbey' as const, entry: 'gate', auto: true, ask: "Do you want to go in through the gate of Saint Elda's?",
   }));
 }
 
