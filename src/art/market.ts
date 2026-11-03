@@ -121,29 +121,272 @@ function goods(m: IsoModel, kind: StallKind, z: number): void {
   }
 }
 
-/** The village well: a round stone wall, a little shingled roof on two posts, and a bucket. */
+/** Mixes two colours, t = 0 gives a, t = 1 gives b. */
+function mix(a: number, b: number, t: number): number {
+  const ch = (shift: number) => Math.round(((a >> shift) & 0xff) * (1 - t) + ((b >> shift) & 0xff) * t) << shift;
+  return ch(16) | ch(8) | ch(0);
+}
+
+/** Fieldstone greys, some cool and some warm, so no two stones quite match. */
+const FIELDSTONE = [0x8a8790, 0x7c7a86, 0x9d9ba6, 0x8c8478, 0x76716a, 0xa39d92, 0x6c6a74];
+
+/**
+ * A rough fieldstone wall wrapped round a cylinder: courses of uneven height,
+ * stones of uneven length, each lit along its top and shadowed along its foot
+ * so it bulges out of the mortar, with moss creeping up from the ground.
+ */
+function fieldstone(courses: number[], seed: number, mossy = true): Shader {
+  // Course boundaries from the top down, as fractions of the wall's height.
+  const total = courses.reduce((a, b) => a + b, 0);
+  const edges: number[] = [0];
+  for (const c of courses) edges.push(edges[edges.length - 1] + c / total);
+  return (u, v) => {
+    let row = 0;
+    while (row < courses.length - 1 && v >= edges[row + 1]) row++;
+    const lv = (v - edges[row]) / (edges[row + 1] - edges[row]);
+    // Each course is cut into stones of 3 to 6 per visible half-turn.
+    const count = 3 + Math.floor(hash(row, seed) * 4);
+    const fu = u * count + hash(row + 7, seed) * 0.9;
+    const stone = Math.floor(fu);
+    const lu = fu - stone;
+    // A cylinder's side comes in 24 slices, so a joint must be at least one slice wide to show.
+    // Rounded ends: the joint widens near the top and bottom of each stone.
+    const round = (count / 24) * 0.9 + 0.15 * Math.max(0, Math.abs(lv - 0.5) * 2 - 0.5);
+    if (lv < 0.1 || lv > 0.9 || lu < round || lu > 1 - round) return P.mortar;
+    const h = hash(stone + row * 13, seed + 3);
+    let c = FIELDSTONE[Math.floor(h * FIELDSTONE.length)];
+    // The light comes from the upper left: brighter on the left of the curve, darker round the right.
+    c = mix(c, u < 0.4 ? 0xc4c1ca : 0x3e3c48, u < 0.4 ? (0.4 - u) * 0.5 : (u - 0.4) * 0.45);
+    if (lv < 0.24) c = mix(c, 0xd2d0d8, 0.3);
+    else if (lv > 0.76) c = mix(c, 0x2e2c38, 0.3);
+    // Speckles of lichen, and moss on the bottom courses.
+    const speck = hash(Math.floor(u * 90), Math.floor(v * 30) + seed);
+    if (mossy && v > 0.62 && speck < (v - 0.62) * 1.6) c = speck < 0.12 ? 0x4e6a32 : P.moss;
+    else if (speck > 0.96) c = mix(c, 0xb4b070, 0.5);
+    return c;
+  };
+}
+
+/**
+ * A rounded boulder, built from stacked discs that shrink towards the top, so
+ * it reads as a lump of rock rather than a box. Light on its left and top.
+ */
+function boulder(m: IsoModel, cx: number, cy: number, r: number, h: number, base: number, moss = 0): void {
+  const layers = Math.max(2, Math.round(h / 2.5));
+  for (let i = 0; i < layers; i++) {
+    const t = i / layers;
+    const rr = r * Math.sqrt(1 - t * t * 0.85);
+    const z = (h * i) / layers;
+    const lit = mix(base, 0xd8d6dc, 0.15 + t * 0.35);
+    const top = moss > 0 && t > 0.5 ? mix(lit, P.moss, moss) : lit;
+    m.cylinder(cx, cy, z, rr, h / layers + 0.5, (u) => (u < 0.3 ? mix(base, 0xd8d6dc, 0.2) : u > 0.7 ? darken(base, 0.62) : darken(base, 0.85)), top);
+  }
+}
+
+/**
+ * The village well: a round wall of rough fieldstone with a lip of capstones,
+ * rising from a heap of boulders, under a little shingled roof on two timber
+ * posts with a windlass, rope and bucket. Its footprint is 2x2, centred on (1, 1).
+ */
 function well(): IsoModel {
   const m = new IsoModel();
-  const stones: Shader = (u, v) => {
-    const row = Math.floor(v * 3);
-    const brick = Math.floor(u * 14 + row * 0.5);
-    if ((v * 3) % 1 < 0.14 || (u * 14 + row * 0.5) % 1 < 0.06) return P.mortar;
-    return hash(brick, row) < 0.3 ? P.stoneDark : u < 0.35 ? P.stoneLight : P.stone;
-  };
-  m.box(0.95, 0.35, 0, 0.1, 0.1, 54, { top: P.barkLight, left: P.bark, right: P.barkDark });
-  m.cylinder(1, 1, 0, 0.72, 20, stones, (u, v) => {
-    const d = (u - 0.5) ** 2 + (v - 0.5) ** 2;
-    return d < 0.16 ? (d < 0.12 ? P.waterDeep : P.mortar) : P.stoneLight;
+  const cx = 1;
+  const cy = 1;
+  const wallR = 0.66;
+  const wallH = 22;
+  const lipH = 5;
+  const rim = wallH + lipH;
+
+  // Boulders heaped round the foot of the wall, as if the ground were built up round it.
+  const rocks: Array<[number, number, number, number, number]> = [];
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + hash(i, 4) * 0.4;
+    const r = 0.08 + hash(i, 5) * 0.09;
+    const d = wallR + r * 0.35 + hash(i, 6) * 0.05;
+    const h = 2 + hash(i, 7) * 4 + r * 14;
+    rocks.push([cx + Math.cos(a) * d, cy + Math.sin(a) * d, r, h, FIELDSTONE[Math.floor(hash(i, 8) * FIELDSTONE.length)]]);
+  }
+  // A few smaller stones tumbled further out, still within the footprint.
+  for (const [a, d, r] of [[0.6, 0.93, 0.06], [2.1, 0.9, 0.07], [3.6, 0.94, 0.05], [5.5, 0.9, 0.05]]) {
+    rocks.push([cx + Math.cos(a) * d, cy + Math.sin(a) * d, r, 2 + r * 20, FIELDSTONE[Math.floor(hash(a, d) * FIELDSTONE.length)]]);
+  }
+  rocks.sort((a, b) => a[0] + a[1] - (b[0] + b[1]));
+  const behind = rocks.filter(([x, y]) => x + y < cx + cy);
+  const before = rocks.filter(([x, y]) => x + y >= cx + cy);
+  for (const [x, y, r, h, c] of behind) boulder(m, x, y, r, h, c, 0.35);
+
+  // The wall itself.
+  m.cylinder(cx, cy, 0, wallR, wallH, fieldstone([5, 4, 6, 4, 5], 11), P.mortar);
+  // The lip: big flat capstones, slightly overhanging the wall.
+  const capR = wallR + 0.06;
+  const caps = 9;
+  m.cylinder(cx, cy, wallH, capR, lipH, (u, v) => {
+    const fu = u * caps * 0.5 + 0.3;
+    if ((fu % 1) < (caps * 0.5) / 24) return P.mortar;
+    let c = FIELDSTONE[Math.floor(hash(Math.floor(fu), 21) * FIELDSTONE.length)];
+    c = mix(c, 0xd0ced6, 0.25);
+    c = mix(c, u < 0.4 ? 0xe0dee6 : 0x3e3c48, u < 0.4 ? (0.4 - u) * 0.5 : (u - 0.4) * 0.4);
+    return v > 0.75 ? darken(c, 0.7) : v < 0.25 ? mix(c, 0xe8e6ee, 0.25) : c;
+  }, (u, v) => {
+    // Looking down on the lip: capstones round the edge, then the dark shaft.
+    const dx = u * 2 - 1;
+    const dy = v * 2 - 1;
+    const d = Math.hypot(dx, dy);
+    const inner = wallR / capR - 0.2;
+    if (d > inner) {
+      const ang = (Math.atan2(dy, dx) / (Math.PI * 2) + 1) % 1;
+      const fa = ang * caps * 2 + 0.15;
+      if (fa % 1 < 0.08 || d < inner + 0.035) return P.mortar;
+      const c = mix(FIELDSTONE[Math.floor(hash(Math.floor(fa), 21) * FIELDSTONE.length)], 0xd0ced6, 0.35);
+      // Worn smooth and pale where hands and buckets rest on it; lit from the upper left.
+      return dx + dy < -0.6 ? mix(c, 0xeceaf0, 0.25) : dx + dy > 0.8 ? darken(c, 0.85) : c;
+    }
+    // Down the shaft: the far side's stones show at the back, fading into the dark.
+    const depth = (dx + dy) / (inner * 2.2) + 0.5; // 0 at the back wall, 1 at the front
+    if (depth < 0.45) {
+      const ring = Math.floor((Math.atan2(dy, dx) + Math.PI) * 6);
+      const course = Math.floor(depth * 14);
+      if ((depth * 14) % 1 < 0.2 || hash(ring, course) < 0.12) return 0x1c1a24;
+      return mix(0x5a5866, 0x1c1a24, depth / 0.45);
+    }
+    // Far below, a glint of water.
+    const w = (dx - 0.05) ** 2 + (dy - 0.1) ** 2;
+    if (w < 0.02) return w < 0.004 ? 0x5a8cb4 : 0x1d3a5c;
+    return 0x14121a;
   });
-  // Crossbar with the rope and bucket.
-  m.box(0.95, 0.35, 46, 0.1, 1.3, 4, { top: P.barkLight, left: P.bark, right: P.barkDark });
-  m.box(0.99, 0.99, 24, 0.02, 0.02, 22, { top: P.linenDark, left: P.linen, right: P.linenDark });
-  m.cylinder(1, 1, 18, 0.12, 8, (u, v) => (v < 0.2 ? P.iron : u < 0.4 ? P.plankLight : P.plank), P.plank);
-  m.box(0.95, 1.55, 0, 0.1, 0.1, 54, { top: P.barkLight, left: P.bark, right: P.barkDark });
-  // A little gabled roof of wooden shingles.
-  const shingles: Shader = (u, v) => ((v * 5) % 1 < 0.2 || (u * 6 + Math.floor(v * 5) * 0.5) % 1 < 0.08 ? P.barkDark : P.plank);
-  m.quad({ x: 0.45, y: 0.2, z: 54 }, { x: 0.55, y: 0, z: 16 }, { x: 0, y: 1.6, z: 0 }, (u, v) => darken(shingles(u, v) ?? P.plank));
-  m.quad({ x: 1.0, y: 0.2, z: 70 }, { x: 0.55, y: 0, z: -16 }, { x: 0, y: 1.6, z: 0 }, shingles);
+
+  // The windlass posts: rough-hewn timber, set into the lip on either side.
+  const post = { top: P.barkLight, left: (u: number, v: number) => (hash(Math.floor(v * 20), 3) < 0.15 ? P.barkDark : u < 0.3 ? P.barkLight : P.bark), right: P.barkDark };
+  m.box(0.94, 0.28, rim - 2, 0.12, 0.12, 36, post);
+  // A wedge of stone at the foot of each post holds it fast.
+  m.box(0.9, 0.32, rim - 2, 0.2, 0.08, 4, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
+
+  // The windlass: a log drum between the posts with the rope wound round its middle.
+  const drumZ = rim + 18;
+  m.box(0.96, 0.4, drumZ, 0.08, 1.2, 7, {
+    top: (_u, v) => (v > 0.38 && v < 0.62 ? P.straw : P.barkLight),
+    left: (_u, v) => (v < 0.2 ? P.barkLight : v > 0.75 ? P.barkDark : P.bark),
+    right: (u) => (u > 0.38 && u < 0.62 ? (Math.floor(u * 60) % 2 ? P.strawDark : P.straw) : P.bark),
+  });
+  // The rope down to the bucket, which hangs just above the shaft.
+  m.box(1.0, 1.0, rim + 12, 0.02, 0.02, drumZ - rim - 12, { top: P.straw, left: P.straw, right: P.strawDark });
+  m.box(0.93, 1.0, rim + 11, 0.14, 0.02, 1, { top: P.iron, left: P.iron, right: P.iron });
+  m.cylinder(1, 1, rim + 2, 0.13, 10, (u, v) => {
+    if (v < 0.12 || (v > 0.55 && v < 0.65)) return u < 0.35 ? P.ironLight : P.iron;
+    const stave = Math.floor(u * 7);
+    const c = stave % 2 ? P.plank : P.plankLight;
+    return u > 0.7 ? darken(c, 0.75) : c;
+  }, (u, v) => ((u - 0.5) ** 2 + (v - 0.5) ** 2 < 0.12 ? 0x1d3a5c : P.plankDark));
+
+  // Front post, the crank sticking out of it, and its stone wedge.
+  m.box(0.94, 1.6, rim - 2, 0.12, 0.12, 36, post);
+  m.box(0.9, 1.64, rim - 2, 0.2, 0.08, 4, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
+  m.box(0.98, 1.72, drumZ + 2, 0.04, 0.16, 3, { top: P.ironLight, left: P.iron, right: P.iron });
+  m.box(0.98, 1.85, drumZ - 6, 0.04, 0.04, 10, { top: P.ironLight, left: P.iron, right: P.iron });
+  m.box(0.98, 1.85, drumZ - 8, 0.16, 0.04, 3, { top: P.plankLight, left: P.plank, right: P.plankDark });
+
+  // Boulders in front of the wall, painted over its foot.
+  for (const [x, y, r, h, c] of before) boulder(m, x, y, r, h, c, 0.35);
+
+  // A little gabled roof of wooden shingles, overhanging the posts, with a ridge board.
+  const roofZ = rim + 34;
+  const shingles = (dim: number): Shader => (u, v) => {
+    const row = Math.floor(v * 6);
+    const lv = (v * 6) % 1;
+    const col = Math.floor(u * 7 + row * 0.5);
+    if (lv > 0.82) return darken(P.barkDark, dim);
+    if ((u * 7 + row * 0.5) % 1 < 0.07) return darken(P.barkDark, dim);
+    const base = hash(col, row) < 0.25 ? P.plankDark : hash(col, row) > 0.8 ? P.plankLight : P.plank;
+    return darken(lv < 0.2 ? mix(base, 0xd8b890, 0.25) : base, dim);
+  };
+  const eave = 0.36;
+  const rise = 17;
+  // Gable ends: a triangle of boards under each slope.
+  const gable: Shader = (u, v) => (Math.abs(u - 0.5) * 2 > 1 - v ? null : Math.floor(u * 6) % 2 ? P.plankDark : P.plank);
+  m.quad({ x: 1 - eave, y: 1.66, z: roofZ + rise }, { x: eave * 2, y: 0, z: 0 }, { x: 0, y: 0, z: -rise }, (u, v) => {
+    const g = gable(u, 1 - v);
+    return g === null ? null : darken(g, 0.85);
+  });
+  m.quad({ x: 1 - eave, y: 0.1, z: roofZ }, { x: eave, y: 0, z: rise }, { x: 0, y: 1.8, z: 0 }, shingles(0.72));
+  m.quad({ x: 1, y: 0.1, z: roofZ + rise }, { x: eave, y: 0, z: -rise }, { x: 0, y: 1.8, z: 0 }, shingles(1));
+  m.box(0.97, 0.06, roofZ + rise - 1, 0.06, 1.88, 3, { top: P.barkLight, left: P.bark, right: P.barkDark });
+  return m;
+}
+
+/**
+ * The ground round the market well: flat stones of all shapes and sizes laid
+ * in the earth, close-set by the well and thinning out raggedly towards the
+ * square, with grass and moss in the cracks. Painted flat into the ground, in
+ * the same frame as the well so both can be placed at the same corner.
+ */
+function wellStones(): IsoModel {
+  const m = new IsoModel();
+  const cx = 1;
+  const cy = 1;
+  const span = 2.6;
+  const cell = 0.42;
+  // Jittered seeds on a grid make an uneven crazy-paving of flagstones.
+  const seed = (i: number, j: number) => ({
+    x: (i + 0.15 + hash(i, j) * 0.7) * cell,
+    y: (j + 0.15 + hash(j + 31, i + 17) * 0.7) * cell,
+  });
+  // How far the paving reaches in each direction: ragged, never a neat circle.
+  const reach = (a: number) => 1.75 + 0.28 * Math.sin(a * 3 + 1.1) + 0.18 * Math.sin(a * 5 + 2.3) + 0.1 * Math.sin(a * 9);
+  const kept = (i: number, j: number) => {
+    const s = seed(i, j);
+    const d = Math.hypot(s.x - cx, s.y - cy);
+    const r = reach(Math.atan2(s.y - cy, s.x - cx));
+    if (d < r - 0.45) return true;
+    // Near the edge, some stones are missing or sunk out of sight.
+    if (d < r + 0.2) return hash(i * 3 + 5, j * 7 + 2) < (r + 0.2 - d) / 0.65;
+    // A few strays out in the earth.
+    return d < r + 0.7 && hash(i + 9, j + 4) < 0.12;
+  };
+  m.quad({ x: cx - span, y: cy - span, z: 0 }, { x: span * 2, y: 0, z: 0 }, { x: 0, y: span * 2, z: 0 }, (u, v) => {
+    const gx = cx - span + u * span * 2;
+    const gy = cy - span + v * span * 2;
+    const ci = Math.floor(gx / cell);
+    const cj = Math.floor(gy / cell);
+    let d1 = Infinity;
+    let d2 = Infinity;
+    let best = { i: 0, j: 0, x: 0, y: 0 };
+    for (let j = cj - 2; j <= cj + 2; j++) {
+      for (let i = ci - 2; i <= ci + 2; i++) {
+        const s = seed(i, j);
+        const d = Math.hypot(gx - s.x, gy - s.y);
+        if (d < d1) {
+          d2 = d1;
+          d1 = d;
+          best = { i, j, ...s };
+        } else if (d < d2) d2 = d;
+      }
+    }
+    if (!kept(best.i, best.j)) return null;
+    const gap = d2 - d1;
+    const h = hash(best.i * 5 + 1, best.j * 3 + 7);
+    // Smaller stones are shrunk inside their cells, leaving earth and grass round them.
+    const shrink = h < 0.3 ? 0.05 : 0.02;
+    if (gap < shrink) {
+      // The cracks: earth, with tufts of grass and moss here and there.
+      const g = hash(Math.floor(gx * 40), Math.floor(gy * 40));
+      if (Math.hypot(gx - cx, gy - cy) < 0.75) return P.mortar;
+      return g < 0.35 ? P.grass : g < 0.55 ? P.moss : g < 0.7 ? P.grassDark : P.dirtDark;
+    }
+    let c = FIELDSTONE[Math.floor(h * FIELDSTONE.length)];
+    // Each stone slightly domed: lit along its back edges (towards the light), shadowed at the front.
+    const dx = gx - best.x;
+    const dy = gy - best.y;
+    if (gap < shrink + 0.04) c = dx + dy < 0 ? mix(c, 0xdcdae2, 0.35) : darken(c, 0.68);
+    else if (dx + dy > 0.08) c = darken(c, 0.9);
+    // Lichen and wear.
+    const speck = hash(Math.floor(gx * 60), Math.floor(gy * 60) + 3);
+    if (speck > 0.965) c = mix(c, 0xb4b070, 0.45);
+    else if (speck < 0.04) c = darken(c, 0.82);
+    // Moss creeps over the stones furthest out.
+    const far = Math.hypot(gx - cx, gy - cy) / reach(Math.atan2(gy - cy, gx - cx));
+    if (far > 0.75 && hash(Math.floor(gx * 50), Math.floor(gy * 50) + 9) < (far - 0.75) * 1.2) c = mix(c, P.moss, 0.45);
+    return c;
+  });
   return m;
 }
 
@@ -347,8 +590,8 @@ export const TOWNHOUSES: Record<string, TownhouseStyle> = {
 };
 
 export function generateMarket(scene: Phaser.Scene): void {
-  const put = (key: string, model: IsoModel) => {
-    const r = model.render();
+  const put = (key: string, model: IsoModel, outline = true) => {
+    const r = model.render(outline);
     const tex = r.canvas.toTexture(scene, key);
     MODEL_ART[key] = { key, originX: r.anchorX / tex.width, originY: r.anchorY / tex.height };
   };
@@ -358,6 +601,7 @@ export function generateMarket(scene: Phaser.Scene): void {
   }
   for (const [key, style] of Object.entries(TOWNHOUSES)) put(key, townhouse(style));
   put('mkt-well', well());
+  put('mkt-well-stones', wellStones(), false);
   put('mkt-lamp', lampPost());
   put('mkt-bench', bench());
   put('mkt-crates', crates());

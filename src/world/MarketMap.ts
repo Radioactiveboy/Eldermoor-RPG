@@ -75,14 +75,14 @@ export function buildMarketMap(gateOpen = false): MapData {
     props.push(new Array(W).fill(Prop.None));
   }
 
-  // The square: earth trodden bare by feet and carts, fading into worn grass at the edges, with a
-  // few flagstones laid round the well.
+  // The square: earth trodden bare by feet and carts, fading into worn grass at the edges.
   for (let y = 5; y <= 22; y++) {
     for (let x = 5; x <= 24; x++) {
       const edge = Math.min(x - 5, 24 - x, y - 5, 22 - y);
       const bare = edge >= 3 ? 1 : edge === 2 ? 0.8 : edge === 1 ? 0.5 : 0.25;
       if (rnd.frac() < bare) terrain[y][x] = Terrain.Dirt;
-      if (Math.hypot(x + 0.5 - 15, y + 0.5 - 14) < 2.3) terrain[y][x] = Terrain.Stone;
+      // Bare earth all round the well, where the flat stones are laid (see below).
+      if (Math.hypot(x + 0.5 - 15, y + 0.5 - 14) < 3) terrain[y][x] = Terrain.Dirt;
     }
   }
   // The road in from the east, worn into the grass: it dips north a little on its way out of the
@@ -148,7 +148,8 @@ export function buildMarketMap(gateOpen = false): MapData {
   house('bld-house-red-back', 13, 24);
   house('bld-house-ochre-back', 19, 24);
 
-  // The well in the middle of the square.
+  // The well in the middle of the square, on a ragged spread of flat stones set into the earth.
+  placeObject(data, { key: 'mkt-well-stones', tx: 14, ty: 13, w: 2, h: 2, flat: true });
   placeObject(data, { key: 'mkt-well', tx: 14, ty: 13, w: 2, h: 2 });
 
   // The traders, each behind their counter.
