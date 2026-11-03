@@ -140,16 +140,26 @@ export class IsoMap {
   /**
    * The centre of the round thing (a trunk, a boulder, a person) a circle at
    * (x, y) would bump into, if that's what is in the way. Lets characters
-   * slip around round things instead of stopping dead against them.
+   * slip around round things instead of stopping dead against them. Just
+   * clipping the corner of a box (a table, the end of the bar) counts too:
+   * the corner is rounded like a post, unless a flat side is also in the way.
    */
   roundBlocker(x: number, y: number, r: number, ignore?: Body): Vec2 | undefined {
+    let corner: Vec2 | undefined;
+    let flat = false;
     for (let ty = Math.floor(y - r); ty <= Math.floor(y + r); ty++) {
       for (let tx = Math.floor(x - r); tx <= Math.floor(x + r); tx++) {
         for (const s of this.shapes[ty * this.width + tx] ?? []) {
-          if (s.kind === 'circle' && circleHits(s, x, y, r)) return s;
+          if (!circleHits(s, x, y, r)) continue;
+          if (s.kind === 'circle') return s;
+          const outsideX = x < s.x0 || x > s.x1;
+          const outsideY = y < s.y0 || y > s.y1;
+          if (outsideX && outsideY) corner ??= { x: x < s.x0 ? s.x0 : s.x1, y: y < s.y0 ? s.y0 : s.y1 };
+          else flat = true;
         }
       }
     }
+    if (corner && !flat) return corner;
     for (const b of this.bodies) {
       if (b !== ignore && (b.gx - x) ** 2 + (b.gy - y) ** 2 < (b.radius + r) ** 2) return { x: b.gx, y: b.gy };
     }

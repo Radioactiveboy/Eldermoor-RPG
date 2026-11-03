@@ -25,7 +25,18 @@ function emptyRoom(w: number, h: number, floor: Terrain): Pick<MapData, 'width' 
   return { width: w, height: h, terrain, props };
 }
 
-const stoolShape = [circle(0.5, 0.5, 0.26)];
+/**
+ * Just the legs, not the seat that overhangs them: a stool is low enough to
+ * brush past, so it shouldn't stop the hero a hand's breadth short of it.
+ */
+const stoolShape = [circle(0.5, 0.5, 0.15)];
+
+/**
+ * A taproom table (two tiles wide) by its legs rather than its whole
+ * footprint, so there's room to edge round it and between it and its stools.
+ * One box per tile, since each shape must lie inside one tile.
+ */
+const tableShape = [box(0.12, 0.12, 1, 0.88), box(1, 0.12, 1.88, 0.88)];
 
 /**
  * The taproom. The bar runs along the back on the right, with Godric behind
@@ -117,12 +128,12 @@ export function buildTavernMap(): MapData {
   }
   // The tables, each with its stools, some of them the regulars'. The hero's stools all face away from
   // the room (towards the back walls), so they're seen sitting at the table rather than through it.
-  add('tav-table-0', 2, 4, { w: 2 });
+  add('tav-table-0', 2, 4, { w: 2, shapes: tableShape });
   add('furn-stool', 1, 4, { shapes: stoolShape }); // Sigrun's
   add('furn-stool', 4, 4, { shapes: stoolShape });
   seat(4, 4, { x: -1, y: 0 }, { x: 4.5, y: 3.5 });
 
-  add('tav-table-1', 6, 5, { w: 2 });
+  add('tav-table-1', 6, 5, { w: 2, shapes: tableShape });
   add('furn-stool', 8, 5, { shapes: stoolShape });
   add('furn-stool', 6, 6, { shapes: stoolShape });
   add('furn-stool', 7, 6, { shapes: stoolShape });
@@ -130,12 +141,12 @@ export function buildTavernMap(): MapData {
   seat(6, 6, { x: 0, y: -1 }, { x: 6.5, y: 7.5 });
   seat(7, 6, { x: 0, y: -1 }, { x: 7.5, y: 7.5 });
 
-  add('tav-table-2', 3, 7, { w: 2 });
+  add('tav-table-2', 3, 7, { w: 2, shapes: tableShape });
   add('furn-stool', 3, 8, { shapes: stoolShape });
   add('furn-stool', 5, 7, { shapes: stoolShape }); // Fenwick's
   seat(3, 8, { x: 0, y: -1 }, { x: 2.5, y: 8.5 });
 
-  add('tav-table-3', 8, 8, { w: 2 });
+  add('tav-table-3', 8, 8, { w: 2, shapes: tableShape });
   add('furn-stool', 7, 8, { shapes: stoolShape }); // Ada's
   add('furn-stool', 10, 8, { shapes: stoolShape }); // Cobb's
   add('furn-stool', 8, 9, { shapes: stoolShape });
