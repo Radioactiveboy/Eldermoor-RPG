@@ -1,5 +1,5 @@
 import { darker, type Tones } from './character';
-import { Detail, Hit, limb, Model, Pose3D, Solid } from './figure3d';
+import { Detail, Hit, limb, Material, Model, Pose3D, Solid } from './figure3d';
 import { PALETTE as P } from './palette';
 import { MORTEN } from './tollgate';
 
@@ -103,6 +103,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   nell: nellModel,
   rosie: rosieModel,
   pell: pellModel,
+  fisherman: fishermanModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1209,5 +1210,99 @@ export function pellModel(pose: Pose3D): Model {
   for (const side of [-1, 1]) details.push({ x: side * 0.6, y: hy - 2.4, z: 4.9, color: 0xb86a58 }); // a smile
   // The lute's sound-hole.
   details.push({ x: 1.4, y: 18.2 - b, z: 6, color: 0x3a2414 });
+  return { solids, details };
+}
+
+/** Legs for a seated figure: thighs forward from the hips, shins down to the ground, feet flat. */
+function seatedLegs(width: number, legs: Material, boots: Material, r = 1.9): Solid[] {
+  const out: Solid[] = [];
+  const hip = 10;
+  for (const side of [-1, 1]) {
+    const x = side * width;
+    out.push(...limb([x, hip, -0.5], [x, hip + 0.4, 5], r, r * 0.95, legs));
+    out.push(...limb([x, hip, 5.4], [x, 3.4, 5.8], r * 0.9, r * 0.8, legs));
+    out.push({ cx: x, cy: 1.3, cz: 6.6, rx: r * 0.9, ry: 1.4, rz: 2.6, material: boots });
+  }
+  return out;
+}
+
+/**
+ * Old Tobin the fisherman, on his stool watching his float: a sagging oilcloth
+ * hat, a white beard, a darned blue-grey jersey and patched breeches, his hands
+ * resting on his knees.
+ */
+export function fishermanModel(pose: Pose3D): Model {
+  const jersey: Tones = [0x56687a, 0x3c4a5a, 0x72869a];
+  const darn: Tones = [0x6e7e8e, 0x4e5c6a, 0x8a9aaa];
+  const breeches: Tones = [0x5e5040, 0x40362a, 0x766650];
+  const patch: Tones = [0x7a6a4a, 0x5a4c34, 0x94845e];
+  const skin: Tones = [0xd09a76, 0xa47052, 0xe8b490];
+  const hair: Tones = [0xd8d4cc, 0xaaa69e, 0xf0ece4];
+  const beard: Tones = [0xe4e0d8, 0xb6b2aa, 0xfaf8f2];
+  const oilcloth: Tones = [0x6a5e3a, 0x4a4026, 0x847650];
+  const boots: Tones = [P.barkDark, P.ink, P.bark];
+  const b = pose.bob;
+  const s = pose.stride;
+  const sit = !!pose.sit;
+  const solids: Solid[] = [];
+  // A knitted jersey, the rows showing, darned here and there.
+  const knit = (h: Hit): Tones => {
+    if (dusted(h, 0.06)) return darn;
+    return Math.floor(h.y * 1.2) % 2 ? jersey : [jersey[0], jersey[1], jersey[0]];
+  };
+  const patched = (h: Hit): Tones => (h.z > 3 && h.x > 0.5 && h.x < 3.6 && Math.abs(h.y - (sit ? 10.6 : 8)) < 1.6 ? patch : breeches);
+
+  if (sit) {
+    solids.push(...seatedLegs(2.3, patched, boots));
+  } else {
+    for (const side of [-1, 1]) {
+      const swing = s * side;
+      const lift = swing < 0 ? 0.9 : 0;
+      solids.push(...limb([side * 2.3, 12.5 - b * 0.5, 0], [side * 2.3, 3.6 + lift, swing * 2.4], 2, 1.7, patched));
+      solids.push({ cx: side * 2.3, cy: 1.3 + lift, cz: 0.8 + swing * 2.4, rx: 1.8, ry: 1.4, rz: 2.7, material: boots });
+    }
+  }
+
+  // A round old back under the jersey, hunched a little forward.
+  const lean = sit ? 1 : 0.5;
+  solids.push({ cx: 0, cy: 14 - b, cz: 0, rx: 4.7, ry: 2.8, rz: 3.6, material: knit });
+  solids.push({ cx: 0, cy: 17.6 - b, cz: lean * 0.4, rx: 4.9, ry: 3.4, rz: 3.8, material: knit });
+  solids.push({ cx: 0, cy: 22 - b, cz: lean * 0.8, rx: 5.3, ry: 4.6, rz: 3.9, material: knit });
+  // A rolled collar.
+  solids.push({ cx: 0, cy: 26 - b, cz: lean, rx: 3.4, ry: 1.3, rz: 3.2, material: jersey });
+
+  for (const side of [-1, 1]) {
+    const swing = sit ? 0 : -s * side * 2;
+    solids.push({ cx: side * 4.8, cy: 24.6 - b, cz: lean, rx: 2.4, ry: 2.2, rz: 2.4, material: knit });
+    // Seated, the hands rest on the knees.
+    const elbow: [number, number, number] = sit ? [side * 5.6, 19.6 - b, 2] : [side * 6, 20.2 - b, lean + swing * 0.5];
+    const hand: [number, number, number] = sit ? [side * 3.6, 12, 4.8] : [side * 6.2, 16.6 - b, 1 + lean + swing];
+    solids.push(...limb([side * 5.3, 24 - b, lean], elbow, 1.8, 1.6, knit));
+    solids.push(...limb(elbow, hand, 1.6, 1.5, knit));
+    solids.push({ cx: hand[0], cy: hand[1] - 0.6, cz: hand[2] + 0.4, rx: 1.6, ry: 1.5, rz: 1.7, material: skin });
+  }
+
+  // Head pushed forward: white hair and beard, and the hat's brim sagging all round.
+  const hy = 31.6 - b;
+  const hz = 1.4;
+  solids.push({ cx: 0, cy: 27 - b, cz: hz * 0.6, rx: 2.1, ry: 2, rz: 2.1, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (h.nz > -0.35 && (py < -1.6 || (py < 0 && Math.abs(h.nx) > 0.6))) return beard;
+    if (h.nz < -0.2 || Math.abs(h.nx) > 0.7) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: hz, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
+  solids.push({ cx: 0, cy: hy - 4.8, cz: hz + 2.6, rx: 3.4, ry: 2.6, rz: 2.2, material: beard });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: hz + 5.2, rx: 1.1, ry: 1.2, rz: 1, material: skin });
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const sag = 0.8 + Math.max(0, Math.sin(a)) * 0.8;
+    solids.push({ cx: Math.cos(a) * 5.4, cy: hy + 3.4 - sag, cz: hz - 0.4 + Math.sin(a) * 5.2, rx: 2.6, ry: 0.8, rz: 2.6, material: oilcloth });
+  }
+  solids.push({ cx: 0, cy: hy + 4, cz: hz - 0.4, rx: 5.3, ry: 3.6, rz: 5.1, material: oilcloth });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: hz + 5, color: P.eye });
   return { solids, details };
 }

@@ -57,8 +57,10 @@ export interface Model {
 export interface Pose3D {
   /** -1..1 leg swing: positive puts the figure's right leg forward. */
   stride: number;
-  /** Units the upper body sinks (breathing, the walk's contact frames). */
+  /** Units the upper body sinks (breathing, the walk's contact frames, or sitting down). */
   bob: number;
+  /** Seated on a stool or bench: thighs forward, shins down, the body lowered by `bob`. */
+  sit?: boolean;
 }
 
 /** Drawn directions, in sheet-row order: angle in degrees, 0 facing the viewer, 90 facing screen-right. */
@@ -86,7 +88,11 @@ const WALK: Pose3D[] = [
   { stride: 0, bob: 0 },
 ];
 /** Same columns as character.ts's sheets (4 idle, 4 walk, 2 sit), so animations line up. */
-const POSES = [...IDLE, ...WALK, IDLE[0], IDLE[2]];
+const SIT: Pose3D[] = [
+  { stride: 0, bob: 3.5, sit: true },
+  { stride: 0, bob: 4.2, sit: true },
+];
+const POSES = [...IDLE, ...WALK, ...SIT];
 
 /** How far the view looks down on the figure. */
 const PITCH = (16 * Math.PI) / 180;
