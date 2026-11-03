@@ -88,6 +88,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   guard: guardModel,
   tollguard: tollGuardModel,
   iran: iranModel,
+  porter: porterModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -523,4 +524,116 @@ export function iranModel(pose: Pose3D): Model {
   const details: Detail[] = [];
   for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: hz + 5, color: P.eye });
   return { solids, details };
+}
+
+/** How one of the brothers of Saint Elda's is turned out. */
+interface MonkLook {
+  habit: Tones;
+  skin: Tones;
+  /** The ring of hair round a shaved crown. */
+  hair: Tones;
+  beard?: Tones;
+  boots: Tones;
+  /** The cowl up over the head rather than lying on the shoulders. */
+  hoodUp?: boolean;
+  /** A tall staff in the right hand. */
+  staff?: boolean;
+  /** A head pushed forward with age. */
+  stooped?: boolean;
+}
+
+/**
+ * A brother of Saint Elda's: a wool habit to the ankles with wide sleeves, a
+ * rope cincture, the cowl on the shoulders (or up), and a tonsured head.
+ */
+function monkModel(pose: Pose3D, look: MonkLook): Model {
+  const { habit, skin, hair, boots } = look;
+  const rope: Tones = [0xc8b07a, 0x9a8458, 0xe0c890];
+  const shaft: Tones = [P.bark, P.barkDark, P.barkLight];
+  const b = pose.bob;
+  const s = pose.stride;
+  const lean = look.stooped ? 1 : 0;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    solids.push({ cx: side * 2.3, cy: 1.2 + (swing < 0 ? 0.8 : 0), cz: 0.8 + swing * 2.3, rx: 1.7, ry: 1.3, rz: 2.5, material: boots });
+  }
+
+  // The habit to the ankles, falling in a fold or two, the rope's end hanging at the front.
+  const skirt = (h: Hit): Tones => {
+    if (h.nz > 0.6 && Math.abs(h.x - 1.2) < 0.6 && h.y > 9) return rope;
+    return habit;
+  };
+  for (let y = 2.5; y <= 16; y += 0.5) {
+    const t = (16 - y) / 13.5;
+    solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 4.7 + t * 1.6, ry: 0.8, rz: 3.8 + t * 1.1, material: skirt });
+  }
+  const body = (h: Hit): Tones => (Math.abs(h.y - (16.6 - b)) < 0.6 ? rope : habit);
+  solids.push({ cx: 0, cy: 17 - b, cz: 0, rx: 4.6, ry: 2.8, rz: 3.6, material: body });
+  solids.push({ cx: 0, cy: 21.8 - b, cz: lean * 0.5, rx: 5.1, ry: 4.6, rz: 3.8, material: habit });
+
+  // The cowl, lying in folds over the shoulders and back.
+  if (!look.hoodUp) {
+    solids.push({ cx: 0, cy: 25.6 - b, cz: lean * 0.5 - 1.4, rx: 5.4, ry: 2, rz: 4.2, material: habit });
+    solids.push({ cx: 0, cy: 24 - b, cz: lean * 0.5 - 3.4, rx: 3.6, ry: 3, rz: 1.8, material: habit });
+  }
+
+  // Wide sleeves; the right hand (screen-left facing us) holds the staff if there is one.
+  let staffHand: [number, number, number] | undefined;
+  for (const side of [-1, 1]) {
+    const holding = !!look.staff && side === -1;
+    const swing = holding ? 0 : -s * side * 2;
+    solids.push({ cx: side * 4.7, cy: 24.4 - b, cz: lean * 0.5, rx: 2.3, ry: 2.2, rz: 2.3, material: habit });
+    const elbow: [number, number, number] = [side * 5.8, 20.4 - b, lean * 0.5 + (holding ? 0.8 : swing * 0.5)];
+    const wrist: [number, number, number] = holding ? [side * 6.8, 19.2 - b, 2] : [side * 6.1, 17.4 - b, 1 + lean * 0.5 + swing];
+    solids.push(...limb([side * 5.2, 24 - b, lean * 0.5], elbow, 1.8, 1.9, habit));
+    solids.push(...limb(elbow, wrist, 2, 2.4, habit));
+    const hand = { cx: wrist[0], cy: wrist[1] - 1.2, cz: wrist[2] + 0.2, rx: 1.4, ry: 1.6, rz: 1.4, material: skin };
+    solids.push(hand);
+    if (holding) staffHand = [hand.cx, hand.cy, hand.cz];
+  }
+  if (staffHand) {
+    const [x, , z] = staffHand;
+    const pole = limb([x, 0.4, z - s * 0.6], [x, 37 - b, z], 0.6, 0.6, shaft, 0.4);
+    solids.push(...pole.map((p) => ({ ...p, soft: true })));
+  }
+
+  // The head: a ring of hair round a shaved crown, or the cowl drawn up over it.
+  const hy = 32 - b - lean * 0.4;
+  const hz = 0.2 + lean;
+  solids.push({ cx: 0, cy: 27 - b, cz: lean * 0.6, rx: 2.1, ry: 2, rz: 2.1, material: skin });
+  const beard = look.beard;
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (beard && h.nz > -0.35 && (py < -1.6 || (py < 0 && Math.abs(h.nx) > 0.6))) return beard;
+    if (py > 3.6) return skin; // the tonsure
+    if (h.nz < -0.2 || (Math.abs(h.nx) > 0.7 && py > -1.5) || py > 2.4) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: hz, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
+  if (beard) solids.push({ cx: 0, cy: hy - 4.6, cz: hz + 2.6, rx: 3, ry: 2.4, rz: 2, material: beard });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: hz + 5.2, rx: 0.9, ry: 1.1, rz: 0.9, material: skin });
+  if (look.hoodUp) {
+    // The cowl drawn up: a deep hood round the face, open at the front.
+    for (const [dy, dz, r] of [[0.6, -1.6, 7], [3.4, -2.2, 6.2], [-3.6, -1.6, 6.4]] as const) {
+      solids.push({ cx: 0, cy: hy + dy, cz: hz + dz, rx: r, ry: r, rz: r - 0.4, material: habit });
+    }
+  }
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: hz + 5, color: P.eye });
+  return { solids, details };
+}
+
+/** Brother Wystan, the porter: an old man in a grey-brown habit, white-haired, leaning on his staff. */
+export function porterModel(pose: Pose3D): Model {
+  return monkModel(pose, {
+    habit: [0x5a4636, 0x3c2e24, 0x76604a],
+    skin: [0xe2b896, 0xb88c6e, 0xf6d2b2],
+    hair: [0xd8d4d0, 0xa8a4a2, 0xf0ece8],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    staff: true,
+    stooped: true,
+  });
 }
