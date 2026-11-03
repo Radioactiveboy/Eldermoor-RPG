@@ -97,6 +97,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   cook: cookModel,
   pedlar: pedlarModel,
   pilgrim: pilgrimModel,
+  drover: droverModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -846,4 +847,80 @@ export function pilgrimModel(pose: Pose3D): Model {
     model.details.push({ x, y: y - b, z: 3.6, color: 0xf2e6c8 });
   }
   return model;
+}
+
+/**
+ * Wil the drover: a lanky lad with a mop of red hair, a belted blue tunic over
+ * linen sleeves, and a hazel switch for driving his sheep.
+ */
+export function droverModel(pose: Pose3D): Model {
+  const tunic: Tones = [0x3d5a8a, 0x2a3e62, 0x5577aa];
+  const linen: Tones = [P.linen, P.linenDark, 0xfff6e6];
+  const trouser: Tones = [0x6b4a30, 0x4a3020, 0x845c3e];
+  const belt: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const skin: Tones = [P.skin, P.skinShade, 0xf4cfa8];
+  const hair: Tones = [0xb4562a, 0x823c1c, 0xd0703e];
+  const boots: Tones = [P.leather, P.leatherDark, P.leatherLight];
+  const hazel: Tones = [P.bark, P.barkDark, P.barkLight];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    solids.push(...limb([side * 2.1, 13.5 - b * 0.5, 0], [side * 2.1, 3.6 + lift, swing * 2.5], 1.8, 1.5, trouser));
+    solids.push(...limb([side * 2.1, 5.6 + lift, swing * 2.5], [side * 2.1, 2.6 + lift, swing * 2.5], 1.8, 1.7, boots));
+    solids.push({ cx: side * 2.1, cy: 1.3 + lift, cz: 0.8 + swing * 2.5, rx: 1.6, ry: 1.3, rz: 2.4, material: boots });
+  }
+
+  // The tunic to the hips, belted, with the shirt showing at the neck.
+  const body = (h: Hit): Tones => {
+    if (Math.abs(h.y - (16.4 - b)) < 0.6) return belt;
+    if (h.z > 2 && Math.abs(h.x) < 1.6 - (25.5 - b - h.y) * 0.5 && h.y > 23.5 - b) return linen;
+    return tunic;
+  };
+  solids.push({ cx: 0, cy: 13.8 - b * 0.5, cz: 0, rx: 4.3, ry: 2.6, rz: 3.3, material: body });
+  solids.push({ cx: 0, cy: 17.2 - b, cz: 0, rx: 4.1, ry: 3.4, rz: 3.2, material: body });
+  solids.push({ cx: 0, cy: 22 - b, cz: 0, rx: 4.7, ry: 4.6, rz: 3.5, material: body });
+
+  // Linen sleeves; the right hand (screen-left facing us) carries the switch.
+  let switchHand: [number, number, number] = [0, 0, 0];
+  for (const side of [-1, 1]) {
+    const holding = side === -1;
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 4.4, cy: 24.6 - b, cz: 0, rx: 2.1, ry: 2.1, rz: 2.1, material: tunic });
+    const elbow: [number, number, number] = [side * 5.4, 20.2 - b, holding ? 0.8 : swing * 0.5];
+    const wrist: [number, number, number] = holding ? [side * 5.8, 17.6 - b, 2.6] : [side * 5.6, 16.8 - b, 0.8 + swing];
+    solids.push(...limb([side * 4.8, 24 - b, 0], elbow, 1.6, 1.4, linen));
+    solids.push(...limb(elbow, wrist, 1.4, 1.3, linen));
+    solids.push({ cx: wrist[0], cy: wrist[1] - 0.9, cz: wrist[2], rx: 1.4, ry: 1.5, rz: 1.4, material: skin });
+    if (holding) switchHand = [wrist[0], wrist[1] - 0.9, wrist[2]];
+  }
+  // The hazel switch, held low and pointing ahead, flicking as he walks.
+  const [hx, hy0, hz0] = switchHand;
+  const flick = s * 1.5;
+  const sw = limb([hx + 0.6, hy0 + 2, hz0 - 0.6], [hx - 4.5, 3 + Math.abs(flick), hz0 + 3 + flick], 0.55, 0.4, hazel, 0.35);
+  solids.push(...sw.map((p) => ({ ...p, soft: true })));
+
+  // Head: a mop of red hair falling over the brow.
+  const hy = 32.2 - b;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0, rx: 1.9, ry: 2, rz: 1.9, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (py > 1.6 || h.nz < -0.2 || (Math.abs(h.nx) > 0.66 && py > -2.4)) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.3, ry: 5.7, rz: 5.1, material: head, soft: true });
+  // Tufts sticking up.
+  for (const [x, z] of [[-2.2, 1.6], [1.4, 2.4], [2.8, -0.8], [-1, -1.6]]) {
+    solids.push({ cx: x, cy: hy + 5, cz: z, rx: 1.8, ry: 1.6, rz: 1.8, material: hair });
+  }
+  solids.push({ cx: 0, cy: hy - 0.4, cz: 5.1, rx: 0.8, ry: 1, rz: 0.8, material: skin });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 1.9, y: hy + 0.8, z: 5, color: P.eye });
+  details.push({ x: 0.4, y: hy - 2.4, z: 4.9, color: 0xb86a58 }); // a grin
+  details.push({ x: -0.6, y: hy - 2.4, z: 4.9, color: 0xb86a58 });
+  return { solids, details };
 }
