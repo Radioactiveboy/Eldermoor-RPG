@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import { BEAST_COLS } from '../art/beasts3d';
 import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
+import { DIRECTIONS_8 } from '../art/figure3d';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { FoeKind, FOES } from '../systems/Combat';
 import { findPath, GridPoint } from '../systems/Pathfinding';
@@ -61,6 +63,12 @@ export class Creature implements Body {
   /** Running from the player after being startled. */
   private bolting = false;
   private readonly ways: (typeof WAYS)[FoeKind];
+  /** Drawn in all eight directions (modelled in 3D, see beasts3d.ts), rather than side-on and mirrored. */
+  private readonly eight: boolean;
+  /** Which of DIRECTIONS_8 it faces. */
+  private facing = Math.floor(Math.random() * 8);
+  /** The animation playing ('walk', 'sniff', 'idle'), or the frame it's held on. */
+  private showing: { anim: string } | { frame: number } = { anim: 'sniff' };
 
   constructor(scene: Phaser.Scene, map: IsoMap, id: string, kind: FoeKind, gx: number, gy: number) {
     this.scene = scene;
@@ -72,12 +80,13 @@ export class Creature implements Body {
     this.home = { x: gx, y: gy };
     this.ways = WAYS[kind];
     const art = CREATURE_ART[kind];
+    this.eight = !!art.eight;
     const scale = art.scale ?? 1;
     const small = kind === 'hare' || kind === 'rat';
     this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : 1.4) * scale, (small ? 0.6 : 1) * scale);
     this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale);
-    this.sprite.play({ key: `${kind}-sniff`, startFrame: Math.floor(Math.random() * 4) });
-    this.sprite.setFlipX(Math.random() < 0.5);
+    this.sprite.play({ key: this.animKey('sniff'), startFrame: Math.floor(Math.random() * 4) });
+    if (!this.eight) this.sprite.setFlipX(Math.random() < 0.5);
     this.timer = 1 + Math.random() * 3;
     map.bodies.add(this);
     this.sync();
@@ -127,7 +136,7 @@ export class Creature implements Body {
       this.state = 'alert';
       this.path = [];
       this.faceTowards(player.x, player.y);
-      this.sprite.stop().setFrame(CREATURE_FRAME.snarl);
+      this.setFrame(CREATURE_FRAME.snarl);
       this.sync();
       return true;
     }
@@ -148,7 +157,7 @@ export class Creature implements Body {
   engage(): void {
     this.state = 'fight';
     this.path = [];
-    this.sprite.stop().setFrame(CREATURE_FRAME.snarl);
+    this.setFrame(CREATURE_FRAME.snarl);
   }
 
   /** Back to wandering, and leave the player be for a while (after they run away). */
@@ -163,7 +172,7 @@ export class Creature implements Body {
   die(): void {
     this.state = 'gone';
     this.map.bodies.delete(this);
-    this.sprite.stop().setFrame(CREATURE_FRAME.dead);
+    this.setFrame(CREATURE_FRAME.dead);
     this.shadow.setVisible(false);
     this.sprite.setDepth(depthAt(this.gx, this.gy) - 1);
   }
@@ -177,7 +186,7 @@ export class Creature implements Body {
     const len = Math.hypot(dx, dy) || 1;
     const to = { gx: this.gx + (dx / len) * 6, gy: this.gy + (dy / len) * 6 };
     this.faceTowards(to.gx, to.gy);
-    this.sprite.play(`${this.kind}-walk`).anims.timeScale = 1.8;
+    this.play('walk').anims.timeScale = 1.8;
     return new Promise((resolve) => {
       this.scene.tweens.add({
         targets: this,
@@ -199,7 +208,7 @@ export class Creature implements Body {
   moveTo(gx: number, gy: number, ms: number): Promise<void> {
     if (Math.hypot(gx - this.gx, gy - this.gy) < 0.05) return Promise.resolve();
     this.faceTowards(gx, gy);
-    this.sprite.play(`${this.kind}-walk`);
+    this.play('walk');
     return new Promise((resolve) => {
       this.scene.tweens.add({
         targets: this,
@@ -208,7 +217,7 @@ export class Creature implements Body {
         duration: ms,
         onUpdate: () => this.sync(),
         onComplete: () => {
-          this.sprite.stop().setFrame(CREATURE_FRAME.snarl);
+          this.setFrame(CREATURE_FRAME.snarl);
           this.sync();
           resolve();
         },
@@ -216,14 +225,47 @@ export class Creature implements Body {
     });
   }
 
-  /** The sprite is drawn facing screen-right; mirror it to face left. */
+  /**
+   * Turn towards a point. A beast drawn in eight directions turns to the
+   * nearest of them (keeping its place in whatever it's doing); one drawn
+   * side-on facing screen-right is mirrored to face left.
+   */
   faceTowards(gx: number, gy: number): void {
-    const screenDx = gridToScreen(gx - this.gx, gy - this.gy).x;
-    if (Math.abs(screenDx) > 2) this.sprite.setFlipX(screenDx < 0);
+    const screen = gridToScreen(gx - this.gx, gy - this.gy);
+    if (!this.eight) {
+      if (Math.abs(screen.x) > 2) this.sprite.setFlipX(screen.x < 0);
+      return;
+    }
+    if (Math.hypot(screen.x, screen.y) < 0.5) return;
+    const facing = (Math.round(Math.atan2(screen.x, screen.y) / (Math.PI / 4)) + 8) % 8;
+    if (facing === this.facing) return;
+    this.facing = facing;
+    if ('frame' in this.showing) this.setFrame(this.showing.frame);
+    else if (this.sprite.anims.isPlaying) {
+      const at = this.sprite.anims.currentFrame?.index ?? 1;
+      const timeScale = this.sprite.anims.timeScale;
+      this.sprite.play({ key: this.animKey(this.showing.anim), startFrame: at - 1 }).anims.timeScale = timeScale;
+    }
   }
 
+  /** The frame to show it by (in the fight's turn order): standing, turned three-quarters to the viewer. */
+  get portraitFrame(): number {
+    return this.eight ? 1 * BEAST_COLS : 0;
+  }
+
+  /** Hold on one of the frames in {@link CREATURE_FRAME}'s order, in the direction it faces. */
   setFrame(frame: number): void {
-    this.sprite.stop().setFrame(frame);
+    this.showing = { frame };
+    this.sprite.stop().setFrame(this.eight ? this.facing * BEAST_COLS + frame : frame);
+  }
+
+  private animKey(anim: string): string {
+    return this.eight ? `${this.kind}-${anim}-${DIRECTIONS_8[this.facing].name}` : `${this.kind}-${anim}`;
+  }
+
+  private play(anim: string): Phaser.GameObjects.Sprite {
+    this.showing = { anim };
+    return this.sprite.play(this.animKey(anim));
   }
 
   /** Stand and sniff the ground (or graze), or now and then lift the head to look around. */
@@ -232,11 +274,11 @@ export class Creature implements Body {
     this.sprite.anims.timeScale = 1;
     if (Math.random() < 0.35) {
       this.state = 'look';
-      this.sprite.play(`${this.kind}-idle`);
+      this.play('idle');
       this.timer = 1.2 + Math.random() * 1.5;
     } else {
       this.state = 'sniff';
-      this.sprite.play(`${this.kind}-sniff`);
+      this.play('sniff');
       this.timer = 2 + Math.random() * 3;
     }
   }
@@ -255,7 +297,7 @@ export class Creature implements Body {
       this.path = path;
       this.state = 'roam';
       this.bolting = true;
-      this.sprite.play(`${this.kind}-walk`).anims.timeScale = 1.8;
+      this.play('walk').anims.timeScale = 1.8;
       return;
     }
   }
@@ -277,7 +319,7 @@ export class Creature implements Body {
       if (!path || path.length === 0 || path.length > leash * 3) continue;
       this.path = path;
       this.state = 'roam';
-      this.sprite.play(`${this.kind}-walk`);
+      this.play('walk');
       return;
     }
     this.rest();

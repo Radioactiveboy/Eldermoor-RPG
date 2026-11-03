@@ -229,7 +229,7 @@ export class CombatScene extends Phaser.Scene {
       sprite: creature.sprite,
       offset: creature.offset,
       pos: () => ({ x: creature.gx, y: creature.gy }),
-      height: (CREATURE_ART[creature.kind].feetY - 3) * (CREATURE_ART[creature.kind].scale ?? 1),
+      height: CREATURE_ART[creature.kind].tall ?? (CREATURE_ART[creature.kind].feetY - 3) * (CREATURE_ART[creature.kind].scale ?? 1),
       creature,
     }));
     this.actors = [this.hero, ...this.foes];
@@ -284,6 +284,8 @@ export class CombatScene extends Phaser.Scene {
     const spots: Vec2[] = [];
     for (const f of this.foes) spots.push(this.closeInSpot(f, spots));
     await Promise.all(this.foes.map((f, i) => f.creature!.moveTo(spots[i].x, spots[i].y, 650)));
+    const here = this.hero.pos();
+    for (const f of this.foes) f.creature!.faceTowards(here.x, here.y);
     this.world.player.faceTowards(first.pos().x, first.pos().y);
     this.world.frameFight(this.actors.map((a) => a.pos()));
     this.banner(mother ? FOE_TEXT.wolfmother.banner : this.foes.length > 1 && first.creature!.kind !== 'rat' ? 'Wolves attack!' : FOE_TEXT[first.creature!.kind].banner);
@@ -1279,8 +1281,10 @@ export class CombatScene extends Phaser.Scene {
       bg.fillRoundedRect(0, 0, CHIP_W, CHIP_H, 8);
       bg.lineStyle(active ? 3 : 1.5, c.side === 'party' ? 0x8fbf6a : THEME.gold, active ? 1 : 0.5);
       bg.strokeRoundedRect(0, 0, CHIP_W, CHIP_H, 8);
-      const portrait = c.side === 'party' ? this.add.image(CHIP_W / 2, 54, 'player', 0) : this.add.image(CHIP_W / 2, 50, this.actorOf(c).creature!.sprite.texture.key, 0);
+      const beast = c.side === 'party' ? undefined : this.actorOf(c).creature!;
+      const portrait = beast ? this.add.image(CHIP_W / 2, 50, beast.sprite.texture.key, beast.portraitFrame) : this.add.image(CHIP_W / 2, 54, 'player', 0);
       portrait.setOrigin(0.5, 1);
+      if (beast) portrait.setScale(Math.min(1, (CHIP_W - 4) / portrait.width, 46 / portrait.height));
       if (c.side === 'party') portrait.setCrop(0, 4, 32, 40);
       const name = this.add
         .text(CHIP_W / 2, 56, c.side === 'party' ? 'You' : c.name, { fontFamily: FONT, fontSize: '11px', color: active ? THEME.goldText : THEME.text })
