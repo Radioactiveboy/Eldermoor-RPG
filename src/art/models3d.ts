@@ -104,6 +104,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   rosie: rosieModel,
   pell: pellModel,
   fisherman: fishermanModel,
+  leofric: leofricModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -567,6 +568,8 @@ interface MonkLook {
   stout?: boolean;
   /** The hood (when up) in its own colour: a cloak's hood over the habit or dress. */
   cowl?: Tones;
+  /** Wounded: a bandage round the head and the left arm in a sling. */
+  bandaged?: boolean;
 
   /** A head pushed forward with age. */
   stooped?: boolean;
@@ -585,9 +588,10 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
   const b = pose.bob;
   const s = pose.stride;
   const lean = look.stooped ? 1 : 0;
+  const sit = !!pose.sit;
   const solids: Solid[] = [];
 
-  for (const side of [-1, 1]) {
+  for (const side of sit ? [] : [-1, 1]) {
     const swing = s * side;
     const lift = swing < 0 ? 0.8 : 0;
     if (look.hitched) solids.push(...limb([side * 2.3, 12 - b * 0.5, 0], [side * 2.3, 3.6 + lift, swing * 2.3], 1.9, 1.7, look.hitched));
@@ -603,7 +607,12 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
     return habit;
   };
   const hem = look.hitched ? 8.5 : 2.5;
-  for (let y = hem; y <= 16; y += 0.5) {
+  if (sit) {
+    // Seated: the habit falls over the knees and down the shins to the ankles.
+    solids.push(...seatedLegs(2.3, habit, boots, 2.3));
+    for (let y = 3; y <= 10; y += 0.5) solids.push({ cx: 0, cy: y, cz: 5.7, rx: 4.6, ry: 0.8, rz: 1.8, material: habit });
+  }
+  for (let y = sit ? 99 : hem; y <= 16; y += 0.5) {
     const t = ((16 - y) / 13.5) * (look.hitched ? 0.6 : 1);
     solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 4.7 + t * 1.6, ry: 0.8, rz: 3.8 + t * 1.1, material: skirt });
   }
@@ -625,9 +634,18 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
     const holding = !!look.staff && side === -1;
     const swing = holding ? 0 : -s * side * 2;
     solids.push({ cx: side * 4.7, cy: 24.4 - b, cz: lean * 0.5, rx: 2.3, ry: 2.2, rz: 2.3, material: habit });
-    const elbow: [number, number, number] = [side * 5.8, 20.4 - b, lean * 0.5 + (holding ? 0.8 : swing * 0.5)];
-    const wrist: [number, number, number] = holding ? [side * 6.8, 19.2 - b, 2] : [side * 6.1, 17.4 - b, 1 + lean * 0.5 + swing];
+    const elbow: [number, number, number] = sit ? [side * 5.6, 19.6 - b, 2] : [side * 5.8, 20.4 - b, lean * 0.5 + (holding ? 0.8 : swing * 0.5)];
+    // Seated, the hands rest on the knees.
+    const wrist: [number, number, number] = sit ? [side * 3.8, 13.4, 4.4] : holding ? [side * 6.8, 19.2 - b, 2] : [side * 6.1, 17.4 - b, 1 + lean * 0.5 + swing];
     solids.push(...limb([side * 5.2, 24 - b, lean * 0.5], elbow, 1.8, 1.9, habit));
+    if (look.bandaged && side === 1) {
+      // The left arm bound across the chest in a linen sling.
+      const linen: Tones = [P.linen, P.linenDark, 0xfff6e6];
+      solids.push(...limb([side * 5.4, 21 - b, lean * 0.5 + 1], [-1.4, 21.6 - b, 4.2], 1.7, 1.6, linen));
+      solids.push(...limb([3.4, 25.6 - b, 2], [-2.6, 20 - b, 4.6], 0.6, 0.6, linen));
+      solids.push({ cx: -2, cy: 21.8 - b, cz: 4.6, rx: 1.3, ry: 1.4, rz: 1.3, material: skin });
+      continue;
+    }
     if (look.rolled) solids.push(...limb(elbow, wrist, 1.5, 1.4, skin));
     else solids.push(...limb(elbow, wrist, 2, 2.4, habit));
     const hand = { cx: wrist[0], cy: wrist[1] - 1.2, cz: wrist[2] + 0.2, rx: 1.4, ry: 1.6, rz: 1.4, material: skin };
@@ -1305,4 +1323,20 @@ export function fishermanModel(pose: Pose3D): Model {
   const details: Detail[] = [];
   for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: hz + 5, color: P.eye });
   return { solids, details };
+}
+
+/** Brother Leofric, mending in the infirmary after the wolves caught him on the road: a bandaged head and his arm in a sling. */
+export function leofricModel(pose: Pose3D): Model {
+  const model = monkModel(pose, {
+    habit: [0x6a5444, 0x4c3c30, 0x86705c],
+    skin: [0xd8a07a, 0xac7656, 0xeeb894],
+    hair: [0x6a3a22, 0x4a2816, 0x845036],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    bandaged: true,
+  });
+  // A linen bandage wound round his brow, a spot of blood showing at the temple.
+  const hy = 32 - pose.bob;
+  model.solids.push({ cx: 0, cy: hy + 2.6, cz: 0.2, rx: 5.7, ry: 1.3, rz: 5.5, material: [P.linen, P.linenDark, 0xfff6e6] });
+  model.details.push({ x: -3.6, y: hy + 2.6, z: 4.4, color: 0xa0302a });
+  return model;
 }
