@@ -126,6 +126,15 @@ export const ITEMS = {
     category: 'Material',
     stack: 10,
   },
+  'willow-bark': {
+    name: 'White Willow Bark',
+    description:
+      'Curls of bark from the old white willow by the upland pool, silver-grey outside and pale as cream within. Bitter to the tongue. ' +
+      "The other half of Mother's tincture.",
+    icon: 'item-willowbark',
+    category: 'Material',
+    stack: 10,
+  },
   venison: {
     name: 'Venison',
     description: 'A haunch of red deer, wrapped in dock leaves. Rich and dark; Hilde would make a pie of it.',

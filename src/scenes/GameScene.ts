@@ -1725,14 +1725,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Pick something growing (the moonpetal by the cloister pond), once. It's
-   * Brother Anselm's, so not before he has said the hero may. Picking all of
-   * it moves Mother's errand on.
+   * Pick something growing, once: the moonpetal by the cloister pond, or the
+   * bark of the old white willow up on the plains. The moonpetal is Brother
+   * Anselm's, so not before he has said the hero may; the willow's bark is
+   * only worth cutting once the hero knows Mother's tincture needs it. Each
+   * moves Mother's errand on.
    */
   private gather(sight: Sight): void {
     const { item } = sight.gather!;
-    if (!QuestLog.hasFlag('may-pick-moonpetal')) {
+    const bark = item === 'willow-bark';
+    if (!bark && !QuestLog.hasFlag('may-pick-moonpetal')) {
       this.onHint?.('Pale flowers like little stars, shining faintly. Moonpetal! But these are Brother Anselm\'s. I should ask him before I pick any.');
+      return;
+    }
+    if (bark && !QuestLog.has('mother-medicine')) {
+      this.onHint?.('An old white willow, its bark grey and deeply furrowed. Willow bark is good for aches and fevers, they say. I have no need of it today.');
       return;
     }
     if (!Inventory.canAdd(item)) {
@@ -1742,30 +1749,59 @@ export class GameScene extends Phaser.Scene {
     GameAudio.rustle();
     this.startChannel(
       {
-        label: 'Gathering',
-        seconds: PICK_SECONDS,
+        label: bark ? 'Stripping bark' : 'Gathering',
+        seconds: bark ? PICK_SECONDS * 1.6 : PICK_SECONDS,
         onDone: () => {
           QuestLog.setFlag(`gathered-${sight.id}`);
-          this.give(item, 1);
+          this.give(item, bark ? 3 : 1);
           this.syncGathered();
-          if (!MOONPETAL.every((m) => QuestLog.hasFlag(`gathered-${m.id}`))) return;
-          QuestLog.complete('mother-medicine', 'moonpetal');
-          this.onHint?.('Three blooms of moonpetal, wrapped in a dock leaf. Now for the willow bark.');
-          QuestLog.writeDiary(
-            "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. That is half of Mother's " +
-              'tincture. Now I need white willow bark. Brother Anselm says it grows by water.',
-          );
+          if (bark) this.gatheredWillowBark();
+          else this.gatheredMoonpetal();
         },
       },
       { x: sight.gx, y: sight.gy },
     );
   }
 
-  /** Shows anything already gathered (the moonpetal) as picked. */
+  private gatheredMoonpetal(): void {
+    if (!MOONPETAL.every((m) => QuestLog.hasFlag(`gathered-${m.id}`))) return;
+    QuestLog.complete('mother-medicine', 'moonpetal');
+    const haveBark = QuestLog.isDone('mother-medicine', 'willow');
+    this.onHint?.(haveBark ? 'Three blooms of moonpetal, wrapped in a dock leaf. With the willow bark, that is all of it. Home to Mother!' : 'Three blooms of moonpetal, wrapped in a dock leaf. Now for the willow bark.');
+    QuestLog.writeDiary(
+      haveBark
+        ? "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. With the willow bark I cut on the plains, I have all of Mother's tincture. Home, and quickly."
+        : "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. That is half of Mother's " +
+            'tincture. Now I need white willow bark. Brother Anselm says it grows by water.',
+    );
+  }
+
+  private gatheredWillowBark(): void {
+    QuestLog.complete('mother-medicine', 'willow');
+    const havePetal = QuestLog.isDone('mother-medicine', 'moonpetal');
+    this.onHint?.(
+      havePetal
+        ? 'Three long curls of white willow bark, bitter as sloes. With the moonpetal, that is all of it. Home to Mother!'
+        : 'Three long curls of white willow bark, bitter as sloes. Half of the tincture. Now for the moonpetal.',
+    );
+    QuestLog.writeDiary(
+      'Found an old white willow up on the plains, past where the north road climbs into the upland, leaning out over a still pool. ' +
+        'It must be older than the monastery. I cut three long strips of bark from the side away from the water, and begged its pardon. ' +
+        (havePetal ? "With Brother Anselm's moonpetal, that is the whole of Mother's tincture. Home, and quickly." : 'Now I need the moonpetal to go with it.'),
+    );
+  }
+
+  /** Shows anything already gathered (the moonpetal, the willow's bark) as picked. */
   private syncGathered(): void {
     for (const sight of this.map.data.sights ?? []) {
       if (!sight.gather || !QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
-      const obj = this.map.data.objects?.find((o) => o.tx === Math.floor(sight.gx) && o.ty === Math.floor(sight.gy));
+      const tx = Math.floor(sight.gx);
+      const ty = Math.floor(sight.gy);
+      // The thing itself: on the sight's tile (the moonpetal), or else standing over it (the willow, whose trunk is mid-footprint).
+      const objects = this.map.data.objects ?? [];
+      const obj =
+        objects.find((o) => o.tx === tx && o.ty === ty) ??
+        objects.find((o) => !o.flat && tx >= o.tx && tx < o.tx + o.w && ty >= o.ty && ty < o.ty + o.h);
       if (obj) this.map.setObjectArt(obj, sight.gather.picked);
     }
   }

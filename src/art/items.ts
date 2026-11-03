@@ -427,6 +427,24 @@ const moonpetalIcon = () =>
     c.rect(6, 11, 5, 1, P.linen);
   });
 
+/** Three curls of white willow bark, tied with twine: grey and furrowed outside, cream where they were cut from the wood. */
+const willowBarkIcon = () =>
+  icon((c) => {
+    const curls: Array<[number, number, number]> = [[3, 3, 10], [6, 2, 11], [9, 4, 10]];
+    for (const [x, y, len] of curls) {
+      for (let i = 0; i < len; i++) {
+        const px = x + Math.round(i * 0.35);
+        // The outside, furrowed grey, and the cut inner face curling round to show cream.
+        c.set(px, y + i, i % 3 === 0 ? 0x6e6a60 : 0x948e80);
+        c.set(px + 1, y + i, i % 4 === 1 ? 0x6e6a60 : 0xb4ae9c);
+        c.set(px + 2, y + i, 0xf0e2bc);
+      }
+      c.set(x + 2, y, 0xfff4d6);
+    }
+    c.rect(4, 9, 9, 1, 0xc8a46a);
+    c.set(12, 10, 0xc8a46a);
+  });
+
 /** A small folded hare pelt. */
 const harePelt = () =>
   icon((c) => {
@@ -494,6 +512,7 @@ export function generateItemIcons(scene: Phaser.Scene): void {
     ['item-tusk', tusk],
     ['item-whitehide', whiteHide],
     ['item-moonpetal', moonpetalIcon],
+    ['item-willowbark', willowBarkIcon],
     ['item-ale', tankard(0xf6eedc, 0xd8ccb0)],
     ['item-cider', tankard(0xf0dc8a, 0xc8b060)],
     ['item-mead', mead],

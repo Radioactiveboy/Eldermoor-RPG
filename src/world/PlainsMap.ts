@@ -5,14 +5,26 @@ import { tollGateShape } from './MarketMap';
 import { joinDiagonals, paintPath, smoothLine, spaced, Vec } from './MapGenerator';
 
 export const PLAINS_W = 120;
-export const PLAINS_H = 120;
+/**
+ * Rows of upland added along the top of the original plains, where the north
+ * road climbs towards the Greyfells: the old white willow stands up there by
+ * its pool. Everything south of them keeps the layout it always had, just
+ * this many rows further down.
+ */
+const NORTH = 30;
+const OLD_H = 120;
+export const PLAINS_H = OLD_H + NORTH;
 
 /** Where the Lord's Road meets the roads west and north. */
-const CROSSROADS = { x: 60, y: 62 };
+const CROSSROADS = { x: 60, y: 62 + NORTH };
 /** Where the Lord's Road leaves the east edge, for Saint Elda's monastery. */
-const EAST_ROAD_Y = 50;
+const EAST_ROAD_Y = 50 + NORTH;
 /** The back corner of the rocky knoll with the Wolf Mother's den in it; its mouth is at the front corner. */
-const DEN = { x: 98, y: 27 };
+const DEN = { x: 98, y: 27 + NORTH };
+/** The still pool up in the northern upland, fed by a brook off the Greyfells. */
+const WILLOW_POOL = { x: 44, y: 15, r: 3.4 };
+/** The back corner of the old white willow's 3x3 footprint, on the pool's south-east bank; its trunk is in the middle tile. */
+const WILLOW = { tx: 47, ty: 16 };
 
 /**
  * Adowvale Plains, beyond Lord Morten's toll gate north of the village: the
@@ -24,12 +36,17 @@ const DEN = { x: 98, y: 27 };
  * thickets; the game comes back each time the plains are visited. A carter and
  * a herb-gatherer walk the road. North of the road near the east edge, up a
  * wolf-trodden track, is a rocky knoll with an old den in it, where the white
- * Wolf Mother lairs (see DenMap.ts); two of her wolves watch the track.
+ * Wolf Mother lairs (see DenMap.ts); two of her wolves watch the track. Up the
+ * north road, the plains rise into rough upland below the Greyfells, where a
+ * brook comes down into a still pool and an old white willow leans over it:
+ * the bark Mother's tincture needs.
  */
 export function buildPlainsMap(): MapData {
   const W = PLAINS_W;
   const H = PLAINS_H;
   const rnd = new Phaser.Math.RandomDataGenerator(['adowvale-plains']);
+  // The northern upland has its own dice, so the rest of the plains rolls out just as it always has.
+  const rndNorth = new Phaser.Math.RandomDataGenerator(['adowvale-plains-north']);
   const terrain: Terrain[][] = [];
   const props: Prop[][] = [];
   for (let y = 0; y < H; y++) {
@@ -38,9 +55,9 @@ export function buildPlainsMap(): MapData {
   }
 
   // The mere, out in the grass east of the road, and a smaller pond up in the north-west, each with a sandy, trodden rim.
-  const mere = { x: 88, y: 88, r: 7 };
-  const pond = { x: 30, y: 30, r: 3.6 };
-  for (const water of [mere, pond]) {
+  const mere = { x: 88, y: 88 + NORTH, r: 7 };
+  const pond = { x: 30, y: 30 + NORTH, r: 3.6 };
+  for (const water of [mere, pond, WILLOW_POOL]) {
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const wobble = Math.sin(x * 0.9) * 0.7 + Math.cos(y * 0.8) * 0.7;
@@ -50,6 +67,26 @@ export function buildPlainsMap(): MapData {
       }
     }
   }
+  // The brook, tumbling down off the Greyfells at the top edge into the willow pool.
+  const brook = smoothLine([
+    { x: 31, y: -3 },
+    { x: 31.5, y: 1 },
+    { x: 35, y: 4.5 },
+    { x: 34, y: 8 },
+    { x: 38.5, y: 11 },
+    { x: WILLOW_POOL.x - 1.5, y: WILLOW_POOL.y - 1 },
+  ]);
+  brook.forEach((p, i) => {
+    const r = 0.42 + 0.1 * Math.sin(i * 0.37) + (i / brook.length) * 0.22;
+    for (let y = Math.floor(p.y - r - 2); y <= p.y + r + 2; y++) {
+      for (let x = Math.floor(p.x - r - 2); x <= p.x + r + 2; x++) {
+        if (terrain[y]?.[x] === undefined) continue;
+        const d = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y);
+        if (d <= r) terrain[y][x] = Terrain.Water;
+        else if (d <= r + 0.9 && terrain[y][x] === Terrain.Grass) terrain[y][x] = Terrain.Sand;
+      }
+    }
+  });
   joinDiagonals(terrain, Terrain.Water, Terrain.Sand);
 
   // The roads: the Lord's Road from the gate up to the crossroads and on east, and the old roads west and north.
@@ -74,14 +111,33 @@ export function buildPlainsMap(): MapData {
     { x: W - 1.5, y: EAST_ROAD_Y + 0.5 },
     { x: W + 2, y: EAST_ROAD_Y + 0.5 },
   ]);
-  const west = smoothLine([cross, ...wander({ x: cross.x - 5, y: cross.y + 0.5 }, { x: 4, y: 70 }, 9, 2.5), { x: -3, y: 70 }]);
-  const north = smoothLine([cross, ...wander({ x: cross.x + 0.5, y: cross.y - 5 }, { x: 68, y: 4 }, 9, 2.5), { x: 68, y: -3 }]);
+  const west = smoothLine([cross, ...wander({ x: cross.x - 5, y: cross.y + 0.5 }, { x: 4, y: 70 + NORTH }, 9, 2.5), { x: -3, y: 70 + NORTH }]);
+  // The north road keeps its old line up to where the plains used to end, then climbs on through the upland to the top edge.
+  const northTop = { x: 66, y: -3 };
+  const north = smoothLine([
+    cross,
+    ...wander({ x: cross.x + 0.5, y: cross.y - 5 }, { x: 68, y: 4 + NORTH }, 9, 2.5),
+    { x: 68.5, y: NORTH - 4 },
+    { x: 64 + rndNorth.realInRange(-1, 1), y: 16 },
+    { x: 67, y: 6 },
+    { x: northTop.x, y: 2 },
+    northTop,
+  ]);
+  // A footpath off the north road, along to the willow pool: trodden by drovers watering their beasts, and by herb-gatherers.
+  const willowPath = smoothLine([
+    { x: 65.5, y: 19 },
+    { x: 60, y: 21.5 },
+    { x: 54, y: 20 },
+    { x: WILLOW.tx + 4.2, y: WILLOW.ty + 3.4 },
+    { x: WILLOW.tx + 2.6, y: WILLOW.ty + 3.2 },
+  ]);
   const lordsRoad = (t: number) => 1.15 + 0.25 * Math.sin(t * 13.1 + 0.7) + 0.12 * Math.sin(t * 31.3);
   const oldRoad = (t: number) => 0.8 + 0.18 * Math.sin(t * 17.9 + 2.1) + 0.1 * Math.sin(t * 43.7);
   paintPath(terrain, south, lordsRoad);
   paintPath(terrain, east, lordsRoad);
   paintPath(terrain, west, oldRoad);
   paintPath(terrain, north, oldRoad);
+  paintPath(terrain, willowPath, (t) => 0.5 + 0.12 * Math.sin(t * 23.3 + 0.4));
   // The crossroads itself, worn wide by carts turning.
   for (let y = CROSSROADS.y - 2; y <= CROSSROADS.y + 2; y++) {
     for (let x = CROSSROADS.x - 2; x <= CROSSROADS.x + 2; x++) {
@@ -89,16 +145,26 @@ export function buildPlainsMap(): MapData {
     }
   }
   joinDiagonals(terrain, Terrain.Dirt, Terrain.Grass);
-  const roads = [...south, ...east, ...west, ...north];
+  const roads = [...south, ...east, ...west, ...north, ...willowPath];
   const nearRoad = (x: number, y: number, within: number) => roads.some((p) => Math.abs(p.x - x) < within && Math.abs(p.y - y) < within && Math.hypot(p.x - x, p.y - y) < within);
 
   // Woods thick along the edges, copses out in the grass, and here and there a lone oak or a boulder.
   const copses: Array<{ x: number; y: number; r: number }> = [];
   for (let tries = 0; copses.length < 34 && tries < 2000; tries++) {
-    const c = { x: rnd.realInRange(6, W - 6), y: rnd.realInRange(6, H - 10), r: rnd.realInRange(1.8, 4.4) };
+    const c = { x: rnd.realInRange(6, W - 6), y: NORTH + rnd.realInRange(6, OLD_H - 10), r: rnd.realInRange(1.8, 4.4) };
     if (nearRoad(c.x, c.y, c.r + 3) || [mere, pond].some((w) => Math.hypot(c.x - w.x, c.y - w.y) < w.r + c.r + 2)) continue;
     if (copses.some((o) => Math.hypot(o.x - c.x, o.y - c.y) < o.r + c.r + 4)) continue;
     copses.push(c);
+  }
+  // Fewer, scrubbier copses up in the upland, kept clear of the brook, the pool and the willow.
+  const nearBrook = (x: number, y: number, within: number) => brook.some((p) => Math.hypot(p.x - x, p.y - y) < within);
+  for (let tries = 0, placed = 0; placed < 7 && tries < 600; tries++) {
+    const c = { x: rndNorth.realInRange(6, W - 6), y: rndNorth.realInRange(5, NORTH + 2), r: rndNorth.realInRange(1.6, 3.6) };
+    if (nearRoad(c.x, c.y, c.r + 3) || nearBrook(c.x, c.y, c.r + 2.5)) continue;
+    if (Math.hypot(c.x - WILLOW_POOL.x, c.y - WILLOW_POOL.y) < WILLOW_POOL.r + c.r + 6) continue;
+    if (copses.some((o) => Math.hypot(o.x - c.x, o.y - c.y) < o.r + c.r + 4)) continue;
+    copses.push(c);
+    placed++;
   }
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -108,8 +174,14 @@ export function buildPlainsMap(): MapData {
       if (nearRoad(cx, cy, 2.3)) continue;
       const edge = Math.min(x, y, W - 1 - x, H - 1 - y);
       const copse = copses.some((c) => Math.hypot(c.x - cx, c.y - cy) < c.r);
-      const chance = edge < 2 ? 0.75 : edge < 4 ? 0.35 : copse ? 0.6 : 0.012;
-      const roll = rnd.frac();
+      // The upland is rougher ground: a few more boulders and lone trees out in the grass.
+      const upland = y < NORTH;
+      const chance = edge < 2 ? 0.75 : edge < 4 ? 0.35 : copse ? 0.6 : upland ? 0.02 : 0.012;
+      const roll = (upland ? rndNorth : rnd).frac();
+      if (upland && !copse && edge >= 4 && roll > 0.992) {
+        props[y][x] = Prop.Rock;
+        continue;
+      }
       if (roll < chance) props[y][x] = Prop.Tree;
       else if (roll < chance + (copse ? 0.05 : 0.006)) props[y][x] = Prop.Rock;
     }
@@ -136,11 +208,13 @@ export function buildPlainsMap(): MapData {
       { gx: gateX, gy: H - 1, name: 'The toll gate', range: 6 },
       { gx: mere.x, gy: mere.y, name: 'The mere', range: mere.r + 4 },
       { gx: pond.x, gy: pond.y, name: 'The reed pond', range: pond.r + 4 },
+      { gx: WILLOW.tx + 1.5, gy: WILLOW.ty + 1.5, name: 'The old willow', range: 8 },
+      { gx: 64, gy: 12, name: 'The upland', range: 9 },
       { gx: W - 1, gy: EAST_ROAD_Y + 0.5, name: "The road to Saint Elda's", range: 6 },
     ],
     musings: [
-      { x0: 0, y0: 66, x1: 5, y1: 74, text: 'The old road west goes on towards Harrowford and its broken bridge. Nothing for me that way.' },
-      { x0: 64, y0: 0, x1: 72, y1: 5, text: 'North, the road climbs towards the Greyfells, where the wolves come down from. Not today.' },
+      { x0: 0, y0: 66 + NORTH, x1: 5, y1: 74 + NORTH, text: 'The old road west goes on towards Harrowford and its broken bridge. Nothing for me that way.' },
+      { x0: northTop.x - 4, y0: 0, x1: northTop.x + 4, y1: 5, text: 'North, the road climbs on into the Greyfells, where the wolves come down from. Not today.' },
     ],
   };
 
@@ -214,6 +288,21 @@ export function buildPlainsMap(): MapData {
     },
   });
 
+  // The old white willow, leaning out over its pool. Only the trunk stops anyone: its hanging boughs can be walked under.
+  for (let y = WILLOW.ty - 2; y <= WILLOW.ty + 5; y++) {
+    for (let x = WILLOW.tx - 2; x <= WILLOW.tx + 5; x++) if (props[y]?.[x] === Prop.Tree || props[y]?.[x] === Prop.Rock) props[y][x] = Prop.None;
+  }
+  for (let y = WILLOW.ty; y < WILLOW.ty + 3; y++) for (let x = WILLOW.tx; x < WILLOW.tx + 3; x++) if (terrain[y][x] === Terrain.Water) terrain[y][x] = Terrain.Sand;
+  placeObject(data, { key: 'plains-willow', tx: WILLOW.tx, ty: WILLOW.ty, w: 3, h: 3, blocks: [[1, 1]], shapes: [circle(1.5, 1.5, 0.42)], fades: true });
+  data.sights!.push({
+    id: 'old-willow', gx: WILLOW.tx + 1.5, gy: WILLOW.ty + 2.05, label: 'Strip willow bark', z: 46,
+    gather: { item: 'willow-bark', picked: 'plains-willow-stripped' },
+  });
+  data.musings!.push({
+    x0: WILLOW.tx - 4, y0: WILLOW.ty - 3, x1: WILLOW.tx + 7, y1: WILLOW.ty + 7,
+    text: 'A willow, older than any tree I have seen, its boughs trailing in the water. White willow, by the silver under its leaves.',
+  });
+
   // Game, spread about the grass away from the gate. It comes back on every visit.
   const game: CreatureSpawn[] = [];
   const herd = (id: string, kind: CreatureSpawn['kind'], x: number, y: number, count: number, spread: number) => {
@@ -228,18 +317,23 @@ export function buildPlainsMap(): MapData {
       placed++;
     }
   };
-  herd('deer-west', 'deer', 24, 88, 3, 2.5);
-  herd('deer-north', 'deer', 42, 22, 4, 3);
-  herd('deer-east', 'deer', 84, 24, 3, 2.5);
-  herd('deer-far-east', 'deer', 100, 70, 4, 3);
-  herd('deer-south-west', 'deer', 30, 104, 3, 2.5);
-  herd('deer-pond', 'deer', 20, 40, 2, 2.5);
-  herd('hare-gate', 'hare', 76, 104, 2, 4);
-  herd('hare-cross', 'hare', 44, 52, 2, 4);
-  herd('hare-mere', 'hare', 102, 80, 2, 4);
-  herd('hare-north', 'hare', 82, 14, 1, 3);
-  herd('hare-west', 'hare', 14, 60, 2, 4);
-  herd('hare-road', 'hare', 84, 44, 2, 4);
+  herd('deer-west', 'deer', 24, 88 + NORTH, 3, 2.5);
+  herd('deer-north', 'deer', 42, 22 + NORTH, 4, 3);
+  herd('deer-east', 'deer', 84, 24 + NORTH, 3, 2.5);
+  herd('deer-far-east', 'deer', 100, 70 + NORTH, 4, 3);
+  herd('deer-south-west', 'deer', 30, 104 + NORTH, 3, 2.5);
+  herd('deer-pond', 'deer', 20, 40 + NORTH, 2, 2.5);
+  herd('hare-gate', 'hare', 76, 104 + NORTH, 2, 4);
+  herd('hare-cross', 'hare', 44, 52 + NORTH, 2, 4);
+  herd('hare-mere', 'hare', 102, 80 + NORTH, 2, 4);
+  herd('hare-north', 'hare', 82, 14 + NORTH, 1, 3);
+  herd('hare-west', 'hare', 14, 60 + NORTH, 2, 4);
+  herd('hare-road', 'hare', 84, 44 + NORTH, 2, 4);
+  // Up in the upland: a few deer come down to drink at the willow pool, and hares in the rough grass.
+  herd('deer-upland', 'deer', 30, 20, 3, 2.5);
+  herd('deer-greyfells', 'deer', 90, 12, 3, 3);
+  herd('hare-upland', 'hare', 76, 22, 2, 4);
+  herd('hare-brook', 'hare', 22, 10, 1, 3);
   // Boar keep to the thickets: each roots about at the edge of a copse.
   copses
     .filter((c) => Math.hypot(c.x - gateX, c.y - H) > 24)
