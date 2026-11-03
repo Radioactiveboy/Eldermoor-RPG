@@ -84,7 +84,6 @@ export class Ambience {
   private sparrowTimer = 3;
   private smokeTimer = 0;
   private leafTimer = 1;
-  private chirpTimer = 4;
 
   constructor(scene: Phaser.Scene, map: IsoMap, clock: TimeOfDay) {
     this.scene = scene;
@@ -448,11 +447,6 @@ export class Ambience {
   /** Now and then a leaf comes loose from a tree in view and spins down. */
   private updateLeaves(dt: number, view: Phaser.Geom.Rectangle): void {
     this.leafTimer -= dt;
-    this.chirpTimer -= dt;
-    if (this.chirpTimer <= 0) {
-      this.chirpTimer = 5 + Math.random() * 12;
-      if (this.daytime) GameAudio.chirp();
-    }
     if (this.leafTimer > 0) return;
     this.leafTimer = 0.6 + Math.random() * 1.4;
     const visible = this.treeImages.filter((t) => view.contains(t.x, t.y));

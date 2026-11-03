@@ -1,4 +1,5 @@
 import { Settings, SettingsData } from '../settings/Settings';
+import { AmbientMix, SILENCE, Soundscape, Surface } from './Soundscape';
 
 /**
  * All game audio, generated live with the Web Audio API. There are no audio
@@ -354,6 +355,11 @@ class AudioEngine {
   private master!: GainNode;
   private musicBus!: GainNode;
   private sfxBus!: GainNode;
+  private ambienceBus!: GainNode;
+  private soundscape?: Soundscape;
+  /** The world sounds asked for, kept until the engine unlocks. */
+  private ambience: AmbientMix = { ...SILENCE };
+  private ambienceDuck = 1;
   private reverb!: ConvolverNode;
   private noiseBuffer!: AudioBuffer;
   private track?: Track;
@@ -393,6 +399,35 @@ class AudioEngine {
     this.playing = undefined;
     this.track?.stop();
     this.track = undefined;
+  }
+
+  /** Sets how much of each background sound the world should have (see audio/Soundscape.ts). */
+  setAmbience(mix: AmbientMix): void {
+    this.ambience = mix;
+    this.soundscape?.setMix(mix);
+  }
+
+  /** Turns the world's background sounds down (1 = normal, 0 = silent), e.g. in a fight or a menu. */
+  duckAmbience(level: number, seconds = 0.6): void {
+    this.ambienceDuck = level;
+    this.soundscape?.setDuck(level, seconds);
+  }
+
+  /** Silences the world's background sounds, e.g. on leaving for the main menu. */
+  stopAmbience(): void {
+    this.setAmbience({ ...SILENCE });
+  }
+
+  /** One of the hero's footsteps. `loud` is 1 for walking, lower creeping, higher running. */
+  footstep(surface: Surface, loud = 1): void {
+    if (!this.unlocked) return;
+    this.soundscape!.footstep(surface, loud, this.sfxBus);
+  }
+
+  /** A church bell tolling `strokes` times; `near` 0..1 for how close the tower is. */
+  bell(strokes: number, near = 0.6): void {
+    if (!this.unlocked) return;
+    this.soundscape!.bell(strokes, near);
   }
 
   /** Short UI blip for button presses. */
@@ -834,6 +869,8 @@ class AudioEngine {
     this.musicBus.connect(this.master);
     this.sfxBus = ctx.createGain();
     this.sfxBus.connect(this.master);
+    this.ambienceBus = ctx.createGain();
+    this.ambienceBus.connect(this.master);
 
     this.reverb = ctx.createConvolver();
     this.reverb.buffer = this.makeImpulse(ctx, 2.8);
@@ -844,6 +881,10 @@ class AudioEngine {
     this.noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const data = this.noiseBuffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+
+    this.soundscape = new Soundscape(ctx, this.ambienceBus, this.noiseBuffer);
+    this.soundscape.setMix(this.ambience);
+    this.soundscape.setDuck(this.ambienceDuck, 0.1);
 
     this.applyVolumes(Settings.get());
   }
@@ -866,6 +907,7 @@ class AudioEngine {
     this.master.gain.setTargetAtTime(s.masterVolume ** 2, t, 0.05);
     this.musicBus.gain.setTargetAtTime(s.musicVolume ** 2, t, 0.05);
     this.sfxBus.gain.setTargetAtTime(s.effectsVolume ** 2, t, 0.05);
+    this.ambienceBus.gain.setTargetAtTime(s.ambienceVolume ** 2, t, 0.05);
   }
 }
 
