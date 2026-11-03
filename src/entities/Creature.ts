@@ -110,8 +110,10 @@ export class Creature implements Body {
    * Wander and sniff about. Returns true on the frame it notices the player
    * (pass no player while they're busy, so it doesn't).
    * @param running whether the player is sprinting, which sends shy game bolting
+   * @param noise how far off the player can be noticed, as a share of the usual
+   *   distance: under 1 while they sneak, over 1 while they sprint
    */
-  update(dt: number, player?: Vec2, running = false): boolean {
+  update(dt: number, player?: Vec2, running = false, noise = 1): boolean {
     this.calm = Math.max(0, this.calm - dt);
     if (this.state === 'gone' || this.state === 'fight') {
       this.sync();
@@ -121,7 +123,7 @@ export class Creature implements Body {
       this.sync();
       return false;
     }
-    if (player && this.prowling && this.distanceTo(player.x, player.y) < this.ways.notice) {
+    if (player && this.prowling && this.distanceTo(player.x, player.y) < this.ways.notice * noise) {
       this.state = 'alert';
       this.path = [];
       this.faceTowards(player.x, player.y);

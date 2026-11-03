@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SPRINT_MULTIPLIER } from '../config';
+import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SNEAK, SPRINT_MULTIPLIER, SPRINT_NOTICE } from '../config';
 import { Child, Siblings } from '../entities/Child';
 import { Creature } from '../entities/Creature';
 import { Hen } from '../entities/Hen';
@@ -47,7 +47,7 @@ import type { SleepSceneData } from './SleepScene';
 import type { ConfirmSceneData } from './ConfirmScene';
 
 type MoveKeys = Record<
-  'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'fastForward',
+  'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'sneak' | 'fastForward',
   Phaser.Input.Keyboard.Key
 >;
 
@@ -303,6 +303,15 @@ export class GameScene extends Phaser.Scene {
   private marketWasOpen = true;
   /** Sprinting this frame, which sends shy game running. */
   private sprinting = false;
+  /** Sneaking this frame: slower, and beasts have to be closer to notice. */
+  sneaking = false;
+  /**
+   * Sneaking switched on with the HUD's boot button (phones have no Ctrl key).
+   * Static so it lasts through doors and treks, which restart this scene.
+   */
+  static sneakToggled = false;
+  /** Whether the hero has been told about sneaking yet this session. */
+  private static sneakExplained = false;
   /** The patch of ground with a thought attached (MapData.musings) the player is standing in, so it's only had once. */
   private musing?: Musing;
   /** Something to happen once the conversation that led to it closes (the toll gate swinging open). */
@@ -480,6 +489,9 @@ export class GameScene extends Phaser.Scene {
       if (e.type === 'added' && e.id === 'chicken-feed') QuestLog.complete('chicken-feed', 'buy');
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, offItems);
+    // The scene object is reused across restarts: start each one stood up, with a fresh hero.
+    this.sneaking = false;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.removeEventListener('beforeunload', GameScene.holdTab));
   }
 
   /** What the children say when the hero walks in: thanks once the hens are fed, a plain hello otherwise. */
@@ -549,7 +561,9 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number): void {
     const dt = Math.min(deltaMs / 1000, 0.1);
-    const wantsSprint = !this.busy && this.keys.sprint.isDown && this.stats.canSprint();
+    // Sneaking wins over sprinting: you can't creep and run at once.
+    const wantsSneak = !this.busy && (this.keys.sneak.isDown || GameScene.sneakToggled);
+    const wantsSprint = !this.busy && !wantsSneak && this.keys.sprint.isDown && this.stats.canSprint();
     const input = this.busy ? { x: 0, y: 0 } : this.readKeyboard();
     const moving = input.x !== 0 || input.y !== 0;
     if (moving) {
@@ -558,7 +572,8 @@ export class GameScene extends Phaser.Scene {
       if (this.channel) this.cancelChannel();
     }
     this.updateChannel(dt);
-    const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : 1);
+    this.setSneaking(wantsSneak);
+    const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : wantsSneak ? SNEAK.speed : 1);
     this.sprinting = wantsSprint && moved;
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
     this.updateMarketHours();
@@ -1147,8 +1162,37 @@ export class GameScene extends Phaser.Scene {
     this.arrivalGrace = Math.max(0, this.arrivalGrace - dt);
     for (const creature of this.creatures) {
       const watching = !this.busy && this.arrivalGrace <= 0 && this.scene.isActive();
-      if (creature.update(dt, watching ? { x: this.player.gx, y: this.player.gy } : undefined, this.sprinting)) this.startCombat(creature);
+      if (creature.update(dt, watching ? { x: this.player.gx, y: this.player.gy } : undefined, this.sprinting, this.noise)) this.startCombat(creature);
     }
+  }
+
+  /** How far off beasts can notice the hero, as a share of the usual: closer while sneaking, further while sprinting. */
+  private get noise(): number {
+    return this.sneaking ? SNEAK.notice : this.sprinting ? SPRINT_NOTICE : 1;
+  }
+
+  /** Crouch into a sneak, or straighten up. The first time, the hero says what it's for. */
+  private setSneaking(on: boolean): void {
+    if (on === this.sneaking) return;
+    this.sneaking = on;
+    this.player.sneaking = on;
+    // Ctrl+W closes the browser tab and can't be blocked, so while Ctrl is held for sneaking, ask before leaving.
+    if (on) window.addEventListener('beforeunload', GameScene.holdTab);
+    else window.removeEventListener('beforeunload', GameScene.holdTab);
+    if (on && !GameScene.sneakExplained) {
+      GameScene.sneakExplained = true;
+      this.onHint?.('Low and quiet. Beasts will have to be a good deal closer to catch wind of me.');
+    }
+  }
+
+  /** Switch sneaking on or off without holding Ctrl (the HUD's boot button). */
+  toggleSneak(): void {
+    GameScene.sneakToggled = !GameScene.sneakToggled;
+  }
+
+  private static holdTab(e: BeforeUnloadEvent): void {
+    e.preventDefault();
+    e.returnValue = '';
   }
 
   /** A beast has spotted the player (or the player has gone after some game): it and any of its pack close by fight. */
@@ -1921,7 +1965,7 @@ export class GameScene extends Phaser.Scene {
     this.keys = kb.addKeys({
       up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT,
       w: K.W, a: K.A, s: K.S, d: K.D,
-      sprint: K.SHIFT, fastForward: K.T,
+      sprint: K.SHIFT, sneak: K.CTRL, fastForward: K.T,
     }) as MoveKeys;
 
     kb.on('keydown-ESC', () => this.openPauseMenu());

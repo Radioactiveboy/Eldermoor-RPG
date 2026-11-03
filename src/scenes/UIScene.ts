@@ -43,6 +43,10 @@ export class UIScene extends Phaser.Scene {
   private pauseButton!: Phaser.GameObjects.Container;
   private journalButton!: Phaser.GameObjects.Container;
   private satchelButton!: Phaser.GameObjects.Container;
+  /** Toggles sneaking (phones have no Ctrl key), and lights up whenever the hero is sneaking. */
+  private sneakButton!: Phaser.GameObjects.Container;
+  private sneakGlow!: Phaser.GameObjects.Graphics;
+  private sneakLit = false;
   private tracker!: QuestTracker;
   private toasts!: Toasts;
   private bubbles!: SpeechBubbles;
@@ -74,6 +78,10 @@ export class UIScene extends Phaser.Scene {
     }, () => this.world.openPauseMenu());
     this.journalButton = this.makeIconButton((g) => this.drawBookIcon(g), () => this.world.openJournal());
     this.satchelButton = this.makeIconButton((g) => this.drawSatchelIcon(g), () => this.world.openInventory());
+    this.sneakButton = this.makeIconButton((g) => this.drawFootprintsIcon(g), () => this.world.toggleSneak());
+    this.sneakGlow = this.add.graphics();
+    this.sneakButton.addAt(this.sneakGlow, 0);
+    this.sneakLit = false;
     this.tracker = new QuestTracker(this, () => this.world.openJournal());
     this.toasts = new Toasts(this);
     this.bubbles = new SpeechBubbles(this);
@@ -203,6 +211,7 @@ export class UIScene extends Phaser.Scene {
     this.bubbles.update([...game.npcs, ...game.speakers], toScreen, !game.inCombat);
     this.updatePrompt(toScreen);
     this.updateProgress(toScreen);
+    this.updateSneakButton(game.sneaking);
     if (this.combatMode !== game.inCombat) this.setCombatMode(game.inCombat);
   }
 
@@ -212,7 +221,7 @@ export class UIScene extends Phaser.Scene {
     this.wheel.setVisible(show);
     this.tracker.setVisible(show);
     this.showMinimap();
-    for (const button of [this.pauseButton, this.journalButton, this.satchelButton]) button.setVisible(show);
+    for (const button of [this.pauseButton, this.journalButton, this.satchelButton, this.sneakButton]) button.setVisible(show);
   }
 
   /** M shows or hides the minimap (or, indoors, just the place name), and it stays that way next time the game is opened. */
@@ -388,8 +397,8 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    // Pause, journal and satchel buttons: a column under the dial on phones, a row bottom-right on wider screens.
-    const buttons = [this.pauseButton, this.journalButton, this.satchelButton];
+    // Pause, journal, satchel and sneak buttons: a column under the dial on phones, a row bottom-right on wider screens.
+    const buttons = [this.pauseButton, this.journalButton, this.satchelButton, this.sneakButton];
     buttons.forEach((button, i) => {
       if (narrow) {
         button.setPosition(width - MARGIN - PAUSE_SIZE / 2, MARGIN + this.wheel.height + 8 + PAUSE_SIZE / 2 + i * (PAUSE_SIZE + 8));
@@ -415,6 +424,32 @@ export class UIScene extends Phaser.Scene {
       onClick();
     });
     return button;
+  }
+
+  /** Lights the sneak button with a soft gold glow while the hero is sneaking. */
+  private updateSneakButton(sneaking: boolean): void {
+    if (sneaking === this.sneakLit) return;
+    this.sneakLit = sneaking;
+    const g = this.sneakGlow.clear();
+    if (!sneaking) return;
+    const half = PAUSE_SIZE / 2;
+    g.fillStyle(UI_COLORS.trim, 0.35);
+    g.fillRoundedRect(-half + 3, -half + 3, PAUSE_SIZE - 6, PAUSE_SIZE - 6, 6);
+    g.lineStyle(2, 0xffe08a, 1);
+    g.strokeRoundedRect(-half - 2, -half - 2, PAUSE_SIZE + 4, PAUSE_SIZE + 4, 9);
+  }
+
+  /** Two soft footprints, one ahead of the other: sneaking. */
+  private drawFootprintsIcon(g: Phaser.GameObjects.Graphics): void {
+    const foot = (x: number, y: number) => {
+      g.fillStyle(0xe8dcc0, 1);
+      g.fillEllipse(x, y, 7, 11);
+      g.fillEllipse(x, y + 8, 5, 5);
+      g.fillStyle(0x8f7a5a, 1);
+      g.fillEllipse(x, y - 1, 3, 5);
+    };
+    foot(-5, -6);
+    foot(5, 0);
   }
 
   /** A leather satchel with a buckled flap. */
