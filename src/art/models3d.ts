@@ -1249,7 +1249,7 @@ export function pellModel(pose: Pose3D): Model {
 }
 
 /** Legs for a seated figure: thighs forward from the hips, shins down to the ground, feet flat. */
-function seatedLegs(width: number, legs: Material, boots: Material, r = 1.9): Solid[] {
+export function seatedLegs(width: number, legs: Material, boots: Material, r = 1.9): Solid[] {
   const out: Solid[] = [];
   const hip = 10;
   for (const side of [-1, 1]) {

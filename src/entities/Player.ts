@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { FEET_Y, FRAME_H, DrawnDir } from '../art/character';
+import { FEET_Y, FRAME_H } from '../art/character';
+import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_RADIUS, PLAYER_SPEED } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
 import { IsoMap } from '../world/IsoMap';
@@ -211,11 +212,8 @@ export class Player {
   }
 
   private sync(moving: boolean): void {
-    // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored.
-    const names: DrawnDir[] = ['s', 'se', 'e', 'ne', 'n'];
-    const mirrored = this.facing > 4;
-    const drawn = names[mirrored ? 8 - this.facing : this.facing];
-    this.sprite.setFlipX(mirrored);
+    // All eight facings are drawn (the hero is modelled in 3D, see hero3d.ts), so none is mirrored.
+    const drawn = DIRECTIONS_8[this.facing].name;
     const anim = this.pose === 'stand' ? (moving ? 'walk' : 'idle') : this.pose;
     this.sprite.play(`player-${anim}-${drawn}`, true);
     // Sneaking: hunched lower, with slow, careful steps.

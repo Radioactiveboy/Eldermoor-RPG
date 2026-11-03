@@ -61,6 +61,8 @@ export interface Pose3D {
   bob: number;
   /** Seated on a stool or bench: thighs forward, shins down, the body lowered by `bob`. */
   sit?: boolean;
+  /** 0..2: how far a cloak's hem streams back as the figure walks. */
+  flutter?: number;
 }
 
 /** Drawn directions, in sheet-row order: angle in degrees, 0 facing the viewer, 90 facing screen-right. */
@@ -82,10 +84,10 @@ const IDLE: Pose3D[] = [
   { stride: 0, bob: 0.7 },
 ];
 const WALK: Pose3D[] = [
-  { stride: 1, bob: 0.8 },
-  { stride: 0, bob: 0 },
-  { stride: -1, bob: 0.8 },
-  { stride: 0, bob: 0 },
+  { stride: 1, bob: 0.8, flutter: 1 },
+  { stride: 0, bob: 0, flutter: 2 },
+  { stride: -1, bob: 0.8, flutter: 1 },
+  { stride: 0, bob: 0, flutter: 2 },
 ];
 /** Same columns as character.ts's sheets (4 idle, 4 walk, 2 sit), so animations line up. */
 const SIT: Pose3D[] = [
@@ -133,7 +135,19 @@ function renderFrame(model: Model, angleDeg: number): PixelCanvas {
   const dirB = toBody(dir);
   const depth = new Float32Array(FRAME_W * FRAME_H).fill(Infinity);
 
+  // Where on screen each solid can fall (a box round its widest radius), so
+  // each pixel only tests the few solids that might cover it.
+  const bounds = model.solids.map((s) => {
+    const w = toWorld([s.cx, s.cy, s.cz]);
+    const r = Math.max(s.rx, s.ry, s.rz) + 1;
+    const sx = w[0] + FRAME_W / 2;
+    const sy = FEET_Y - (w[0] * up[0] + w[1] * up[1] + w[2] * up[2]);
+    return { s, x0: sx - r, x1: sx + r, y0: sy - r, y1: sy + r };
+  });
+
   for (let py = 0; py < FRAME_H; py++) {
+    const row = bounds.filter((bb) => py >= bb.y0 && py <= bb.y1);
+    if (row.length === 0) continue;
     for (let px = 0; px < FRAME_W; px++) {
       const u = px + 0.5 - FRAME_W / 2;
       const v = FEET_Y + 0.5 - (py + 0.5);
@@ -141,7 +155,9 @@ function renderFrame(model: Model, angleDeg: number): PixelCanvas {
       const o = toBody(origin);
       let best = Infinity;
       let hitSolid: Solid | undefined;
-      for (const s of model.solids) {
+      for (const bb of row) {
+        if (px < bb.x0 || px > bb.x1) continue;
+        const s = bb.s;
         const t = rayEllipsoid(o, dirB, s);
         if (t < best) {
           best = t;
@@ -216,14 +232,9 @@ function rayEllipsoid(o: Vec3, d: Vec3, s: Solid): number {
   return t > 0 ? t : Infinity;
 }
 
-/**
- * Builds a 3D figure's sprite sheet (rows = 8 directions, cols as character.ts:
- * 4 idle, 4 walk, 2 sit) and registers '<key>-idle-<dir>', '-walk-' and '-sit-'
- * for all eight directions (see Npc.sync, which then doesn't mirror).
- */
-export function generateFigure3D(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model): void {
-  const cols = POSES.length;
-  const sheet = new PixelCanvas(FRAME_W * cols, FRAME_H * DIRECTIONS_8.length);
+/** Every frame of a 3D figure: rows = 8 directions, cols as character.ts (4 idle, 4 walk, 2 sit). */
+export function drawFigureSheet(build: (pose: Pose3D) => Model): PixelCanvas {
+  const sheet = new PixelCanvas(FRAME_W * POSES.length, FRAME_H * DIRECTIONS_8.length);
   DIRECTIONS_8.forEach((d, row) => {
     POSES.forEach((pose, col) => {
       const frame = renderFrame(build(pose), d.angle);
@@ -231,7 +242,18 @@ export function generateFigure3D(scene: Phaser.Scene, key: string, build: (pose:
       sheet.blit(frame, col * FRAME_W, row * FRAME_H);
     });
   });
-  const tex = sheet.toTexture(scene, key);
+  return sheet;
+}
+
+/**
+ * Builds a 3D figure's sprite sheet (see {@link drawFigureSheet}) and registers
+ * '<key>-idle-<dir>', '-walk-', '-sit-' and '-work-' (the seated frames, bobbing
+ * quickly: crouched at a task) for all eight directions (see Npc.sync, which
+ * then doesn't mirror).
+ */
+export function generateFigure3D(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model): void {
+  const cols = POSES.length;
+  const tex = drawFigureSheet(build).toTexture(scene, key);
   let i = 0;
   for (let row = 0; row < DIRECTIONS_8.length; row++) {
     for (let col = 0; col < cols; col++) tex.add(i++, 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
@@ -241,5 +263,17 @@ export function generateFigure3D(scene: Phaser.Scene, key: string, build: (pose:
     scene.anims.create({ key: `${key}-idle-${d.name}`, frames: frames(0, 4), frameRate: IDLE_FRAME_RATE, repeat: -1 });
     scene.anims.create({ key: `${key}-walk-${d.name}`, frames: frames(4, 4), frameRate: 9, repeat: -1 });
     scene.anims.create({ key: `${key}-sit-${d.name}`, frames: frames(8, 2), frameRate: 1.5, repeat: -1 });
+    scene.anims.create({ key: `${key}-work-${d.name}`, frames: frames(8, 2), frameRate: 6, repeat: -1 });
   });
+}
+
+/**
+ * Repaints a figure made by {@link generateFigure3D} from a new model, in
+ * place: every sprite and image already showing it changes with it, and its
+ * frames and animations stay as they were (the hero changing clothes).
+ */
+export function redrawFigure3D(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model): void {
+  const tex = scene.textures.get(key) as Phaser.Textures.CanvasTexture;
+  tex.context.putImageData(drawFigureSheet(build).toImageData(), 0, 0);
+  tex.refresh();
 }

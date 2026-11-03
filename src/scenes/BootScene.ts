@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { generateArt } from '../art';
-import { HERO_OUTFIT, redrawCharacter } from '../art/character';
 import { dressed } from '../art/gear';
+import { redrawHero } from '../art/hero3d';
 import { Inventory } from '../systems/Inventory';
 
 /**
@@ -28,7 +28,7 @@ export class BootScene extends Phaser.Scene {
       const now = JSON.stringify(Inventory.equipped);
       if (now === worn) return;
       worn = now;
-      redrawCharacter(this, 'player', dressed(HERO_OUTFIT, Inventory.equipped));
+      redrawHero(this, dressed(Inventory.equipped));
     };
     dress();
     Inventory.onChange(dress);
