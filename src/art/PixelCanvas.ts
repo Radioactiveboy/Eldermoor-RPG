@@ -81,6 +81,67 @@ export class PixelCanvas {
     }
   }
 
+  /**
+   * Rounds out a figure drawn from flat, evenly shaded parts, so it reads as a
+   * solid body rather than a paper cut-out. Lit from the upper left, as the
+   * rest of the art is:
+   * - each horizontal run of the figure is shaded as a cylinder: a lit band on
+   *   the left, a core shadow on the right, deepest at the far edge;
+   * - the whole figure darkens a little from head to foot, and more near the
+   *   ground where it stands (ambient occlusion);
+   * - a warm rim of light catches the edges facing the light.
+   * Call before {@link outline}; the outline is left untouched.
+   */
+  shadeForm(): void {
+    let top = -1;
+    let bottom = -1;
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (!this.isSolid(x, y)) continue;
+        if (top < 0) top = y;
+        bottom = y;
+        break;
+      }
+    }
+    if (top < 0) return;
+    const height = Math.max(1, bottom - top);
+    const src = this.rgb.slice();
+    const solid = (x: number, y: number) => this.isSolid(x, y);
+    for (let y = top; y <= bottom; y++) {
+      // Head to foot: a gentle fall-off in steps of three rows, so it stays crisp.
+      const t = Math.floor((y - top) / 3) * 3 / height;
+      let vertical = 1.06 - t * 0.2;
+      const fromGround = bottom - y;
+      if (fromGround < 4) vertical *= 0.8 + fromGround * 0.05;
+      let x = 0;
+      while (x < this.width) {
+        if (!solid(x, y)) {
+          x++;
+          continue;
+        }
+        let end = x;
+        while (end + 1 < this.width && solid(end + 1, y)) end++;
+        const len = end - x + 1;
+        for (let px = x; px <= end; px++) {
+          const i = y * this.width + px;
+          let f = vertical;
+          if (len >= 3) {
+            // -1 at the run's left edge to 1 at its right.
+            const n = ((px - x + 0.5) / len) * 2 - 1;
+            if (n < -0.45) f *= 1.1;
+            else if (n > 0.7 && len >= 5) f *= 0.68;
+            else if (n > 0.3) f *= 0.82;
+          }
+          let color = shadeColor(src[i], f);
+          // Rim light on edges that face the light (open to the left or above).
+          if (!solid(px - 1, y) || (!solid(px, y - 1) && !solid(px - 1, y - 1))) color = mix(color, RIM_LIGHT, 0.22);
+          this.rgb[i] = color;
+        }
+        x = end + 1;
+      }
+    }
+  }
+
   /** Paint a 1px outline around every solid shape (pixel-art "selout"). */
   outline(color: number = PALETTE.outline): void {
     const edge: number[] = [];
@@ -129,6 +190,25 @@ export class PixelCanvas {
     tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
     return tex;
   }
+}
+
+/** The warm light that catches a figure's lit edges (see PixelCanvas.shadeForm). */
+const RIM_LIGHT = 0xffe8b8;
+
+/** A colour darkened (f < 1, multiplied) or lightened (f > 1, towards white). */
+function shadeColor(color: number, f: number): number {
+  const ch = (shift: number) => {
+    const v = (color >> shift) & 0xff;
+    const out = f <= 1 ? v * f : v + (255 - v) * (f - 1);
+    return Math.max(0, Math.min(255, Math.round(out))) << shift;
+  };
+  return ch(16) | ch(8) | ch(0);
+}
+
+/** `a` blended towards `b` by `t` (0..1). */
+function mix(a: number, b: number, t: number): number {
+  const ch = (shift: number) => Math.round(((a >> shift) & 0xff) * (1 - t) + ((b >> shift) & 0xff) * t) << shift;
+  return ch(16) | ch(8) | ch(0);
 }
 
 /** Small deterministic RNG so generated art is identical on every load. */

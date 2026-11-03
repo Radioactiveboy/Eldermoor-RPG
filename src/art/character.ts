@@ -28,10 +28,12 @@ export const DIRECTIONS = [
 ] as const;
 export type DrawnDir = (typeof DIRECTIONS)[number]['name'];
 
-const IDLE_FRAMES = 2;
+const IDLE_FRAMES = 4;
 const WALK_FRAMES = 4;
 const SIT_FRAMES = 2;
 const COLS = IDLE_FRAMES + WALK_FRAMES + SIT_FRAMES;
+/** Frames a second of the idle (breathing) animation: a breath every couple of seconds. */
+export const IDLE_FRAME_RATE = 1.8;
 
 export interface Pose {
   /** -1..1 leg swing: positive puts the left leg forward. */
@@ -44,8 +46,11 @@ export interface Pose {
   sit?: boolean;
 }
 
+// A slow breath: hold, sink, hold, rise.
 const IDLE: Pose[] = [
   { stride: 0, bob: 0, flutter: 0 },
+  { stride: 0, bob: 0, flutter: 0 },
+  { stride: 0, bob: 1, flutter: 0 },
   { stride: 0, bob: 1, flutter: 0 },
 ];
 const WALK: Pose[] = [
@@ -285,6 +290,8 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
         const chest = Math.round(X(0, 3));
         // Linen shirt showing in a V at the collar.
         for (let i = 0; i < 4; i++) c.rect(chest - 2 + Math.ceil(i / 2), top + i, 4 - Math.ceil(i / 2) * 2 + 1, 1, o.shirt[0]);
+        // The chin's shadow falls across the collar.
+        c.rect(chest - 1, top, 3, 1, o.shirt[1]);
         c.set(chest, beltY, P.gold);
         c.set(chest + 1, beltY, P.goldLight);
       }
@@ -377,7 +384,7 @@ function drawFigure(c: PixelCanvas, ox: number, oy: number, angleDeg: number, po
 }
 
 /**
- * Builds a character's sprite sheet (rows = directions, cols = 2 idle + 4 walk +
+ * Builds a character's sprite sheet (rows = directions, cols = 4 idle + 4 walk +
  * 2 sitting frames) and registers '<key>-idle-<dir>', '<key>-walk-<dir>',
  * '<key>-sit-<dir>' and '<key>-work-<dir>' animations. The hero is 'player'.
  */
@@ -392,7 +399,7 @@ export function generateCharacter(scene: Phaser.Scene, key = 'player', outfit: O
     const first = row * COLS;
     const frames = (from: number, n: number) =>
       Array.from({ length: n }, (_, k) => ({ key, frame: first + from + k }));
-    scene.anims.create({ key: `${key}-idle-${dir.name}`, frames: frames(0, IDLE_FRAMES), frameRate: 2, repeat: -1 });
+    scene.anims.create({ key: `${key}-idle-${dir.name}`, frames: frames(0, IDLE_FRAMES), frameRate: IDLE_FRAME_RATE, repeat: -1 });
     scene.anims.create({ key: `${key}-walk-${dir.name}`, frames: frames(IDLE_FRAMES, WALK_FRAMES), frameRate: 9, repeat: -1 });
     // Sitting breathes slowly; crouching to work (picking, gathering) bobs quickly.
     const sitFrames = frames(IDLE_FRAMES + WALK_FRAMES, SIT_FRAMES);
@@ -412,7 +419,7 @@ export function redrawCharacter(scene: Phaser.Scene, key: string, outfit: Outfit
   tex.refresh();
 }
 
-/** Every frame of a character: rows = directions, cols = 2 idle + 4 walk + 2 sitting. */
+/** Every frame of a character: rows = directions, cols = 4 idle + 4 walk + 2 sitting. */
 function drawSheet(outfit: Outfit): PixelCanvas {
   const sheet = new PixelCanvas(FRAME_W * COLS, FRAME_H * DIRECTIONS.length);
   DIRECTIONS.forEach((dir, row) => {
@@ -421,6 +428,7 @@ function drawSheet(outfit: Outfit): PixelCanvas {
       // Draw each frame alone so the outline pass can't bleed between frames.
       const frame = new PixelCanvas(FRAME_W, FRAME_H);
       drawFigure(frame, 0, 0, dir.angle, pose, outfit);
+      frame.shadeForm();
       frame.outline();
       sheet.blit(frame, col * FRAME_W, row * FRAME_H);
     });
