@@ -107,6 +107,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   leofric: leofricModel,
   scribe: scribeModel,
   harlan: harlanModel,
+  fenwick: fenwickModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1478,5 +1479,33 @@ export function harlanModel(pose: Pose3D): Model {
     tankard: true,
     // Patches on the elbows and the front of the coat.
     coatPaint: (h, base) => ((Math.abs(h.x + 2.6) < 1.2 && Math.abs(h.y - 19.4) < 1.4 && h.z > 2) || (Math.abs(Math.abs(h.x) - 5.6) < 1 && Math.abs(h.y - 20) < 1.2) ? patch : base),
+  });
+}
+
+/** Master Fenwick, the wool merchant: a fine blue coat and cloak, white shirt sleeves, and a broad dark hat. Tidy, clean-shaven. */
+export function fenwickModel(pose: Pose3D): Model {
+  const shirt: Tones = [0xf0ece4, 0xc8c2b8, 0xffffff];
+  const coat: Tones = [0x2e3a6a, 0x222a50, 0x40508a];
+  const hat: Tones = [0x3a2e3e, 0x2a202c, 0x504456];
+  const band: Tones = [0x5a3e2e, 0x3e2a1e, 0x765440];
+  return regularModel(pose, {
+    coat,
+    sleeves: shirt,
+    legs: [0x2a2224, 0x1d1620, 0x3a3034],
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+    skin: [0xe6b896, 0xc29474, 0xf8d0b0],
+    hair: [0x2a2024, 0x1a1418, 0x3e3238],
+    long: true,
+    // The white shirt shows in a narrow V at the coat's opening.
+    coatPaint: (h, base) => (h.z > 2.6 && h.y > 21.5 - pose.bob && Math.abs(h.x) < (h.y - (20.5 - pose.bob)) * 0.55 ? shirt : base),
+    extras: (hy, hz, b) => [
+      // A cloak hanging from his shoulders down his back.
+      { cx: 0, cy: 18.4 - b, cz: -2.4, rx: 6.4, ry: 7.4, rz: 2.8, material: coat },
+      { cx: 0, cy: 24.4 - b, cz: -0.6, rx: 6, ry: 1.6, rz: 3.6, material: coat },
+      // A broad-brimmed hat with a leather band.
+      { cx: 0, cy: hy + 3, cz: hz, rx: 8.2, ry: 0.7, rz: 7.8, material: hat },
+      { cx: 0, cy: hy + 4.8, cz: hz - 0.2, rx: 4.8, ry: 3, rz: 4.6, material: hat },
+      { cx: 0, cy: hy + 3.8, cz: hz - 0.2, rx: 5, ry: 0.6, rz: 4.8, material: band },
+    ],
   });
 }
