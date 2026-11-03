@@ -30,6 +30,8 @@ export interface BeastPose {
   hackles?: boolean;
   /** Head lowered a further pixel (the sniffing nod). */
   nod?: number;
+  /** The front of the body raised, in pixels: rearing, or springing into a leap. */
+  rise?: number;
 }
 
 /** A beast's frame order (see the file comment). */
@@ -506,6 +508,171 @@ export function boarSheet(): BeastSheet {
 
 /** The boar's models are drawn this much bigger than their body-space units. */
 const BOAR_SIZE = 1.15;
+
+// --- Red deer ---------------------------------------------------------------
+
+const DEER_DEEP = 0x4a2616;
+const DEER_DARK = 0x6a3a22;
+const DEER = 0x9a5a32;
+const DEER_LIGHT = 0xb87a4a;
+const DEER_PALE = 0xe6d2ae;
+const ANTLER = 0xd8c8a4;
+const ANTLER_DARK = 0xa08a64;
+const HOOF = 0x2a1e18;
+
+/**
+ * A red deer stag: a long slim body on tall thin legs, a deep chest, a long
+ * neck with a shaggy mane, a narrow head with big ears and a dark muzzle, a
+ * pale rump with a short tail, and a pair of branching antlers. Head poses:
+ * 'sniff' grazes, 'snarl' stands alert with its head high and tail flicked up,
+ * 'bite' rears and strikes with its forehooves.
+ */
+export function deerModel(pose: BeastPose, dead = false): Model {
+  const DEEP: Tones = [DEER_DEEP, DEER_DEEP, DEER_DARK];
+  const DARK: Tones = [DEER_DARK, DEER_DEEP, DEER];
+  const COAT: Tones = [DEER, DEER_DARK, DEER_LIGHT];
+  const PALE: Tones = [DEER_PALE, 0xbda889, 0xfaf0d8];
+  const BONE: Tones = [ANTLER, ANTLER_DARK, 0xf4eada];
+  const b = pose.bob;
+  const r = pose.rise ?? 0;
+  const lift = pose.lift ?? [0, 0, 0, 0];
+  const solids: Solid[] = [];
+  const details: Detail[] = [];
+
+  // Russet coat, pale under the belly, a cream patch round the rump.
+  const coat = (h: Hit): Tones => {
+    if (h.z < -7.5 && h.ny > -0.2) return PALE;
+    if (h.ny < -0.35) return PALE;
+    if (h.ny > 0.6) return speck(h, 1.4) < 0.25 ? DARK : COAT;
+    return COAT;
+  };
+
+  // A long, slim body: the chest deep, the belly shallow, the rump rounded.
+  const spine: Spine = [
+    [-9.5, 20, 2.8, 2.8],
+    [-8, 20.2, 4.1, 4],
+    [-4, 20.4, 3.9, 3.8],
+    [0, 20.3, 4.1, 3.9],
+    [4, 20.4, 4.6, 4],
+    [6.5, 20.6, 4.2, 3.6],
+  ];
+  const tilt = (z: number) => r * ((z + 9.5) / 16) * 1.2;
+  const at = profile(spine);
+  for (let z = spine[0][0]; z <= spine[spine.length - 1][0]; z += 0.5) {
+    const [y, ry, rx] = at(z);
+    solids.push({ cx: 0, cy: y - b + tilt(z), cz: z, rx, ry, rz: 2.4, material: coat });
+  }
+
+  // Tall thin legs: the hind ones angled back at the hock, the forelegs straight.
+  for (const [i, side] of [[0, 1], [1, -1]] as const) {
+    const off = pose.legs[i];
+    const l = lift[i];
+    const x = side * 2.4;
+    const hip: V3 = [x, 19 - b, -7.5];
+    const stifle: V3 = [x, 12 - b, -5.6 + off * 0.3];
+    const hock: V3 = [x, 7.4 + l * 0.5, -8.6 + off * 0.7 - l * 0.3];
+    const hoof: V3 = [x, 1 + l, -7.6 + off];
+    solids.push(...chain([hip, stifle], [2.5, 1.3], coat));
+    solids.push(...chain([stifle, hock, [hoof[0], hoof[1] + 1, hoof[2]]], [1.2, 0.8, 0.6], DARK, 0.4));
+    solids.push({ cx: hoof[0], cy: hoof[1], cz: hoof[2], rx: 0.8, ry: 0.9, rz: 1, material: [HOOF, HOOF, 0x4a3a30] });
+  }
+  for (const [i, side] of [[2, 1], [3, -1]] as const) {
+    const off = pose.legs[i];
+    const l = lift[i] + r * 2.4;
+    const x = side * 2.4;
+    const shoulder: V3 = [x, 19 - b + r * 1.2, 5];
+    const elbow: V3 = [x, 12.5 - b + l * 0.5, 5 + off * 0.3 + r * 0.9];
+    const knee: V3 = [x, 6.5 + l * 0.8, 5.6 + off * 0.6 + r * 1.3];
+    const hoof: V3 = [x, 1 + l, 5.8 + off + r * 1.4];
+    solids.push(...chain([shoulder, elbow], [2.3, 1.2], coat));
+    solids.push(...chain([elbow, knee, [hoof[0], hoof[1] + 1, hoof[2]]], [1.1, 0.75, 0.6], DARK, 0.4));
+    solids.push({ cx: hoof[0], cy: hoof[1], cz: hoof[2], rx: 0.8, ry: 0.9, rz: 1, material: [HOOF, HOOF, 0x4a3a30] });
+  }
+
+  // Pale rump and a short tail, flicked up when it's alarmed.
+  const roused = pose.head === 'snarl' || pose.head === 'bite';
+  solids.push({ cx: 0, cy: 20.6 - b, cz: -9.6, rx: 2.6, ry: 2.8, rz: 1.4, material: PALE });
+  solids.push(...chain([[0, 20.4 - b, -10.4], [0, roused ? 23.4 - b : 17.6 - b, roused ? -11.6 : -10.8]], [0.9, 0.7], roused ? PALE : DARK, 0.4));
+
+  // The head: up, grazing, alert (held high), rearing, or flinching.
+  const heads = {
+    up: { h: [0, 32 - b, 8.4] as V3, pitch: 34, neck: 0 },
+    sniff: { h: [0, 4.6 - (pose.nod ?? 0), 11] as V3, pitch: 76, neck: 0 },
+    snarl: { h: [0, 35.5 - b, 7] as V3, pitch: 16, neck: 0 },
+    bite: { h: [0, 38 - b, 11.5] as V3, pitch: 30, neck: 0 },
+    hurt: { h: [0, 28 - b, 9.6] as V3, pitch: 50, neck: 0 },
+  };
+  const hd = dead ? { h: [0, 22, 11] as V3, pitch: 50 } : heads[pose.head];
+  const H = hd.h;
+  const p = (hd.pitch * Math.PI) / 180;
+  const dir: V3 = [0, -Math.sin(p), Math.cos(p)];
+
+  // A long neck with a shaggy mane down its front.
+  const mane = (h: Hit): Tones => (h.nz > 0.3 ? (speck(h, 1.2) < 0.3 ? DARK : DEEP) : h.ny > 0.4 ? DARK : COAT);
+  solids.push(...chain([[0, 21.5 - b + r * 1.2, 5.4], [(H[0] + 0) / 2, (H[1] + 21.5 - b) / 2, (H[2] + 5.4) / 2], add(H, dir, -1.5)], [4, 2.8, 2.2], mane));
+
+  // A narrow head down to a dark muzzle.
+  const head = (h: Hit): Tones => (h.ny < -0.4 ? PALE : h.ny > 0.5 ? DARK : COAT);
+  solids.push({ cx: H[0], cy: H[1], cz: H[2], rx: 2.3, ry: 2.5, rz: 2.4, material: head });
+  const tip = add(H, dir, 5.4);
+  solids.push(...limb(add(H, dir, 1.4), tip, 1.9, 1.3, head));
+  solids.push({ cx: tip[0], cy: tip[1], cz: tip[2] + 0.2, rx: 1.2, ry: 1, rz: 0.9, material: [DEER_DEEP, 0x2e1810, DEER_DARK] });
+
+  // Big ears, turned out to the sides.
+  for (const side of [-1, 1]) {
+    const root = add(H, [side * 1.8, 1.6, -1]);
+    const end = pose.head === 'hurt' || dead ? add(H, [side * 3.4, 2, -4.2]) : add(H, [side * 4.4, 4.4, -2]);
+    solids.push(...limb(root, end, 1.2, 0.9, DARK, 0.35));
+  }
+
+  // Antlers: a beam from each pedicle curving up and back, with three tines.
+  if (!dead || true) {
+    for (const side of [-1, 1]) {
+      const base = add(H, [side * 1.3, 2.4, 0.2]);
+      const beam: V3[] = [base, add(base, [side * 1.4, 4, -1.6]), add(base, [side * 2.4, 7.6, -3.6]), add(base, [side * 2.6, 10.6, -6.6])];
+      solids.push(...chain(beam, [0.75, 0.6, 0.5, 0.4], BONE, 0.35));
+      // Brow, bay and top tines, forwards off the beam.
+      solids.push(...limb(add(base, [side * 0.9, 2.4, -0.8]), add(base, [side * 1.4, 4, 2.6]), 0.5, 0.3, BONE, 0.3));
+      solids.push(...limb(add(base, [side * 2, 6.2, -2.8]), add(base, [side * 2.8, 8.2, 0.4]), 0.45, 0.3, BONE, 0.3));
+      solids.push(...limb(add(base, [side * 2.5, 9.4, -5.4]), add(base, [side * 3.6, 12, -4.4]), 0.4, 0.28, BONE, 0.3));
+    }
+  }
+
+  // Dark eyes, shut when hurt or dead.
+  const shut = dead || pose.head === 'hurt';
+  for (const side of [-1, 1]) details.push({ ...vec(add(add(H, dir, 1.6), [side * 1.95, 0.9, 0])), color: shut ? DEER_DEEP : 0x140c0c });
+  return { solids, details };
+}
+
+/** The deer's frames, in the order of {@link BEAST_FRAME}. */
+export const DEER_POSES: BeastPose[] = [
+  { legs: STILL, bob: 0, head: 'up', tail: 0 },
+  { legs: STILL, bob: 0.6, head: 'up', tail: 0 },
+  { legs: [3, -3, -3, 3], bob: 0.6, head: 'up', tail: 0 },
+  { legs: [0, 0, 0, 0], lift: [0, 2.2, 2.2, 0], bob: 0, head: 'up', tail: 0 },
+  { legs: [-3, 3, 3, -3], bob: 0.6, head: 'up', tail: 0 },
+  { legs: [0, 0, 0, 0], lift: [2.2, 0, 0, 2.2], bob: 0, head: 'up', tail: 0 },
+  { legs: [0, 0, 1, 1.6], bob: 0.6, head: 'sniff', tail: 0 },
+  { legs: [0, 0, 1, 1.6], bob: 1, head: 'sniff', tail: 0, nod: 1 },
+  { legs: [-1, -1, 1, 1], bob: 0, head: 'snarl', tail: 0 },
+  { legs: [-2, -1.5, 1, 1.5], bob: 0, head: 'bite', tail: 0, rise: 4 },
+  { legs: [-1, 1, -2, -1], bob: 1, head: 'hurt', tail: 0 },
+  { legs: [-3, -1.5, 2.5, 4], bob: 0, head: 'up', tail: 0 },
+];
+
+export function deerSpec(): FrameSpec {
+  return { w: 58, h: 62, feetY: 52, groundShade: 4 };
+}
+
+export function deerSheet(): BeastSheet {
+  const models = DEER_POSES.map((pose, i) => {
+    const dead = i === BEAST_FRAME.dead;
+    let m = shifted(deerModel(pose, dead), -1);
+    if (dead) m = onItsSide(m, 20.4, 3.8);
+    return m;
+  });
+  return { spec: deerSpec(), models };
+}
 
 // --- Sheets -----------------------------------------------------------------
 
