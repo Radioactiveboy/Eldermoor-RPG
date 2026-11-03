@@ -111,6 +111,8 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   sigrun: sigrunModel,
   ada: adaModel,
   cobb: cobbModel,
+  pip: pipModel,
+  hetty: hettyModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1601,4 +1603,75 @@ export function cobbModel(pose: Pose3D): Model {
       { cx: 0, cy: hy - 5.2, cz: hz + 2.8, rx: 3.6, ry: 2.6, rz: 2.2, material: (h: Hit) => (dusted(h, 0.3) ? [hair[2], hair[0], hair[2]] : hair) },
     ],
   });
+}
+
+/**
+ * A child built from a grown-up's model: the same head, lowered onto a shorter,
+ * slighter body. Everything below the neck is squashed towards the ground; the
+ * head and what's on it just drop. Materials still see the grown-up's
+ * coordinates, so their painting (hairlines, belts, patches) lands in the same places.
+ */
+function asChild(m: Model, neck = 26, k = 0.68, w = 0.84): Model {
+  const drop = neck * (1 - k);
+  const solids = m.solids.map((s): Solid => {
+    const head = s.cy >= neck;
+    const src = s.material;
+    const back = (h: Hit): Hit => (head
+      ? { ...h, y: h.y + drop }
+      : { ...h, x: h.x / w, y: h.y / k, z: h.z / w });
+    const material: Material = typeof src === 'function' ? (h: Hit) => src(back(h)) : src;
+    return head
+      ? { ...s, cy: s.cy - drop, material }
+      : { ...s, cx: s.cx * w, cy: s.cy * k, cz: s.cz * w, rx: s.rx * w, ry: s.ry * k, rz: s.rz * w, material };
+  });
+  const details = m.details.map((d) => (d.y >= neck ? { ...d, y: d.y - drop } : { ...d, x: d.x * w, y: d.y * k, z: d.z * w }));
+  return { solids, details };
+}
+
+/** Pip, Iran's lad: a scruffy boy in a patched green tunic over a linen shirt, dark hair sticking up. */
+export function pipModel(pose: Pose3D): Model {
+  const patch: Tones = [0x7a6a42, 0x5a4c2e, 0x94845a];
+  const hair: Tones = [0x2e2420, 0x1e1614, 0x463830];
+  return asChild(regularModel(pose, {
+    coat: [0x5a7a3a, 0x42602a, 0x76964e],
+    sleeves: [P.linen, P.linenDark, 0xfff4e0],
+    legs: [0x6b4a30, 0x4a3020, 0x87603e],
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+    skin: [0xd8a07a, 0xb07a5a, 0xecb894],
+    hair,
+    // A patch on the tunic's front, and one on the knee.
+    coatPaint: (h, base) => (Math.abs(h.x - 2.2) < 1.3 && Math.abs(h.y - 17.6) < 1.3 && h.z > 2 ? patch : base),
+    extras: (hy, hz) => [
+      // Tufts sticking up where he never combs it.
+      { cx: -1.4, cy: hy + 5.4, cz: hz - 0.6, rx: 1.4, ry: 1.6, rz: 1.4, material: hair },
+      { cx: 1.6, cy: hy + 5.2, cz: hz + 0.4, rx: 1.3, ry: 1.4, rz: 1.3, material: hair },
+    ],
+  }));
+}
+
+/** Hetty, Pip's little sister: a blue dress over a linen shift, and her hair in two bunches. */
+export function hettyModel(pose: Pose3D): Model {
+  const dress: Tones = [0x5a74a8, 0x42588a, 0x7a94c4];
+  const hair: Tones = [0x3a2a22, 0x261a14, 0x54402e];
+  const ribbon: Tones = [0xc85a5a, 0x984040, 0xe07a72];
+  const skirt: Solid[] = pose.sit
+    ? [{ cx: 0, cy: 6.4, cz: 5.4, rx: 4.4, ry: 3.8, rz: 2.4, material: dress }]
+    : [{ cx: 0, cy: 6, cz: pose.stride * 0.3, rx: 5.6, ry: 4.6, rz: 4.4, material: dress }];
+  return asChild(regularModel(pose, {
+    coat: dress,
+    sleeves: [P.linen, P.linenDark, 0xfff4e0],
+    legs: dress,
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+    skin: [0xd8a07a, 0xb07a5a, 0xecb894],
+    hair,
+    long: true,
+    extras: (hy, hz) => [
+      // Two bunches of hair tied with red ribbon, either side of her head.
+      ...[-1, 1].flatMap((side): Solid[] => [
+        { cx: side * 5.8, cy: hy - 1.4, cz: hz - 1.4, rx: 1.8, ry: 2.8, rz: 1.8, material: hair },
+        { cx: side * 5.4, cy: hy + 1, cz: hz - 1.2, rx: 1.1, ry: 0.8, rz: 1.1, material: ribbon },
+      ]),
+      ...skirt,
+    ],
+  }));
 }
