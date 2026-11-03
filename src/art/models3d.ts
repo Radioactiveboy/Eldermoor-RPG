@@ -98,6 +98,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   pedlar: pedlarModel,
   pilgrim: pilgrimModel,
   drover: droverModel,
+  carter: carterModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -922,5 +923,75 @@ export function droverModel(pose: Pose3D): Model {
   for (const side of [-1, 1]) details.push({ x: side * 1.9, y: hy + 0.8, z: 5, color: P.eye });
   details.push({ x: 0.4, y: hy - 2.4, z: 4.9, color: 0xb86a58 }); // a grin
   details.push({ x: -0.6, y: hy - 2.4, z: 4.9, color: 0xb86a58 });
+  return { solids, details };
+}
+
+/**
+ * Odo the carter: a burly man in a flat cap, a brown beard, a russet coat to
+ * mid-thigh with a blue neckerchief, and a coiled whip at his belt.
+ */
+export function carterModel(pose: Pose3D): Model {
+  const coat: Tones = [0x8a4a2a, 0x62341c, 0xa8623c];
+  const kerchief: Tones = [0x2e5a7a, 0x1e405a, 0x427492];
+  const trouser: Tones = [0x4e4234, 0x342a20, 0x645440];
+  const skin: Tones = [0xe0a07c, 0xb4785a, 0xf2ba96];
+  const hair: Tones = [0x6a4a30, 0x4a321e, 0x845e40];
+  const cap: Tones = [0x5a5a3e, 0x3e3e2a, 0x74745a];
+  const belt: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const boots: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    solids.push(...limb([side * 2.5, 12 - b * 0.5, 0], [side * 2.5, 3.6 + lift, swing * 2.4], 2.1, 1.8, trouser));
+    solids.push({ cx: side * 2.5, cy: 1.4 + lift, cz: 0.9 + swing * 2.4, rx: 1.9, ry: 1.5, rz: 2.8, material: boots });
+  }
+
+  // The coat to mid-thigh, belted, buttoned down the front.
+  const body = (h: Hit): Tones => (Math.abs(h.y - (16.6 - b)) < 0.6 ? belt : coat);
+  for (let y = 9; y <= 15; y += 0.5) {
+    const t = (15 - y) / 6;
+    solids.push({ cx: 0, cy: y - b * 0.5, cz: s * 0.3 * t, rx: 5.2 + t * 0.6, ry: 0.8, rz: 4 + t * 0.4, material: coat });
+  }
+  solids.push({ cx: 0, cy: 17 - b, cz: 0.2, rx: 5.2, ry: 3, rz: 4, material: body });
+  solids.push({ cx: 0, cy: 21.8 - b, cz: 0.2, rx: 5.8, ry: 4.8, rz: 4, material: body });
+  // The neckerchief, knotted at the throat.
+  solids.push({ cx: 0, cy: 26 - b, cz: 0.6, rx: 3.2, ry: 1.4, rz: 3, material: kerchief });
+  solids.push({ cx: 0.4, cy: 25 - b, cz: 3, rx: 1.1, ry: 1.2, rz: 0.8, material: kerchief });
+  // A coiled whip hanging at his left hip.
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    solids.push({ cx: 5 + Math.cos(a) * 0.4, cy: 14 - b + Math.sin(a) * 2, cz: 1.2 + Math.cos(a) * 2, rx: 0.7, ry: 0.7, rz: 0.7, material: belt });
+  }
+
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 5.4, cy: 24.8 - b, cz: 0.2, rx: 2.6, ry: 2.4, rz: 2.6, material: coat });
+    const elbow: [number, number, number] = [side * 6.7, 20.3 - b, swing * 0.5];
+    solids.push(...limb([side * 6, 24.2 - b, 0.2], elbow, 2, 1.9, coat));
+    solids.push(...limb(elbow, [side * 6.9, 17 - b, 0.8 + swing], 1.9, 2, coat));
+    solids.push({ cx: side * 6.9, cy: 15.7 - b, cz: 1 + swing, rx: 1.8, ry: 1.9, rz: 1.8, material: skin });
+  }
+
+  // Head: a short brown beard, and a flat cap with its peak over the brow.
+  const hy = 32.2 - b;
+  solids.push({ cx: 0, cy: 27.4 - b, cz: 0.2, rx: 2.3, ry: 2, rz: 2.3, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (h.nz > -0.35 && (py < -1.8 || (py < -0.2 && Math.abs(h.nx) > 0.6))) return hair;
+    if (h.nz < -0.2 || Math.abs(h.nx) > 0.7) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.5, ry: 5.8, rz: 5.3, material: head, soft: true });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: 5.5, rx: 1.1, ry: 1.2, rz: 1, material: skin });
+  solids.push({ cx: 0, cy: hy + 3.4, cz: -0.4, rx: 6, ry: 2.8, rz: 6, material: cap });
+  solids.push({ cx: 0, cy: hy + 2.8, cz: 4.6, rx: 4.2, ry: 0.7, rz: 2.4, material: cap });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: 5.1, color: P.eye });
+  for (const y of [22, 19.6]) details.push({ x: 0, y: y - b, z: 4.1, color: P.leatherDark });
   return { solids, details };
 }
