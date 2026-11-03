@@ -89,6 +89,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   tollguard: tollGuardModel,
   iran: iranModel,
   porter: porterModel,
+  gardener: gardenerModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -540,6 +541,8 @@ interface MonkLook {
   staff?: boolean;
   /** A head pushed forward with age. */
   stooped?: boolean;
+  /** The habit hitched up to the knee for work, showing breeches (in these tones) and boots. */
+  hitched?: Tones;
 }
 
 /**
@@ -557,16 +560,19 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
 
   for (const side of [-1, 1]) {
     const swing = s * side;
-    solids.push({ cx: side * 2.3, cy: 1.2 + (swing < 0 ? 0.8 : 0), cz: 0.8 + swing * 2.3, rx: 1.7, ry: 1.3, rz: 2.5, material: boots });
+    const lift = swing < 0 ? 0.8 : 0;
+    if (look.hitched) solids.push(...limb([side * 2.3, 12 - b * 0.5, 0], [side * 2.3, 3.6 + lift, swing * 2.3], 1.9, 1.7, look.hitched));
+    solids.push({ cx: side * 2.3, cy: 1.2 + lift, cz: 0.8 + swing * 2.3, rx: 1.7, ry: 1.3, rz: 2.5, material: boots });
   }
 
-  // The habit to the ankles, falling in a fold or two, the rope's end hanging at the front.
+  // The habit to the ankles (or the knee, hitched), falling in a fold or two, the rope's end hanging at the front.
   const skirt = (h: Hit): Tones => {
     if (h.nz > 0.6 && Math.abs(h.x - 1.2) < 0.6 && h.y > 9) return rope;
     return habit;
   };
-  for (let y = 2.5; y <= 16; y += 0.5) {
-    const t = (16 - y) / 13.5;
+  const hem = look.hitched ? 8.5 : 2.5;
+  for (let y = hem; y <= 16; y += 0.5) {
+    const t = ((16 - y) / 13.5) * (look.hitched ? 0.6 : 1);
     solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 4.7 + t * 1.6, ry: 0.8, rz: 3.8 + t * 1.1, material: skirt });
   }
   const body = (h: Hit): Tones => (Math.abs(h.y - (16.6 - b)) < 0.6 ? rope : habit);
@@ -635,5 +641,16 @@ export function porterModel(pose: Pose3D): Model {
     boots: [P.leatherDark, P.barkDark, P.leather],
     staff: true,
     stooped: true,
+  });
+}
+
+/** Brother Cuthbert, the gardener: sandy-haired and ruddy, his habit hitched up to the knee for digging. */
+export function gardenerModel(pose: Pose3D): Model {
+  return monkModel(pose, {
+    habit: [0x6a5240, 0x4a3828, 0x866a54],
+    skin: [0xe6a882, 0xbc8062, 0xf6c4a0],
+    hair: [0xb08a4a, 0x806230, 0xcca464],
+    boots: [P.barkDark, P.ink, P.bark],
+    hitched: [0x4e3c2e, 0x342820, 0x645040],
   });
 }
