@@ -4,7 +4,7 @@ import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADI
 import { Child, Siblings } from '../entities/Child';
 import { Creature } from '../entities/Creature';
 import { Hen } from '../entities/Hen';
-import { Npc } from '../entities/Npc';
+import { Npc, NpcWorld } from '../entities/Npc';
 import { SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
 import { EGG_REWARD, FEED_MONEY, SIBLING_BANTER, SIBLING_GREETINGS, SIBLING_THANKS } from '../dialogue/iran';
 import { Player } from '../entities/Player';
@@ -30,6 +30,9 @@ import { buildAbbeyMap, MOONPETAL } from '../world/AbbeyMap';
 import { buildChapelMap, buildInfirmaryMap, buildRefectoryMap, buildScriptoriumMap } from '../world/AbbeyRooms';
 import { buildDeepDenMap, buildDenMap } from '../world/DenMap';
 import { buildPlainsMap } from '../world/PlainsMap';
+import { BAR_PICKUP, buildCellarMap, buildTavernHallMap, buildTavernMap, buildTavernRoomMap, CELLAR_RATS } from '../world/TavernMap';
+import { CHECKOUT_HOUR, MENU, RENT_OPTIONS, Tavern } from '../systems/Tavern';
+import { DICE_STAKE, HARLAN_DRINK, PELL_SONG, RAT_REWARD, SONG_PRICE, TAVERN_CHATTER, TAVERN_MUTTERS, TAVERN_TOASTS } from '../dialogue/tavern';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
 import { AreaId, Bed, CropPatch, Door, MapData, Musing, Prop, Seat, Sight } from '../world/MapData';
@@ -148,6 +151,24 @@ const SITTING_THOUGHTS: Record<string, string[]> = {
     'Someone has carved a very small wolf into the table. It looks a bit like her.',
   ],
   // The same bench after the traders have gone home.
+  'tavern-table': [
+    'Someone has carved "COBB IS A CHEAT" into the table. Underneath, in another hand: "ADA IS".',
+    'The fire roars, the tankards clatter, and the floor is sticky underfoot. It is wonderful.',
+    'A dog under the next table is eating something it found. Best not to ask what.',
+  ],
+  'tavern-bar': [
+    'Godric polishes the same tankard, over and over, watching the room.',
+    'A row of tankards hangs over the bar, each with a name scratched on it. One just says "NO".',
+  ],
+  'tavern-table-quiet': [
+    'It is quiet at this hour. Dust turns in the light from the window, and the fire ticks.',
+    'Godric is chalking up debts on a slate. The list for "HARLAN" goes right off the bottom.',
+  ],
+  'tavern-bar-quiet': ['Godric polishes the same tankard, over and over. The taproom is nearly empty.'],
+  'tavern-bench': [
+    'Noise and warm light spill out of the Crooked Tankard every time the door opens.',
+    'The sign over the door creaks in the wind: a tankard, painted crooked, on purpose.',
+  ],
   'market-bench-closed': [
     'The stalls are covered over for the night. The square is quiet without the traders.',
     'A militiaman yawns by the well and leans on his spear.',
@@ -162,6 +183,7 @@ const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   deer: [['venison', 2], ['deer-hide', 1]],
   hare: [['hare-pelt', 1]],
   boar: [['boar-tusk', 2]],
+  rat: [['rat-tail', 1]],
 };
 
 /** What the hero thinks over a beast they've brought down, and when one gets away. */
@@ -174,7 +196,16 @@ const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
   deer: { slain: 'Venison for the pot, and a fine hide. Tamsin will want that.', fled: 'Gone, white rump bobbing away over the grass. I need to be quicker.' },
   hare: { slain: 'A hare. Not much eating on it, but the pelt is soft.', fled: 'Gone in a flash. Hares are quicker than they look.' },
   boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and so is my hide.', fled: 'It crashed off into the thicket. Good riddance.' },
+  rat: { slain: 'Rats. Big ones, too. I will take a tail or two to show Godric.', fled: 'It shot off into a hole in the wall. It will be back.' },
 };
+
+/** Seconds sitting at a tavern table before a maid comes over, the first time, and between her visits after that. */
+const SERVICE_FIRST = 4;
+const SERVICE_AGAIN = 50;
+/** Seconds between bits of chatter among the tavern's regulars. */
+const CHATTER_GAP: [number, number] = [6, 12];
+/** Seconds between the lines of an overheard exchange (and of Pell's song). */
+const LINE_GAP = 3.2;
 
 /** What the militia call out about the market's hours. */
 const MILITIA_CALLS = {
@@ -183,8 +214,13 @@ const MILITIA_CALLS = {
   opening: "Morning! Market's open!",
 };
 
-/** What the hero thinks on waking, by the hour. */
-function wakingThought(hour: number): string {
+/** What the hero thinks on waking, by the hour (and in a rented room at the Crooked Tankard, where). */
+function wakingThought(hour: number, area: AreaId): string {
+  if (area === 'tavern-room') {
+    if (hour >= 5 && hour < 12) return 'Morning. Carts in the square below, and the smell of bacon coming up the stairs.';
+    if (hour >= 12 && hour < 18) return 'I slept half the day away in a rented bed. Downstairs, somebody is already arguing about dice.';
+    return 'Dark outside. Through the floor I can hear the taproom: laughing, tankards, and Pell, singing.';
+  }
   if (hour >= 5 && hour < 10) return 'Morning already. I feel rested, and the fire has burned low.';
   if (hour >= 10 && hour < 16) return 'I slept half the day away. Still, I feel better for it.';
   if (hour >= 16 && hour < 20) return 'The light is going. I feel rested, at least.';
@@ -206,6 +242,10 @@ function buildArea(area: AreaId): MapData {
   if (area === 'deepden') return buildDeepDenMap();
   if (area === 'cave') return buildCaveMap();
   if (area === 'hut') return buildHutMap();
+  if (area === 'tavern') return buildTavernMap();
+  if (area === 'tavern-hall') return buildTavernHallMap();
+  if (area === 'tavern-room') return buildTavernRoomMap(Tavern.room ?? 1);
+  if (area === 'cellar') return buildCellarMap();
   return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
 }
 
@@ -267,6 +307,17 @@ export class GameScene extends Phaser.Scene {
   private musing?: Musing;
   /** Something to happen once the conversation that led to it closes (the toll gate swinging open). */
   private afterTalk?: () => void;
+  /**
+   * A tavern maid looking after the hero's table: on her way over, gone to
+   * the bar with an order, or bringing it back.
+   */
+  private service?: { maid: Npc; seat: Seat; item?: ItemId; stage: 'coming' | 'fetching' | 'bringing' };
+  /** Seconds until a maid next comes to the hero's table. */
+  private serviceTimer = SERVICE_FIRST;
+  /** Seconds until the tavern's regulars next say something among themselves. */
+  private chatterTimer = 3;
+  /** An order just placed with a maid, to fetch once the conversation closes. */
+  private ordered?: ItemId;
 
   constructor() {
     super('Game');
@@ -296,6 +347,7 @@ export class GameScene extends Phaser.Scene {
       Experience.reset();
       Farm.reset();
       Shops.reset();
+      Tavern.reset();
       this.defeatedFoes.clear();
       this.visited.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
@@ -305,7 +357,10 @@ export class GameScene extends Phaser.Scene {
     this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
     const areaParam = new URLSearchParams(window.location.search).get('area');
-    const testAreas: AreaId[] = ['market', 'world', 'cave', 'hut', 'plains', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium', 'refectory', 'den', 'deepden'];
+    const testAreas: AreaId[] = [
+      'market', 'world', 'cave', 'hut', 'plains', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium', 'refectory', 'den', 'deepden',
+      'tavern', 'tavern-hall', 'cellar',
+    ];
     if (data.newGame && testAreas.some((a) => a === areaParam)) this.area = areaParam as AreaId;
     // Saves from before the wolves at home counted for anything: if they're all dead, note it.
     if (CAVE_WOLVES.every((id) => this.defeatedFoes.has(id))) QuestLog.setFlag('cleared-cave');
@@ -324,7 +379,10 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.map, start.x, start.y);
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
-    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking));
+    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking, n.hours));
+    this.service = undefined;
+    this.serviceTimer = SERVICE_FIRST;
+    this.chatterTimer = 3;
     this.marketWasOpen = marketOpen(this.clock.hour);
     this.creatures = this.spawnCreatures();
     const hens = this.map.data.hens;
@@ -348,9 +406,10 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(1200, () => this.onHint?.('I came to on the cottage floor, aching all over. That wolf is still out there.'));
     }
     if (data.slept !== undefined) {
-      this.time.delayedCall(1000, () => this.onHint?.(wakingThought(this.clock.hour)));
+      this.time.delayedCall(1000, () => this.onHint?.(wakingThought(this.clock.hour, this.area)));
     } else if (data.load) {
-      this.time.delayedCall(1000, () => this.onHint?.('I wake in my own bed. The day is waiting.'));
+      const waking = this.area === 'tavern-room' ? 'I wake in my room above the Crooked Tankard. The day is waiting.' : 'I wake in my own bed. The day is waiting.';
+      this.time.delayedCall(1000, () => this.onHint?.(waking));
     }
     if (data.newGame) {
       this.time.delayedCall(1200, () => this.onHint?.('Mother is resting by the hearth. She wants to speak with you.'));
@@ -400,6 +459,8 @@ export class GameScene extends Phaser.Scene {
           'into the dark. Something about the place makes the hair on my neck stand up. I will come back better prepared.',
       );
     }
+    if (this.area === 'tavern') this.enteredTavern();
+    if (this.area === 'cellar') this.enteredCellar();
     if (this.area === 'hut' && !this.visited.has('hut')) {
       this.time.delayedCall(900, () => this.onHint?.('Warm, smoky, and loud. Iran was not exaggerating about the children.'));
     }
@@ -445,6 +506,40 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  /** Into the Crooked Tankard: the first time, the hero takes it in. */
+  private enteredTavern(): void {
+    if (this.visited.has('tavern')) return;
+    const busy = this.clock.hour >= 17 || this.clock.hour < 2;
+    this.time.delayedCall(1000, () =>
+      this.onHint?.(busy
+        ? 'Heat, noise and the smell of ale. Every table is full, and somebody is murdering a lute by the fire.'
+        : 'Warm and dim, smelling of woodsmoke and old ale. An old man dozes at the end of the bar.'),
+    );
+    QuestLog.writeDiary(
+      "Went into the Crooked Tankard, the inn on Adowvale's square. Godric the landlord keeps it, a big bald man with a voice like a barrel " +
+        'rolling downstairs. There are rooms to let upstairs, and ale, and more gossip than at Hilde\'s stall.',
+    );
+  }
+
+  /** Down the trapdoor into the cellar: Godric's job moves on. */
+  private enteredCellar(): void {
+    QuestLog.complete('cellar-rats', 'cellar');
+    this.checkCellarClear();
+    if (this.visited.has('cellar')) return;
+    this.time.delayedCall(1000, () => this.onHint?.('Cold stone, the smell of spilt ale and something worse. Little claws skitter in the dark.'));
+  }
+
+  /** All the cellar's rats dead or run off: Godric should hear of it. */
+  private checkCellarClear(): void {
+    if (!CELLAR_RATS.every((id) => this.defeatedFoes.has(id)) || !QuestLog.has('cellar-rats') || QuestLog.isDone('cellar-rats', 'clear')) return;
+    QuestLog.complete('cellar-rats', 'cellar');
+    QuestLog.complete('cellar-rats', 'clear');
+    QuestLog.writeDiary(
+      "Cleared the rats out of the Crooked Tankard's cellar. Six of them, fat as cats on Godric's grain, and one bit me on the ankle. " +
+        'Godric owes me coin, and I have a satchel full of tails I did not want.',
+    );
+  }
+
   /** Into the wolves' den: the first time, the hero takes it in; on Wil's errand, that step is done. */
   private enteredCave(): void {
     QuestLog.complete('lost-sheep', 'cave');
@@ -484,6 +579,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHover();
     this.updateFocus();
     this.updateSitting(dt);
+    this.updateTavern(dt);
 
     this.cropTimer -= dt;
     if (this.cropTimer <= 0) {
@@ -542,7 +638,8 @@ export class GameScene extends Phaser.Scene {
     Inventory.takeOne(index);
     if (eat.health) this.stats.heal(eat.health);
     if (eat.stamina) this.stats.restoreStamina(eat.stamina);
-    GameAudio.crunch();
+    if (itemDef(stack.id).drink) GameAudio.gulp();
+    else GameAudio.crunch();
     return true;
   }
 
@@ -570,8 +667,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private startConversation(npc: Npc): void {
-    if (this.seat) this.standUp();
+  /** @param keepSeat stay sitting (a maid taking an order at the table) */
+  private startConversation(npc: Npc, keepSeat = false): void {
+    if (this.seat && !keepSeat) this.standUp();
+    this.syncNpcWorld();
+    this.ordered = undefined;
     this.busy = true;
     this.walkingTo = undefined;
     this.player.setPath([]);
@@ -583,6 +683,9 @@ export class GameScene extends Phaser.Scene {
     };
     this.scene.launch('Dialogue', data);
     this.scene.get('Dialogue').events.once('dialogue-closed', () => {
+      if (this.ordered && this.service?.maid === npc) this.fetchOrder(this.ordered);
+      else if (this.service?.maid === npc && !this.service.item) this.service = undefined;
+      this.ordered = undefined;
       const shop = this.pendingShop;
       this.pendingShop = undefined;
       const after = this.afterTalk;
@@ -607,7 +710,58 @@ export class GameScene extends Phaser.Scene {
       this.pendingShop = action.slice(5) as ShopId;
       return;
     }
+    if (action.startsWith('drink:')) {
+      this.drinkAtBar(action.slice(6) as ItemId);
+      return;
+    }
+    if (action.startsWith('order:')) {
+      this.placeOrder(action.slice(6) as ItemId);
+      return;
+    }
+    if (action.startsWith('rent:')) {
+      this.rentRoom(Number(action.slice(5)));
+      return;
+    }
     switch (action) {
+      case 'start-rats-quest':
+        if (QuestLog.has('cellar-rats')) return;
+        QuestLog.start('cellar-rats', ['talk']);
+        QuestLog.writeDiary(
+          `Godric at the Crooked Tankard has rats in his cellar, big as cats, he says. He will pay ${RAT_REWARD} coins to have them cleared out. ` +
+            'The trapdoor is by the end of the bar.',
+        );
+        this.checkCellarClear();
+        break;
+      case 'finish-rats-quest':
+        if (QuestLog.get('cellar-rats')?.completed) return;
+        QuestLog.complete('cellar-rats', 'return');
+        Inventory.reward(RAT_REWARD);
+        GameAudio.coins();
+        QuestLog.setFlag('tankard-free-drink');
+        QuestLog.writeDiary(
+          `Told Godric his cellar is clear. He went down to look for himself, came back up grinning, and paid me ${RAT_REWARD} coins. ` +
+            'My next drink is on the house, he says. He did not want the tails.',
+        );
+        break;
+      case 'buy-harlan':
+        if (Inventory.addCoins(-HARLAN_DRINK)) GameAudio.coins();
+        break;
+      case 'harlan-secret':
+        if (QuestLog.hasFlag('harlan-secret')) return;
+        QuestLog.setFlag('harlan-secret');
+        QuestLog.writeDiary(
+          'Old Harlan at the Crooked Tankard says the door under the hill was put there by old Lord Morten, this one\'s grandfather, to shut in ' +
+            'something that came up from the deep places. The key went with him: buried, or kept up at the manor.',
+        );
+        break;
+      case 'dice-game':
+        this.afterTalk = () => this.playDice();
+        break;
+      case 'pell-song':
+        if (!Inventory.addCoins(-SONG_PRICE)) return;
+        GameAudio.coins();
+        this.afterTalk = () => this.pellSings();
+        break;
       case 'start-medicine-quest':
         if (QuestLog.has('mother-medicine')) return;
         QuestLog.start('mother-medicine', ['talk']);
@@ -716,12 +870,209 @@ export class GameScene extends Phaser.Scene {
     if (d < 12) GameAudio.cluck(Math.max(0.1, 1 - d / 12));
   }
 
+  // ------------------------------------------------------------ the Crooked Tankard
+
+  /** Tells the tavern's people what they need to know about the hero and the clock (see NpcWorld). */
+  private syncNpcWorld(): void {
+    NpcWorld.seated = this.seat?.name === 'tavern-table';
+    NpcWorld.now = this.clock.elapsedHours;
+    NpcWorld.hoursUntil = (h) => this.clock.hoursUntil(h);
+  }
+
+  private updateTavern(dt: number): void {
+    if (this.area !== 'tavern') return;
+    this.updateService(dt);
+    this.updateChatter(dt);
+  }
+
+  /** The person with this id, if they're about. */
+  private someone(id: string): Npc | undefined {
+    return this.npcs.find((n) => n.id === id && n.present);
+  }
+
+  /** While the hero sits at a table, now and then a maid comes over to take an order. */
+  private updateService(dt: number): void {
+    this.serviceTimer -= dt;
+    const seat = this.seat;
+    if (this.service || !seat || seat.name !== 'tavern-table' || this.busy || this.serviceTimer > 0) return;
+    const player = { x: this.player.gx, y: this.player.gy };
+    const maid = this.npcs
+      .filter((n) => (n.id === 'nell' || n.id === 'rosie') && n.present && n.idle)
+      .sort((a, b) => a.distanceTo(player.x, player.y) - b.distanceTo(player.x, player.y))[0];
+    if (!maid) {
+      this.serviceTimer = 5;
+      return;
+    }
+    const service = { maid, seat, stage: 'coming' as const };
+    this.service = service;
+    maid.goTo({ x: seat.standX, y: seat.standY }, () => this.maidArrives(service));
+  }
+
+  /** The maid is at the table: she takes the hero's order, unless they've got up and gone in the meantime. */
+  private maidArrives(service: NonNullable<GameScene['service']>): void {
+    if (this.service !== service) return;
+    if (this.seat !== service.seat || this.busy) {
+      service.maid.say(this.seat ? "I'll come back by, love." : 'Oh! Never mind, then.', 3);
+      this.service = undefined;
+      this.serviceTimer = this.seat ? 12 : SERVICE_AGAIN;
+      return;
+    }
+    this.serviceTimer = SERVICE_AGAIN;
+    this.startConversation(service.maid, true);
+  }
+
+  /** Ordered from a maid at the table: pay up, and she'll fetch it once she's done talking. */
+  private placeOrder(item: ItemId): void {
+    const menu = MENU[item];
+    if (!menu || !Inventory.addCoins(-menu.price)) return;
+    GameAudio.coins();
+    this.ordered = item;
+  }
+
+  /** The maid goes to the bar for the order, waits on Godric, and brings it back to the table. */
+  private fetchOrder(item: ItemId): void {
+    const service = this.service!;
+    service.item = item;
+    service.stage = 'fetching';
+    const calls: Partial<Record<ItemId, string>> = { stew: 'One stew, Godric!', bread: 'Bread and butter, Godric!', cheese: 'Cheese for the table, Godric!' };
+    service.maid.goTo(BAR_PICKUP, () => {
+      if (this.service !== service) return;
+      service.maid.faceTowards(9.5, 1.5);
+      service.maid.say(calls[item] ?? `Godric! One ${itemDef(item).name.toLowerCase()}!`, 2.5);
+      this.someone('landlord')?.say('Coming up!', 2);
+      this.time.delayedCall(2800, () => {
+        if (this.service !== service) return;
+        service.stage = 'bringing';
+        service.maid.goTo({ x: service.seat.standX, y: service.seat.standY }, () => this.deliver(service));
+      });
+    });
+  }
+
+  /** The order arrives: eaten (or drunk) at the table, or, if the hero has got up, handed over to take away. */
+  private deliver(service: NonNullable<GameScene['service']>): void {
+    if (this.service !== service || !service.item) return;
+    this.service = undefined;
+    const item = service.item;
+    const menu = MENU[item]!;
+    service.maid.faceTowards(this.player.gx, this.player.gy);
+    service.maid.say(menu.served, 4);
+    if (this.seat === service.seat) this.time.delayedCall(1200, () => this.consume(item, menu.thought));
+    else this.give(item, 1);
+  }
+
+  /** Eat or drink something straight away (served in the tavern), and say how it was. */
+  private consume(item: ItemId, thought: string): void {
+    const def = itemDef(item);
+    if (def.eat?.health) this.stats.heal(def.eat.health);
+    if (def.eat?.stamina) this.stats.restoreStamina(def.eat.stamina);
+    if (def.drink) GameAudio.gulp();
+    else GameAudio.crunch();
+    this.onHint?.(thought);
+  }
+
+  /** A drink across the bar from Godric, drunk there and then (the first after clearing his cellar is on the house). */
+  private drinkAtBar(item: ItemId): void {
+    const menu = MENU[item];
+    if (!menu) return;
+    if (QuestLog.hasFlag('tankard-free-drink')) {
+      QuestLog.clearFlag('tankard-free-drink');
+    } else if (!Inventory.addCoins(-menu.price)) {
+      return;
+    } else {
+      GameAudio.coins();
+    }
+    this.afterTalk = () => {
+      this.someone('landlord')?.say('There you go. Drink up.', 3);
+      this.time.delayedCall(900, () => this.consume(item, menu.thought));
+    };
+  }
+
+  /** Take (or keep on) a room upstairs for some nights: it's the hero's to sleep in until checkout on the last morning. */
+  private rentRoom(nights: number): void {
+    const option = RENT_OPTIONS.find((o) => o.nights === nights);
+    if (!option || !Inventory.addCoins(-option.price)) return;
+    GameAudio.coins();
+    const extending = Tavern.renting(this.clock.elapsedHours);
+    const room = Tavern.rent(nights, this.clock.elapsedHours, this.clock.hoursUntil(CHECKOUT_HOUR));
+    const span = nights === 1 ? 'the night' : nights === 7 ? 'the week' : `${nights} nights`;
+    QuestLog.writeDiary(
+      extending
+        ? `Paid Godric ${option.price} coins to keep my room at the Crooked Tankard for ${span} more.`
+        : `Took a room at the Crooked Tankard for ${span}: room ${room}, up the stairs. ${option.price} coins. A real bed, a lock on the door, and only a few fleas.`,
+    );
+  }
+
+  /** A game of dice with Ada: the higher roll takes the pot, and she wins ties. */
+  private playDice(): void {
+    if (!Inventory.addCoins(-DICE_STAKE)) return;
+    const d6 = () => 1 + Math.floor(Math.random() * 6);
+    const mine = d6() + d6();
+    const hers = d6() + d6();
+    const ada = this.someone('ada');
+    GameAudio.dice();
+    this.time.delayedCall(700, () => {
+      if (mine > hers) {
+        Inventory.reward(DICE_STAKE * 2);
+        GameAudio.coins();
+        ada?.say(mine === 12 ? 'Double sixes?! Well, I never.' : 'Hmph. Beginner\'s luck.', 3.5);
+        this.onHint?.(`I roll ${mine}. Ada rolls ${hers}. I win! She pushes the coins over with a face like thunder.`);
+      } else {
+        ada?.say(mine === hers ? 'A tie goes to the house, dearie.' : 'Thank you kindly!', 3.5);
+        this.onHint?.(`I roll ${mine}. Ada rolls ${hers}. She scoops up the pot before the dice have stopped rolling.`);
+      }
+    });
+  }
+
+  /** Pell sings the Ballad of the Crooked Tankard, a bubble at a time, and the room joins in at the end. */
+  private pellSings(): void {
+    const pell = this.someone('pell');
+    if (!pell) return;
+    this.chatterTimer = PELL_SONG.length * LINE_GAP + 3;
+    PELL_SONG.forEach((line, i) => this.time.delayedCall(i * LINE_GAP * 1000, () => pell.say(line, LINE_GAP + 0.2)));
+    this.time.delayedCall(PELL_SONG.length * LINE_GAP * 1000, () => {
+      const crowd = this.npcs.filter((n) => n.present && n !== pell && n.id !== 'landlord');
+      crowd[Math.floor(Math.random() * crowd.length)]?.say('Hooray! ...More or less.', 3);
+      this.someone('landlord')?.say('Not bad, Pell. Not good, either.', 3);
+    });
+  }
+
+  /** The regulars talk among themselves: an exchange between some of them, someone muttering, or the room raising a cup. */
+  private updateChatter(dt: number): void {
+    if (this.busy) return;
+    this.chatterTimer -= dt;
+    if (this.chatterTimer > 0) return;
+    const gap = () => CHATTER_GAP[0] + Math.random() * (CHATTER_GAP[1] - CHATTER_GAP[0]);
+    const exchanges = TAVERN_CHATTER.filter((ex) => ex.every(([id]) => this.someone(id)?.idle));
+    if (exchanges.length > 0 && Math.random() < 0.55) {
+      const ex = exchanges[Math.floor(Math.random() * exchanges.length)];
+      ex.forEach(([id, text], i) => this.time.delayedCall(i * LINE_GAP * 1000, () => this.someone(id)?.say(text, LINE_GAP + 0.3)));
+      this.chatterTimer = ex.length * LINE_GAP + gap();
+      return;
+    }
+    this.chatterTimer = gap();
+    const about = this.npcs.filter((n) => n.present && n.idle && !n.speech);
+    const patrons = about.filter((n) => !['landlord', 'nell', 'rosie'].includes(n.id));
+    if (patrons.length >= 4 && Math.random() < 0.35) {
+      const who = patrons[Math.floor(Math.random() * patrons.length)];
+      who.say(TAVERN_TOASTS[Math.floor(Math.random() * TAVERN_TOASTS.length)], 3);
+      return;
+    }
+    const talkers = about.filter((n) => TAVERN_MUTTERS[n.id as SpeakerId]);
+    const who = talkers[Math.floor(Math.random() * talkers.length)];
+    const lines = who && TAVERN_MUTTERS[who.id as SpeakerId]!;
+    if (who && lines) who.say(lines[Math.floor(Math.random() * lines.length)], 3.5);
+  }
+
   // ------------------------------------------------------------ sleeping and saving
 
   /** Lie down in a bed: choose how long to sleep for, then sleep and save. */
   private goToBed(bed: Bed): void {
     if (!QuestLog.has('mother-medicine')) {
       this.onHint?.("I can't sleep yet. Mother wants to speak with me.");
+      return;
+    }
+    if (bed.id === 'tavern-room' && !Tavern.renting(this.clock.elapsedHours)) {
+      this.onHint?.('My time in this room is up. I should see Godric downstairs if I want to stay another night.');
       return;
     }
     if (!this.takeControls()) return;
@@ -820,7 +1171,8 @@ export class GameScene extends Phaser.Scene {
     );
     const hunted = first.huntable;
     foes.forEach((c) => c.engage());
-    if (!hunted) GameAudio.growl();
+    if (first.kind === 'rat') GameAudio.squeak();
+    else if (!hunted) GameAudio.growl();
     GameAudio.playMusic('battle');
     const data: CombatSceneData = { foes };
     this.scene.launch('Combat', data);
@@ -860,6 +1212,15 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(2600, () => this.onHint?.('The den is quiet now. Only the dripping water, and something pale at the back of the cave.'));
       }
       if (CAVE_WOLVES.every((id) => this.defeatedFoes.has(id))) QuestLog.setFlag('cleared-cave');
+      if (this.area === 'cellar') {
+        const before = QuestLog.isDone('cellar-rats', 'clear');
+        this.checkCellarClear();
+        if (!this.creatures.some((c) => c.active)) {
+          this.time.delayedCall(2600, () =>
+            this.onHint?.(QuestLog.isDone('cellar-rats', 'clear') && !before ? 'That is the last of them. Godric will want to hear.' : 'The cellar is quiet now, apart from the dripping.'),
+          );
+        }
+      }
       if (result.slain.includes('den-mother')) this.slewWolfMother();
       if (foes.some((c) => c.id === 'cottage-wolf')) {
         QuestLog.writeDiary(
@@ -1003,7 +1364,12 @@ export class GameScene extends Phaser.Scene {
   private doorInteraction(door: Door): Interaction {
     // Doors in a wall along the tile's -x edge have the prompt over the doorway; the cave mouth, over its tile.
     const front = door.facing === 'front';
-    const p = front ? gridToScreen(door.tx + 0.5, door.ty + 0.5) : gridToScreen(door.tx, door.ty + 0.5);
+    // A door in the wall along the tile's -y edge (the tavern's), over its middle.
+    const p = front
+      ? gridToScreen(door.tx + 0.5, door.ty + 0.5)
+      : door.facing === 'back'
+        ? gridToScreen(door.tx + 0.5, door.ty)
+        : gridToScreen(door.tx, door.ty + 0.5);
     return {
       key: `door:${door.tx},${door.ty}`, label: door.label ?? (door.to === 'home' ? 'Go inside' : 'Go outside'),
       gx: door.tx + 0.5, gy: door.ty + 0.5, range: 1.3, promptX: p.x, promptY: p.y - (front ? 62 : 58),
@@ -1349,6 +1715,8 @@ export class GameScene extends Phaser.Scene {
     this.walkingTo = undefined;
     this.seat = seat;
     this.sitTimer = 0;
+    // Sitting down at a tavern table: a maid will be over in a moment.
+    if (seat.name === 'tavern-table') this.serviceTimer = Math.max(this.serviceTimer, SERVICE_FIRST);
     this.player.sitAt(seat.gx, seat.gy, { x: seat.faceX, y: seat.faceY });
   }
 
@@ -1366,7 +1734,8 @@ export class GameScene extends Phaser.Scene {
     this.sitTimer += dt;
     if (before < 3 && this.sitTimer >= 3) {
       const closed = this.area === 'market' && !marketOpen(this.clock.hour);
-      const thoughts = SITTING_THOUGHTS[closed ? `${this.seat.name}-closed` : this.seat.name] ?? [];
+      const quiet = this.area === 'tavern' && this.clock.hour >= 2 && this.clock.hour < 17;
+      const thoughts = SITTING_THOUGHTS[closed ? `${this.seat.name}-closed` : quiet ? `${this.seat.name}-quiet` : this.seat.name] ?? SITTING_THOUGHTS[this.seat.name] ?? [];
       if (thoughts.length > 0) this.onHint?.(thoughts[Math.floor(Math.random() * thoughts.length)]);
     }
   }
@@ -1434,8 +1803,40 @@ export class GameScene extends Phaser.Scene {
       this.onHint?.("I shouldn't go anywhere before I've spoken with Mother.");
       return;
     }
+    if (!this.doorAllowed(door)) return;
     if (door.ask) this.askBeforeLeaving(door);
     else this.leaveThrough(door);
+  }
+
+  /**
+   * Doors that may be shut to the hero: the Crooked Tankard's cellar until
+   * Godric asks for the rats to be cleared, and the rooms upstairs, of which
+   * only the one let to the hero opens (and only while it's paid for).
+   */
+  private doorAllowed(door: Door): boolean {
+    if (door.id === 'cellar' && !QuestLog.has('cellar-rats')) {
+      GameAudio.rattle();
+      this.onHint?.("The trapdoor is bolted, and Godric is watching me over the bar. Not without asking him first.");
+      return false;
+    }
+    const room = door.id?.startsWith('room-') ? Number(door.id.slice(5)) : undefined;
+    if (room === undefined) return true;
+    const renting = Tavern.renting(this.clock.elapsedHours);
+    if (renting && Tavern.room === room) return true;
+    GameAudio.rattle();
+    const others = [
+      `Room ${room} is locked. Somebody on the other side is snoring like a saw.`,
+      `Locked. A voice from inside: "Go away! I paid for this one!"`,
+      `Room ${room} is locked. It smells of pipe smoke and wet dog.`,
+    ];
+    this.onHint?.(
+      !renting
+        ? Tavern.room === room && Tavern.paidUntil > 0
+          ? 'Locked. My time in this room is up. I would have to take it again from Godric.'
+          : "Locked. I'd have to take a room from Godric downstairs first."
+        : others[(room + this.clock.day) % others.length],
+    );
+    return false;
   }
 
   /** "Do you want to make the trek to...?" Yes goes; no turns back. */
@@ -1471,6 +1872,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private leaveThrough(door: Door): void {
+    // An order still on its way from the bar comes along, wrapped in a cloth.
+    const order = this.service?.item;
+    if (order) {
+      this.service = undefined;
+      Inventory.add(order, 1);
+    }
     this.busy = true;
     this.player.setPath([]);
     // Only real doors creak: not the end of a road, nor the mouth of a cave.

@@ -1275,9 +1275,267 @@ const scribe = monk({ skin: 0xf0caa8, hair: 0x2e2420, habit: 0x3e3a4a, iris: 0x3
 /** Brother Leofric, bitten on the road: young, stubbled, a little pale. */
 const leofric = monk({ skin: 0xd8a07a, hair: 0x6a3a22, habit: 0x6a5444, iris: 0x5a4a3a, brow: 'worried', smile: 0, width: 17, jaw: 9, beard: 0x5a3220 });
 
+// --- Townsfolk: the Crooked Tankard ------------------------------------------
+
+interface FolkLook {
+  skin: number;
+  hair: number;
+  /** How the hair is worn: cropped short, long and loose, in a bun, a single plait, a mop of curls, or bald with a fringe round the back. */
+  style: 'short' | 'long' | 'bun' | 'braid' | 'curly' | 'bald';
+  cloth: number;
+  shirt?: number;
+  iris: number;
+  brow: BrowShape;
+  smile: number;
+  width?: number;
+  jaw?: number;
+  old?: boolean;
+  beard?: number;
+  /** Just a moustache (or with `beard`, a heavier one over it). */
+  moustache?: number;
+  /** An apron bib over the clothes (the landlord and his maids). */
+  apron?: number;
+  /** A soft felt cap pulled down over the hair. */
+  cap?: number;
+  /** A feather in the cap. */
+  feather?: number;
+  /** A kerchief tied over the hair. */
+  kerchief?: number;
+  lashes?: boolean;
+  blush?: [number, number];
+  freckles?: boolean;
+  earring?: boolean;
+  /** An old white scar down the cheek. */
+  scar?: boolean;
+  nose?: number;
+  look?: number;
+  tired?: boolean;
+  /** Mail showing at the neck under the clothes. */
+  mail?: boolean;
+}
+
+/**
+ * Folk of Adowvale met in the Crooked Tankard: one painter, dressed and
+ * styled per person, on the same face, eyes and shading as everyone else.
+ */
+function townsfolk(look: FolkLook): Painter {
+  return (c, fr) => {
+    const skin = ramp(look.skin);
+    const hair = ramp(look.hair);
+    const cloth = ramp(look.cloth);
+    const width = look.width ?? 17;
+    const jaw = look.jaw ?? 7;
+    const hairTex = strands((x, y) => (x - CX) * 0.9 + (y - 30) * Math.sign(x - CX) * 0.3, 30, Math.round(look.hair % 97));
+    const hairAt = (x: number, y: number, nx: number, ny: number) => tone(hair, lightness(nx * 0.8, ny * 0.8) + hairTex(x, y), x, y);
+
+    // Behind the head: long hair down past the shoulders, a bun, curls, a plait.
+    if (look.style === 'long') {
+      for (let y = 22; y < 86; y++) {
+        const half = y < 44 ? (width + 6) * Math.sqrt(Math.max(0, 1 - ((44 - y) / 23) ** 2)) : width + 6 - (y - 44) * 0.1;
+        for (let x = Math.round(CX - half); x < Math.round(CX + half); x++) c.set(x, y, hairAt(x, y, (x - CX) / (half + 3), (y - 44) / 50));
+      }
+    } else if (look.style === 'bun') {
+      blob(c, CX + 1, 17, 10, 8, hair, 0.05, strands((x, y) => (x - CX) * 0.8 + y * 0.6, 14, 5));
+      blob(c, CX, 42, width + 7, 23, hair, 0, hairTex);
+    } else if (look.style === 'curly') {
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * Math.PI * 2;
+        blob(c, CX + Math.cos(a) * (width + 3), 40 + Math.sin(a) * 18, 6, 6, hair, 0.05, hairTex);
+      }
+      blob(c, CX, 40, width + 5, 21, hair, 0, hairTex);
+    } else if (look.style !== 'bald') {
+      blob(c, CX, 41, width + 5, 22, hair, 0, hairTex);
+    }
+    if (look.style === 'braid') {
+      for (let i = 0; i < 7; i++) blob(c, CX + 20 + i * 0.7, 54 + i * 5, 4, 3.2, hair, 0.05);
+      c.rect(CX + 24, 89, 3, 2, look.apron ?? P.linen);
+    }
+
+    neck(c, skin, look.width && look.width > 18 ? 10 : 7, 63);
+    shoulders(c, cloth, 75, 10);
+    if (look.mail) {
+      const iron = ramp(0x7a7a86);
+      for (let y = 72; y < 80; y++) {
+        for (let x = CX - 13; x < CX + 13; x++) c.set(x, y, tone(iron, lightness((x - CX) / 18, 0, 0) + ((x + (y % 2)) % 2 ? -0.18 : 0.06), x, y));
+      }
+    }
+    collar(c, ramp(look.shirt ?? P.linen), 75, 9, 7);
+    if (look.apron !== undefined) {
+      const apron = ramp(look.apron);
+      for (let y = 82; y < S; y++) {
+        for (let x = CX - 13; x < CX + 13; x++) c.set(x, y, tone(apron, lightness((x - CX) / 22, (y - 88) / 30, 0.04), x, y));
+      }
+      for (const side of [-1, 1]) for (let y = 74; y < 84; y++) c.rect(Math.round(CX + side * (14 + (y - 74) * 0.2)) - 1, y, 3, 1, apron[2]);
+    }
+
+    ears(c, skin, width);
+    const shape = { skin, width, jaw, top: look.style === 'bald' ? 22 : 27, chin: 70, shadowAbove: look.cap !== undefined ? 33 : undefined };
+    face(c, shape);
+    if (look.style === 'bald') {
+      // The light catching a bare scalp, and a fringe of hair round the back and sides.
+      for (const [x, y] of [[CX - 8, 26], [CX - 7, 25], [CX - 6, 25], [CX - 9, 27], [CX - 5, 24]]) c.set(x, y, skin[4]);
+      for (let y = 34; y < EYE_Y + 8; y++) {
+        const w = faceHalf(shape, y) ?? 0;
+        for (let x = Math.floor(CX - w); x < Math.ceil(CX + w); x++) {
+          if (Math.abs(x + 0.5 - CX) < w - 3) continue;
+          c.set(x, y, hairAt(x, y, (x - CX) / 22, -0.2));
+        }
+      }
+    }
+    eyes(c, { iris: look.iris, blink: fr.blink, skin, lashes: look.lashes, tired: look.tired || look.old, look: look.look });
+    brows(c, mix(look.hair, 0x000000, 0.25), look.brow, look.old ? 3 : 2);
+    nose(c, skin, look.nose ?? 0);
+    if (look.old) wrinkles(c, skin, true);
+    if (look.blush) blush(c, look.blush[0], look.blush[1]);
+    if (look.freckles) freckles(c, skin, 21);
+    if (look.scar) for (let i = 0; i < 9; i++) c.set(CX + 11 + Math.round(i * 0.25), EYE_Y - 3 + i, mix(look.skin, 0xffffff, 0.45));
+    mouth(c, { skin, lip: mix(look.skin, 0x8a2a2a, 0.45), open: fr.open, curve: look.smile, half: 4, y: EYE_Y + 16 });
+
+    if (look.beard !== undefined) {
+      const beard = ramp(look.beard);
+      const tex = strands((x, y) => x * 0.9 + y * 0.1, undefined, 47);
+      for (let y = EYE_Y + 6; y < 82; y++) {
+        for (let x = CX - 22; x <= CX + 22; x++) {
+          const dx = Math.abs(x + 0.5 - CX);
+          const w = (faceHalf(shape, Math.min(y, 69)) ?? 8) + 1;
+          if (dx > w + 1 || y > 74 + 5 * (1 - (dx / 16) ** 2)) continue;
+          if (y < EYE_Y + 6 + Math.max(0, 14 - dx) * 0.6) continue;
+          if (y >= EYE_Y + 15 && y <= EYE_Y + (fr.open ? 19 : 17) && dx < 4.5) continue;
+          c.set(x, y, tone(beard, lightness((x - CX) / 22, (y - 68) / 30, 0.05) + tex(x, y), x, y));
+        }
+      }
+    }
+    if (look.moustache !== undefined) {
+      const m = ramp(look.moustache);
+      for (let x = CX - 7; x <= CX + 7; x++) {
+        const dx = Math.abs(x + 0.5 - CX);
+        const droop = dx > 4 ? Math.round((dx - 4) * 0.6) : 0;
+        for (let t = 0; t < 3; t++) c.set(x, EYE_Y + 12 + droop + t, tone(m, lightness((x - CX) / 14, -0.2 + t * 0.2, 0.05), x, EYE_Y + 12 + t));
+      }
+    }
+
+    // Front hair.
+    const head = (x: number, y: number) => {
+      const nx = (x + 0.5 - CX) / (width + 7);
+      const ny = (y + 0.5 - 41) / 23;
+      return nx * nx + ny * ny <= 1 ? { nx, ny } : null;
+    };
+    if (look.style !== 'bald') {
+      for (let y = 17; y < 62; y++) {
+        for (let x = CX - width - 7; x < CX + width + 7; x++) {
+          const h = head(x, y);
+          if (!h) continue;
+          const dx = Math.abs(x + 0.5 - CX);
+          let line: number;
+          let side: boolean;
+          if (look.style === 'long') {
+            const px = x + 0.5 - (CX - 4);
+            line = 31 + (px < 0 ? (px / 10) ** 2 * 6 : (px / 16) ** 2 * 3 + 1);
+            side = dx > width - 2 && y < 62;
+          } else if (look.style === 'curly') {
+            line = 32 + Math.sin(x * 0.9) * 2 + (dx / 13) ** 2 * 4;
+            side = dx > width - 1.5 && y < EYE_Y + 4;
+          } else if (look.style === 'short') {
+            line = 31 + (dx / 14) ** 2 * 5 + (hash(Math.floor(x / 3), 9) - 0.5) * 2;
+            side = dx > width - 1 && y < EYE_Y + 2;
+          } else {
+            // Swept back from a middle parting (a bun, a plait).
+            line = 31 + Math.pow(dx / 15, 2) * 9;
+            side = dx > width - 0.5 && y < 55 - (dx - width) * 2;
+          }
+          if (y > line && !side) continue;
+          c.set(x, y, hairAt(x, y, h.nx, h.ny));
+        }
+      }
+    }
+    if (look.kerchief !== undefined) {
+      const k = ramp(look.kerchief);
+      for (let y = 15; y < 38; y++) {
+        for (let x = CX - width - 7; x < CX + width + 7; x++) {
+          const h = head(x, y);
+          if (!h) continue;
+          if (y > 32 + Math.pow((x - CX) / 13, 2) * 4) continue;
+          c.set(x, y, tone(k, lightness(h.nx * 0.85, h.ny * 0.85, 0.05) + Math.sin(x * 0.5 + y * 0.2) * 0.04, x, y));
+        }
+      }
+      for (let x = CX - width; x <= CX + width; x++) c.set(x, Math.round(32 + Math.pow((x - CX) / 13, 2) * 4) + 1, k[0]);
+    }
+    if (look.cap !== undefined) {
+      const cap = ramp(look.cap);
+      // A soft cap, slouched to one side, with a band over the brow.
+      blob(c, CX + 3, 24, width + 9, 12, cap, 0.05, (x) => Math.sin(x * 0.35) * 0.04, (_x, y) => y < 33);
+      for (let x = CX - width - 4; x <= CX + width + 5; x++) {
+        c.set(x, 32, cap[0]);
+        c.set(x, 31, cap[1]);
+      }
+      if (look.feather !== undefined) {
+        for (let i = 0; i < 14; i++) {
+          const fx = CX + width + 2 - Math.round(i * 0.3);
+          const fy = 30 - i;
+          c.set(fx, fy, look.feather);
+          c.set(fx + 1, fy, mix(look.feather, 0xffffff, 0.3));
+          if (i > 3) c.set(fx - 1, fy + 1, mix(look.feather, 0x000000, 0.25));
+        }
+      }
+    }
+    if (look.earring) {
+      c.set(CX - width - 1, EYE_Y + 9, P.gold);
+      c.set(CX - width - 1, EYE_Y + 10, 0x9a7430);
+    }
+    finish(c);
+  };
+}
+
+/** Godric, landlord of the Crooked Tankard: big, bald and red-faced, mutton-chop whiskers, sleeves rolled, a white apron. */
+const landlord = townsfolk({
+  skin: 0xe8a888, hair: 0x7a5232, style: 'bald', cloth: 0x7a2e2e, shirt: 0xe8dcc4, apron: 0xece4d4,
+  iris: 0x4a3a2a, brow: 'heavy', smile: 1, width: 19.5, jaw: 11, beard: 0x7a5232, moustache: 0x6a4428, blush: [0xd05a4a, 0.6], nose: 1,
+});
+/** Nell, the older of the two maids: auburn hair in a bun, freckled, quick and kind. */
+const nell = townsfolk({
+  skin: 0xf0c4a0, hair: 0x9a4426, style: 'bun', cloth: 0x3a6a5a, apron: 0xece4d4,
+  iris: 0x4a7a4a, brow: 'arched', smile: 1, width: 16, jaw: 6, lashes: true, freckles: true, blush: [0xe0605a, 0.45],
+});
+/** Rosie, the younger maid: a fair plait over her shoulder, rosy, a sidelong look. */
+const rosie = townsfolk({
+  skin: 0xf4cca8, hair: 0xe0c070, style: 'braid', cloth: 0x8a3a4a, apron: 0xf0e8d8,
+  iris: 0x4a6a9a, brow: 'arched', smile: 1, width: 15.5, jaw: 6, lashes: true, blush: [0xe86060, 0.75], look: -1,
+});
+/** Old Harlan, who has propped up the end of the bar for thirty years: grey stubble, a nose like a plum. */
+const harlan = townsfolk({
+  skin: 0xd8a086, hair: 0xb8b0a8, style: 'bald', cloth: 0x5a5040, shirt: 0x8a7a64,
+  iris: 0x6a7a8a, brow: 'worried', smile: 1, width: 16.5, jaw: 8, old: true, beard: 0x9a948c, blush: [0xc84848, 0.9], nose: 2,
+});
+/** Master Fenwick, a wool merchant from the south: a felt cap, a fine blue coat and a neat black moustache. */
+const fenwick = townsfolk({
+  skin: 0xe6b896, hair: 0x2a2024, style: 'short', cloth: 0x2e3a6a, shirt: 0xf0ece4, cap: 0x3a2e3e,
+  iris: 0x3a2a22, brow: 'arched', smile: 0, width: 16, jaw: 8, moustache: 0x2a2024,
+});
+/** Sigrun, a sellsword passing through: pale hair, an old scar, mail under her leathers, and not much patience. */
+const sigrun = townsfolk({
+  skin: 0xe8c0a0, hair: 0xd8c8a0, style: 'long', cloth: 0x5a4030, shirt: 0x6e6a62, mail: true,
+  iris: 0x5a8aaa, brow: 'stern', smile: 0, width: 16, jaw: 7, scar: true, lashes: true,
+});
+/** Ada, a farmer's widow who never loses at dice: a blue kerchief, a sharp eye and a sharper grin. */
+const ada = townsfolk({
+  skin: 0xe2ae8c, hair: 0x8a7a6a, style: 'bun', cloth: 0x7a5a3a, kerchief: 0x5a6a9a,
+  iris: 0x5a4a3a, brow: 'flat', smile: 1, width: 16, jaw: 7, old: true, blush: [0xd06a5a, 0.4], look: 1,
+});
+/** Cobb, a big curly-headed farmer who always loses at dice to Ada. */
+const cobb = townsfolk({
+  skin: 0xd89a74, hair: 0x3a2a20, style: 'curly', cloth: 0x6a7a4a, shirt: 0x9a8a6a,
+  iris: 0x3a2a20, brow: 'worried', smile: 1, width: 18.5, jaw: 10, beard: 0x3a2a20, blush: [0xd0605a, 0.5],
+});
+/** Pell the minstrel: a feathered cap, shoulder-length hair, a gold earring and a lute he is very proud of. */
+const pell = townsfolk({
+  skin: 0xecc0a0, hair: 0x6a3a22, style: 'long', cloth: 0x2a6a6a, shirt: 0xd8b040, cap: 0x8a2a4a, feather: 0xf0ece0,
+  iris: 0x6a5a2a, brow: 'arched', smile: 1, width: 15.5, jaw: 6, earring: true, look: -1,
+});
+
 const PAINTERS: Record<string, Painter> = {
   mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
+  landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */

@@ -224,6 +224,19 @@ export interface TownhouseStyle {
   door: 'front' | 'side' | 'back';
   /** A hanging sign over the door (an inn, a shop). */
   sign?: number;
+  /** Something painted on the sign: the Crooked Tankard's tilted tankard. */
+  emblem?: 'tankard';
+}
+
+/** The painted face of a hanging sign: plain, or with the Crooked Tankard's tankard, tipped at a jaunty angle. */
+function signPaint(style: TownhouseStyle, u: number, v: number): number {
+  if (style.emblem === 'tankard') {
+    const tu = u - (v - 0.5) * 0.25;
+    if (tu > 0.28 && tu < 0.62 && v > 0.34 && v < 0.82) return tu < 0.36 ? 0x9a5a2a : 0x7a4420;
+    if (tu > 0.26 && tu < 0.66 && v > 0.22 && v <= 0.34) return 0xfaf2e0;
+    if (tu >= 0.62 && tu < 0.76 && v > 0.42 && v < 0.7 && !(tu < 0.7 && v > 0.48 && v < 0.64)) return 0x7a4420;
+  }
+  return style.sign!;
 }
 
 /**
@@ -310,10 +323,10 @@ function townhouse(style: TownhouseStyle): IsoModel {
     const sy = front ? S : 1.5;
     if (front) {
       m.box(sx + 0.2, sy, H - 30, 0.05, 0.5, 2, { top: P.iron, left: P.iron, right: P.iron });
-      m.quad({ x: sx + 0.2, y: sy + 0.15, z: H - 32 }, { x: 0, y: 0.35, z: 0 }, { x: 0, y: 0, z: -14 }, (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? P.barkDark : style.sign!));
+      m.quad({ x: sx + 0.2, y: sy + 0.15, z: H - 32 }, { x: 0, y: 0.35, z: 0 }, { x: 0, y: 0, z: -14 }, (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? P.barkDark : signPaint(style, u, v)));
     } else {
       m.box(sx, sy + 0.2, H - 30, 0.5, 0.05, 2, { top: P.iron, left: P.iron, right: P.iron });
-      m.quad({ x: sx + 0.15, y: sy + 0.2, z: H - 32 }, { x: 0.35, y: 0, z: 0 }, { x: 0, y: 0, z: -14 }, (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? P.barkDark : style.sign!));
+      m.quad({ x: sx + 0.15, y: sy + 0.2, z: H - 32 }, { x: 0.35, y: 0, z: 0 }, { x: 0, y: 0, z: -14 }, (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? P.barkDark : signPaint(style, u, v)));
     }
   }
   return m;
@@ -326,7 +339,7 @@ export const TOWNHOUSES: Record<string, TownhouseStyle> = {
   'bld-house-red': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'front' },
   'bld-house-slate': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'front' },
   'bld-house-ochre': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'front' },
-  'bld-inn': { roof: 0x7a3a2e, plaster: 0xeee4cc, door: 'front', sign: P.gold },
+  'bld-inn': { roof: 0x7a3a2e, plaster: 0xeee4cc, door: 'front', sign: P.gold, emblem: 'tankard' },
   // Seen from behind: the houses along the near side of the square, facing into it.
   'bld-house-red-back': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'back' },
   'bld-house-slate-back': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'back' },

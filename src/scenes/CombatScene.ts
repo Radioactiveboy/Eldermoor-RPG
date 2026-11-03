@@ -65,6 +65,7 @@ const LOG_LINES = 3;
 /** Names to tell several of a kind apart in one fight. */
 const PACK_NAMES: Partial<Record<FoeKind, string[]>> = {
   wolf: ['Grey Wolf', 'Scarred Wolf', 'Lean Wolf', 'Old Wolf', 'Young Wolf', 'Black Wolf'],
+  rat: ['Cellar Rat', 'Fat Rat', 'Mangy Rat', 'Bold Rat', 'One-eared Rat', 'Big Rat'],
 };
 
 /** How each kind of beast's fight reads: how it starts, the banner, and how it runs off. */
@@ -88,6 +89,11 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     start: 'You pounce at the hare. It freezes, ears flat, ready to bolt!',
     banner: 'The hunt is on!',
     flee: 'jinks away through the long grass and is gone!',
+  },
+  rat: {
+    start: 'Rats boil out of the dark between the barrels, squealing, teeth bared!',
+    banner: 'Rats!',
+    flee: 'squeals and vanishes into a hole in the wall!',
   },
   boar: {
     start: 'The boar squeals, lowers its tusks and charges!',
@@ -205,6 +211,8 @@ export class CombatScene extends Phaser.Scene {
     this.log(
       mother
         ? `${FOE_TEXT.wolfmother.start}${this.foes.length > 1 ? ' Her wolves fan out round you.' : ''}`
+        : this.foes.length > 1 && first.creature!.kind === 'rat'
+        ? FOE_TEXT.rat.start
         : this.foes.length > 1
         ? this.world.map.data.underground
           ? 'Eyes shine in the lantern light. Wolves pad out of the dark, hackles raised. You are surrounded!'
@@ -217,7 +225,7 @@ export class CombatScene extends Phaser.Scene {
     await Promise.all(this.foes.map((f, i) => f.creature!.moveTo(spots[i].x, spots[i].y, 650)));
     this.world.player.faceTowards(first.pos().x, first.pos().y);
     this.world.frameFight(this.actors.map((a) => a.pos()));
-    this.banner(mother ? FOE_TEXT.wolfmother.banner : this.foes.length > 1 ? 'Wolves attack!' : FOE_TEXT[first.creature!.kind].banner);
+    this.banner(mother ? FOE_TEXT.wolfmother.banner : this.foes.length > 1 && first.creature!.kind !== 'rat' ? 'Wolves attack!' : FOE_TEXT[first.creature!.kind].banner);
     await this.wait(900);
 
     if (!Inventory.equipped.mainHand) {
@@ -390,7 +398,7 @@ export class CombatScene extends Phaser.Scene {
       this.hero.c.hp = Math.round(this.world.stats.health);
       const healed = Math.round(this.world.stats.health - before);
       this.float(this.hero, healed > 0 ? `+${healed}` : 'Refreshed', '#8fe08a');
-      this.log(`You wolf down the ${def.name.toLowerCase()}${healed > 0 ? ` and recover ${healed} health` : ''}.`);
+      this.log(`You ${def.drink ? 'gulp' : 'wolf'} down the ${def.name.toLowerCase()}${healed > 0 ? ` and recover ${healed} health` : ''}.`);
       await this.wait(500);
     } else {
       Inventory.equip(index);

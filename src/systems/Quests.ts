@@ -87,6 +87,21 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 80,
   },
+  'cellar-rats': {
+    id: 'cellar-rats',
+    title: 'Rats in the Cellar',
+    giver: 'Godric the Landlord',
+    summary:
+      "Godric, who keeps the Crooked Tankard in Adowvale, has rats in his cellar: big as cats, he says, and twice as bold. They have " +
+      "been at his grain and his kegs, and the maids won't go down there. He'll pay 25 coins to have them cleared out.",
+    objectives: [
+      { id: 'talk', text: 'Speak with Godric the Landlord' },
+      { id: 'cellar', text: 'Go down through the trapdoor by the bar to the cellar' },
+      { id: 'clear', text: 'Kill the rats in the cellar' },
+      { id: 'return', text: 'Tell Godric his cellar is clear' },
+    ],
+    xp: 70,
+  },
 };
 
 export interface QuestState {
@@ -131,6 +146,10 @@ class QuestLogStore {
 
   setFlag(flag: string): void {
     this.flags.add(flag);
+  }
+
+  clearFlag(flag: string): void {
+    this.flags.delete(flag);
   }
 
   hasFlag(flag: string): boolean {

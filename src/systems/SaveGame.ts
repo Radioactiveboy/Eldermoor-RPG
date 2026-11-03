@@ -56,6 +56,10 @@ export const AREA_NAMES: Record<AreaId, string> = {
   refectory: 'The refectory',
   den: "The Wolf Mother's den",
   deepden: 'Beneath the den',
+  tavern: 'The Crooked Tankard',
+  'tavern-hall': 'Upstairs at the Crooked Tankard',
+  'tavern-room': 'A room at the Crooked Tankard',
+  cellar: "The Crooked Tankard's cellar",
 };
 
 type Listener = (save: SaveData) => void;

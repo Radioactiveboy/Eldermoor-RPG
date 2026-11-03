@@ -63,6 +63,18 @@ export const SHOPS = {
     buyRate: 0.4,
     wants: { 'wolf-pelt': 0.75, 'deer-hide': 0.75 },
   },
+  // Godric, at the Crooked Tankard's bar: drink and food to take away.
+  tavern: {
+    name: 'The Crooked Tankard',
+    keeper: 'landlord',
+    greeting: "Ale, cider, mead by the horn, and a bite to go with it. Bring the tankard back.",
+    refuse: "What would I want with that? I run a tavern, friend.",
+    thanks: ['Good health to you.', "There's plenty more where that came from.", "Don't drink it all at once. Or do. I'm not your mother."],
+    stock: [['ale', 12], ['cider', 10], ['mead', 4], ['spiced-wine', 3], ['bread', 4], ['cheese', 3], ['meat-pie', 2]],
+    buys: ['Food'],
+    buyRate: 0.4,
+    keeps: { ale: 3 },
+  },
 } satisfies Record<string, ShopDef>;
 
 export type ShopId = keyof typeof SHOPS;

@@ -288,6 +288,18 @@ export const FOES = {
     packs: false,
     stubborn: true,
   },
+  // The rats in the Crooked Tankard's cellar (see world/TavernMap.ts): weak alone, but they come in swarms.
+  rat: {
+    name: 'Cellar Rat',
+    maxHp: 6,
+    ac: 10,
+    toHit: 1,
+    damage: { count: 1, sides: 3, bonus: 0 },
+    quickness: 3,
+    verb: 'bites at',
+    xp: 10,
+    packs: true,
+  },
 } satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean }>;
 
 export type FoeKind = keyof typeof FOES;

@@ -9,6 +9,8 @@ import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
+import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
+import { ROOM_COUNT, Tavern } from '../systems/Tavern';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
@@ -47,6 +49,52 @@ interface NpcDef {
 
 /** Travellers met before, who get a shorter hello next time. */
 const met = new Set<string>();
+
+/**
+ * What the people of the Crooked Tankard need to know about the hero and the
+ * clock when they're spoken to (whether the hero is sitting at a table, what
+ * time it is), kept up to date by GameScene.
+ */
+export const NpcWorld = {
+  seated: false,
+  /** In-game hours since the start (TimeOfDay.elapsedHours). */
+  now: 0,
+  /** Hours from now until the clock next reads an hour (TimeOfDay.hoursUntil). */
+  hoursUntil: (_hour: number) => 0,
+};
+
+/** How Godric's job of clearing his cellar of rats stands. */
+function ratStage(): RatStage {
+  const quest = QuestLog.get('cellar-rats');
+  if (!quest) return 'none';
+  if (quest.completed) return 'done';
+  return quest.done.has('clear') ? 'cleared' : 'active';
+}
+
+/** Godric's side of the bar: the room he'd give the hero is chosen now, so he can name it. */
+function landlord(hour: number): DialogueScript {
+  const first = !met.has('landlord');
+  met.add('landlord');
+  const now = NpcWorld.now;
+  const renting = Tavern.renting(now);
+  if (!renting) Tavern.room = 1 + Math.floor(Math.random() * ROOM_COUNT);
+  return landlordScript({
+    first,
+    coins: Inventory.coins,
+    room: Tavern.room!,
+    renting,
+    nightsLeft: Tavern.nightsLeft(now),
+    rats: ratStage(),
+    late: hour >= 0 && hour < 5,
+    freeDrink: QuestLog.hasFlag('tankard-free-drink'),
+    news: landlordNews({
+      paidToll: QuestLog.hasFlag('paid-toll'),
+      slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
+      foundCaveDoor: QuestLog.hasFlag('found-cave-door'),
+      monasteryOpen: QuestLog.hasFlag('monastery-open'),
+    }),
+  });
+}
 
 /** A conversation that opens on one of several greetings, picked at random. */
 function anyOf(script: DialogueScript, starts: string[]): () => DialogueScript {
@@ -180,6 +228,24 @@ const NPCS: Record<string, NpcDef> = {
   leofric: { texture: 'folk-leofric', sits: true, script: traveller('leofric', LEOFRIC) },
   scribe: { texture: 'folk-scribe', sits: true, script: traveller('scribe', SCRIBE) },
   cook: { texture: 'folk-cook', roam: 2, script: () => cookScript(QuestLog.hasFlag('fed-by-hob')) },
+  // The Crooked Tankard: Godric behind his bar, his maids going round the tables, and the regulars.
+  landlord: { texture: 'folk-landlord', script: landlord },
+  nell: { texture: 'folk-nell', roam: 3, script: () => maidScript('nell', NpcWorld.seated, Inventory.coins) },
+  rosie: { texture: 'folk-rosie', roam: 3, script: () => maidScript('rosie', NpcWorld.seated, Inventory.coins) },
+  harlan: {
+    texture: 'folk-harlan',
+    sits: true,
+    script: () => {
+      const first = !met.has('harlan');
+      met.add('harlan');
+      return harlanScript(first, Inventory.coins, QuestLog.hasFlag('harlan-secret'), QuestLog.hasFlag('found-cave-door'));
+    },
+  },
+  fenwick: { texture: 'folk-fenwick', sits: true, script: traveller('fenwick', FENWICK) },
+  sigrun: { texture: 'folk-sigrun', sits: true, script: () => sigrunScript(QuestLog.hasFlag('slew-wolf-mother')) },
+  ada: { texture: 'folk-ada', sits: true, script: () => adaScript(Inventory.coins) },
+  cobb: { texture: 'folk-cobb', sits: true, script: () => COBB },
+  pell: { texture: 'folk-pell', script: () => pellScript(Inventory.coins) },
   // The village militia, walking their rounds of the square, day and night.
   ...Object.fromEntries(
     [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),
@@ -227,13 +293,22 @@ export class Npc implements Body {
 
   /** For someone who stays put: the way they look when nobody is talking to them (the fisherman, at his float). */
   private readonly looking?: Vec2;
+  /** Only about between these hours (see NpcSpawn.hours). */
+  private readonly hours?: [number, number];
+  /** Out for now, outside their hours. */
+  private off = false;
+  /** Somewhere they've been sent (a maid fetching an order): walked to whatever's in the way, then `then` runs. */
+  private errand?: { route: Vec2[]; then?: () => void };
 
   /**
    * @param commute for a trader, their walk home (see MapData.Commute)
    * @param hour the hour of the day now, so a trader who has gone home isn't there to begin with
    * @param looking for someone who stays put, the grid direction they face when left alone
+   * @param hours the hours they're about, if not all day (the tavern's regulars)
    */
-  constructor(scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number, commute?: Commute, hour = 12, looking?: Vec2) {
+  constructor(
+    scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number, commute?: Commute, hour = 12, looking?: Vec2, hours?: [number, number],
+  ) {
     const def = NPCS[id];
     if (!def) throw new Error(`Unknown NPC: ${id}`);
     this.id = id;
@@ -245,6 +320,7 @@ export class Npc implements Body {
     this.commute = commute;
     this.hour = hour;
     this.looking = looking;
+    this.hours = hours;
     if (looking) this.face(looking);
     this.shadow = scene.add.image(0, 0, 'shadow');
     this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
@@ -269,12 +345,54 @@ export class Npc implements Body {
       this.setVisible(false);
       map.setObjectArt(commute.stall, `${commute.stall.key}-closed`);
     }
+    if (hours && !Npc.within(hours, hour)) this.goOff(false);
     this.sync(false);
   }
 
-  /** Here to be seen and talked to (not indoors for the night). */
+  /** Whether an hour falls in [from, to), where `to` may run past midnight (e.g. [18, 26] is 6pm to 2am). */
+  static within(hours: [number, number], hour: number): boolean {
+    const [from, to] = hours;
+    return (hour >= from && hour < to) || (hour + 24 >= from && hour + 24 < to);
+  }
+
+  /** Here to be seen and talked to (not indoors for the night, nor gone home from the tavern). */
   get present(): boolean {
-    return this.shift !== 'away';
+    return this.shift !== 'away' && !this.off;
+  }
+
+  /** Not walking anywhere they've been sent. */
+  get idle(): boolean {
+    return !this.errand;
+  }
+
+  /**
+   * Send them somewhere (round the furniture), then do something on arrival.
+   * They keep walking whoever's in the way; nobody stops a maid with a tray.
+   */
+  goTo(target: Vec2, then?: () => void): void {
+    const from = { x: Math.floor(this.gx), y: Math.floor(this.gy) };
+    const to = { x: Math.floor(target.x), y: Math.floor(target.y) };
+    const tiles = findPath(from, to, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 3000) ?? [];
+    const route = tiles.map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 }));
+    if (route.length > 0) route.pop();
+    route.push(target);
+    this.route = [];
+    this.errand = { route, then };
+  }
+
+  /** Leave (or arrive), fading out at the end of their hours: no longer in the way, nor to be talked to. */
+  private goOff(off: boolean, fade = false): void {
+    this.off = off;
+    this.errand = undefined;
+    this.route = [];
+    if (this.moves) {
+      if (off) this.map.bodies.delete(this);
+      else this.map.bodies.add(this);
+    } else {
+      this.map.setOccupied(Math.floor(this.gx), Math.floor(this.gy), !off);
+    }
+    if (off) this.speech = undefined;
+    this.setVisible(!off, fade);
   }
 
   /** Say something out loud, in a bubble over their head, for a few seconds. */
@@ -350,6 +468,23 @@ export class Npc implements Body {
     }
     if (this.commute) {
       this.keepHours(dt, paused);
+      return;
+    }
+    if (this.hours && !paused && Npc.within(this.hours, hour) === this.off && !this.errand) {
+      this.goOff(!this.off, true);
+    }
+    if (this.off) return;
+    if (this.errand) {
+      if (paused) {
+        this.sync(false);
+        return;
+      }
+      if (this.walkRoute(dt, this.errand.route)) return;
+      const then = this.errand.then;
+      this.errand = undefined;
+      this.wait = 4 + Math.random() * 4;
+      this.sync(false);
+      then?.();
       return;
     }
     if (!this.moves) {
@@ -459,9 +594,9 @@ export class Npc implements Body {
     return points.map((point) => ({ point, index: -1 }));
   }
 
-  /** Walk on along the route, through anything in the way. False once it's walked. */
-  private walkRoute(dt: number): boolean {
-    const next = this.route[0]?.point;
+  /** Walk on along the route (or the given points), through anything in the way. False once it's walked. */
+  private walkRoute(dt: number, points?: Vec2[]): boolean {
+    const next = points ? points[0] : this.route[0]?.point;
     if (!next) return false;
     const dx = next.x - this.gx;
     const dy = next.y - this.gy;
@@ -472,7 +607,10 @@ export class Npc implements Body {
       this.gy += (dy / dist) * step;
       this.face({ x: dx, y: dy });
     }
-    if (dist - step < 0.02) this.route.shift();
+    if (dist - step < 0.02) {
+      if (points) points.shift();
+      else this.route.shift();
+    }
     this.sync(true);
     return true;
   }

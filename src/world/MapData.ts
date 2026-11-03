@@ -35,7 +35,9 @@ export type AreaId =
   // Inside Saint Elda's walls: the grounds, and the rooms off them.
   | 'abbey' | 'chapel' | 'infirmary' | 'scriptorium' | 'refectory'
   // The Wolf Mother's den on the plains, and the passage beyond its crevice.
-  | 'den' | 'deepden';
+  | 'den' | 'deepden'
+  // The Crooked Tankard in Adowvale: the taproom, the passage upstairs, a rented room, and the cellar.
+  | 'tavern' | 'tavern-hall' | 'tavern-room' | 'cellar';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -86,9 +88,13 @@ export interface Door {
   label?: string;
   /**
    * Whether it's in a wall along the tile's -x edge (the cottage's doors, which
-   * have their prompt there) or opens towards the viewer (the cave mouth).
+   * have their prompt there), opens towards the viewer (the cave mouth, a
+   * trapdoor), or is in a wall along the tile's -y edge ('back': the tavern's
+   * front door, the doors along the passage upstairs).
    */
-  facing?: 'wall' | 'front';
+  facing?: 'wall' | 'front' | 'back';
+  /** Names a door GameScene may keep shut (the tavern's cellar and its rooms, see GameScene.doorAllowed). */
+  id?: string;
   /**
    * Asked before going, e.g. "Do you want to make the trek to Adowvale?".
    * Saying no turns the player back the way they came.
@@ -174,6 +180,11 @@ export interface NpcSpawn {
   commute?: Commute;
   /** For someone who stays put: the grid direction they face when nobody is talking to them. */
   looking?: { x: number; y: number };
+  /**
+   * Only about between these hours (the tavern's regulars, who come in of an
+   * evening): [from, to), where `to` may run past 24 into the small hours.
+   */
+  hours?: [number, number];
 }
 
 /** How a stallholder gets between their stall and their front door (see systems/MarketHours.ts). */

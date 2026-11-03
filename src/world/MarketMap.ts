@@ -133,6 +133,7 @@ export function buildMarketMap(gateOpen = false): MapData {
   };
   house('bld-house-red', 5, 1);
   house('bld-inn', 9, 1);
+  addTavernFront(data);
   house('bld-house-slate', 14, 1);
   house('bld-house-red', 19, 2);
   house('bld-house-slate', 1, 6, true);
@@ -201,6 +202,21 @@ export function buildMarketMap(gateOpen = false): MapData {
     { id: 'guard-4', gx: 25.5, gy: 16.5 },
   );
   return data;
+}
+
+/**
+ * The Crooked Tankard, the inn on the north side of the square (see
+ * TavernMap.ts for inside): its front door, a lantern's glow over it, a bench
+ * and a couple of barrels out front.
+ */
+function addTavernFront(data: MapData): void {
+  data.doors!.push({ tx: 10, ty: 4, to: 'tavern', entry: 'door', label: 'Go inside', facing: 'back' });
+  data.entries!.tavern = { x: 10.5, y: 4.7 };
+  data.landmarks!.push({ gx: 10.5, gy: 4.5, name: 'The Crooked Tankard', range: 2.5 });
+  data.lights!.push({ gx: 10.5, gy: 4.1, z: 52, radius: 110, flicker: 0.5 });
+  placeObject(data, { key: 'furn-barrels', tx: 8, ty: 4, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
+  placeObject(data, { key: 'mkt-bench', tx: 12, ty: 4, w: 1, h: 1, shapes: [box(0.08, 0.35, 0.92, 0.7)] });
+  data.seats!.push({ name: 'tavern-bench', gx: 12.5, gy: 4.55, faceX: 0, faceY: 1, standX: 12.5, standY: 5.5 });
 }
 
 /**

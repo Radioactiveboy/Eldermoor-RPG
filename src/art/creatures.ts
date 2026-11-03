@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE as P } from './palette';
 import { PixelCanvas } from './PixelCanvas';
+import { drawDeadRat, drawRat, RAT_ART, RAT_FRAMES } from './rats';
 
 /**
  * Wild animals. The grey wolf is drawn side-on, facing screen-right (it's
@@ -220,13 +221,15 @@ export const CREATURE_FRAME = WOLF_FRAME;
  * Each beast's frame size and the pixel row its feet stand on, by kind (see
  * systems/Combat.ts FOES), and how much bigger than its frame it's shown.
  */
-export const CREATURE_ART: Record<'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar', { w: number; h: number; feetY: number; scale?: number }> = {
+export const CREATURE_ART: Record<'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'rat', { w: number; h: number; feetY: number; scale?: number }> = {
   wolf: { w: WOLF_W, h: WOLF_H, feetY: WOLF_FEET_Y },
   // The Wolf Mother: the grey wolf's frames, half as big again, in a coat as white as frost.
   wolfmother: { w: WOLF_W, h: WOLF_H, feetY: WOLF_FEET_Y, scale: 1.5 },
   deer: { w: 48, h: 46, feetY: 43 },
   hare: { w: 26, h: 22, feetY: 19 },
   boar: { w: 48, h: 32, feetY: 29 },
+  // The rats in the Crooked Tankard's cellar (see rats.ts).
+  rat: { ...RAT_ART, scale: 1.3 },
 };
 
 // --- Red deer ---------------------------------------------------------------
@@ -580,4 +583,5 @@ export function generateCreatures(scene: Phaser.Scene): void {
   sheet(scene, 'deer', DEER_FRAMES, drawDeer, drawDeadDeer, { walk: 8 });
   sheet(scene, 'hare', HARE_FRAMES, drawHare, drawDeadHare, { walk: 10 });
   sheet(scene, 'boar', BOAR_FRAMES, drawBoar, drawDeadBoar, { walk: 9 });
+  sheet(scene, 'rat', RAT_FRAMES, drawRat, drawDeadRat, { walk: 12 });
 }
