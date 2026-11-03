@@ -109,6 +109,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   harlan: harlanModel,
   fenwick: fenwickModel,
   sigrun: sigrunModel,
+  ada: adaModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1540,6 +1541,37 @@ export function sigrunModel(pose: Pose3D): Model {
       { cx: 0, cy: 24.4 - b, cz: -0.6, rx: 6, ry: 1.6, rz: 3.6, material: cloak },
       // Her hair tied back in a short tail.
       ...limb([0, hy - 1, hz - 5], [0, hy - 5, hz - 5.4], 1.6, 1.2, hair),
+    ],
+  });
+}
+
+/** Ada, who plays dice: a long brown dress, a blue shawl round her shoulders, and grey-brown hair in a bun. */
+export function adaModel(pose: Pose3D): Model {
+  const dress: Tones = [0x7a5a3a, 0x5a4228, 0x967450];
+  const shawl: Tones = [0x5a6a9a, 0x44527a, 0x7486b4];
+  const hair: Tones = [0x8a7a6a, 0x6a5c50, 0xa49484];
+  // The dress falls in one piece to her ankles: over her knees when she sits.
+  const skirt: Solid[] = pose.sit
+    ? [
+        { cx: 0, cy: 6.4, cz: 5.4, rx: 4.4, ry: 3.8, rz: 2.4, material: dress },
+        { cx: 0, cy: 9.4, cz: 4.6, rx: 4.4, ry: 1.6, rz: 2.8, material: dress },
+      ]
+    : [{ cx: 0, cy: 6, cz: pose.stride * 0.3, rx: 5.4, ry: 4.4, rz: 4.2, material: dress }];
+  return regularModel(pose, {
+    coat: dress,
+    legs: dress,
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xe2ae8c, 0xbe8a6c, 0xf4c6a4],
+    hair,
+    long: true,
+    // The shawl covers her back and shoulders, and is crossed over at the front.
+    coatPaint: (h, base) => (h.z < 1.6 && h.y > 21 - pose.bob) || h.y > 24.2 - pose.bob ? shawl : base,
+    extras: (hy, hz, b) => [
+      { cx: 0, cy: 19.6 - b, cz: -2.2, rx: 6.2, ry: 6.4, rz: 2.8, material: shawl },
+      { cx: 0, cy: 24.6 - b, cz: -0.4, rx: 6.2, ry: 1.8, rz: 3.8, material: shawl },
+      // Her hair pinned up in a bun at the back.
+      { cx: 0, cy: hy + 0.6, cz: hz - 5.4, rx: 2.4, ry: 2.2, rz: 1.8, material: hair },
+      ...skirt,
     ],
   });
 }
