@@ -1532,8 +1532,80 @@ const pell = townsfolk({
   iris: 0x6a5a2a, brow: 'arched', smile: 1, width: 15.5, jaw: 6, earring: true, look: -1,
 });
 
+/**
+ * The hero: a young face under the green hood of their travelling cloak, brown
+ * hair falling out over the brow, a linen shirt and a leather strap across the
+ * chest. Not a speaker (the hero's lines are the replies), but shown on the
+ * combat hotbar.
+ */
+const hero: Painter = (c, fr) => {
+  const skin = ramp(P.skin);
+  const hair = ramp(P.hair);
+  const cloak = ramp(P.cloak);
+  const hairTex = strands((x, y) => x * 0.6 + y * 0.35, 30, 7);
+  // The cloak over the shoulders, then the hood: rounded to a soft point on top, falling in folds.
+  shoulders(c, cloak, 72, 12);
+  for (let y = 8; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - CX;
+      let half: number;
+      if (y < 46) {
+        const ny = (y + 0.5 - 46) / 36;
+        half = 28 * Math.sqrt(Math.max(0, 1 - ny * ny)) * (1 - Math.max(0, -ny - 0.55) * 0.85);
+      } else half = 28 + (y - 46) * 0.32;
+      if (Math.abs(dx) > half) continue;
+      const fold = y > 54 ? Math.sin(dx * 0.42) * 0.08 : Math.sin(dx * 0.3 + y * 0.12) * 0.03;
+      c.set(x, y, tone(cloak, lightness(dx / 33, (y - 44) / 46, 0.06) + fold, x, y));
+    }
+  }
+  // Inside the hood is deep shadow round the face.
+  blob(c, CX, 50, 21, 26, ramp(mix(cloak[0], 0x000000, 0.35)), -0.25);
+  neck(c, skin, 7, 64, 80);
+  // Linen shirt at the throat, where the cloak parts.
+  collar(c, ramp(P.linen), 76, 14, 9);
+  ears(c, skin, 16);
+  const shape = { skin, width: 16, jaw: 7, top: 29, chin: 68 };
+  face(c, shape);
+  eyes(c, { iris: 0x5a7a4a, blink: fr.blink, skin });
+  brows(c, mix(P.hair, 0x000000, 0.2), 'stern');
+  nose(c, skin);
+  blush(c, 0xd07060, 0.25);
+  mouth(c, { skin, lip: 0xb06a5a, open: fr.open, curve: 0, half: 4 });
+  // Brown fringe swept to one side under the hood, and locks at the cheeks.
+  for (let y = 22; y < 56; y++) {
+    for (let x = 26; x < 71; x++) {
+      const dx = x + 0.5 - CX;
+      const nx = dx / 22;
+      const ny = (y + 0.5 - 40) / 18;
+      if (nx * nx + ny * ny > 1 && Math.abs(dx) < 15) continue;
+      const lock = Math.floor((x + 1) / 4);
+      const line = 33 + hash(lock, 9) * 5 + dx * 0.16 + ((x + 1) % 4 === 0 ? -1 : 0);
+      const side = Math.abs(dx) > 14.5 && Math.abs(dx) < 20 && y < 54 - (Math.abs(dx) - 14) * 1.5;
+      if ((y > line || y < 26) && !side) continue;
+      c.set(x, y, tone(hair, lightness(nx * 0.8, ny * 0.7, -0.05) + hairTex(x, y), x, y));
+    }
+  }
+  // The hood's rim shadows the top of the hair.
+  for (let x = 27; x < 70; x++) {
+    const y = 24 + Math.round(Math.pow((x - CX) / 21, 2) * 6);
+    const here = c.get(x, y);
+    if (here !== null) c.set(x, y, mix(here, 0x000000, 0.35));
+  }
+  // A leather strap from the left shoulder across the chest, with a brass buckle.
+  for (let y = 70; y < S; y++) {
+    const x0 = Math.round(16 + (y - 70) * 1.1);
+    for (let x = x0; x < x0 + 7; x++) c.set(x, y, tone(ramp(P.leather), lightness((x - x0 - 3) / 6, -0.2, 0.05), x, y));
+    c.set(x0, y, P.leatherDark);
+  }
+  blob(c, 33, 86, 4, 3.5, ramp(P.gold), 0.1);
+  c.set(33, 86, P.leatherDark);
+  // The cloak's clasp at the throat.
+  blob(c, CX, 77, 3, 3, ramp(P.gold), 0.15);
+  finish(c);
+};
+
 const PAINTERS: Record<string, Painter> = {
-  mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
+  hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
 };
