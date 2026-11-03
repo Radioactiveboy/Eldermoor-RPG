@@ -112,7 +112,7 @@ src/
                           conditions (prone, dazed...), fleeing, how beasts choose their moves, and the
                           beasts' stats and traits (FOES)
   systems/Abilities.ts    The hero's combat skills: action or bonus action, stamina, cooldowns, levels
-  ui/AbilityIcons.ts      The hotbar's skill icons, drawn with shapes
+  ui/AbilityIcons.ts      The hotbar's skill icons, painted with canvas gradients and glows into textures
   entities/Player.ts      Movement, collision, click-to-move path following
   entities/Npc.ts         People you can talk to, which conversation they have, travellers
                           who wander up and down the road, and the militia on their rounds
@@ -256,7 +256,7 @@ src/
   wake up at home. The clock stops during a fight.
 
   To add a skill: an id and entry in `ABILITIES` (cost, stamina, cooldown, level,
-  the numbers for its tooltip), an icon in `ui/AbilityIcons.ts`, and what it
+  the numbers for its tooltip), a painter in `ui/AbilityIcons.ts`, and what it
   does in `CombatScene.useAbility`. New beasts go in `FOES` (`systems/Combat.ts`)
   with art in `art/` and a spawn in the map's `creatures` list. How each behaves
   in the wild is in `WAYS` (`entities/Creature.ts`): wolves and boar attack when

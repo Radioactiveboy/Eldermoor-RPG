@@ -35,7 +35,8 @@ import {
 } from '../systems/Combat';
 import { Experience } from '../systems/Experience';
 import { Inventory, itemDef, ItemId } from '../systems/Inventory';
-import { drawAbilityIcon } from '../ui/AbilityIcons';
+import { abilityIconKey, ensureAbilityIcons } from '../ui/AbilityIcons';
+import { PORTRAIT_SIZE } from '../art/portraits';
 import { bodyStyle, THEME, titleStyle } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
 
@@ -86,11 +87,11 @@ const CHIP_H = 92;
 const LOG_LINES = 4;
 
 // The hotbar along the bottom (laid out at this size, then scaled down to fit narrower windows).
-const SLOT = 56;
+const SLOT = 60;
 const SLOT_GAP = 6;
 const GROUP_GAP = 26;
 const PANEL_PAD = 14;
-const HERO_W = 196;
+const HERO_W = 236;
 const END_W = 96;
 const LABEL_H = 22;
 const PANEL_H = PANEL_PAD * 2 + LABEL_H + SLOT;
@@ -233,6 +234,7 @@ export class CombatScene extends Phaser.Scene {
     }));
     this.actors = [this.hero, ...this.foes];
 
+    ensureAbilityIcons(this);
     this.orderBar = this.add.container(0, 0);
     this.logBox = this.add.container(0, 0);
     this.hotbar = this.add.container(0, 0);
@@ -947,36 +949,36 @@ export class CombatScene extends Phaser.Scene {
     const cd = this.hero.c.cooldowns[a.id];
     const lit = this.aiming === a.id;
     const bg = this.add.graphics();
-    const icon = this.add.graphics().setPosition(SLOT / 2, SLOT / 2 + 2);
-    drawAbilityIcon(icon, a.id);
-    const parts: Phaser.GameObjects.GameObject[] = [bg, icon];
+    const icon = this.add.image(SLOT / 2, SLOT / 2, abilityIconKey(a.id)).setDisplaySize(SLOT - 4, SLOT - 4);
+    const border = this.add.graphics();
+    const parts: Phaser.GameObjects.GameObject[] = [bg, icon, border];
 
     const marker = this.add.graphics();
     marker.fillStyle(color, 1).lineStyle(1, 0x000000, 0.8);
-    if (a.cost === 'action') marker.fillCircle(SLOT - 8, 8, 4).strokeCircle(SLOT - 8, 8, 4);
-    else marker.fillTriangle(SLOT - 8, 3, SLOT - 3.5, 11.5, SLOT - 12.5, 11.5).strokeTriangle(SLOT - 8, 3, SLOT - 3.5, 11.5, SLOT - 12.5, 11.5);
+    marker.lineStyle(1.5, 0x000000, 0.9);
+    if (a.cost === 'action') marker.fillCircle(SLOT - 9, 9, 4.5).strokeCircle(SLOT - 9, 9, 4.5);
+    else marker.fillTriangle(SLOT - 9, 3.5, SLOT - 3.5, 13, SLOT - 14.5, 13).strokeTriangle(SLOT - 9, 3.5, SLOT - 3.5, 13, SLOT - 14.5, 13);
     parts.push(marker);
     if (i < SLOT_KEY_LABELS.length) {
-      parts.push(this.add.text(5, 3, SLOT_KEY_LABELS[i], { fontFamily: FONT, fontSize: '11px', color: THEME.dimText, stroke: '#000000', strokeThickness: 2 }));
+      parts.push(this.add.text(6, 3, SLOT_KEY_LABELS[i], { fontFamily: FONT, fontSize: '12px', color: THEME.text, stroke: '#000000', strokeThickness: 3, fontStyle: 'bold' }));
     }
     if (a.stamina) {
+      // Its stamina cost in a little dark pill in the corner, with a bolt.
       const short = ctx.stamina < a.stamina;
-      parts.push(
-        this.add
-          .text(SLOT - 4, SLOT - 2, `${a.stamina}`, { fontFamily: FONT, fontSize: '11px', color: short ? '#ff7a6a' : '#f0e08a', stroke: '#000000', strokeThickness: 3 })
-          .setOrigin(1, 1),
-      );
-      const bolt = this.add.graphics();
-      bolt.fillStyle(short ? 0xff7a6a : 0xf0e08a, 1).fillTriangle(SLOT - 26, SLOT - 9, SLOT - 21, SLOT - 15, SLOT - 22, SLOT - 9).fillTriangle(SLOT - 23, SLOT - 9, SLOT - 22, SLOT - 4, SLOT - 18, SLOT - 10);
-      parts.push(bolt);
+      const col = short ? 0xff7a6a : 0x8fd0ff;
+      const pill = this.add.graphics();
+      pill.fillStyle(0x000000, 0.72).fillRoundedRect(SLOT - 29, SLOT - 17, 26, 14, 5);
+      pill.fillStyle(col, 1).fillTriangle(SLOT - 24, SLOT - 9, SLOT - 19, SLOT - 15, SLOT - 20, SLOT - 9).fillTriangle(SLOT - 21, SLOT - 10, SLOT - 20, SLOT - 4, SLOT - 16, SLOT - 11);
+      parts.push(pill);
+      parts.push(this.add.text(SLOT - 5, SLOT - 10, `${a.stamina}`, { fontFamily: FONT, fontSize: '11px', color: hex(col), fontStyle: 'bold' }).setOrigin(1, 0.5));
     }
     const shade = this.add.graphics();
     parts.push(shade);
     if (locked) {
-      shade.fillStyle(0x000000, 0.7).fillRoundedRect(0, 0, SLOT, SLOT, 7);
+      shade.fillStyle(0x000000, 0.7).fillRoundedRect(0, 0, SLOT, SLOT, 9);
       parts.push(this.add.text(SLOT / 2, SLOT / 2, `Lv ${a.level}`, { fontFamily: FONT, fontSize: '14px', color: THEME.dimText }).setOrigin(0.5));
     } else if (cd) {
-      shade.fillStyle(0x000000, 0.62).fillRoundedRect(0, 0, SLOT, SLOT, 7);
+      shade.fillStyle(0x000000, 0.62).fillRoundedRect(0, 0, SLOT, SLOT, 9);
       parts.push(
         this.add
           .text(SLOT / 2, SLOT / 2, cd === Infinity ? 'Used' : `${cd}`, {
@@ -988,8 +990,11 @@ export class CombatScene extends Phaser.Scene {
     const slot = this.add.container(x, y, parts);
     const draw = (on: boolean) => {
       bg.clear();
-      bg.fillStyle(on ? THEME.panelLight : 0x0f0b12, 1).fillRoundedRect(0, 0, SLOT, SLOT, 7);
-      bg.lineStyle(on || lit ? 2.5 : 1.5, on || lit ? THEME.gold : color, on || lit ? 1 : 0.55).strokeRoundedRect(0, 0, SLOT, SLOT, 7);
+      bg.fillStyle(0x000000, 0.5).fillRoundedRect(1, 3, SLOT, SLOT, 9);
+      bg.fillStyle(0x0f0b12, 1).fillRoundedRect(0, 0, SLOT, SLOT, 9);
+      border.clear();
+      border.lineStyle(on || lit ? 3 : 2, on || lit ? THEME.gold : color, on || lit ? 1 : 0.7).strokeRoundedRect(0, 0, SLOT, SLOT, 9);
+      if (on || lit) border.lineStyle(1, 0xfff2c0, 0.5).strokeRoundedRect(3, 3, SLOT - 6, SLOT - 6, 7);
       // Greyed out when it can't be used now (a slot on cooldown or not yet learned has its own cover instead).
       slot.setAlpha(option.disabled && !lit && !locked && !cd ? 0.42 : 1);
       slot.y = on && !option.disabled ? y - 3 : y;
@@ -1038,42 +1043,42 @@ export class CombatScene extends Phaser.Scene {
     const c = this.hero.c;
     const stats = this.world.stats;
     const block = this.add.container(PANEL_PAD, PANEL_PAD).setName('hero-block');
+    // The hero's painted portrait in a framed square, lit green while it's their turn.
+    const P = PANEL_H - PANEL_PAD * 2;
+    const yourTurn = this.battle.order.length > 0 && this.battle.current === c;
     const frame = this.add.graphics();
-    const r = 30;
-    const cy = (PANEL_H - PANEL_PAD * 2) / 2;
-    frame.fillStyle(0x0f0b12, 1).fillCircle(r, cy, r);
-    frame.lineStyle(2.5, this.battle.order.length > 0 && this.battle.current === c ? 0x8fbf6a : THEME.gold, 1).strokeCircle(r, cy, r);
-    const portrait = this.add.image(r, cy + 22, 'player', 0).setOrigin(0.5, 1).setCrop(0, 4, 32, 40).setScale(1.25);
-    const mask = this.make.graphics({}, false).fillCircle(0, 0, r - 2);
-    block.add([frame, portrait]);
+    frame.fillStyle(0x000000, 0.5).fillRoundedRect(2, 3, P, P, 10);
+    frame.fillGradientStyle(0x3a2c3e, 0x3a2c3e, 0x140f18, 0x140f18, 1).fillRoundedRect(0, 0, P, P, 10);
+    const portrait = this.add.image(P / 2, P - 2, 'portrait-hero', 0).setOrigin(0.5, 1).setScale((P - 6) / PORTRAIT_SIZE);
+    const rim = this.add.graphics();
+    rim.lineStyle(yourTurn ? 3 : 2.5, yourTurn ? 0x8fbf6a : THEME.gold, 1).strokeRoundedRect(0, 0, P, P, 10);
+    rim.lineStyle(1, 0xfff2c0, 0.25).strokeRoundedRect(3, 3, P - 6, P - 6, 8);
+    if (c.hp <= 0) portrait.setTint(0x777777);
+    block.add([frame, portrait, rim]);
 
-    const x = r * 2 + 10;
+    const r = P / 2;
+    const x = r * 2 + 12;
     const w = HERO_W - x - 6;
-    const name = this.add.text(x, 0, HERO_NAME, { fontFamily: FONT, fontSize: '15px', color: THEME.goldText });
+    const name = this.add.text(x, 2, HERO_NAME, { fontFamily: FONT, fontSize: '16px', color: THEME.goldText });
     const bars = this.add.graphics();
     const bar = (y: number, t: number, fill: number, text: string) => {
-      bars.fillStyle(0x000000, 0.6).fillRoundedRect(x, y, w, 12, 4);
-      bars.fillStyle(fill, 1).fillRoundedRect(x, y, Math.max(0, w * Phaser.Math.Clamp(t, 0, 1)), 12, 4);
-      bars.lineStyle(1, THEME.gold, 0.5).strokeRoundedRect(x, y, w, 12, 4);
-      block.add(this.add.text(x + w / 2, y + 6, text, { fontFamily: FONT, fontSize: '10px', color: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5));
+      bars.fillStyle(0x000000, 0.6).fillRoundedRect(x, y, w, 13, 4);
+      if (t > 0.02) bars.fillStyle(fill, 1).fillRoundedRect(x, y, Math.max(8, w * Phaser.Math.Clamp(t, 0, 1)), 13, 4);
+      bars.lineStyle(1, THEME.gold, 0.5).strokeRoundedRect(x, y, w, 13, 4);
+      block.add(this.add.text(x + w / 2, y + 6.5, text, { fontFamily: FONT, fontSize: '10px', color: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5));
     };
     block.add([name, bars]);
     const hp = c.hp / c.maxHp;
-    bar(21, hp, hp > 0.5 ? 0x5fae3c : hp > 0.25 ? 0xd9a22a : 0xc8352a, `${c.hp} / ${c.maxHp}`);
-    bar(37, stats.stamina / stats.maxStamina, 0x3f8fd0, `${Math.floor(stats.stamina)} / ${stats.maxStamina} stamina`);
+    bar(26, hp, hp > 0.5 ? 0x5fae3c : hp > 0.25 ? 0xd9a22a : 0xc8352a, `${c.hp} / ${c.maxHp}`);
+    bar(44, stats.stamina / stats.maxStamina, 0x3f8fd0, `${Math.floor(stats.stamina)} / ${stats.maxStamina} stamina`);
     // What's on the hero: guarded, prone, bleeding...
     let tx = x;
     for (const s of c.statuses) {
       const def = STATUSES[s.id];
-      const tag = this.add.text(tx, 54, def.name, { fontFamily: FONT, fontSize: '10px', color: hex(def.color), stroke: '#000000', strokeThickness: 2 });
+      const tag = this.add.text(tx, 63, def.name, { fontFamily: FONT, fontSize: '10px', color: hex(def.color), stroke: '#000000', strokeThickness: 2 });
       block.add(tag);
       tx += tag.width + 6;
     }
-    // The portrait is clipped to its round frame.
-    const geo = this.panelGeometry();
-    mask.setPosition(geo.x + (PANEL_PAD + r) * geo.scale, geo.y + (PANEL_PAD + cy) * geo.scale).setScale(geo.scale);
-    portrait.setMask(mask.createGeometryMask());
-    block.once(Phaser.GameObjects.Events.DESTROY, () => mask.destroy());
     this.hotbar.add(block);
   }
 
