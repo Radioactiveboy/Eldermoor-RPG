@@ -37,6 +37,8 @@ export interface Solid {
   ry: number;
   rz: number;
   material: Material;
+  /** Lit more evenly, so shadow doesn't muddy it (a face). */
+  soft?: boolean;
 }
 
 /** A small mark painted on top where it can be seen (eyes, buttons), in body space. */
@@ -150,7 +152,7 @@ function renderFrame(model: Model, angleDeg: number): PixelCanvas {
       const hit: Hit = { x: hx, y: hy, z: hz, nx: n[0], ny: n[1], nz: n[2] };
       const tones = typeof s.material === 'function' ? s.material(hit) : s.material;
       const nw = toWorld(n);
-      c.set(px, py, light(tones, nw, hy, dir));
+      c.set(px, py, light(tones, nw, hy, dir, s.soft));
     }
   }
 
@@ -169,12 +171,12 @@ function renderFrame(model: Model, angleDeg: number): PixelCanvas {
 }
 
 /** The colour a surface shows, lit: the light and normal pick one of its tones. */
-function light(tones: Tones, n: Vec3, y: number, view: Vec3): number {
+function light(tones: Tones, n: Vec3, y: number, view: Vec3, soft = false): number {
   const [base, shade, lit] = tones;
   const diffuse = Math.max(0, n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2]);
   // Edges turned side-on to the viewer and towards the light catch a rim of it.
   const facing = -(n[0] * view[0] + n[1] * view[1] + n[2] * view[2]);
-  let k = 0.12 + diffuse;
+  let k = soft ? 0.42 + diffuse * 0.6 : 0.12 + diffuse;
   if (facing < 0.3 && n[0] < -0.2) k += 0.25;
   // Darker towards the ground, where less light reaches.
   if (y < 4) k -= (4 - y) * 0.06;

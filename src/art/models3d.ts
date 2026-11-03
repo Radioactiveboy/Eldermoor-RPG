@@ -83,6 +83,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   landlord: landlordModel,
   baker: bakerModel,
   smith: smithModel,
+  tanner: tannerModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -234,5 +235,78 @@ export function smithModel(pose: Pose3D): Model {
   for (const side of [-1, 1]) details.push({ x: side * 2.1, y: hy + 1.4, z: 5.2, color: P.eye });
   // A heavy brow over the eyes.
   for (const side of [-1, 1]) details.push({ x: side * 2.1, y: hy + 2.4, z: 5.1, color: 0x8a5a40 });
+  return { solids, details };
+}
+
+/**
+ * Tamsin the tanner: slight and quick, with red hair to the shoulders, a
+ * belted green jerkin over linen sleeves, and a short brown cloak.
+ */
+export function tannerModel(pose: Pose3D): Model {
+  const jerkin: Tones = [0x4e6a3a, 0x344a26, 0x6a8a4e];
+  const linen: Tones = [P.linen, P.linenDark, 0xfff6e6];
+  const cloak: Tones = [0x7a5434, 0x52381f, 0x96704a];
+  const trouser: Tones = [0x5a4634, 0x3a2c22, 0x70583f];
+  const belt: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const skin: Tones = [0xf0c8a6, 0xc89a78, 0xffe2c4];
+  const hair: Tones = [0xb04a24, 0x7e3218, 0xd06636];
+  const boots: Tones = [P.leather, P.leatherDark, P.leatherLight];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    solids.push(...limb([side * 2.2, 13 - b * 0.5, 0], [side * 2.2, 3.6 + lift, swing * 2.4], 1.9, 1.6, trouser));
+    // Boots to mid-calf.
+    solids.push(...limb([side * 2.2, 6 + lift, swing * 2.4], [side * 2.2, 2.6 + lift, swing * 2.4], 1.9, 1.8, boots));
+    solids.push({ cx: side * 2.2, cy: 1.3 + lift, cz: 0.8 + swing * 2.4, rx: 1.7, ry: 1.3, rz: 2.5, material: boots });
+  }
+
+  // The jerkin to the hips, belted at the waist, laced up the front.
+  const body = (h: Hit): Tones => {
+    if (Math.abs(h.y - (16.2 - b)) < 0.7) return belt;
+    if (h.nz > 0.75 && Math.abs(h.nx) < 0.15 && h.y > 17 - b) return linen;
+    return jerkin;
+  };
+  solids.push({ cx: 0, cy: 13.6 - b * 0.5, cz: 0, rx: 4.4, ry: 2.6, rz: 3.4, material: body });
+  solids.push({ cx: 0, cy: 17 - b, cz: 0, rx: 4.3, ry: 3.4, rz: 3.3, material: body });
+  solids.push({ cx: 0, cy: 21.8 - b, cz: 0, rx: 4.9, ry: 4.6, rz: 3.6, material: body });
+
+  // A short cloak over the shoulders, hanging to the small of the back, swinging as they walk.
+  for (let y = 15; y <= 25; y += 0.5) {
+    const t = (25 - y) / 10;
+    solids.push({ cx: 0, cy: y - b, cz: -2.2 - t * 1.2 - Math.abs(s) * t * 0.8, rx: 5.4 + t * 0.9, ry: 0.8, rz: 2.4, material: cloak });
+  }
+
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 4.6, cy: 24.6 - b, cz: 0, rx: 2.3, ry: 2.2, rz: 2.3, material: cloak });
+    const elbow: [number, number, number] = [side * 5.6, 20.2 - b, swing * 0.5];
+    solids.push(...limb([side * 5, 24 - b, 0], elbow, 1.7, 1.5, linen));
+    solids.push(...limb(elbow, [side * 5.8, 16.6 - b, 0.8 + swing], 1.5, 1.4, linen));
+    solids.push({ cx: side * 5.8, cy: 15.6 - b, cz: 1 + swing, rx: 1.5, ry: 1.6, rz: 1.5, material: skin });
+  }
+
+  // Head: red hair to the shoulders, parted at the front.
+  const hy = 32.4 - b;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0, rx: 2, ry: 2, rz: 2, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (py > 2.4 || h.nz < -0.15) return hair;
+    if (Math.abs(h.nx) > 0.62) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
+  // Hair falling behind the ears to the shoulders.
+  solids.push(...limb([0, hy - 1, -2], [0, hy - 5.6, -2.6], 4.6, 3.6, hair));
+  solids.push({ cx: 0, cy: hy - 0.2, cz: 5.2, rx: 0.8, ry: 1, rz: 0.8, material: skin });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 1.2, z: 5, color: P.eye });
+  // Freckles.
+  for (const side of [-1, 1]) details.push({ x: side * 2.7, y: hy - 0.6, z: 4.6, color: 0xc88660 });
+  details.push({ x: 0, y: hy - 2.4, z: 5, color: 0xb86a58 }); // mouth
   return { solids, details };
 }
