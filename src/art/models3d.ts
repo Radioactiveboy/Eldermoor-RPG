@@ -96,6 +96,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   anselm: anselmModel,
   cook: cookModel,
   pedlar: pedlarModel,
+  pilgrim: pilgrimModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -828,4 +829,21 @@ export function pedlarModel(pose: Pose3D): Model {
   const details: Detail[] = [];
   for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 1, z: 5.1, color: P.eye });
   return { solids, details };
+}
+
+/** Sister Ysolde, a pilgrim: a grey hooded robe, a tall staff, and a scallop shell, the pilgrim's badge, at her breast. */
+export function pilgrimModel(pose: Pose3D): Model {
+  const model = monkModel(pose, {
+    habit: [0x7a7680, 0x58545e, 0x9a96a0],
+    skin: [0xeac0a0, 0xc29478, 0xfad6b8],
+    hair: [0x3a2a24, 0x241a16, 0x523e34],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    hoodUp: true,
+    staff: true,
+  });
+  const b = pose.bob;
+  for (const [x, y] of [[1.6, 23], [2.6, 23], [3.4, 22.8], [2, 22], [3, 22], [2.5, 21.2]]) {
+    model.details.push({ x, y: y - b, z: 3.6, color: 0xf2e6c8 });
+  }
+  return model;
 }
