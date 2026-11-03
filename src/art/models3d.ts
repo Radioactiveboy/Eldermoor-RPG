@@ -94,6 +94,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   novice: noviceModel,
   prior: priorModel,
   anselm: anselmModel,
+  cook: cookModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -549,6 +550,12 @@ interface MonkLook {
   longBeard?: boolean;
   /** A leather pouch hanging at the belt. */
   pouch?: boolean;
+  /** A long apron over the front of the habit, from the chest down. */
+  apron?: Tones;
+  /** Sleeves pushed up to the elbow, showing the forearms. */
+  rolled?: boolean;
+  /** A well-fed belly. */
+  stout?: boolean;
 
   /** A head pushed forward with age. */
   stooped?: boolean;
@@ -577,7 +584,10 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
   }
 
   // The habit to the ankles (or the knee, hitched), falling in a fold or two, the rope's end hanging at the front.
+  const apron = look.apron;
+  const inFront = (h: Hit) => !!apron && h.nz > 0.1 && Math.abs(h.nx) < 0.75;
   const skirt = (h: Hit): Tones => {
+    if (inFront(h) && h.y > 4) return apron!;
     if (h.nz > 0.6 && Math.abs(h.x - 1.2) < 0.6 && h.y > 9) return rope;
     return habit;
   };
@@ -586,9 +596,11 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
     const t = ((16 - y) / 13.5) * (look.hitched ? 0.6 : 1);
     solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 4.7 + t * 1.6, ry: 0.8, rz: 3.8 + t * 1.1, material: skirt });
   }
-  const body = (h: Hit): Tones => (Math.abs(h.y - (16.6 - b)) < 0.6 ? rope : habit);
+  const body = (h: Hit): Tones => (Math.abs(h.y - (16.6 - b)) < 0.6 ? rope : inFront(h) ? apron! : habit);
+  const chest = (h: Hit): Tones => (inFront(h) && h.y < 23.5 - b && Math.abs(h.nx) < 0.5 ? apron! : habit);
   solids.push({ cx: 0, cy: 17 - b, cz: 0, rx: 4.6, ry: 2.8, rz: 3.6, material: body });
-  solids.push({ cx: 0, cy: 21.8 - b, cz: lean * 0.5, rx: 5.1, ry: 4.6, rz: 3.8, material: habit });
+  if (look.stout) solids.push({ cx: 0, cy: 18 - b, cz: 0.8, rx: 5.6, ry: 4.4, rz: 4.6, material: body });
+  solids.push({ cx: 0, cy: 21.8 - b, cz: lean * 0.5, rx: 5.1, ry: 4.6, rz: 3.8, material: chest });
 
   // The cowl, lying in folds over the shoulders and back.
   if (!look.hoodUp) {
@@ -605,7 +617,8 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
     const elbow: [number, number, number] = [side * 5.8, 20.4 - b, lean * 0.5 + (holding ? 0.8 : swing * 0.5)];
     const wrist: [number, number, number] = holding ? [side * 6.8, 19.2 - b, 2] : [side * 6.1, 17.4 - b, 1 + lean * 0.5 + swing];
     solids.push(...limb([side * 5.2, 24 - b, lean * 0.5], elbow, 1.8, 1.9, habit));
-    solids.push(...limb(elbow, wrist, 2, 2.4, habit));
+    if (look.rolled) solids.push(...limb(elbow, wrist, 1.5, 1.4, skin));
+    else solids.push(...limb(elbow, wrist, 2, 2.4, habit));
     const hand = { cx: wrist[0], cy: wrist[1] - 1.2, cz: wrist[2] + 0.2, rx: 1.4, ry: 1.6, rz: 1.4, material: skin };
     solids.push(hand);
     if (holding) staffHand = [hand.cx, hand.cy, hand.cz];
@@ -725,5 +738,18 @@ export function anselmModel(pose: Pose3D): Model {
     stooped: true,
     longBeard: true,
     pouch: true,
+  });
+}
+
+/** Brother Hob, the cook: a stout, ruddy man with his sleeves rolled and a long apron over his habit. */
+export function cookModel(pose: Pose3D): Model {
+  return monkModel(pose, {
+    habit: [0x6a5240, 0x4a3828, 0x866a54],
+    skin: [0xeaa886, 0xc0806a, 0xfac4a2],
+    hair: [0x5a3a26, 0x3c2618, 0x74503a],
+    boots: [P.barkDark, P.ink, P.bark],
+    apron: [0xe4dccc, 0xb8ae9a, 0xf6f0e4],
+    rolled: true,
+    stout: true,
   });
 }
