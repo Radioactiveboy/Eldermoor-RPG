@@ -35,8 +35,10 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   things from the stall to your satchel to buy them, or from your satchel to the stall
   to sell them; when there's more than one, a box asks how many (slider, - / +, or the
   arrow keys, then Enter). Or click something and press Buy / Sell. Esc closes
-- **In a fight**: pick an action with the mouse, the number keys, or arrows then Enter;
-  Esc goes back from a sub-menu (choosing a target or an item)
+- **In a fight**: the hotbar along the bottom holds your skills. Click one, or press its number
+  (1-9, 0, -), or move along with the arrow keys and press Enter; hover or select a skill to see what it
+  costs and does. **Space** ends your turn. When a skill needs a target, click the beast (each shows your
+  chance to hit) or its button; Esc goes back
 - **Shift**: sprint (uses stamina, which refills when you stop sprinting)
 - **Mouse wheel**: zoom
 - **Hold T**: fast-forward the clock (60x) to watch the day/night cycle. A day lasts 24 real minutes
@@ -106,8 +108,11 @@ src/
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   systems/Experience.ts   XP and levels: what each level needs, what it gives, XP for quests
-  systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, fleeing,
-                          how beasts choose their moves, and the beasts' stats (FOES)
+  systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, advantage,
+                          conditions (prone, dazed...), fleeing, how beasts choose their moves, and the
+                          beasts' stats and traits (FOES)
+  systems/Abilities.ts    The hero's combat skills: action or bonus action, stamina, cooldowns, levels
+  ui/AbilityIcons.ts      The hotbar's skill icons, drawn with shapes
   entities/Player.ts      Movement, collision, click-to-move path following
   entities/Npc.ts         People you can talk to, which conversation they have, travellers
                           who wander up and down the road, and the militia on their rounds
@@ -146,7 +151,7 @@ src/
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
   scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
   scenes/SleepScene.ts    "How long to sleep?" box, opened from a bed
-  scenes/CombatScene.ts   Turn-based fights over the world: turn order, action menu, dice, combat log
+  scenes/CombatScene.ts   Turn-based fights over the world: turn order, skill hotbar and tooltips, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera
   ui/StatusBars.ts        Slim health and stamina bars, the hero's level and an XP bar
   ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day
@@ -217,21 +222,48 @@ src/
   `CombatScene` takes over. Everyone rolls initiative (d20 + quickness) and acts
   in that order, shown along the top of the screen. An attack rolls d20 + to-hit
   against the target's armour class; a hit rolls damage dice, a natural 20 is a
-  critical hit (double dice) and a natural 1 always misses. Your armour is
-  10 + the Defence of what you wear; your to-hit and damage come from your
-  weapon's Attack (fists roll d4, a weapon d6). On your turn you choose to
-  **Attack**, make a **Heavy blow** (-2 to hit but double damage, costs stamina),
-  **Defend** (+4 armour until your next turn, recovers stamina), **Use an item**
-  (eat food, or take up a weapon from the satchel) or **Flee** (d20 + quickness
-  against 10, +2 per extra enemy). Wolves gang up (+2 to hit in a pack) and may
-  bolt when badly hurt. Lose and you wake up at home. The clock stops during a
-  fight. New beasts go in `FOES` (`systems/Combat.ts`) with art in `art/` and a
-  spawn in the map's `creatures` list. How each behaves in the wild is in
-  `WAYS` (`entities/Creature.ts`): wolves and boar attack when you come close;
-  deer and hares are shy game you hunt yourself, which may bolt (`skittish`).
-  What each leaves behind is `SPOILS` in `GameScene` (venison and a hide from a
-  deer, a hare's pelt, a boar's tusks). Spawns marked `respawns` (the plains'
-  game) are back every visit.
+  critical hit (double dice) and a natural 1 always misses. Some rolls are made
+  with **advantage** (two d20, keep the higher) or **disadvantage** (keep the
+  lower). Your armour is 10 + the Defence of what you wear; your to-hit and
+  damage come from your weapon's Attack (fists roll d4, a weapon d6).
+
+  Each turn you get one **Action** (green circle) and one **Bonus action**
+  (orange triangle), spent in either order from the hotbar, then End turn.
+  Skills can cost stamina, have a cooldown in turns, need a weapon in hand, or be
+  learned at a later level (`ABILITIES` in `systems/Abilities.ts`):
+
+  | Skill | Cost | What it does |
+  | --- | --- | --- |
+  | Strike | Action | A plain attack |
+  | Heavy Blow | Action, 30 stamina | -2 to hit, damage dice rolled twice |
+  | Staggering Blow | Action, 15 stamina, 2-turn cooldown | On a hit the foe is Dazed: its attacks roll with disadvantage |
+  | Sweeping Blow | Action, 20 stamina, 3-turn cooldown, level 2, needs a weapon | Attacks every foe at -2, half damage |
+  | Brace | Action | +4 armour until your next turn, +20 stamina |
+  | Eat | Action | Eat something from your satchel |
+  | Flee | Action | d20 + quickness against 10, +2 per extra foe |
+  | Shove | Bonus, 10 stamina, 2-turn cooldown | Contest to knock a foe Prone: attacks on it roll with advantage, and it spends its next turn getting up |
+  | Mark Prey | Bonus, 10 stamina, 4-turn cooldown, level 3 | +2 to hit and +1d4 damage against that foe for 3 of its turns |
+  | Second Wind | Bonus, once a fight | Heal 1d8 + your level |
+  | Ready Weapon | Bonus | Take up a weapon from your satchel |
+
+  Fighters can carry **conditions** (`STATUSES` in `systems/Combat.ts`), shown
+  as tags on the turn-order cards: Guarded, Prone, Dazed, Marked, Bleeding and
+  Rallied. Beasts have **traits** (`FoeTrait`): wolves try to drag you down
+  (save with d20 + quickness or you're Prone, and getting up costs your bonus
+  action), cellar rats' bites bleed, a boar's first charge hits harder and it's
+  hard to shove, and the Wolf Mother howls to rally her pack (+2 to hit). Wolves
+  also gang up (+2 to hit in a pack) and may bolt when badly hurt. Lose and you
+  wake up at home. The clock stops during a fight.
+
+  To add a skill: an id and entry in `ABILITIES` (cost, stamina, cooldown, level,
+  the numbers for its tooltip), an icon in `ui/AbilityIcons.ts`, and what it
+  does in `CombatScene.useAbility`. New beasts go in `FOES` (`systems/Combat.ts`)
+  with art in `art/` and a spawn in the map's `creatures` list. How each behaves
+  in the wild is in `WAYS` (`entities/Creature.ts`): wolves and boar attack when
+  you come close; deer and hares are shy game you hunt yourself, which may bolt
+  (`skittish`). What each leaves behind is `SPOILS` in `GameScene` (venison and a
+  hide from a deer, a hare's pelt, a boar's tusks). Spawns marked `respawns` (the
+  plains' game) are back every visit.
 
 - **Experience and levels.** The hero earns XP for slaying beasts (each beast
   in `FOES` has an `xp` value; a grey wolf is 40), for each step of a quest (20),
