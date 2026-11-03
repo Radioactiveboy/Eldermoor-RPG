@@ -23,6 +23,7 @@ const VOLUMES: [Exclude<keyof SettingsData, 'showMinimap'>, string][] = [
   ['masterVolume', 'Master'],
   ['musicVolume', 'Music'],
   ['effectsVolume', 'Effects'],
+  ['ambienceVolume', 'Ambience'],
 ];
 
 /** Volume sliders and display options. Changes save and apply immediately. */
@@ -41,10 +42,10 @@ export class SettingsScene extends Phaser.Scene {
     const title = this.add.text(0, -170, 'Settings', titleStyle(40)).setOrigin(0.5);
 
     const sliders = VOLUMES.map(([key, label], i) =>
-      makeSlider(this, 60, -90 + i * 56, label, Settings.get()[key], (v) => Settings.set(key, v)),
+      makeSlider(this, 60, -112 + i * 50, label, Settings.get()[key], (v) => Settings.set(key, v)),
     );
 
-    const fullscreen = makeButton(this, 0, 90, this.fullscreenLabel(), () => {
+    const fullscreen = makeButton(this, 0, 100, this.fullscreenLabel(), () => {
       this.scale.toggleFullscreen();
     }, 300);
     const fsText = fullscreen.list[1] as Phaser.GameObjects.Text;
@@ -52,7 +53,7 @@ export class SettingsScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.ENTER_FULLSCREEN, refreshFs);
     this.scale.on(Phaser.Scale.Events.LEAVE_FULLSCREEN, refreshFs);
 
-    const back = makeButton(this, 0, 160, 'Back', () => this.close(), 200);
+    const back = makeButton(this, 0, 162, 'Back', () => this.close(), 200);
     const hint = this.add.text(0, 205, 'Esc to close', bodyStyle(14, THEME.dimText)).setOrigin(0.5);
 
     this.ui = this.add.container(0, 0, [panel, title, ...sliders, fullscreen, back, hint]);

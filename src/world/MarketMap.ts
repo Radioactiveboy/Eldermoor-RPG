@@ -47,6 +47,12 @@ const STALLS: Array<{
   { kind: 'tanner', tx: 7, ty: 13, facing: 'x', exit: { x: 7.5, y: 15.5 }, home: { x: 4.3, y: 17.5 }, late: 0.25 },
 ];
 
+/** Where the smith works, for the sound of the hammer (see world/AmbientSounds.ts). */
+export const SMITHY = (() => {
+  const s = STALLS.find((st) => st.kind === 'smith')!;
+  return { x: s.exit.x, y: s.exit.y, late: s.late };
+})();
+
 /**
  * Adowvale, the village at the far end of the road from the cottage, built
  * round its market square: bare earth with the well in the middle, three

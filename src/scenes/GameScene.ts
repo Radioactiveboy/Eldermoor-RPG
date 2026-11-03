@@ -21,6 +21,7 @@ import { AREA_NAMES, SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGam
 import { ShopId, Shops, SHOPS } from '../systems/Shops';
 import { clockText, TimeOfDay } from '../systems/TimeOfDay';
 import { buildCaveMap } from '../world/CaveMap';
+import { AmbientSounds } from '../world/AmbientSounds';
 import { Drips } from '../world/Drips';
 import { buildHomeMap } from '../world/HomeMap';
 import { buildHutMap } from '../world/HutMap';
@@ -114,6 +115,8 @@ const SHEEP_REWARD = 30;
 const PACK_RANGE = 7;
 /** Seconds after arriving in an area before beasts can notice the player, so there's time to see them first. */
 const ARRIVAL_GRACE = 2.5;
+/** How loud the world's background sounds stay during a fight, under the battle music. */
+const COMBAT_DUCK = 0.35;
 
 const SITTING_THOUGHTS: Record<string, string[]> = {
   bench: [
@@ -269,6 +272,7 @@ export class GameScene extends Phaser.Scene {
   ambience?: Ambience;
   /** Water dripping from stalactites, in the cave. */
   private drips?: Drips;
+  private sounds!: AmbientSounds;
   /** What the player would do by pressing E right now, if anything. */
   focus?: Interaction;
   /** A few-seconds action in progress, for the HUD's progress bar. */
@@ -403,6 +407,18 @@ export class GameScene extends Phaser.Scene {
     this.syncGathered();
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
     this.drips = this.map.data.drips ? new Drips(this, this.map.data) : undefined;
+    this.sounds = new AmbientSounds(this.area, this.map.data);
+    GameAudio.duckAmbience(1);
+    // The world falls quiet behind the pause menu.
+    const hush = () => GameAudio.duckAmbience(0);
+    const unhush = () => GameAudio.duckAmbience(this.inCombat ? COMBAT_DUCK : 1);
+    this.events.on(Phaser.Scenes.Events.PAUSE, hush);
+    this.events.on(Phaser.Scenes.Events.RESUME, unhush);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.PAUSE, hush);
+      this.events.off(Phaser.Scenes.Events.RESUME, unhush);
+      this.sounds.stop();
+    });
 
     this.hover = this.add.image(0, 0, 'tile-highlight').setDepth(1).setAlpha(0.6).setVisible(false);
     this.marker = this.add.image(0, 0, 'tile-highlight').setDepth(1).setTint(0x9cf09c).setVisible(false);
@@ -580,6 +596,8 @@ export class GameScene extends Phaser.Scene {
     this.updateMarketHours();
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
+    const stepLoudness = !moved ? 0 : this.sprinting ? 1.4 : wantsSneak ? 0.35 : 1;
+    this.sounds.update(dt, { x: this.player.gx, y: this.player.gy }, this.clock.hour, this.npcs, stepLoudness);
     // Time stands still while fighting, turn by turn.
     if (!this.inCombat) {
       this.stats.update(dt, wantsSprint && moved);
@@ -1230,6 +1248,7 @@ export class GameScene extends Phaser.Scene {
     if (this.channel) this.cancelChannel();
     this.busy = true;
     this.inCombat = true;
+    GameAudio.duckAmbience(COMBAT_DUCK);
     this.walkingTo = undefined;
     this.player.setPath([]);
     // Only beasts that hunt in packs (wolves) bring the rest of the pack with them.
@@ -1260,6 +1279,7 @@ export class GameScene extends Phaser.Scene {
 
   private endCombat(result: CombatResult, foes: Creature[]): void {
     this.inCombat = false;
+    GameAudio.duckAmbience(1, 2);
     // Gone for good, except the plains' game, which is back the next time the hero comes this way.
     const respawns = new Set((this.map.data.creatures ?? []).filter((s) => s.respawns).map((s) => s.id));
     for (const id of [...result.slain, ...result.fled]) if (!respawns.has(id)) this.defeatedFoes.add(id);

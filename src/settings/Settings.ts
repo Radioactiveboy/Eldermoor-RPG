@@ -3,6 +3,8 @@ export interface SettingsData {
   masterVolume: number; // 0..1
   musicVolume: number; // 0..1
   effectsVolume: number; // 0..1
+  /** The world's background sounds: wind, birds, crowds, water. */
+  ambienceVolume: number; // 0..1
   /** Whether the minimap is shown (M toggles it). */
   showMinimap: boolean;
 }
@@ -13,6 +15,7 @@ const DEFAULTS: SettingsData = {
   masterVolume: 0.8,
   musicVolume: 0.6,
   effectsVolume: 0.8,
+  ambienceVolume: 0.8,
   showMinimap: true,
 };
 
