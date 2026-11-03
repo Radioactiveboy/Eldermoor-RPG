@@ -91,6 +91,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   porter: porterModel,
   gardener: gardenerModel,
   silent: silentModel,
+  novice: noviceModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -672,4 +673,18 @@ export function silentModel(pose: Pose3D): Model {
     boots: [P.leatherDark, P.barkDark, P.leather],
     hoodUp: true,
   });
+}
+
+/** Brother Tobin, a novice: young, freckled and red-haired, in an undyed habit. */
+export function noviceModel(pose: Pose3D): Model {
+  const model = monkModel(pose, {
+    habit: [0x8a7a64, 0x645744, 0xa6967e],
+    skin: [P.skin, P.skinShade, 0xf4cfa8],
+    hair: [0xb4562a, 0x823c1c, 0xd0703e],
+    boots: [P.leather, P.leatherDark, P.leatherLight],
+  });
+  // Freckles across the nose.
+  const hy = 32 - pose.bob;
+  for (const side of [-1, 1]) model.details.push({ x: side * 2.6, y: hy - 0.6, z: 4.8, color: 0xc88660 });
+  return model;
 }
