@@ -87,6 +87,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   tanner: tannerModel,
   guard: guardModel,
   tollguard: tollGuardModel,
+  iran: iranModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -450,5 +451,76 @@ function soldierModel(pose: Pose3D, look: SoldierLook): Model {
   for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: 5, color: P.eye });
   // A gold emblem on the chest.
   for (const [x, y] of look.badge.at) details.push({ x, y: y - b, z: 3.9, color: look.badge.color });
+  return { solids, details };
+}
+
+/**
+ * Farmer Iran: weathered and a little stooped, in a battered straw hat, a
+ * grey beard, and an undyed wool smock tied at the waist with rope.
+ */
+export function iranModel(pose: Pose3D): Model {
+  const smock: Tones = [0x9a8a6a, 0x6e6048, 0xb4a682];
+  const sleeve: Tones = [0x7a5a3a, 0x54402a, 0x94704a];
+  const rope: Tones = [0xc8b07a, 0x9a8458, 0xe0c890];
+  const trouser: Tones = [0x4e4234, 0x342a20, 0x645440];
+  const skin: Tones = [0xc8906a, 0x9c6a4c, 0xe0a882];
+  const hair: Tones = [0x3a2e28, 0x241c18, 0x504038];
+  const beard: Tones = [0x8a807a, 0x625a56, 0xa8a09a];
+  const straw: Tones = [P.straw, P.strawDark, P.strawLight];
+  const boots: Tones = [P.barkDark, P.ink, P.bark];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    solids.push(...limb([side * 2.3, 12 - b * 0.5, 0], [side * 2.3, 3.6 + lift, swing * 2.4], 2, 1.7, trouser));
+    solids.push({ cx: side * 2.3, cy: 1.3 + lift, cz: 0.8 + swing * 2.4, rx: 1.8, ry: 1.4, rz: 2.7, material: boots });
+  }
+
+  // The smock: loose, to mid-thigh, gathered at the waist by a rope.
+  const body = (h: Hit): Tones => (Math.abs(h.y - (17 - b)) < 0.6 ? rope : smock);
+  for (let y = 9; y <= 16; y += 0.5) {
+    const t = (16 - y) / 7;
+    solids.push({ cx: 0, cy: y - b * 0.5, cz: s * 0.3 * t, rx: 4.9 + t * 0.8, ry: 0.8, rz: 3.9 + t * 0.5, material: smock });
+  }
+  solids.push({ cx: 0, cy: 17.4 - b, cz: 0.1, rx: 4.8, ry: 2.6, rz: 3.8, material: body });
+  // Stooped: the chest and shoulders lean a little forward.
+  solids.push({ cx: 0, cy: 22 - b, cz: 0.5, rx: 5.3, ry: 4.6, rz: 3.9, material: body });
+
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 4.9, cy: 24.6 - b, cz: 0.5, rx: 2.4, ry: 2.2, rz: 2.4, material: smock });
+    const elbow: [number, number, number] = [side * 6, 20.2 - b, 0.6 + swing * 0.5];
+    solids.push(...limb([side * 5.4, 24 - b, 0.5], elbow, 1.8, 1.6, sleeve));
+    solids.push(...limb(elbow, [side * 6.2, 16.6 - b, 1.4 + swing], 1.6, 1.5, sleeve));
+    solids.push({ cx: side * 6.2, cy: 15.6 - b, cz: 1.6 + swing, rx: 1.7, ry: 1.8, rz: 1.7, material: skin });
+  }
+
+  // Head pushed forward, grey beard, and the hat.
+  const hy = 31.8 - b;
+  const hz = 1.2;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0.8, rx: 2.1, ry: 2, rz: 2.1, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (h.nz > -0.35 && (py < -1.6 || (py < 0 && Math.abs(h.nx) > 0.6))) return beard;
+    if (h.nz < -0.2 || Math.abs(h.nx) > 0.7) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: hz, rx: 5.4, ry: 5.8, rz: 5.2, material: head, soft: true });
+  solids.push({ cx: 0, cy: hy - 4.6, cz: hz + 2.6, rx: 3.2, ry: 2.2, rz: 2, material: beard });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: hz + 5.2, rx: 1, ry: 1.2, rz: 1, material: skin });
+  // A battered straw hat: the brim droops on one side, the crown is dented.
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const droop = Math.max(0, Math.cos(a - 0.8)) * 1.3;
+    solids.push({ cx: Math.cos(a) * 5.6, cy: hy + 3.6 - droop, cz: hz + Math.sin(a) * 5.2, rx: 3, ry: 0.8, rz: 3, material: straw });
+  }
+  solids.push({ cx: 0, cy: hy + 5, cz: hz - 0.2, rx: 5, ry: 3.4, rz: 4.8, material: (h) => (Math.abs(h.y - (hy + 4)) < 0.5 ? sleeve : straw) });
+  solids.push({ cx: 0.8, cy: hy + 7.4, cz: hz, rx: 3.4, ry: 1.6, rz: 3.2, material: straw });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: hz + 5, color: P.eye });
   return { solids, details };
 }
