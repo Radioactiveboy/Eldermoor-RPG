@@ -108,6 +108,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   scribe: scribeModel,
   harlan: harlanModel,
   fenwick: fenwickModel,
+  sigrun: sigrunModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1371,7 +1372,7 @@ export function scribeModel(pose: Pose3D): Model {
 interface RegularLook {
   coat: Tones;
   /** Sleeves, if not the coat's. */
-  sleeves?: Tones;
+  sleeves?: Material;
   legs: Tones;
   boots: Tones;
   skin: Tones;
@@ -1506,6 +1507,39 @@ export function fenwickModel(pose: Pose3D): Model {
       { cx: 0, cy: hy + 3, cz: hz, rx: 8.2, ry: 0.7, rz: 7.8, material: hat },
       { cx: 0, cy: hy + 4.8, cz: hz - 0.2, rx: 4.8, ry: 3, rz: 4.6, material: hat },
       { cx: 0, cy: hy + 3.8, cz: hz - 0.2, rx: 5, ry: 0.6, rz: 4.8, material: band },
+    ],
+  });
+}
+
+/** Sigrun, a sellsword: a leather jerkin over mail, a dark cloak, and fair hair tied back. */
+export function sigrunModel(pose: Pose3D): Model {
+  const leather: Tones = [0x5a4030, 0x422e22, 0x765640];
+  const mail: Tones = [P.ironLight, P.iron, 0x9a9aa6];
+  const ring: Tones = [P.iron, 0x34343c, P.ironLight];
+  const belt: Tones = [0x3a2a1e, 0x261a12, 0x4e3a2a];
+  const buckle: Tones = [P.gold, 0xa8802e, P.goldLight];
+  const cloak: Tones = [0x3a3438, 0x2a2428, 0x4e484c];
+  const hair: Tones = [0xd8c8a0, 0xb0a07c, 0xf0e4c0];
+  const rings = (h: Hit) => mailRings(h, mail, ring);
+  return regularModel(pose, {
+    coat: leather,
+    sleeves: rings,
+    legs: [0x3a3032, 0x2a2224, 0x4e4446],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xe8c0a0, 0xc49a7c, 0xf8d4b4],
+    hair,
+    // Mail shows at the shoulders, the sides and the hem; a belt at the waist.
+    coatPaint: (h, base) => {
+      const by = 15.6 - pose.bob;
+      if (Math.abs(h.y - by) < 0.7) return h.nz > 0.85 && Math.abs(h.x) < 0.8 ? buckle : belt;
+      if (Math.abs(h.nx) > 0.93 || h.y > 24.6 - pose.bob) return rings(h);
+      return base;
+    },
+    extras: (hy, hz, b) => [
+      { cx: 0, cy: 18.4 - b, cz: -2.4, rx: 6.4, ry: 7.4, rz: 2.8, material: cloak },
+      { cx: 0, cy: 24.4 - b, cz: -0.6, rx: 6, ry: 1.6, rz: 3.6, material: cloak },
+      // Her hair tied back in a short tail.
+      ...limb([0, hy - 1, hz - 5], [0, hy - 5, hz - 5.4], 1.6, 1.2, hair),
     ],
   });
 }
