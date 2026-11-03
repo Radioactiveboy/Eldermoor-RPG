@@ -82,6 +82,7 @@ export function landlordModel(pose: Pose3D): Model {
 export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   landlord: landlordModel,
   baker: bakerModel,
+  smith: smithModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -161,5 +162,77 @@ export function bakerModel(pose: Pose3D): Model {
     details.push({ x: side * 2.6, y: hy - 0.8, z: 4.7, color: 0xe08a7a });
   }
   details.push({ x: 0, y: hy - 2.4, z: 5, color: 0xb05a50 }); // mouth
+  return { solids, details };
+}
+
+/**
+ * Osric the smith: a big, bald man with a black beard, in a grey work shirt
+ * with the sleeves rolled up over thick forearms, and a scorched leather
+ * apron from chest to knee.
+ */
+export function smithModel(pose: Pose3D): Model {
+  const shirt: Tones = [0x6e6a62, 0x4a4640, 0x8a867c];
+  const leather: Tones = [0x4e3626, 0x2e1e16, 0x6a4c36];
+  const scorch: Tones = [0x2a1c16, 0x1a1210, 0x3a2a20];
+  const trouser: Tones = [0x3a3032, 0x241c1e, 0x50444a];
+  const skin: Tones = [0xd8a07a, 0xa87454, 0xf0bc96];
+  const beard: Tones = [0x2a2024, 0x18121a, 0x3e3238];
+  const boots: Tones = [P.barkDark, P.ink, P.bark];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  // Legs in dark breeches, boots stepping out.
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    const lift = swing < 0 ? 0.9 : 0;
+    const foot: [number, number, number] = [side * 2.6, 3.4 + lift, swing * 2.4];
+    solids.push(...limb([side * 2.6, 13 - b * 0.5, 0], foot, 2.3, 2, trouser));
+    solids.push({ cx: side * 2.6, cy: 1.4 + lift, cz: 0.9 + swing * 2.4, rx: 2, ry: 1.5, rz: 2.8, material: boots });
+  }
+
+  // A barrel of a body; the apron hangs over its front from chest to knee.
+  const apron = (h: Hit): boolean => h.nz > 0.05 && Math.abs(h.nx) < 0.8 && h.y > 7 && h.y < 25 - b;
+  // Its straps cross over his back.
+  const strap = (h: Hit): boolean => h.nz < -0.1 && h.y > 17 - b && h.y < 26.5 - b && Math.abs(Math.abs(h.x) - (h.y - (17 - b)) * 0.55) < 0.8;
+  const body = (h: Hit): Tones => (apron(h) ? (dusted(h, 0.08) ? scorch : leather) : strap(h) ? leather : shirt);
+  solids.push({ cx: 0, cy: 14 - b * 0.5, cz: 0, rx: 5, ry: 3, rz: 3.8, material: (h) => (apron(h) ? leather : trouser) });
+  solids.push({ cx: 0, cy: 18 - b, cz: 0.3, rx: 5.8, ry: 4.4, rz: 4.6, material: body });
+  solids.push({ cx: 0, cy: 22.8 - b, cz: 0, rx: 6.6, ry: 4.8, rz: 4.4, material: body });
+  // The apron's skirt, standing a little proud of the legs.
+  for (let y = 7.5; y <= 13; y += 0.5) {
+    const t = (13 - y) / 5.5;
+    solids.push({ cx: 0, cy: y, cz: 2.2 + t * 0.4 + s * 0.3 * t, rx: 5 + t * 0.4, ry: 0.8, rz: 1.6, material: (h) => (dusted(h, 0.08) ? scorch : leather) });
+  }
+
+  // Broad shoulders, sleeves rolled up over thick bare forearms.
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 6.2, cy: 25 - b, cz: 0, rx: 3, ry: 2.6, rz: 2.9, material: shirt });
+    const elbow: [number, number, number] = [side * 7.6, 20.2 - b, swing * 0.5];
+    solids.push(...limb([side * 6.8, 24.4 - b, 0], elbow, 2.4, 2.1, shirt));
+    solids.push(...limb(elbow, [side * 7.8, 16.4 - b, 0.8 + swing], 2, 1.8, skin));
+    solids.push({ cx: side * 7.8, cy: 15.2 - b, cz: 1 + swing, rx: 2, ry: 2.1, rz: 2, material: skin });
+  }
+
+  // Bald head over a thick neck, and a full black beard.
+  const hy = 32.6 - b;
+  solids.push({ cx: 0, cy: 27.6 - b, cz: 0.2, rx: 3, ry: 2.2, rz: 2.8, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (py < -1.2 && h.nz > -0.35) return beard;
+    if (py < 0.2 && h.nz > -0.35 && Math.abs(h.nx) > 0.6) return beard;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy - 0.3, cz: 0.2, rx: 5.7, ry: 5.6, rz: 5.4, material: head });
+  // The beard spreads over the chest a little.
+  solids.push({ cx: 0, cy: hy - 5, cz: 3, rx: 3.6, ry: 2.4, rz: 2.2, material: beard });
+  solids.push({ cx: 0, cy: hy + 0.2, cz: 5.5, rx: 1.1, ry: 1.2, rz: 1, material: skin });
+  for (const side of [-1, 1]) solids.push({ cx: side * 5.3, cy: hy - 0.2, cz: 0.4, rx: 0.8, ry: 1.2, rz: 0.9, material: skin });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2.1, y: hy + 1.4, z: 5.2, color: P.eye });
+  // A heavy brow over the eyes.
+  for (const side of [-1, 1]) details.push({ x: side * 2.1, y: hy + 2.4, z: 5.1, color: 0x8a5a40 });
   return { solids, details };
 }
