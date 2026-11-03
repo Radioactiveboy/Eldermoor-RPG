@@ -1,4 +1,4 @@
-import type { Tones } from './character';
+import { darker, type Tones } from './character';
 import { Detail, Hit, limb, Model, Pose3D, Solid } from './figure3d';
 import { PALETTE as P } from './palette';
 import { MORTEN } from './tollgate';
@@ -90,6 +90,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   iran: iranModel,
   porter: porterModel,
   gardener: gardenerModel,
+  silent: silentModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -622,9 +623,15 @@ function monkModel(pose: Pose3D, look: MonkLook): Model {
   solids.push({ cx: 0, cy: hy + 0.2, cz: hz + 5.2, rx: 0.9, ry: 1.1, rz: 0.9, material: skin });
   if (look.hoodUp) {
     // The cowl drawn up: a deep hood round the face, open at the front.
-    for (const [dy, dz, r] of [[0.6, -1.6, 7], [3.4, -2.2, 6.2], [-3.6, -1.6, 6.4]] as const) {
-      solids.push({ cx: 0, cy: hy + dy, cz: hz + dz, rx: r, ry: r, rz: r - 0.4, material: habit });
+    // The hood's crown and back sit behind the face; its rim frames it.
+    solids.push({ cx: 0, cy: hy + 0.8, cz: hz - 1.8, rx: 6.4, ry: 6.6, rz: 5.4, material: habit });
+    solids.push({ cx: 0, cy: hy + 5.6, cz: hz - 4.2, rx: 2, ry: 2.2, rz: 2, material: habit });
+    for (let i = 0; i <= 12; i++) {
+      const a = -Math.PI * 0.62 + (i / 12) * Math.PI * 1.24;
+      solids.push({ cx: Math.sin(a) * 4.8, cy: hy + 0.2 + Math.cos(a) * 5, cz: hz + 3, rx: 1.8, ry: 1.8, rz: 2, material: habit });
     }
+    // Shadow under the hood, on the face.
+    solids.push({ cx: 0, cy: hy + 2.4, cz: hz + 3.9, rx: 3.6, ry: 1.2, rz: 1, material: [habit[1], darker(habit[1]), habit[1]] });
   }
 
   const details: Detail[] = [];
@@ -652,5 +659,17 @@ export function gardenerModel(pose: Pose3D): Model {
     hair: [0xb08a4a, 0x806230, 0xcca464],
     boots: [P.barkDark, P.ink, P.bark],
     hitched: [0x4e3c2e, 0x342820, 0x645040],
+  });
+}
+
+/** Brother Aldo, under a vow of silence: dark-bearded, in a dark grey habit with the cowl drawn up. */
+export function silentModel(pose: Pose3D): Model {
+  return monkModel(pose, {
+    habit: [0x4e4a46, 0x34302e, 0x66625c],
+    skin: [0xb88262, 0x8e5c44, 0xd09a78],
+    hair: [0x2a2024, 0x18121a, 0x3e3238],
+    beard: [0x2a2024, 0x18121a, 0x3e3238],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    hoodUp: true,
   });
 }
