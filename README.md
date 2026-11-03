@@ -148,8 +148,10 @@ src/
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
                           the grey wolf (creatures.ts), travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
-  audio/Audio.ts          Music and UI sounds, composed live with Web Audio (no audio files)
-  audio/Soundscape.ts     The world's background sounds: wind, water, birds, crickets, owls, crowds, bells, footsteps
+  audio/Audio.ts          Music and UI sounds, composed live with Web Audio
+  audio/Soundscape.ts     The world's background sounds, footsteps and the bell, all recordings
+  public/audio/ambience/  The ambient recordings (MP3) and CREDITS.md with their sources and licences
+  tools/build-ambience.py Cuts, loops and levels those recordings from the originals
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
   settings/Settings.ts    Volume settings, saved in the browser
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
@@ -197,15 +199,18 @@ src/
   tense `battle` one, a bouncing `market` dance and a slow, chant-like `monastery` one; add more by adding entries
   to `TRACKS`. Each map names its track (`MapData.music`). Recorded music can
   replace it later without changing the scenes.
-- **The world has its own sounds, also code.** `world/AmbientSounds.ts` gives each
+- **The world has its own sounds, from real recordings.** `world/AmbientSounds.ts` gives each
   area a profile in `PLACES` (out in the open, how windy, how wild, a hearth, a
   cave, the monastery bell, a taproom) and every fraction of a second works out
   an `AmbientMix` from it: birds by day with a dawn chorus, crickets, frogs, owls
   and far-off wolves by night, waves when near the shore, the market's chatter
   while it's open, the smith's hammer by the smithy, the taproom filling up with
   its regulars, bees by the hives, the bell at the offices. `audio/Soundscape.ts`
-  plays it: steady sounds are looping noise glided to their level, the rest are
-  scheduled one-offs. They go through their own Ambience volume slider, duck
+  plays it: steady sounds are seamless loops of recordings glided to their level,
+  the rest (owls, wolves, clinking mugs, the anvil) are recorded one-offs
+  scheduled now and then. The recordings are in `public/audio/ambience/`, all
+  CC0 or CC BY (see `CREDITS.md` there), and are fetched only when a place first
+  needs them. The footsteps and the monastery bell are recordings too. They go through their own Ambience volume slider, duck
   under a fight and fall silent behind the pause menu. Footsteps follow what's
   underfoot (grass, dirt, sand, soil, cave gravel, flagstones, floorboards).
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;

@@ -2,8 +2,10 @@ import { Settings, SettingsData } from '../settings/Settings';
 import { AmbientMix, SILENCE, Soundscape, Surface } from './Soundscape';
 
 /**
- * All game audio, generated live with the Web Audio API. There are no audio
- * files, so nothing to license: the music is composed here in code.
+ * All game audio, played with the Web Audio API. The music and UI sounds are
+ * composed live here in code; the world's background sounds, footsteps and
+ * the bell are recordings (see audio/Soundscape.ts and
+ * public/audio/ambience/CREDITS.md).
  *
  * Browsers only allow sound after the player clicks or presses a key, so the
  * engine starts silent and unlocks itself on the first input. Asking for a
@@ -930,7 +932,7 @@ class AudioEngine {
     const data = this.noiseBuffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
 
-    this.soundscape = new Soundscape(ctx, this.ambienceBus, this.noiseBuffer);
+    this.soundscape = new Soundscape(ctx, this.ambienceBus);
     this.soundscape.setMix(this.ambience);
     this.soundscape.setDuck(this.ambienceDuck, 0.1);
 

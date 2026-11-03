@@ -148,7 +148,7 @@ export class AmbientSounds {
       // The taproom's din comes from the folk drinking in it, and carries upstairs faintly.
       const folk = this.area === 'tavern' ? npcs.filter((n) => n.present).length : this.taproomGuess(hour);
       const busy = clamp01(folk / 7);
-      mix.crowd = busy * p.tavern;
+      mix.taproom = busy * p.tavern;
       mix.clatter = (0.2 + busy * 0.8) * p.tavern;
     }
     if (p.clatter) mix.clatter = Math.max(mix.clatter, p.clatter);
