@@ -100,6 +100,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   drover: droverModel,
   carter: carterModel,
   herbwife: herbwifeModel,
+  nell: nellModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -1029,4 +1030,93 @@ export function herbwifeModel(pose: Pose3D): Model {
     model.solids.push({ cx: x, cy: 25.6 - b, cz: z, rx: 1.6, ry: 1.4, rz: 1.6, material: herbs });
   }
   return model;
+}
+
+/** How one of the Crooked Tankard's maids is turned out. */
+interface MaidLook {
+  dress: Tones;
+  /** Sleeves, if not the dress's own. */
+  sleeves?: Tones;
+  skin: Tones;
+  hair: Tones;
+  /** A long braid down the back, or the hair worn loose to the shoulders. */
+  hairStyle: 'braid' | 'loose';
+}
+
+/**
+ * A tavern maid: a dress to the ankles with a white apron and bib over it, a
+ * cloth tucked in at the apron strings, and her hair braided or loose.
+ */
+function maidModel(pose: Pose3D, look: MaidLook): Model {
+  const { dress, skin, hair } = look;
+  const sleeves = look.sleeves ?? dress;
+  const apron: Tones = [0xece4d4, 0xbfb29a, 0xfffaf0];
+  const cloth: Tones = [0xc8b48a, 0x9a8862, 0xe0cca2];
+  const boots: Tones = [P.leatherDark, P.barkDark, P.leather];
+  const b = pose.bob;
+  const s = pose.stride;
+  const solids: Solid[] = [];
+
+  for (const side of [-1, 1]) {
+    const swing = s * side;
+    solids.push({ cx: side * 2.1, cy: 1.2 + (swing < 0 ? 0.8 : 0), cz: 0.8 + swing * 2.2, rx: 1.6, ry: 1.3, rz: 2.3, material: boots });
+  }
+
+  const front = (h: Hit) => h.nz > 0.1 && Math.abs(h.nx) < 0.75;
+  for (let y = 3; y <= 15; y += 0.5) {
+    const t = (15 - y) / 12;
+    solids.push({ cx: 0, cy: y - b * (1 - t), cz: s * 0.4 * t, rx: 4.4 + t * 1.8, ry: 0.8, rz: 3.6 + t * 1.2, material: (h) => (front(h) && h.y > 4.5 ? apron : dress) });
+  }
+  const bodice = (h: Hit): Tones => {
+    if (Math.abs(h.y - (16 - b)) < 0.6) return apron;
+    if (h.nz > 0.35 && Math.abs(h.nx) < 0.45 && h.y < 22.5 - b) return apron;
+    return dress;
+  };
+  solids.push({ cx: 0, cy: 16.5 - b, cz: 0, rx: 4.3, ry: 3, rz: 3.5, material: bodice });
+  solids.push({ cx: 0, cy: 21.5 - b, cz: 0.2, rx: 4.8, ry: 4.8, rz: 3.7, material: bodice });
+  // A cloth tucked in at her left hip.
+  solids.push({ cx: 4, cy: 13.6 - b, cz: 1.6, rx: 1.2, ry: 2.4, rz: 1.4, material: cloth });
+
+  for (const side of [-1, 1]) {
+    const swing = -s * side * 2;
+    solids.push({ cx: side * 4.5, cy: 24.5 - b, cz: 0, rx: 2.2, ry: 2.1, rz: 2.2, material: sleeves });
+    const elbow: [number, number, number] = [side * 5.8, 20.3 - b, swing * 0.5];
+    solids.push(...limb([side * 5, 24 - b, 0], elbow, 1.8, 1.6, sleeves));
+    solids.push(...limb(elbow, [side * 6, 17.2 - b, 0.8 + swing], 1.6, 1.5, sleeves));
+    solids.push({ cx: side * 6, cy: 15.9 - b, cz: 1 + swing, rx: 1.5, ry: 1.6, rz: 1.5, material: skin });
+  }
+
+  const hy = 32.5 - b;
+  solids.push({ cx: 0, cy: 27 - b, cz: 0, rx: 2, ry: 2, rz: 2, material: skin });
+  const head = (h: Hit): Tones => {
+    const py = h.y - hy;
+    if (py > 2.2 || h.nz < -0.25) return hair;
+    if (Math.abs(h.nx) > 0.68 && py > -2) return hair;
+    return skin;
+  };
+  solids.push({ cx: 0, cy: hy, cz: 0.2, rx: 5.4, ry: 5.9, rz: 5.2, material: head, soft: true });
+  if (look.hairStyle === 'braid') {
+    // A braid down her back, swinging a little as she walks.
+    for (let i = 0; i < 6; i++) {
+      solids.push({ cx: (i % 2 ? 0.4 : -0.4) + s * 0.2 * i, cy: hy - 3 - i * 1.7, cz: -4.4 - i * 0.15, rx: 1.3 - i * 0.08, ry: 1.2, rz: 1.2, material: hair });
+    }
+  } else {
+    solids.push(...limb([0, hy - 1, -2], [0, hy - 5.6, -2.6], 4.6, 3.8, hair));
+  }
+  solids.push({ cx: 0, cy: hy - 0.2, cz: 5.2, rx: 0.8, ry: 1, rz: 0.8, material: skin });
+
+  const details: Detail[] = [];
+  for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 1.2, z: 5, color: P.eye });
+  details.push({ x: 0, y: hy - 2.4, z: 5, color: 0xb05a50 });
+  return { solids, details };
+}
+
+/** Nell, a tavern maid: a green dress and a white apron, and her auburn hair in a long braid. */
+export function nellModel(pose: Pose3D): Model {
+  return maidModel(pose, {
+    dress: [0x3a6a5a, 0x264a3e, 0x4e8a76],
+    skin: [0xf0c4a0, 0xc69a7a, 0xffdcbc],
+    hair: [0x9a4426, 0x6e2e18, 0xb85a36],
+    hairStyle: 'braid',
+  });
 }
