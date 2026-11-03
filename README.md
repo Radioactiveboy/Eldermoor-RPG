@@ -149,7 +149,7 @@ src/
                           the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
                           the grey wolf (creatures.ts), travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
   audio/Audio.ts          Music and UI sounds, composed live with Web Audio
-  audio/Soundscape.ts     The world's background sounds (recordings): wind, water, birds, crickets, owls, crowds; plus bells and footsteps
+  audio/Soundscape.ts     The world's background sounds, footsteps and the bell, all recordings
   public/audio/ambience/  The ambient recordings (MP3) and CREDITS.md with their sources and licences
   tools/build-ambience.py Cuts, loops and levels those recordings from the originals
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
@@ -210,7 +210,7 @@ src/
   the rest (owls, wolves, clinking mugs, the anvil) are recorded one-offs
   scheduled now and then. The recordings are in `public/audio/ambience/`, all
   CC0 or CC BY (see `CREDITS.md` there), and are fetched only when a place first
-  needs them. The bell and footsteps are still synthesised. They go through their own Ambience volume slider, duck
+  needs them. The footsteps and the monastery bell are recordings too. They go through their own Ambience volume slider, duck
   under a fight and fall silent behind the pause menu. Footsteps follow what's
   underfoot (grass, dirt, sand, soil, cave gravel, flagstones, floorboards).
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;

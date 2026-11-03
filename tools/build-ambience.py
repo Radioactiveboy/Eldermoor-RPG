@@ -6,13 +6,15 @@ recordings listed in public/audio/ambience/CREDITS.md.
   python3 tools/build-ambience.py <folder>
 
 where <folder> holds clones of the repositories the recordings were found in
-(omarchy-ambient, moodist, Blankie, meta = Meta-open-sound, and the two Kenney
-Godot ports), under the names used in the paths below.
+(omarchy-ambient, moodist, Blankie, meta = Meta-open-sound, the two Kenney
+Godot ports and joeuk89_pixel-art for the bell), under the names used in the
+paths below.
 
 Needs ffmpeg and numpy. Steady sounds ("beds") are cut to a stretch, their end
 crossfaded into their start so they loop without a seam, levelled to the same
 loudness, and saved as MP3. One-off sounds (an owl, a wolf's howl, the smith's
-hammer, a mug on a table) are split out, trimmed of silence and levelled.
+hammer, a mug on a table, footsteps, a bell stroke) are split out, trimmed
+and levelled.
 """
 import json
 import subprocess
@@ -63,6 +65,22 @@ SINGLES = {
 EXTRA = {
     'fire': 'acompressor=threshold=-32dB:ratio=8:attack=0.5:release=60:makeup=4,alimiter=limit=0.6',
 }
+
+KI = 'kenney-impact-sounds-for-godot/addons/kenney impact sounds/'
+KR = 'kenney-rpg-audio-for-godot/addons/kenney rpg audio/'
+OC = 'meta/corpora/oculus-audio-pack/ogg/'
+# The hero's footsteps, a few takes per surface: step-<kind>-1, -2, ...
+STEPS = {
+    'grass': [f'{KI}footstep_grass_00{i}.ogg' for i in range(5)],
+    'dirt': [f'{OC}FEETHmn_ShoeDirtWalk_OS_0{i}.ogg' for i in range(1, 6)],
+    'boot': [f'{KR}footstep_{i}.ogg' for i in range(10)],
+    'crunch': [f'{KI}footstep_snow_00{i}.ogg' for i in range(5)],
+    'stone': [f'{KI}footstep_concrete_00{i}.ogg' for i in range(5)],
+    'wood': [f'{KI}footstep_wood_00{i}.ogg' for i in range(5)],
+}
+
+# The monastery bell: one stroke of a real church bell, (source, start s, end s).
+BELL = ('joeuk89_pixel-art/library/ambient/freesound-church-bell-846302.ogg', 8.3, 12.0)
 
 
 def decode(path: Path, hp=0, lp=0, extra='') -> np.ndarray:
@@ -161,6 +179,19 @@ def main() -> None:
         a = level(trim(decode(src / f, 120), 0.002, 0.05), -24)
         encode(a, name, mono=True, kbps=64)
         made[name] = round(len(a) / RATE, 2)
+    for kind, files in STEPS.items():
+        for i, f in enumerate(files, 1):
+            a = trim(decode(src / f, 60), 0.002, 0.04)
+            # Footsteps are levelled by their peak: they're all attack.
+            a = a * (0.5 / max(1e-6, np.max(np.abs(a))))
+            encode(a, f'step-{kind}-{i}', mono=True, kbps=64)
+            made[f'step-{kind}-{i}'] = round(len(a) / RATE, 2)
+    f, s, e = BELL
+    # High- and low-passed to take out the traffic rumble and the birds near the microphone.
+    a = decode(src / f, 300, 4500)[int(s * RATE):int(e * RATE)]
+    a = level(trim(a, 0.005, 1.2), -22)
+    encode(a, 'bell', mono=True, kbps=64)
+    made['bell'] = round(len(a) / RATE, 2)
     print(json.dumps(made, indent=1))
 
 

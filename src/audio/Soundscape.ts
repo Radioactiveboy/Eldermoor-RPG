@@ -11,8 +11,8 @@
  * the new level; the rest are one-off calls and clinks, scheduled a little
  * ahead on a timer and played more or less often by their level.
  *
- * The hero's footsteps and the monastery bell are still made live, since
- * they're short and tuned to the moment.
+ * The hero's footsteps (a few takes per surface) and the monastery bell are
+ * recordings too, loaded up front since they're small.
  */
 
 /** How much of each sound to play, each 0 (none) to 1 (full). */
@@ -106,6 +106,19 @@ const SHOTS = {
   clink: numbered('clink', 9),
 } as const;
 
+/** How each surface sounds underfoot: which takes, and how they're coloured. */
+const STEPS: Record<Surface, { takes: string[]; peak: number; rate?: [number, number]; lowpass?: number }> = {
+  grass: { takes: numbered('step-grass', 5), peak: 0.175 },
+  dirt: { takes: numbered('step-dirt', 5), peak: 0.23 },
+  // Tilled earth: a soft, dull tread.
+  soil: { takes: numbered('step-boot', 10), peak: 0.21, rate: [0.86, 0.96], lowpass: 1800 },
+  // A soft shush rather than a crunch.
+  sand: { takes: numbered('step-crunch', 5), peak: 0.09, rate: [0.82, 0.92], lowpass: 2400 },
+  gravel: { takes: numbered('step-crunch', 5), peak: 0.165, rate: [1, 1.1] },
+  stone: { takes: numbered('step-stone', 5), peak: 0.29 },
+  wood: { takes: numbered('step-wood', 5), peak: 0.29 },
+};
+
 /** A loop that's playing (or about to, once its recording has loaded). */
 interface Bed {
   def: LoopDef;
@@ -139,7 +152,6 @@ export class Soundscape {
   constructor(
     private readonly ctx: AudioContext,
     dest: AudioNode,
-    private readonly white: AudioBuffer,
   ) {
     this.out = ctx.createGain();
     this.out.gain.value = LEVEL;
@@ -154,6 +166,9 @@ export class Soundscape {
     this.send.connect(this.reverb).connect(this.out);
     this.dry.connect(this.send);
     this.timer = window.setInterval(() => this.tick(), TICK_MS);
+    // Small and wanted at once: the footsteps and the bell.
+    for (const s of Object.values(STEPS)) s.takes.forEach((f) => void this.clip(f));
+    void this.clip('bell');
   }
 
   setMix(mix: AmbientMix): void {
@@ -186,44 +201,17 @@ export class Soundscape {
 
   /** One footstep. `loud` is about 1 for walking, less sneaking and more sprinting. */
   footstep(surface: Surface, loud: number, dest: AudioNode): void {
-    const t = this.ctx.currentTime;
-    const v = loud * rand(0.8, 1.1);
-    switch (surface) {
-      case 'grass':
-        this.noise(dest, t, 0.13, 'bandpass', 1700, 900, 0.8, 0.09 * v);
-        this.thud(dest, t, 90, 0.06 * v);
-        break;
-      case 'soil':
-        this.noise(dest, t, 0.1, 'lowpass', 900, 400, 0.7, 0.12 * v);
-        this.thud(dest, t, 80, 0.08 * v);
-        break;
-      case 'dirt':
-        this.noise(dest, t, 0.09, 'bandpass', 2200, 1400, 1, 0.1 * v);
-        this.thud(dest, t, 95, 0.08 * v);
-        break;
-      case 'sand':
-        this.noise(dest, t, 0.16, 'highpass', 2600, 1800, 0.6, 0.06 * v);
-        break;
-      case 'gravel':
-        this.noise(dest, t, 0.08, 'bandpass', 3000, 1800, 1.2, 0.11 * v);
-        this.noise(dest, t + 0.03, 0.06, 'highpass', 3500, 2500, 0.8, 0.05 * v);
-        this.thud(dest, t, 110, 0.07 * v);
-        break;
-      case 'stone':
-        this.thud(dest, t, 140, 0.1 * v);
-        this.noise(dest, t, 0.04, 'highpass', 2800, 2200, 0.8, 0.07 * v);
-        break;
-      case 'wood':
-        this.thud(dest, t, 120, 0.16 * v, 0.09);
-        this.knock(dest, t, rand(330, 380), 0.05 * v);
-        break;
-    }
+    const s = STEPS[surface];
+    this.shot(s.takes, this.ctx.currentTime, s.peak * loud * rand(0.8, 1.05), { rate: s.rate, lowpass: s.lowpass, dest });
   }
 
   /** A church bell rung `strokes` times, slow and far-carrying. */
   bell(strokes: number, near = 0.6): void {
     const t0 = this.ctx.currentTime + 0.1;
-    for (let i = 0; i < strokes; i++) this.bellStroke(t0 + i * 2.6, near);
+    for (let i = 0; i < strokes; i++) {
+      // Each stroke a touch different, as a real bell swings.
+      this.shot(['bell'], t0 + i * 2.6, 0.27 * near * rand(0.9, 1.05), { rate: [0.99, 1.01], echo: 0.8 });
+    }
   }
 
   stop(): void {
@@ -380,8 +368,9 @@ export class Soundscape {
   /**
    * Plays one of a few recordings at time `t`, slightly re-pitched so repeats
    * don't sound the same, through a filter if given, with some going to the echo.
+   * It plays into the world's sounds unless `dest` says otherwise.
    */
-  private shot(names: readonly string[], t: number, peak: number, opts: { rate?: [number, number]; lowpass?: number; echo?: number } = {}): void {
+  private shot(names: readonly string[], t: number, peak: number, opts: { rate?: [number, number]; lowpass?: number; echo?: number; dest?: AudioNode } = {}): void {
     const buf = this.loaded.get(pick(names));
     if (!buf) return;
     const ctx = this.ctx;
@@ -400,7 +389,7 @@ export class Soundscape {
     } else {
       src.connect(g);
     }
-    head.connect(this.dry);
+    head.connect(opts.dest ?? this.dry);
     if (opts.echo) {
       const wet = ctx.createGain();
       wet.gain.value = opts.echo;
@@ -427,79 +416,6 @@ export class Soundscape {
   /** The smith at work: a run of ringing blows on the anvil. */
   private hammer(t: number, level: number): void {
     this.shot(SHOTS.anvil, t, 0.27 * level, { rate: [0.96, 1.04] });
-  }
-
-  private bellStroke(t: number, near: number): void {
-    const base = 196;
-    // The partials of a cast bell: hum, prime, minor third, fifth, octave.
-    const partials: Array<[number, number, number]> = [[0.5, 0.5, 6], [1, 0.8, 4.5], [1.19, 0.45, 3], [1.5, 0.3, 2.5], [2, 0.35, 2], [2.66, 0.15, 1.2]];
-    for (const [mul, a, d] of partials) {
-      const o = this.ctx.createOscillator();
-      o.type = 'sine';
-      o.frequency.value = base * mul;
-      const g = this.ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.06 * a * near, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      o.connect(g);
-      g.connect(this.dry);
-      g.connect(this.send);
-      o.start(t);
-      o.stop(t + d + 0.05);
-    }
-  }
-
-  // ---------------------------------------------------------------- building blocks (footsteps)
-
-  /** A low, quickly falling thump: a foot coming down. */
-  private thud(dest: AudioNode, t: number, f: number, peak: number, len = 0.12): void {
-    const o = this.ctx.createOscillator();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(f, t);
-    o.frequency.exponentialRampToValueAtTime(f * 0.5, t + len);
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(Math.max(0.0002, peak), t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-    o.connect(g).connect(dest);
-    o.start(t);
-    o.stop(t + len + 0.02);
-  }
-
-  /** A hollow wooden knock. */
-  private knock(dest: AudioNode, t: number, f: number, peak: number): void {
-    const o = this.ctx.createOscillator();
-    o.type = 'triangle';
-    o.frequency.setValueAtTime(f, t);
-    o.frequency.exponentialRampToValueAtTime(f * 0.8, t + 0.06);
-    const band = this.ctx.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.value = f * 2;
-    band.Q.value = 3;
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(Math.max(0.0002, peak), t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
-    o.connect(band).connect(g).connect(dest);
-    o.start(t);
-    o.stop(t + 0.09);
-  }
-
-  /** Filtered noise with a swell-and-fade, the filter sweeping from one frequency to another. */
-  private noise(dest: AudioNode, t: number, len: number, type: BiquadFilterType, from: number, to: number, q: number, peak: number): void {
-    const buffer = this.white;
-    const src = this.ctx.createBufferSource();
-    src.buffer = buffer;
-    const f = this.ctx.createBiquadFilter();
-    f.type = type;
-    f.Q.value = q;
-    f.frequency.setValueAtTime(from, t);
-    f.frequency.exponentialRampToValueAtTime(to, t + len);
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + len * 0.3);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-    src.connect(f).connect(g).connect(dest);
-    src.start(t, Math.random() * Math.max(0, buffer.duration - len - 0.1));
-    src.stop(t + len + 0.02);
   }
 
   private impulse(seconds: number): AudioBuffer {
