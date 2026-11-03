@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { itemScale } from '../art/items';
 import { GameAudio } from '../audio/Audio';
 import { HERO_NAME } from '../config';
 import { Experience } from '../systems/Experience';
@@ -226,7 +227,7 @@ export class InventoryScene extends Phaser.Scene {
     this.content.add(g);
     let icon: Phaser.GameObjects.Image | undefined;
     if (id) {
-      icon = this.add.image(x + SLOT / 2, y + SLOT / 2, itemDef(id).icon).setScale(2.5);
+      icon = this.add.image(x + SLOT / 2, y + SLOT / 2, itemDef(id).icon).setScale(itemScale(2.8));
       this.content.add(icon);
       if (count > 1) {
         const n = this.add
@@ -294,7 +295,7 @@ export class InventoryScene extends Phaser.Scene {
     this.content.add([sortBg, sortLabel, sortHit]);
     // The purse, on the right.
     const coins = this.add.text(x0 + GRID_W, y0 + GRID_H + 10, `${Inventory.coins} coins`, bodyStyle(14, THEME.goldText)).setOrigin(1, 0);
-    const coin = this.add.image(coins.x - coins.width - 12, coins.y + coins.height / 2, 'item-coin').setScale(1.4);
+    const coin = this.add.image(coins.x - coins.width - 12, coins.y + coins.height / 2, 'item-coin').setScale(itemScale(1.4));
     this.content.add([footer, coins, coin]);
   }
 
@@ -355,7 +356,7 @@ export class InventoryScene extends Phaser.Scene {
     }
     const def = itemDef(id);
     const pad = 16;
-    const icon = this.add.image(x + pad + 28, y + pad + 28, def.icon).setScale(3.5);
+    const icon = this.add.image(x + pad + 28, y + pad + 28, def.icon).setScale(itemScale(3.5));
     const name = this.add.text(x + pad + 66, y + pad + 6, def.name, { ...titleStyle(19), shadow: undefined, wordWrap: { width: w - pad * 2 - 66 } });
     const kind = this.add.text(x + pad + 66, name.y + name.height + 2, def.category, bodyStyle(13, THEME.dimText));
     this.content.add([icon, name, kind]);
@@ -438,7 +439,7 @@ export class InventoryScene extends Phaser.Scene {
       // Lift the item: a copy follows the pointer and its slot looks empty.
       d.ghost = this.add
         .image(p.x, p.y, itemDef(stack.id).icon)
-        .setScale(2.8 * this.window.scale)
+        .setScale(itemScale(2.8 * this.window.scale))
         .setDepth(10)
         .setAlpha(0.9);
       this.bagIcons[d.index]?.setAlpha(0.25);

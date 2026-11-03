@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { itemScale } from '../art/items';
 import { GameAudio } from '../audio/Audio';
 import { Experience, ExperienceEvent } from '../systems/Experience';
 import { Inventory, InventoryEvent, itemDef } from '../systems/Inventory';
@@ -143,7 +144,7 @@ export class UIScene extends Phaser.Scene {
     const x = (sprite.x - cam.worldView.x) * cam.zoom;
     const y = (sprite.y - cam.worldView.y) * cam.zoom - 48 * cam.zoom;
     const [iconKey, label] = e.type === 'added' ? [itemDef(e.id).icon, `+${e.count} ${itemDef(e.id).name}`] : ['item-coin', `+${e.coins} coins`];
-    const icon = this.add.image(0, 0, iconKey).setScale(2).setOrigin(1, 0.5);
+    const icon = this.add.image(0, 0, iconKey).setScale(itemScale(2)).setOrigin(1, 0.5);
     const text = this.add
       .text(4, 0, label, { fontFamily: UI_FONT, fontSize: '16px', color: '#fff6e0', stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0, 0.5);
