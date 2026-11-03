@@ -605,7 +605,7 @@ export class GameScene extends Phaser.Scene {
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
     const stepLoudness = !moved ? 0 : this.sprinting ? 1.4 : wantsSneak ? 0.35 : 1;
-    this.sounds.update(dt, { x: this.player.gx, y: this.player.gy }, this.clock.hour, this.npcs, stepLoudness);
+    this.sounds.update(dt, { x: this.player.gx, y: this.player.gy }, this.clock.hour, this.npcs, stepLoudness, this.player.footfalls);
     // Time stands still while fighting, turn by turn.
     if (!this.inCombat) {
       this.stats.update(dt, wantsSprint && moved);
