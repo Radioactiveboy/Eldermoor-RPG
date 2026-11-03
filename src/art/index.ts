@@ -18,6 +18,7 @@ import { generateProps } from './props';
 import { generateTavern } from './tavern';
 import { generateTiles } from './tiles';
 import { generateTollGate } from './tollgate';
+import { generateWillow } from './willow';
 
 /**
  * Draws all of the game's pixel art at startup and registers it as textures
@@ -44,4 +45,5 @@ export function generateArt(scene: Phaser.Scene): void {
   generateMonastery(scene);
   generateAbbey(scene);
   generateTavern(scene);
+  generateWillow(scene);
 }

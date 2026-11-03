@@ -1437,6 +1437,76 @@ const PAINTERS: Record<string, (c: Ctx) => void> = {
     ]), 2.5);
   },
 
+  'willow-bark': (c) => {
+    // Three long curls of white willow bark, tied with twine: grey and furrowed outside, cream where they were cut from the wood.
+    const rnd = rng(37);
+    const strip = (x: number, y: number, angle: number, len: number, w: number) =>
+      at(c, x, y, angle, () => {
+        drop(c, () => {
+          smooth(c, [
+            [-w, -len / 2],
+            [w * 0.9, -len / 2 + 4],
+            [w * 1.1, 0],
+            [w, len / 2],
+            [-w * 0.8, len / 2 - 3],
+            [-w * 1.15, 0],
+          ]);
+          fillInk(c, lin(c, -w, 0, w, 0, [
+            [0, '#bdb5a2'],
+            [0.45, '#8e8676'],
+            [1, '#5a5348'],
+          ]));
+        });
+        // Furrows running down the bark.
+        smooth(c, [[-w, -len / 2], [w * 0.9, -len / 2 + 4], [w * 1.1, 0], [w, len / 2], [-w * 0.8, len / 2 - 3], [-w * 1.15, 0]]);
+        clipped(c, () => {
+          c.strokeStyle = 'rgba(40,32,24,0.55)';
+          c.lineWidth = 1.6;
+          for (let i = 0; i < 7; i++) {
+            const fx = -w + (i + 0.5) * ((2 * w) / 7) + (rnd() - 0.5) * 2;
+            c.beginPath();
+            c.moveTo(fx, -len / 2);
+            c.bezierCurveTo(fx + (rnd() - 0.5) * 6, -len / 6, fx + (rnd() - 0.5) * 6, len / 6, fx + (rnd() - 0.5) * 4, len / 2);
+            c.stroke();
+          }
+          // The pale inner bark, showing where the strip curls over at the top.
+          ellipse(c, 0, -len / 2 + 3, w * 1.2, 7);
+          c.fillStyle = lin(c, 0, -len / 2 - 4, 0, -len / 2 + 10, [
+            [0, '#fff4d6'],
+            [1, '#e2c890'],
+          ]);
+          c.fill();
+        });
+        ellipse(c, 0, -len / 2 + 3, w * 1.05, 5.5);
+        ink(c, 2);
+        shine(c, -w * 0.45, -len / 8, w * 0.35, len / 4, 0, 0.3);
+      });
+    strip(40, 66, -0.38, 92, 11);
+    strip(88, 64, 0.34, 88, 10);
+    strip(64, 60, 0.02, 100, 12);
+    // Twine round the middle of the bundle.
+    for (const [y, tilt] of [[70, -0.06], [79, 0.05]] as const) {
+      at(c, 64, y, tilt, () => {
+        roundRect(c, -34, -3, 68, 6, 3);
+        fillInk(c, lin(c, 0, -3, 0, 3, [
+          [0, '#e8cc8c'],
+          [1, '#a4824a'],
+        ]), 2);
+      });
+    }
+    at(c, 96, 78, 0.5, () => {
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.quadraticCurveTo(8, 10, 4, 22);
+      c.strokeStyle = INK;
+      c.lineWidth = 6;
+      c.lineCap = 'round';
+      c.stroke();
+      c.strokeStyle = '#c8a46a';
+      c.lineWidth = 3;
+      c.stroke();
+    });
+  },
   moonpetal: (c) => {
     // A sprig of pale, star-shaped flowers, glowing faintly.
     c.save();
@@ -2400,6 +2470,7 @@ const ICONS: Array<[string, string]> = [
   ['item-tusk', 'boar-tusk'],
   ['item-whitehide', 'white-hide'],
   ['item-moonpetal', 'moonpetal'],
+  ['item-willowbark', 'willow-bark'],
   ['item-ale', 'ale'],
   ['item-cider', 'cider'],
   ['item-mead', 'mead'],

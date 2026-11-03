@@ -185,6 +185,7 @@ export const HERBWIFE: DialogueScript = {
       lines: ['What is it, dear?'],
       choices: [
         { text: 'Do you have any moonpetal?', next: 'moonpetal' },
+        { text: 'Where might I find white willow?', next: 'willow' },
         { text: 'What took you to the monastery?', next: 'monastery' },
         { text: 'Any advice for the plains?', next: 'advice' },
         { text: 'Good day, Ness.', next: 'bye' },
@@ -198,6 +199,15 @@ export const HERBWIFE: DialogueScript = {
         'Ask for Brother Anselm, and be polite. Who is it for? ...Your mother. Then go soon, dear.',
       ],
       action: 'heard-of-monastery',
+      next: 'ask',
+    },
+    willow: {
+      speaker: 'herbwife',
+      lines: [
+        "White willow? For a fever, is it. There's crack willow down by the mere, but that's no good to you, it's the white you want.",
+        'Take the north road from the crossroads, up past the woods into the upland. Where the brook comes down off the Greyfells, there is a pool, and on its bank the oldest willow in the shire.',
+        'Cut from the side away from the water, three strips no longer than your hand is wide, and thank her for it. She has given bark to every fever in Adowvale since my grandmother was a girl.',
+      ],
       next: 'ask',
     },
     monastery: {
