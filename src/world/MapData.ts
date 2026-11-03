@@ -125,6 +125,8 @@ export interface Sight {
   gather?: { item: ItemId; picked: string };
   /** Just a thought on looking closely (a carving, a grave). */
   thought?: string;
+  /** Somewhere to brew or cook: opens the station window (an id in systems/Crafting.ts STATIONS). */
+  station?: string;
 }
 
 /** A warm light source that brightens its surroundings in the dark. */

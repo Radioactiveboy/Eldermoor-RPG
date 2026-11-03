@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
-import { MOTHER_INTRO, MOTHER_WAITING } from '../dialogue/mother';
+import { MedicineStage, MOTHER_INTRO, motherScript } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
 import { FeedStage, iranScript } from '../dialogue/iran';
@@ -103,6 +103,8 @@ function landlord(hour: number): DialogueScript {
       foundCaveDoor: QuestLog.hasFlag('found-cave-door'),
       monasteryOpen: QuestLog.hasFlag('monastery-open'),
     }),
+    medicine: QuestLog.has('mother-medicine') && !QuestLog.get('mother-medicine')!.completed,
+    toldBench: QuestLog.hasFlag('may-use-cellar'),
   });
 }
 
@@ -158,6 +160,14 @@ const PACKING_SECONDS = 2.5;
 /** Seconds to fade in or out at the front door. */
 const DOOR_FADE_MS = 500;
 
+/** How Mother's errand stands (see the 'mother-medicine' quest). */
+function medicineStage(): MedicineStage {
+  if (QuestLog.get('mother-medicine')?.completed) return 'well';
+  if (Inventory.count('fever-tincture') > 0) return 'tincture';
+  if (Inventory.count('moonpetal') > 0 && Inventory.count('willow-bark') > 0) return 'herbs';
+  return 'looking';
+}
+
 /** How Farmer Iran's errand for chicken feed stands (see the 'chicken-feed' quest). */
 function feedStage(): FeedStage {
   const quest = QuestLog.get('chicken-feed');
@@ -170,7 +180,7 @@ const NPCS: Record<string, NpcDef> = {
   mother: {
     texture: 'npc-mother',
     anim: 'mother-idle',
-    script: () => (QuestLog.has('mother-medicine') ? MOTHER_WAITING : MOTHER_INTRO),
+    script: () => (QuestLog.has('mother-medicine') ? motherScript(medicineStage()) : MOTHER_INTRO),
   },
   pedlar: { texture: 'folk-pedlar', script: traveller('pedlar', PEDLAR), wander: 7 },
   pilgrim: { texture: 'folk-pilgrim', script: traveller('pilgrim', PILGRIM), wander: 5 },

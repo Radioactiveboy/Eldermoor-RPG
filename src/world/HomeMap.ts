@@ -64,5 +64,7 @@ export function buildHomeMap(): MapData {
   add('stool', 4, 4);
   add('chest', 0, 3, 1, 1, { flipX: true });
   add('strawbed', 7, 4, 1, 2);
+  // Mother's pot and spit over the hearth: cook here (see systems/Crafting.ts).
+  data.sights = [{ id: 'home-hearth', gx: 4, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'home-hearth' }];
   return data;
 }

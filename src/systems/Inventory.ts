@@ -16,7 +16,7 @@ export const EQUIP_SLOTS: Array<{ id: EquipSlot; label: string }> = [
   { id: 'trinket', label: 'Trinket' },
 ];
 
-export type ItemCategory = 'Food' | 'Material' | 'Clothing' | 'Tool' | 'Weapon' | 'Armour';
+export type ItemCategory = 'Food' | 'Potion' | 'Material' | 'Clothing' | 'Tool' | 'Weapon' | 'Armour';
 
 export interface ItemDef {
   name: string;
@@ -137,11 +137,11 @@ export const ITEMS = {
   },
   venison: {
     name: 'Venison',
-    description: 'A haunch of red deer, wrapped in dock leaves. Rich and dark; Hilde would make a pie of it.',
+    description: 'A raw haunch of red deer, wrapped in dock leaves. Rich and dark, and much better over a fire.',
     icon: 'item-venison',
     category: 'Food',
     stack: 10,
-    eat: { health: 18, stamina: 10 },
+    eat: { health: 6, stamina: 4 },
     value: 8,
   },
   'deer-hide': {
@@ -398,6 +398,110 @@ export const ITEMS = {
     stack: 30,
     value: 1,
   },
+  // Brewed at an alchemist's bench (see systems/Crafting.ts).
+  'fever-tincture': {
+    name: 'Moonpetal Tincture',
+    description:
+      'Moonpetal steeped with white willow bark and strained into a little corked flask. It glows faintly, and smells of rain. ' +
+      'The old cure for a fever and a bad chest. Mother needs this.',
+    icon: 'item-fever-tincture',
+    category: 'Potion',
+    stack: 5,
+    eat: { health: 30 },
+    drink: true,
+  },
+  // Meat from the hunt: edible raw, at a pinch, but far better cooked at a hearth.
+  'raw-hare': {
+    name: 'Raw Hare',
+    description: 'A skinned and jointed hare. Not much eating on it raw; roast it, or put it in a pot with some roots.',
+    icon: 'item-raw-hare',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 2, stamina: 3 },
+    value: 2,
+  },
+  'wolf-meat': {
+    name: 'Wolf Meat',
+    description: 'Dark, stringy and strong-smelling, with a bit of grey fur still on it. Nobody would eat this raw. Nobody sensible.',
+    icon: 'item-wolf-meat',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 1, stamina: 2 },
+    value: 2,
+  },
+  'boar-meat': {
+    name: 'Boar Meat',
+    description: 'A heavy joint of wild boar with a thick rind of fat. It wants a good long roasting.',
+    icon: 'item-boar-meat',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 3, stamina: 3 },
+    value: 5,
+  },
+  // Cooked at a hearth.
+  'roast-hare': {
+    name: 'Roast Hare',
+    description: 'Crisp outside, tender in. It smells of woodsmoke.',
+    icon: 'item-roast-hare',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 16, stamina: 14 },
+    value: 4,
+  },
+  'wolf-steak': {
+    name: 'Seared Wolf Steak',
+    description: 'Cooked hard over the coals. Still tough as an old boot, but filling, and there is something fierce in it.',
+    icon: 'item-wolf-steak',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 20, stamina: 12 },
+    value: 5,
+  },
+  'venison-steak': {
+    name: 'Venison Steak',
+    description: 'Seared dark, pink in the middle, with a sprig of rosemary. Food for a lord, or a lucky hunter.',
+    icon: 'item-venison-steak',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 30, stamina: 18 },
+    value: 12,
+  },
+  'roast-boar': {
+    name: 'Roast Boar',
+    description: 'A joint of wild boar, the crackling blistered and golden. The fat runs down your chin.',
+    icon: 'item-roast-boar',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 32, stamina: 22 },
+    value: 12,
+  },
+  'boiled-egg': {
+    name: 'Boiled Egg',
+    description: 'Hard boiled, shelled and halved. Much better than raw.',
+    icon: 'item-boiled-egg',
+    category: 'Food',
+    stack: 20,
+    eat: { health: 8, stamina: 14 },
+    value: 3,
+  },
+  'hare-stew': {
+    name: 'Hare Stew',
+    description: 'Hare, carrot and turnip, simmered down till the meat falls off the bone. Mother would approve.',
+    icon: 'item-hare-stew',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 30, stamina: 35 },
+    value: 7,
+  },
+  'hunters-pottage': {
+    name: "Hunter's Pottage",
+    description: 'Venison and cabbage, thickened with bread. Thick enough to stand a spoon in, and it keeps you going all day.',
+    icon: 'item-hunters-pottage',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 38, stamina: 30 },
+    value: 9,
+  },
 } satisfies Record<string, ItemDef>;
 
 export type ItemId = keyof typeof ITEMS;
@@ -433,7 +537,7 @@ type Listener = (e: InventoryEvent) => void;
 
 export const BAG_SIZE = 20;
 /** How Sort lays out the satchel, by kind of thing. */
-const SORT_ORDER: ItemCategory[] = ['Weapon', 'Armour', 'Clothing', 'Tool', 'Food', 'Material'];
+const SORT_ORDER: ItemCategory[] = ['Weapon', 'Armour', 'Clothing', 'Tool', 'Potion', 'Food', 'Material'];
 /** Coins the hero has saved up at the start. */
 const START_COINS = 15;
 

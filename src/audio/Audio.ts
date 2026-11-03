@@ -785,6 +785,54 @@ class AudioEngine {
     for (let i = 0; i < 5; i++) this.noise(t + i * 0.045, 0.04, 'bandpass', 900, 1400, 1.5, 0.06);
   }
 
+  /** A bubble rising and popping in a pot or a still. */
+  bubble(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    const f = 300 + Math.random() * 300;
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * 2.4, t + 0.06);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.1);
+  }
+
+  /** Meat sizzling in a hot pan: a burst of hissing fat. */
+  sizzle(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.noise(t, 0.5 + Math.random() * 0.4, 'highpass', 5200, 3800, 0.6, 0.08);
+    for (let i = 0; i < 3; i++) this.noise(t + Math.random() * 0.5, 0.03, 'highpass', 3000, 3000, 0.5, 0.06 + Math.random() * 0.05);
+  }
+
+  /** A spoon going round a pot. */
+  stir(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.noise(t, 0.28, 'bandpass', 700, 1500, 2, 0.18);
+  }
+
+  /** Something wonderful made: a shimmering run up and a bright chord. */
+  sparkle(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    [72, 76, 79, 84, 88, 91].forEach((n, i) => this.pluckNote(n, t + i * 0.06, 0.13));
+    [84, 88, 91].forEach((n) => this.pluckNote(n, t + 0.45, 0.1));
+    this.noise(t + 0.1, 0.6, 'highpass', 6000, 9000, 0.7, 0.05);
+  }
+
+  /** A dull "no": that won't work. */
+  fizzle(): void {
+    this.blip(220, 140, 0.18, 0.18);
+  }
+
   private thump(delay: number): void {
     if (!this.unlocked) return;
     const ctx = this.ctx!;

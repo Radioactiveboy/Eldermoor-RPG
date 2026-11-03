@@ -41,6 +41,10 @@ export interface LandlordState {
   freeDrink: boolean;
   /** Something he's heard, for "Heard any news?". */
   news: string[];
+  /** The hero is after Mother's tincture, so may ask about his grandmother's brewing bench in the cellar. */
+  medicine: boolean;
+  /** He's already said they may use it. */
+  toldBench: boolean;
 }
 
 export function landlordScript(s: LandlordState): DialogueScript {
@@ -97,6 +101,7 @@ export function landlordScript(s: LandlordState): DialogueScript {
           { text: 'What have you got to take away?', action: 'shop:tavern' },
           s.renting ? { text: 'About my room...', next: 'room-have' } : { text: 'Do you have a room?', next: 'rooms' },
           work,
+          ...(s.medicine ? [{ text: s.toldBench ? 'About your grandmother\'s brewing bench...' : 'Do you know anyone who could brew a tincture?', next: s.toldBench ? 'bench-again' : 'bench' }] : []),
           { text: 'Heard any news?', next: 'news' },
           { text: 'Goodbye, Godric.', next: 'bye' },
         ],
@@ -166,6 +171,7 @@ export function landlordScript(s: LandlordState): DialogueScript {
         lines: [
           "Good. The trapdoor's by the end of the bar. Mind the steps, and mind your ankles: they bite.",
           'Kill the lot and come and tell me. Bring me a tail or two if you like, though I would rather you didn\'t.',
+          "And don't touch Gran's old brewing bench at the back. Well, touch it if you must. Just don't break anything.",
         ],
         next: 'ask',
       },
@@ -186,6 +192,21 @@ export function landlordScript(s: LandlordState): DialogueScript {
           `Here: ${coinText(RAT_REWARD)}, as promised. And your next drink is on the house.`,
         ],
         action: 'finish-rats-quest',
+        next: 'ask',
+      },
+      bench: {
+        speaker: 'landlord',
+        lines: [
+          "A tincture? Now there's a word I haven't heard since Gran. Old Maud, God rest her. She brewed cordials and cures for half the shire, down in that cellar.",
+          "Her bench is still down there, copper still and all. Nobody's touched it in years. I keep meaning to sell the copper, but I haven't the heart.",
+          "You're welcome to use it. Grind it, steep it, strain it, that's what she always said. Mind the rats, mind. They've no respect for the dead.",
+        ],
+        action: 'godric-brewing',
+        next: 'ask',
+      },
+      'bench-again': {
+        speaker: 'landlord',
+        lines: ["Gran's bench is at the back of the cellar, against the far wall. Trapdoor's by the end of the bar. Use what you like, and don't break the flasks."],
         next: 'ask',
       },
       'no-work': {

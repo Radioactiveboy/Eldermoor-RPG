@@ -61,32 +61,73 @@ export const MOTHER_INTRO: DialogueScript = {
   },
 };
 
-/** What she says if you talk to her again while the quest is under way. */
-export const MOTHER_WAITING: DialogueScript = {
-  start: 'ask',
+/** How far along the hero is with Mother's medicine, as far as she can tell. */
+export type MedicineStage = 'looking' | 'herbs' | 'tincture' | 'well';
+
+/** What she says if you talk to her again: while the quest is under way, when the tincture is ready, and once she's mending. */
+export function motherScript(stage: MedicineStage): DialogueScript {
+  if (stage === 'well') return MOTHER_WELL;
+  const ask = stage === 'tincture'
+    ? { text: "I've brought your tincture, Mother. I brewed it myself.", next: 'give' }
+    : stage === 'herbs'
+      ? { text: "I've found the moonpetal and the willow bark.", next: 'herbs' }
+      : { text: "Not yet. I'm still looking.", next: 'not-yet' };
+  return {
+    start: 'ask',
+    nodes: {
+      ask: {
+        speaker: 'mother',
+        lines: [stage === 'tincture' ? `${HERO_NAME}? Is that you? You look as if you've run all the way.` : `Back so soon, ${HERO_NAME}? Did you find the moonpetal tincture?`],
+        choices: [
+          ask,
+          { text: 'How are you feeling?', next: 'feeling' },
+          { text: 'What was I looking for again?', next: 'remind' },
+        ],
+      },
+      'not-yet': {
+        speaker: 'mother',
+        lines: [`Then don't dawdle here on my account, ${HERO_NAME}. *cough* I'll keep.`],
+      },
+      herbs: {
+        speaker: 'mother',
+        lines: [
+          'You clever thing! But they are no good to me as they are, love. They must be ground and steeped and strained, over a slow heat, and I have no still.',
+          "My mother used old Maud's bench, at the Crooked Tankard in Adowvale. Maud's long gone, but Godric is her grandson. Ask him if it's still down in his cellar.",
+        ],
+      },
+      feeling: {
+        speaker: 'mother',
+        lines: ['Tired. Cold, even this close to the fire.', 'Go on now. The sooner you leave, the sooner you are home.'],
+      },
+      remind: {
+        speaker: 'mother',
+        lines: [
+          'Moonpetal and willow bark, brewed into a tincture at a proper bench. Ask in the village square for a healer or a herbalist.',
+          "And it's all written down in your journal, if you'd only look.",
+        ],
+      },
+      give: {
+        speaker: 'mother',
+        lines: [
+          'Brewed it yourself? Oh, look at it glow. Just like my mother used to make. Give it here, then, and help me sit up.',
+          '*sip* ...Ugh! Just as foul as hers was. That is how you know it works.',
+          `I can feel it already, ${HERO_NAME}. Warm, all the way down. I think I shall sleep tonight. Thank you, my love. Thank you.`,
+        ],
+        action: 'give-tincture',
+      },
+    },
+  };
+}
+
+/** Once she's had her tincture and is mending. */
+export const MOTHER_WELL: DialogueScript = {
+  start: 'greet',
   nodes: {
-    ask: {
-      speaker: 'mother',
-      lines: [`Back so soon, ${HERO_NAME}? Did you find the moonpetal tincture?`],
-      choices: [
-        { text: "Not yet. I'm still looking.", next: 'not-yet' },
-        { text: 'How are you feeling?', next: 'feeling' },
-        { text: 'What was I looking for again?', next: 'remind' },
-      ],
-    },
-    'not-yet': {
-      speaker: 'mother',
-      lines: [`Then don't dawdle here on my account, ${HERO_NAME}. *cough* I'll keep.`],
-    },
-    feeling: {
-      speaker: 'mother',
-      lines: ['Tired. Cold, even this close to the fire.', 'Go on now. The sooner you leave, the sooner you are home.'],
-    },
-    remind: {
+    greet: {
       speaker: 'mother',
       lines: [
-        'Moonpetal and willow bark, as a tincture. Ask in the village square for a healer or a herbalist.',
-        "And it's all written down in your journal, if you'd only look.",
+        `There you are, ${HERO_NAME}. The fever's gone, and the cough's nearly gone with it. I even had some of the soup.`,
+        "Off you go now, and don't worry about me. Just come home for supper now and then.",
       ],
     },
   },

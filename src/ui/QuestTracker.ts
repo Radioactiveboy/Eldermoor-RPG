@@ -56,8 +56,10 @@ export class QuestTracker {
 
   update(): void {
     const quest = QuestLog.focused;
-    const title = quest ? quest.def.title : 'At home';
-    const step = quest ? (QuestLog.current(quest)?.text ?? 'Return to whoever gave you this quest') : 'Speak with Mother';
+    // Before anything has begun, Mother is waiting; once every errand is done, the world is the hero's to wander.
+    const begun = QuestLog.all.length > 0;
+    const title = quest ? quest.def.title : begun ? 'Free to roam' : 'At home';
+    const step = quest ? (QuestLog.current(quest)?.text ?? 'Return to whoever gave you this quest') : begun ? 'Mother is mending. Explore, hunt and cook.' : 'Speak with Mother';
     const text = `${title}|${step}`;
     if (text === this.shownText) return;
     const changed = this.shownText !== '';
