@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { itemScale } from '../art/items';
+import { STATION_H, STATION_POINTS, STATION_RES } from '../art/stations';
 import { GameAudio } from '../audio/Audio';
 import { Crafting, Recipe, STATION_SLOTS, StationDef, STATIONS } from '../systems/Crafting';
 import { Experience } from '../systems/Experience';
@@ -95,6 +96,14 @@ export class StationScene extends Phaser.Scene {
   private popupBlock?: Phaser.GameObjects.Rectangle;
   private time0 = 0;
   private lastFrame = 0;
+  private flames: Phaser.GameObjects.Image[] = [];
+  private glow?: Phaser.GameObjects.Image;
+
+  /** Where the pot's mouth is, in window space: where ingredients drop in and steam rises. */
+  private get mouth(): { x: number; y: number } {
+    const m = this.alchemy ? STATION_POINTS.stillMouth : STATION_POINTS.potMouth;
+    return { x: this.vesselX + m.x, y: this.vesselY + m.y };
+  }
 
   constructor() {
     super('Station');
@@ -333,12 +342,10 @@ export class StationScene extends Phaser.Scene {
     const arrows = this.add.text(cx, sy + ING + 4, '⌄   ⌄   ⌄', { fontFamily: BODY_FONT, fontSize: '22px', color: THEME.goldText }).setOrigin(0.5, 0).setAlpha(0.45);
     this.content.add(arrows);
 
-    // The pot, drawn every frame.
-    this.vesselX = cx - 72;
-    this.vesselY = y0 + 250;
-    this.vessel = this.add.graphics();
-    this.content.add(this.vessel);
-    this.drawVessel();
+    // The still or the pot, in painted layers with the moving parts in between.
+    this.vesselX = this.alchemy ? cx - 40 : cx - 62;
+    this.vesselY = y0 + (this.alchemy ? 236 : 230);
+    this.buildVessel();
 
     // What it'll make, to the right of the pot.
     const recipe = Crafting.match(this.def.kind, this.slots);
@@ -567,139 +574,147 @@ export class StationScene extends Phaser.Scene {
 
   // ------------------------------------------------------------ the pot
 
-  /** The still (or the pot over the fire), and what's in it, as of now. */
+  /** Puts a painted station layer (art/stations.ts) at the vessel's spot. */
+  private layer(key: string): Phaser.GameObjects.Image {
+    const img = this.add.image(this.vesselX, this.vesselY, key).setScale(1 / STATION_RES);
+    this.content.add(img);
+    return img;
+  }
+
+  /**
+   * The still over its brazier, or the cauldron over the fire: the painted
+   * layers, a glow that breathes, flames that flicker, and between them the
+   * Graphics that draws what's in the pot (redrawn every frame by drawVessel).
+   */
+  private buildVessel(): void {
+    const P = STATION_POINTS;
+    const x = this.vesselX;
+    const y = this.vesselY;
+    this.flames = [];
+    const glow = this.layer('stn-glow').setBlendMode(Phaser.BlendModes.ADD);
+    if (this.alchemy) {
+      glow.setPosition(x + P.coals.x, y + P.coals.y).setScale(0.55 / STATION_RES);
+      this.glow = glow;
+      this.layer('stn-still');
+      this.vessel = this.add.graphics();
+      this.content.add(this.vessel);
+      this.layer('stn-flask-shine');
+    } else {
+      glow.setPosition(x, y + 70).setScale(1.1 / STATION_RES);
+      this.glow = glow;
+      this.layer('stn-hearth-back');
+      const flame = (fx: number, fy: number, size: number, i: number): void => {
+        const f = this.layer(`stn-flame-${i % 3}`)
+          .setOrigin(0.5, (STATION_H / 2 + 40) / STATION_H)
+          .setPosition(x + fx, y + fy)
+          .setScale(size / STATION_RES)
+          .setBlendMode(Phaser.BlendModes.SCREEN);
+        f.setData('size', size).setData('phase', i * 1.7);
+        this.flames.push(f);
+      };
+      [-78, -56, -30, 0, 30, 56, 78].forEach((fx, i) => flame(fx, P.flames[0].y + Math.abs(fx) * 0.12, Math.abs(fx) > 50 ? 0.75 : 1.05, i));
+      this.layer('stn-cauldron');
+      this.vessel = this.add.graphics();
+      this.content.add(this.vessel);
+      [-34, 6, 40].forEach((fx, i) => flame(fx, 100, 0.45, i + 1));
+      this.layer('stn-hearth-front');
+    }
+    this.drawVessel();
+  }
+
+  /** What's in the pot, as of now: the liquid at the mouth, the flask filling, drips; and the fire and glow breathing. */
   private drawVessel(): void {
     const g = this.vessel;
     if (!g || !g.active) return;
     g.clear();
+    const P = STATION_POINTS;
     const x = this.vesselX;
     const y = this.vesselY;
     const t = this.time0;
     const recipe = this.work?.recipe ?? Crafting.match(this.def.kind, this.slots);
     const working = !!this.work;
+    // The glow breathes, faster and brighter while it's working.
+    this.glow?.setAlpha(0.55 + 0.2 * Math.sin(t * (working ? 7 : 2.5)) + (working ? 0.25 : 0));
+    for (const f of this.flames) {
+      const size = f.getData('size') as number;
+      const ph = f.getData('phase') as number;
+      const lick = Math.sin(t * (working ? 13 : 8) + ph) * 0.12 + Math.sin(t * 21 + ph * 2) * 0.05;
+      const tall = (working ? 1.25 : 1) * size;
+      f.setScale((size * (1 - lick * 0.4)) / STATION_RES, (tall * (1 + lick)) / STATION_RES);
+      f.setAngle(Math.sin(t * 5 + ph) * 5);
+    }
     if (this.alchemy) {
-      // A brazier of coals.
-      g.fillStyle(0x2a2a30, 1);
-      g.fillRect(x - 46, y + 52, 92, 18);
-      g.fillStyle(0x4a4a54, 1);
-      g.fillRect(x - 50, y + 48, 100, 6);
-      for (let i = 0; i < 7; i++) {
-        const heat = 0.5 + 0.5 * Math.sin(t * (working ? 9 : 3) + i * 1.7);
-        g.fillStyle(Phaser.Display.Color.GetColor(200 + heat * 55, 60 + heat * 90, 20), 1);
-        g.fillCircle(x - 36 + i * 12, y + 46, 5 + heat * 2);
-      }
-      // The copper pot.
-      g.fillStyle(0x1a0f08, 1);
-      g.fillEllipse(x, y, 132, 104);
-      g.fillStyle(0xb86a32, 1);
-      g.fillEllipse(x, y, 124, 96);
-      g.fillStyle(0xd88a4a, 1);
-      g.fillEllipse(x - 18, y - 8, 70, 56);
-      g.fillStyle(0xf0b070, 0.6);
-      g.fillEllipse(x - 30, y - 18, 22, 14);
-      // Its neck, the liquid seen through the mouth, and the pipe to the flask.
-      g.fillStyle(0x1a0f08, 1);
-      g.fillRect(x - 26, y - 64, 52, 26);
-      g.fillStyle(0xc87a3a, 1);
-      g.fillRect(x - 22, y - 62, 44, 24);
-      g.fillStyle(0x1a0f08, 1);
-      g.fillEllipse(x, y - 64, 60, 16);
-      const liquid = recipe ? (Crafting.isKnown(recipe) || working ? 0x8ae8d8 : 0x9a80d8) : 0x2a4a5a;
-      const swirl = working ? 3 : 1;
+      const m = P.stillMouth;
+      const known = !recipe || Crafting.isKnown(recipe) || working;
+      const liquid = recipe ? (known ? 0x8ae8d8 : 0xa890e8) : 0x2a4a5a;
+      // The liquid in the mouth, swirling, with a gleam going round.
       g.fillStyle(liquid, 1);
-      g.fillEllipse(x + Math.sin(t * 3) * swirl, y - 64, 52, 11);
-      g.fillStyle(0xffffff, 0.35);
-      g.fillEllipse(x - 8 + Math.sin(t * 2) * 6, y - 66, 14, 4);
-      g.lineStyle(6, 0x1a0f08, 1);
-      g.beginPath();
-      g.moveTo(x + 24, y - 54);
-      g.lineTo(x + 70, y - 70);
-      g.lineTo(x + 92, y - 30);
-      g.strokePath();
-      g.lineStyle(3, 0xd88a4a, 1);
-      g.beginPath();
-      g.moveTo(x + 24, y - 54);
-      g.lineTo(x + 70, y - 70);
-      g.lineTo(x + 92, y - 30);
-      g.strokePath();
-      // The flask catching the drips, filling as it works.
-      const fill = working ? this.work!.elapsed / this.work!.seconds : 0;
-      g.fillStyle(0x1a0f08, 1);
-      g.fillCircle(x + 92, y + 6, 26);
-      g.fillRect(x + 84, y - 34, 16, 24);
-      g.fillStyle(0xb9d4e6, 0.35);
-      g.fillCircle(x + 92, y + 6, 23);
-      g.fillRect(x + 87, y - 32, 10, 24);
-      if (fill > 0) {
-        // The tincture pooling in the bottom of the flask, rising as it fills.
-        const rr = 6 + fill * 16;
-        g.fillStyle(0x8ae8d8, 0.9);
-        g.fillCircle(x + 92, y + 6 + 22 - rr, rr);
-        g.fillStyle(0xffffff, 0.4);
-        g.fillEllipse(x + 92, y + 6 + 22 - rr * 2 + 3, rr * 1.2, 3);
+      g.fillEllipse(x + m.x, y + m.y + 1, m.rx * 2 - 2, m.ry * 2 - 1);
+      g.fillStyle(0xffffff, recipe ? 0.45 : 0.2);
+      const a = t * (working ? 4 : 1.2);
+      g.fillEllipse(x + m.x + Math.cos(a) * m.rx * 0.5, y + m.y + Math.sin(a) * m.ry * 0.4, 8, 2.5);
+      if (recipe) {
+        // A soft glow over the brew.
+        g.fillStyle(liquid, 0.18 + 0.08 * Math.sin(t * 3));
+        g.fillEllipse(x + m.x, y + m.y - 4, m.rx * 2.6, m.ry * 4);
       }
-      g.lineStyle(2, 0x1a0f08, 1);
-      g.strokeCircle(x + 92, y + 6, 24);
-      g.fillStyle(0xffffff, 0.5);
-      g.fillEllipse(x + 83, y - 2, 6, 10);
-      // A drip falling from the pipe now and then.
-      if (working) {
-        const d = (t * 1.6) % 1;
-        g.fillStyle(0x8ae8d8, 1 - d);
-        g.fillCircle(x + 92, y - 28 + d * 20, 2.5);
+      // The flask filling as it works, the tincture pooling in the bottom of the bulb.
+      const fill = working ? this.work!.elapsed / this.work!.seconds : 0;
+      if (fill > 0) {
+        const rr = 5 + fill * (P.flask.r - 5);
+        const fy = y + P.flask.y + P.flask.r - rr;
+        g.fillStyle(0x4aa0b8, 0.95);
+        g.fillCircle(x + P.flask.x, fy, rr);
+        g.fillStyle(0x8ae8d8, 0.95);
+        g.fillCircle(x + P.flask.x - rr * 0.15, fy - rr * 0.15, rr * 0.8);
+        g.fillStyle(0xffffff, 0.35);
+        g.fillEllipse(x + P.flask.x, fy - rr + 3, rr * 1.1, 2.5);
+        // A drip falling from the pipe.
+        const d = (t * 1.4) % 1;
+        g.fillStyle(0x8ae8d8, 1 - d * 0.5);
+        g.fillEllipse(x + P.drip.x, y + P.drip.y + 4 + d * (P.flask.y + P.flask.r - rr * 2 - P.drip.y - 4), 4, 5.5);
       }
     } else {
-      // Logs and a fire under an iron pot on its trivet.
-      g.fillStyle(0x3b2618, 1);
-      g.fillRoundedRect(x - 60, y + 54, 120, 14, 6);
-      g.fillStyle(0x5c3b23, 1);
-      g.fillRoundedRect(x - 50, y + 46, 100, 12, 6);
-      const tongues = 9;
-      for (let i = 0; i < tongues; i++) {
-        const f = Math.sin(t * (working ? 14 : 7) + i * 2.3) * 0.5 + 0.5;
-        const h = (working ? 46 : 30) + f * 22;
-        const fx = x - 44 + i * 11;
-        g.fillStyle(0xd8452a, 0.9);
-        g.fillTriangle(fx - 9, y + 50, fx + 9, y + 50, fx + Math.sin(t * 5 + i) * 4, y + 50 - h);
-        g.fillStyle(0xf08a2a, 0.95);
-        g.fillTriangle(fx - 6, y + 50, fx + 6, y + 50, fx + Math.sin(t * 6 + i) * 3, y + 50 - h * 0.7);
-        g.fillStyle(0xffd25a, 1);
-        g.fillTriangle(fx - 3, y + 50, fx + 3, y + 50, fx, y + 50 - h * 0.4);
-      }
-      // The trivet's legs.
-      g.lineStyle(5, 0x2a2a30, 1);
-      g.lineBetween(x - 52, y + 60, x - 40, y + 8);
-      g.lineBetween(x + 52, y + 60, x + 40, y + 8);
-      // The pot.
-      g.fillStyle(0x0a080a, 1);
-      g.fillEllipse(x, y + 4, 142, 64);
-      g.fillStyle(0x3a3a44, 1);
-      g.fillEllipse(x, y + 2, 134, 56);
-      g.fillStyle(0x5a5a66, 1);
-      g.fillEllipse(x - 20, y - 4, 60, 20);
-      g.fillStyle(0x0a080a, 1);
-      g.fillEllipse(x, y - 22, 140, 34);
+      const m = P.potMouth;
       // What's in it: water, or a simmering stew, or meat in the fat.
-      const broth = recipe ? (recipe.needs.length > 1 ? 0x9a6030 : recipe.makes === 'boiled-egg' ? 0x5a7a8a : 0x6a3010) : 0x2a2420;
+      const broth = recipe ? (recipe.needs.length > 1 ? 0x9a6030 : recipe.makes === 'boiled-egg' ? 0x6a8a9a : 0x7a3414) : 0x2a2420;
       g.fillStyle(broth, 1);
-      g.fillEllipse(x, y - 22, 128, 26);
-      if (working) {
-        g.fillStyle(0xffffff, 0.12);
-        for (let i = 0; i < 5; i++) g.fillCircle(x - 44 + i * 22 + Math.sin(t * 4 + i) * 4, y - 22 + Math.cos(t * 5 + i) * 4, 4 + Math.sin(t * 8 + i) * 2);
+      g.fillEllipse(x + m.x, y + m.y + 1, m.rx * 2 - 4, m.ry * 2 - 2);
+      g.fillStyle(0x000000, 0.25);
+      g.fillEllipse(x + m.x, y + m.y + 3, m.rx * 2 - 10, m.ry * 1.2);
+      if (recipe) {
+        // Bits of what's cooking, bobbing about.
+        const bits = recipe.needs.length > 1 ? [0xf08a2a, 0xf0e0b0, 0x8ac050, 0xc87a50] : recipe.makes === 'boiled-egg' ? [0xf8f4ec] : [0x8a3a20, 0xa04a28];
+        bits.forEach((col, i) => {
+          const bx = x + m.x + Math.sin(i * 2.4 + t * (working ? 1.6 : 0.4)) * m.rx * 0.55;
+          const by = y + m.y + Math.cos(i * 1.9 + t * (working ? 1.3 : 0.3)) * m.ry * 0.4;
+          g.fillStyle(0x1a0f08, 1);
+          g.fillEllipse(bx, by, 15, 8);
+          g.fillStyle(col, 1);
+          g.fillEllipse(bx, by - 0.5, 12, 6);
+        });
       }
-      // The handle.
-      g.lineStyle(4, 0x2a2a30, 1);
-      g.beginPath();
-      g.arc(x, y - 30, 72, Math.PI * 1.15, Math.PI * 1.85);
-      g.strokePath();
+      if (working) {
+        // Bubbles breaking the surface.
+        for (let i = 0; i < 6; i++) {
+          const k = (t * 1.5 + i * 0.37) % 1;
+          const bx = x + m.x + Math.sin(i * 3.1) * m.rx * 0.7;
+          const by = y + m.y + Math.cos(i * 2.3) * m.ry * 0.5;
+          g.lineStyle(1.5, 0xffffff, 0.5 * (1 - k));
+          g.strokeEllipse(bx, by, 4 + k * 8, 2 + k * 4);
+        }
+      }
+      g.fillStyle(0xffffff, 0.18);
+      g.fillEllipse(x + m.x - 20, y + m.y - 3, 26, 3);
     }
   }
 
   /** One bubble, spark or wisp of steam rising from the pot. */
   private puff(): void {
     if (!this.vessel?.active) return;
-    const x = this.vesselX + (Math.random() - 0.5) * (this.alchemy ? 40 : 100);
-    const y = this.vesselY + (this.alchemy ? -70 : -28);
+    const mouth = this.mouth;
+    const x = mouth.x + (Math.random() - 0.5) * (this.alchemy ? 30 : 90);
+    const y = mouth.y - 4;
     const working = !!this.work;
     let dot: Phaser.GameObjects.Arc;
     if (this.alchemy) {
@@ -707,7 +722,7 @@ export class StationScene extends Phaser.Scene {
       if (working && Math.random() < 0.25) GameAudio.bubble();
     } else if (working && Math.random() < 0.5) {
       // A spark spitting up from the fire.
-      dot = this.add.circle(this.vesselX + (Math.random() - 0.5) * 90, this.vesselY + 40, 2, 0xffd25a, 1);
+      dot = this.add.circle(this.vesselX + (Math.random() - 0.5) * 140, this.vesselY + 70, 2, 0xffd25a, 1);
       if (Math.random() < 0.12) GameAudio.sizzle();
     } else {
       dot = this.add.circle(x, y, 6 + Math.random() * 8, 0xf0ece8, working ? 0.22 : 0.1);
@@ -904,8 +919,8 @@ export class StationScene extends Phaser.Scene {
       if (!icon) continue;
       this.tweens.add({
         targets: icon,
-        x: this.vesselX + (i - 1) * 16,
-        y: this.vesselY + (this.alchemy ? -64 : -22),
+        x: this.mouth.x + (i - 1) * 14,
+        y: this.mouth.y,
         scale: icon.scale * 0.4,
         alpha: 0,
         delay: i * 120,
@@ -942,7 +957,7 @@ export class StationScene extends Phaser.Scene {
     const w = this.work!;
     w.elapsed = Math.min(w.seconds, w.elapsed + w.seconds * STIR);
     GameAudio.stir();
-    const ring = this.add.ellipse(this.vesselX, this.vesselY - 64, 50, 10, 0xffffff, 0).setStrokeStyle(2, 0xffffff, 0.8);
+    const ring = this.add.ellipse(this.mouth.x, this.mouth.y, 40, 10, 0xffffff, 0).setStrokeStyle(2, 0xffffff, 0.8);
     this.content.add(ring);
     this.tweens.add({ targets: ring, scaleX: 1.6, scaleY: 1.6, alpha: 0, duration: 400, onComplete: () => ring.destroy() });
   }
