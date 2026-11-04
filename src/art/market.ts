@@ -451,10 +451,104 @@ function tileRoof(base: number): Shader {
   };
 }
 
+/** Slates: small, thin and close-laid, blue-grey with the odd lighter or rustier one, and a little moss low down. */
+function slateRoof(base: number): Shader {
+  const dark = darken(base, 0.62);
+  return (u, v) => {
+    const row = Math.floor(v * 16);
+    const lv = (v * 16) % 1;
+    const fu = u * 34 + (row % 2) * 0.5;
+    if (v > 0.96 || lv > 0.78 || fu % 1 < 0.07) return dark;
+    const n = hash(Math.floor(fu), row + 40);
+    let c = n < 0.15 ? darken(base, 0.85) : n > 0.88 ? lighten(base) : n > 0.8 ? mix(base, 0x8a6a5a, 0.35) : base;
+    if (lv < 0.18) c = mix(c, 0xc8c8d4, 0.2);
+    if (v > 0.7 && hash(Math.floor(u * 60), Math.floor(v * 40) + 7) < (v - 0.7) * 0.6) c = mix(c, P.moss, 0.55);
+    return c;
+  };
+}
+
+/** Wooden shingles, split by hand: uneven widths, weathered grey at the tips. */
+function shingleRoof(base: number): Shader {
+  const dark = darken(base, 0.6);
+  return (u, v) => {
+    const row = Math.floor(v * 12);
+    const lv = (v * 12) % 1;
+    const fu = u * 26 + hash(row, 5) * 3;
+    const warped = fu + 0.3 * Math.sin(fu * 1.7 + row);
+    if (v > 0.95 || lv > 0.82 || warped % 1 < 0.08) return dark;
+    const n = hash(Math.floor(warped), row + 11);
+    let c = n < 0.25 ? darken(base, 0.85) : n > 0.8 ? lighten(base) : base;
+    if (lv > 0.55) c = mix(c, 0x8a8478, 0.3);
+    return c;
+  };
+}
+
+/**
+ * Thatch: long straw combed down the slope in streaks, a darker trimmed edge
+ * at the eaves, and moss gathered in the hollows where the rain runs off.
+ */
+function thatchRoof(base: number): Shader {
+  return (u, v) => {
+    const streak = hash(Math.floor(u * 140), Math.floor(v * 9 + hash(Math.floor(u * 140), 2) * 3));
+    let c = streak < 0.3 ? darken(base, 0.82) : streak > 0.85 ? mix(base, 0xf0dca0, 0.35) : base;
+    // Courses of thatch, each overlapping the one below in a soft shadow.
+    const course = (v * 6) % 1;
+    if (course > 0.88) c = darken(c, 0.8);
+    // Patches of moss and weathering, lumped together rather than speckled.
+    const lump = Math.sin(u * 23 + 1.3) * Math.sin(v * 13 + u * 9) + 0.5 * Math.sin(u * 57 + v * 21);
+    const grain = hash(Math.floor(u * 70), Math.floor(v * 30) + 5);
+    if (lump > 1.05 && grain < 0.8) c = mix(c, P.moss, 0.5);
+    else if (lump > 0.8 && grain < 0.6) c = mix(c, 0x7a6a48, 0.35);
+    // The trimmed edge at the eaves: thick and darker.
+    if (v > 0.92) c = v > 0.97 ? darken(base, 0.5) : darken(base, 0.68);
+    return c;
+  };
+}
+
 function lighten(c: number): number {
   const ch = (shift: number) => Math.min(255, Math.round(((c >> shift) & 0xff) * 1.2)) << shift;
   return ch(16) | ch(8) | ch(0);
 }
+
+/**
+ * Rough rubble walling, in pixels: courses of uneven fieldstones like the
+ * well's, each lit along its top and shadowed below, with moss at the foot.
+ */
+function rubble(x: number, y: number, height: number, seed: number): number {
+  const rowH = 6 + Math.floor(hash(Math.floor(y / 7), seed) * 2);
+  const row = Math.floor(y / rowH);
+  const ly = (y % rowH) / rowH;
+  const s = (x + hash(row, seed + 1) * 20) / (8 + hash(row, seed + 2) * 6);
+  const warped = s + 0.35 * Math.sin(s * 2.1 + row);
+  const stone = Math.floor(warped);
+  const lu = warped - stone;
+  if (ly < 0.16 || lu < 0.1) return P.mortar;
+  let c = FIELDSTONE[Math.floor(hash(stone + row * 17, seed + 3) * FIELDSTONE.length)];
+  if (ly < 0.34 || lu < 0.22) c = mix(c, 0xd2d0d8, 0.28);
+  else if (ly > 0.82) c = darken(c, 0.78);
+  if (y > height - 8 && hash(Math.floor(x), Math.floor(y) + seed) < (y - height + 8) / 14) c = mix(c, P.moss, 0.7);
+  return c;
+}
+
+/** Dressed stone blocks, laid in neat courses. */
+function ashlar(x: number, y: number): number {
+  const row = Math.floor(y / 6);
+  const brick = Math.floor(x / 9 + (row % 2) * 0.5);
+  if (y % 6 < 1 || (x / 9 + (row % 2) * 0.5) % 1 < 0.08) return P.mortar;
+  const n = hash(brick, row);
+  return n < 0.3 ? P.stoneDark : n > 0.8 ? P.stoneLight : P.stone;
+}
+
+/** Red brick in a running bond, every brick fired a little differently. */
+function brick(x: number, y: number): number {
+  const row = Math.floor(y / 3);
+  const fx = x / 7 + (row % 2) * 0.5;
+  if (y % 3 < 0.8 || fx % 1 < 0.1) return 0x8a7e72;
+  const n = hash(Math.floor(fx), row + 9);
+  return n < 0.2 ? 0x7a3a2a : n > 0.85 ? 0xb8684a : n > 0.6 ? 0xa0503a : 0x92462f;
+}
+
+export type RoofKind = 'tile' | 'slate' | 'shingle' | 'thatch';
 
 export interface TownhouseStyle {
   roof: number;
@@ -465,10 +559,29 @@ export interface TownhouseStyle {
    * side of the square, facing into it, shows only its back walls).
    */
   door: 'front' | 'side' | 'back';
+  /** What the roof is covered with (clay tiles if not given). */
+  roofKind?: RoofKind;
+  /** The ground floor: dressed stone (the default), rough fieldstone rubble, or brick. */
+  ground?: 'ashlar' | 'rubble' | 'brick';
+  /**
+   * The upper floor: timber framing with diagonal braces (the default), close
+   * upright studs, chevrons, or no framing at all, just more rubble stone.
+   */
+  upper?: 'braced' | 'studded' | 'chevron' | 'rubble';
+  /** Colour of the framing timbers. */
+  timber?: number;
+  /** Painted shutters either side of the windows. */
+  shutters?: number;
+  /** Window boxes under the upstairs windows, with flowers in these colours. */
+  flowers?: number[];
+  /** Ivy (or hops) climbing a wall from the ground: which face, and how far along it (0..1). */
+  ivy?: { face: 'front' | 'side'; at: number; hops?: boolean };
   /** A hanging sign over the door (an inn, a shop). */
   sign?: number;
   /** Something painted on the sign: the Crooked Tankard's tilted tankard. */
   emblem?: 'tankard';
+  /** The Crooked Tankard: bow window, porch, leaning chimney and a big sign. */
+  inn?: boolean;
 }
 
 /** The painted face of a hanging sign: plain, or with the Crooked Tankard's tankard, tipped at a jaunty angle. */
@@ -482,85 +595,263 @@ function signPaint(style: TownhouseStyle, u: number, v: number): number {
   return style.sign!;
 }
 
+const IVY = [0x2f5a2a, 0x3d6b33, 0x4c8038, 0x2a4a26];
+const HOPS = [0x4c8038, 0x619a43, 0x3d6b33, 0xb8d070];
+
 /**
- * A two-storey townhouse on a 3x3 footprint: a stone ground floor, timber
- * framing over whitewashed plaster above, and a steep clay-tiled roof with a
- * chimney. Seen from the square, with its door on the front or side.
+ * A two-storey townhouse on a 3x3 footprint: a stone or brick ground floor,
+ * timber framing over limewashed plaster above (or more stone), and a steep
+ * roof of tiles, slates, shingles or thatch with a chimney. Seen from the
+ * square, with its door on the front or side. The style picks the materials,
+ * so no two houses round the square need look alike.
  */
 function townhouse(style: TownhouseStyle): IsoModel {
   const m = new IsoModel();
   const S = 3;
   const H = 84;
   const R = 44;
-  const o = 0.28;
-  const roof = tileRoof(style.roof);
-  const wall = (windows: Array<[number, number]>, door: [number, number] | null, shade: boolean): Shader => (u, v) => {
+  const thatched = style.roofKind === 'thatch';
+  const o = thatched ? 0.36 : 0.28;
+  const roofPaint = { tile: tileRoof, slate: slateRoof, shingle: shingleRoof, thatch: thatchRoof }[style.roofKind ?? 'tile'](style.roof);
+  const timber = style.timber ?? P.bark;
+  const timberDark = darken(timber, 0.7);
+  const seed = Math.floor(style.plaster % 97) + Math.floor(style.roof % 89);
+  const upperH = H - 38;
+
+  const ivyAt = (face: 'front' | 'side', u: number, y: number): number | null => {
+    const iv = style.ivy;
+    if (!iv || iv.face !== face) return null;
+    const spread = Math.abs(u - iv.at) / 0.2;
+    if (spread > 1) return null;
+    const reach = (H - 6) * (1 - spread * spread) * (0.75 + 0.25 * Math.sin(u * 40));
+    if (y < H - reach) return null;
+    const leaf = hash(Math.floor(u * 96 / 2), Math.floor(y / 2) + 31);
+    const edge = (y - (H - reach)) / 10;
+    if (leaf > 0.55 + (edge < 1 ? 0.35 * (1 - edge) : 0)) return null;
+    const pal = iv.hops ? HOPS : IVY;
+    return pal[Math.floor(hash(Math.floor(u * 96), Math.floor(y)) * pal.length)];
+  };
+
+  const timberUpper = (u: number, y: number, f: (c: number) => number): number | null => {
+    if (style.upper === 'rubble') return null;
+    const beam = u < 0.025 || u > 0.975 || y < 3 || Math.abs(u - 0.5) < 0.02;
+    if (beam) return f(timber);
+    const bay = (u * 2) % 1;
+    const t = y / upperH;
+    if (style.upper === 'studded') {
+      if ((u * 12) % 1 < 0.18) return f(timber);
+      if (Math.abs(y - upperH * 0.55) < 1.5) return f(timberDark);
+    } else if (style.upper === 'chevron') {
+      const up = 1 - t;
+      if (Math.abs(bay - up * 0.5) < 0.03 || Math.abs(bay - (1 - up * 0.5)) < 0.03) return f(timberDark);
+    } else if (Math.abs(bay - t) < 0.035 || Math.abs(bay - (1 - t)) < 0.035) return f(timberDark);
+    return null;
+  };
+
+  const shutterAt = (u: number, a: number, b: number): number | null => {
+    if (style.shutters === undefined) return null;
+    const w = 0.06;
+    if ((u > a - w && u <= a) || (u >= b && u < b + w)) {
+      const su = u <= a ? (u - (a - w)) / w : (u - b) / w;
+      return su < 0.15 || su > 0.85 || Math.abs(su - 0.5) < 0.08 ? darken(style.shutters, 0.7) : style.shutters;
+    }
+    return null;
+  };
+
+  const wall = (face: 'front' | 'side', windows: Array<[number, number]>, groundWindows: Array<[number, number]>, door: [number, number] | null, shade: boolean): Shader => (u, v) => {
     const x = u * S * 32;
     const y = v * H;
     const f = (c: number) => (shade ? darken(c, 0.8) : c);
-    // Stone plinth and ground floor.
+    // Climbing ivy (or hops) over everything but the door.
+    const inDoor = door && u > door[0] && u < door[1] && y > H - 30;
+    if (!inDoor) {
+      const iv = ivyAt(face, u, y);
+      if (iv !== null) return f(iv);
+    }
+    // Ground floor.
     if (y > H - 34) {
-      if (door && u > door[0] && u < door[1] && y > H - 30) {
-        const du = (u - door[0]) / (door[1] - door[0]);
-        if (du < 0.1 || du > 0.9 || y < H - 28) return f(P.barkDark);
+      if (inDoor) {
+        const du = (u - door![0]) / (door![1] - door![0]);
+        if (du < 0.1 || du > 0.9 || y < H - 28) return f(timberDark);
+        if (style.inn) {
+          // Double doors, studded with iron, and an arched fanlight over them.
+          if (y < H - 23) return Math.abs(du - 0.5) < 0.06 ? f(timberDark) : P.glassLit;
+          if (Math.abs(du - 0.5) < 0.03) return f(P.leatherDark);
+          if ((Math.floor(du * 8) + Math.floor(y / 4)) % 4 === 0 && Math.floor(y) % 4 === 0) return P.ironLight;
+          return f(0x3a5a3a);
+        }
         if (Math.abs(du - 0.5) < 0.04) return f(P.leatherDark);
         if (Math.abs(du - 0.75) < 0.05 && Math.abs(y - (H - 14)) < 2) return P.gold;
         return f(P.leather);
       }
-      for (const [a, b] of windows) {
+      for (const [a, b] of groundWindows) {
         if (u > a && u < b && y > H - 26 && y < H - 12) {
           const wu = (u - a) / (b - a);
-          if (wu < 0.14 || wu > 0.86 || y < H - 24 || y > H - 14) return f(P.barkDark);
+          if (wu < 0.14 || wu > 0.86 || y < H - 24 || y > H - 14) return f(timberDark);
           return Math.abs(wu - 0.5) < 0.07 ? P.bark : P.glassLit;
         }
+        if (y > H - 26 && y < H - 12) {
+          const sh = shutterAt(u, a, b);
+          if (sh !== null) return f(sh);
+        }
       }
-      const row = Math.floor(y / 6);
-      const brick = Math.floor(x / 9 + (row % 2) * 0.5);
-      if (y % 6 < 1 || (x / 9 + (row % 2) * 0.5) % 1 < 0.08) return f(P.mortar);
-      return f(hash(brick, row) < 0.3 ? P.stoneDark : hash(brick, row) > 0.8 ? P.stoneLight : P.stone);
+      const g = style.ground ?? 'ashlar';
+      return f(g === 'rubble' ? rubble(x, y, H, seed) : g === 'brick' ? brick(x, y) : ashlar(x, y));
     }
-    // Jetty beam between the floors.
-    if (y > H - 38) return f(y < H - 36 ? P.barkLight : P.barkDark);
-    // Upper floor: timber frame and plaster, with windows.
+    // Jetty beam between the floors, or a stone string course on a stone house.
+    if (y > H - 38) {
+      if (style.upper === 'rubble') return f(y < H - 36 ? P.stoneLight : P.stoneDark);
+      return f(y < H - 36 ? lighten(timber) : timberDark);
+    }
+    // Upper floor: windows, then framing, then plaster (or stone).
     for (const [a, b] of windows) {
       if (u > a && u < b && y > 12 && y < 36) {
         const wu = (u - a) / (b - a);
-        if (wu < 0.14 || wu > 0.86 || y < 14 || y > 34) return f(P.barkDark);
+        if (wu < 0.14 || wu > 0.86 || y < 14 || y > 34) return f(timberDark);
+        if (style.inn) {
+          // Leaded diamond panes.
+          const d1 = (wu * 6 + y / 4) % 1;
+          const d2 = (wu * 6 - y / 4 + 10) % 1;
+          if (d1 < 0.12 || d2 < 0.12) return P.leatherDark;
+          return y < 24 ? P.glassLit : P.fireOrange;
+        }
         if (Math.abs(wu - 0.5) < 0.07 || Math.abs(y - 24) < 1) return P.bark;
         return y < 24 ? P.glassLit : P.fireOrange;
       }
+      if (y > 12 && y < 36) {
+        const sh = shutterAt(u, a, b);
+        if (sh !== null) return f(sh);
+      }
     }
-    const beam = u < 0.025 || u > 0.975 || y < 3 || Math.abs(u - 0.5) < 0.02;
-    if (beam) return f(P.bark);
-    // Diagonal braces in each bay.
-    const bay = (u * 2) % 1;
-    const t = y / (H - 38);
-    if (Math.abs(bay - t) < 0.035 || Math.abs(bay - (1 - t)) < 0.035) return f(P.barkDark);
+    if (style.upper === 'rubble') return f(rubble(x, y + 3, H, seed + 5));
+    const fr = timberUpper(u, y, f);
+    if (fr !== null) return fr;
     const n = hash(Math.floor(x / 3), Math.floor(y / 3));
     return f(n < 0.1 ? darken(style.plaster, 0.92) : style.plaster);
   };
 
   const front = style.door === 'front';
   // Back roof slope, then the chimney through it.
-  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, roof);
-  m.box(0.4, 0.5, H, 0.45, 0.45, R + 22, {
+  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, roofPaint);
+  const chimneyPaint = {
     top: P.soot,
-    left: (u, v) => ((v * 8) % 1 < 0.15 || (u * 3 + Math.floor(v * 8) * 0.5) % 1 < 0.1 ? P.mortar : P.stone),
-    right: (_u, v) => ((v * 8) % 1 < 0.15 ? P.mortar : P.stoneDark),
-  });
-  m.quad({ x: 0, y: S, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, wall([[0.12, 0.3], [0.7, 0.88]], front ? [0.4, 0.6] : null, false));
-  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, wall([[0.15, 0.33], [0.67, 0.85]], style.door === 'side' ? [0.4, 0.6] : null, true));
-  // Gable over the side, plastered and framed like the upper floor.
+    left: (u: number, v: number) => ((v * 8) % 1 < 0.15 || (u * 3 + Math.floor(v * 8) * 0.5) % 1 < 0.1 ? P.mortar : P.stone),
+    right: (_u: number, v: number) => ((v * 8) % 1 < 0.15 ? P.mortar : P.stoneDark),
+  };
+  if (style.inn) {
+    // The crooked chimney the inn is named for: it leans further with every course, and wears a pot on top.
+    const h = (R + 22) / INN_LEAN.parts;
+    for (let i = 0; i < INN_LEAN.parts; i++) {
+      const lean = (i * i) / (INN_LEAN.parts * INN_LEAN.parts);
+      m.box(0.4 + lean * INN_LEAN.x, 0.5 + lean * INN_LEAN.y, H + i * h, 0.45, 0.45, h + 0.5, chimneyPaint);
+    }
+    m.cylinder(INN_CHIMNEY.gx, INN_CHIMNEY.gy, H + R + 22, 0.12, 7, (u) => (u < 0.4 ? 0xb8684a : 0x8a4a32), P.soot);
+  } else {
+    m.box(0.4, 0.5, H, 0.45, 0.45, R + 22, chimneyPaint);
+  }
+  const frontWindows: Array<[number, number]> = [[0.12, 0.3], [0.7, 0.88]];
+  const sideWindows: Array<[number, number]> = [[0.15, 0.33], [0.67, 0.85]];
+  // The inn's bow window takes the place of its left-hand ground-floor window.
+  const frontGround: Array<[number, number]> = style.inn ? [[0.7, 0.88]] : frontWindows;
+  m.quad({ x: 0, y: S, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, wall('front', frontWindows, frontGround, front ? [0.4, 0.6] : null, false));
+  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, wall('side', sideWindows, sideWindows, style.door === 'side' ? [0.4, 0.6] : null, true));
+  // Gable over the side, finished like the upper floor.
   m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: R }, (u, v) => {
     if (v > 1 - Math.abs(u * 2 - 1)) return null;
-    if (v < 0.06 || Math.abs(u - 0.5) < 0.02) return P.barkDark;
+    if (style.upper === 'rubble') {
+      if (Math.abs(u - 0.5) < 0.05 && v > 0.3 && v < 0.5) return P.ink;
+      return darken(rubble(u * 96, (1 - v) * R + 40, H + 100, seed + 9), 0.8);
+    }
+    if (v < 0.06 || Math.abs(u - 0.5) < 0.02) return darken(timberDark, 0.8);
+    if (style.upper === 'studded' && (u * 12) % 1 < 0.18) return darken(timber, 0.8);
     if (Math.abs(u - 0.5) < 0.08 && v > 0.3 && v < 0.55) return P.ink;
     return darken(style.plaster, 0.8);
   });
+  // The roof's edge over the gable: thick and rounded for thatch.
   m.quad({ x: S, y: S / 2, z: H + R }, { x: o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, darken(style.roof, 0.6));
-  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, roof);
-  m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: lighten(style.roof), left: darken(style.roof, 0.7), right: darken(style.roof, 0.7) });
-  if (style.sign !== undefined) {
+  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, roofPaint);
+  if (thatched) {
+    // Thick thatch shows its cut ends along the gable, and a ridge roll pegged down with criss-crossed spars.
+    m.quad({ x: S + o, y: S / 2, z: H + R }, { x: 0, y: S / 2 + o, z: -R - 8 }, { x: 0, y: 0, z: -6 }, (u) => (hash(Math.floor(u * 60), 3) < 0.4 ? darken(style.roof, 0.5) : darken(style.roof, 0.65)));
+    m.box(-o, S / 2 - 0.16, H + R - 3, S + o * 2, 0.32, 7, {
+      top: lighten(style.roof),
+      left: (u, v) => {
+        const zig = Math.abs(((u * 24) % 1) - 0.5) * 2;
+        if (Math.abs(v - zig) < 0.12 || Math.abs(v - (1 - zig)) < 0.12) return P.barkDark;
+        return v > 0.85 ? darken(style.roof, 0.6) : style.roof;
+      },
+      right: darken(style.roof, 0.7),
+    });
+  } else {
+    m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: lighten(style.roof), left: darken(style.roof, 0.7), right: darken(style.roof, 0.7) });
+  }
+
+  // Window boxes under the upstairs windows, spilling flowers.
+  if (style.flowers) {
+    const fl = style.flowers;
+    const bloom: Shader = (u, v) => {
+      const n = hash(Math.floor(u * 30), Math.floor(v * 4) + 3);
+      if (n < 0.35) return IVY[Math.floor(n * 10) % IVY.length];
+      return fl[Math.floor(n * 97) % fl.length];
+    };
+    const tuft: Shader = (u, v) => {
+      const n = hash(Math.floor(u * 30), 17);
+      if (v < 1 - n * 1.2) return null;
+      return n > 0.5 ? fl[Math.floor(n * 31) % fl.length] : IVY[Math.floor(n * 10) % IVY.length];
+    };
+    const boxPaint = { top: bloom, left: planks(1, P.plank, P.plankDark, P.plankLight), right: P.plankDark };
+    for (const [a, b] of frontWindows) {
+      m.box(a * S, S, H - 52, (b - a) * S, 0.14, 4, boxPaint);
+      m.quad({ x: a * S, y: S + 0.07, z: H - 44 }, { x: (b - a) * S, y: 0, z: 0 }, { x: 0, y: 0, z: -4 }, tuft);
+    }
+    for (const [a, b] of sideWindows) {
+      m.box(S, a * S, H - 52, 0.14, (b - a) * S, 4, boxPaint);
+      m.quad({ x: S + 0.07, y: a * S, z: H - 44 }, { x: 0, y: (b - a) * S, z: 0 }, { x: 0, y: 0, z: -4 }, tuft);
+    }
+  }
+
+  if (style.inn) {
+    // A bow window of bottle glass, bulging from the taproom onto the square, on a low stone sill wall.
+    const bx = 0.3;
+    const bw = 0.66;
+    const bd = 0.22;
+    m.box(bx, S, 0, bw, bd, 7, { top: P.stoneLight, left: (u, v) => rubble(u * 40, v * 7 + 77, 84, seed), right: P.stoneDark });
+    const panes = (dim: number): Shader => (u, v) => {
+      if (v < 0.08 || v > 0.92 || u < 0.05 || u > 0.95) return darken(P.barkDark, dim);
+      if ((u * 5) % 1 < 0.1) return darken(P.barkDark, dim);
+      // Round bottle-glass bullseyes, each with a bright knot in the middle.
+      const cu = ((u * 10) % 1) - 0.5;
+      const cv = ((v * 4) % 1) - 0.5;
+      const r = cu * cu + cv * cv;
+      if (r < 0.03) return 0xfff2c0;
+      return darken(r < 0.15 ? P.glassLit : P.fireOrange, dim);
+    };
+    m.box(bx, S, 7, bw, bd, 16, { top: P.plankLight, left: panes(1), right: panes(0.8) });
+    m.quad({ x: bx - 0.04, y: S, z: 28 }, { x: bw + 0.08, y: 0, z: 0 }, { x: 0, y: bd + 0.1, z: -5 }, shingleRoof(P.plank));
+    // A porch hood over the door on two curved brackets.
+    m.box(1.22, S, 26, 0.06, 0.32, 3, { top: timber, left: timberDark, right: timberDark });
+    m.box(1.72, S, 26, 0.06, 0.32, 3, { top: timber, left: timberDark, right: timberDark });
+    m.quad({ x: 1.12, y: S, z: 38 }, { x: 0.76, y: 0, z: 0 }, { x: 0, y: 0.4, z: -9 }, roofPaint);
+    m.quad({ x: 1.12, y: S + 0.4, z: 29 }, { x: 0.76, y: 0, z: 0 }, { x: 0, y: 0, z: -2 }, darken(style.roof, 0.55));
+    // A lantern on an iron arm beside the door.
+    m.box(1.95, S, 36, 0.04, 0.18, 1, { top: P.iron, left: P.iron, right: P.iron });
+    m.box(1.94, S + 0.1, 28, 0.1, 0.1, 7, {
+      top: P.iron,
+      left: (u, v) => (u < 0.2 || u > 0.8 || v < 0.15 || v > 0.85 ? P.iron : P.glassLit),
+      right: (u, v) => (u < 0.2 || u > 0.8 || v < 0.15 || v > 0.85 ? P.iron : P.fireOrange),
+    });
+    // The big sign, swinging from a long scrolled bracket at the corner of the upper floor.
+    const sx = 0.14;
+    m.box(sx, S, H - 30, 0.05, 0.8, 2, { top: P.ironLight, left: P.iron, right: P.iron });
+    m.quad({ x: sx, y: S, z: H - 40 }, { x: 0, y: 0.35, z: 0 }, { x: 0, y: 0, z: 10 }, (u, v) => (Math.abs(v - u) < 0.12 ? P.iron : null));
+    m.box(sx, S + 0.25, H - 32, 0.03, 0.03, 2, { top: P.iron, left: P.iron, right: P.iron });
+    m.box(sx, S + 0.72, H - 32, 0.03, 0.03, 2, { top: P.iron, left: P.iron, right: P.iron });
+    m.quad({ x: sx, y: S + 0.18, z: H - 32 }, { x: 0, y: 0.62, z: 0 }, { x: 0, y: 0, z: -22 }, (u, v) => {
+      if (u < 0.06 || u > 0.94 || v < 0.07 || v > 0.93) return P.barkDark;
+      if (u < 0.1 || u > 0.9 || v < 0.12 || v > 0.88) return P.gold;
+      return signPaint(style, u, v);
+    });
+  } else if (style.sign !== undefined) {
     // A bracket and a painted board hanging over the door.
     const sx = front ? 1.5 : S;
     const sy = front ? S : 1.5;
@@ -577,16 +868,36 @@ function townhouse(style: TownhouseStyle): IsoModel {
 
 /** Height (pixels) and position of a townhouse's chimney top, relative to its corner, for the smoke. */
 export const TOWNHOUSE_CHIMNEY = { gx: 0.62, gy: 0.72, z: 150 };
+/** How far the Crooked Tankard's chimney leans over by its top course, in tiles. */
+const INN_LEAN = { parts: 6, x: 0.55, y: -0.25 };
+const INN_TOP = (INN_LEAN.parts - 1) ** 2 / INN_LEAN.parts ** 2;
+/** The Crooked Tankard's leaning chimney tops out further over, and higher for its pot. */
+export const INN_CHIMNEY = { gx: 0.625 + INN_TOP * INN_LEAN.x, gy: 0.725 + INN_TOP * INN_LEAN.y, z: 157 };
 
+const BLACK_OAK = 0x2e2622;
+const FLOWERS_RED = [0xc8434a, 0xe86a5a, 0xf2e2c8];
+const FLOWERS_BLUE = [0x6a7ad0, 0xb0a0e8, 0xf2e2c8];
+const FLOWERS_GOLD = [0xe6b54a, 0xf2d27a, 0xc8434a];
+
+/**
+ * Every house round the square is dressed differently: slate, shingle or tile;
+ * dressed stone, rubble or brick below; braces, studs, chevrons or bare stone
+ * above; and shutters, window boxes or ivy here and there.
+ */
 export const TOWNHOUSES: Record<string, TownhouseStyle> = {
-  'bld-house-red': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'front' },
-  'bld-house-slate': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'front' },
-  'bld-house-ochre': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'front' },
-  'bld-inn': { roof: 0x7a3a2e, plaster: 0xeee4cc, door: 'front', sign: P.gold, emblem: 'tankard' },
+  'bld-house-cooper': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'front', ground: 'ashlar', flowers: FLOWERS_RED },
+  'bld-house-weaver': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'front', roofKind: 'slate', ground: 'rubble', upper: 'rubble', shutters: 0x3a5a8a, ivy: { face: 'side', at: 0.5 } },
+  'bld-house-chandler': { roof: 0x7a6250, plaster: 0xf0ece0, door: 'front', roofKind: 'shingle', ground: 'brick', upper: 'studded', timber: BLACK_OAK, flowers: FLOWERS_BLUE },
+  'bld-house-reeve': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'front', ground: 'rubble', upper: 'chevron', shutters: 0x8a3a30, ivy: { face: 'front', at: 0.92 } },
+  'bld-house-miller': { roof: 0x5e6272, plaster: 0xd4dccc, door: 'front', roofKind: 'slate', ground: 'ashlar', timber: 0x5a3a24, flowers: FLOWERS_GOLD, shutters: 0x4e6a3a },
+  'bld-inn': {
+    roof: 0xa89058, plaster: 0xe2b49a, door: 'front', roofKind: 'thatch', ground: 'rubble', upper: 'studded', timber: BLACK_OAK,
+    shutters: 0x3a5a3a, flowers: FLOWERS_GOLD, ivy: { face: 'side', at: 0.12, hops: true }, sign: P.gold, emblem: 'tankard', inn: true,
+  },
   // Seen from behind: the houses along the near side of the square, facing into it.
-  'bld-house-red-back': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'back' },
-  'bld-house-slate-back': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'back' },
-  'bld-house-ochre-back': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'back' },
+  'bld-house-back-slate': { roof: 0x5a5a6e, plaster: 0xeae2d0, door: 'back', roofKind: 'slate', ground: 'rubble', upper: 'studded', timber: 0x4a3020 },
+  'bld-house-back-tile': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'back', ground: 'brick', ivy: { face: 'front', at: 0.25 }, shutters: 0x6a4a7a },
+  'bld-house-back-shingle': { roof: 0x6e5a48, plaster: 0xe6cf98, door: 'back', roofKind: 'shingle', ground: 'ashlar', upper: 'rubble', flowers: FLOWERS_RED },
 };
 
 export function generateMarket(scene: Phaser.Scene): void {

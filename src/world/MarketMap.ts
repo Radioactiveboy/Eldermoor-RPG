@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TOWNHOUSE_CHIMNEY } from '../art/market';
+import { INN_CHIMNEY, TOWNHOUSE_CHIMNEY } from '../art/market';
 import { TREK_HOURS } from '../config';
 import { box, circle, Shape } from './Collision';
 import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
@@ -133,20 +133,20 @@ export function buildMarketMap(gateOpen = false): MapData {
   // are on the side facing the square, out of view).
   const house = (key: string, tx: number, ty: number, flipX = false) => {
     placeObject(data, { key, tx, ty, w: 3, h: 3, flipX });
-    const c = TOWNHOUSE_CHIMNEY;
+    const c = key === 'bld-inn' ? INN_CHIMNEY : TOWNHOUSE_CHIMNEY;
     // Mirroring the art swaps x and y on the grid.
     data.chimneys!.push({ gx: tx + (flipX ? c.gy : c.gx), gy: ty + (flipX ? c.gx : c.gy), z: c.z });
   };
-  house('bld-house-red', 5, 1);
+  house('bld-house-cooper', 5, 1);
   house('bld-inn', 9, 1);
   addTavernFront(data);
-  house('bld-house-slate', 14, 1);
-  house('bld-house-red', 19, 2);
-  house('bld-house-slate', 1, 6, true);
-  house('bld-house-ochre', 1, 16, true);
-  house('bld-house-slate-back', 8, 24);
-  house('bld-house-red-back', 13, 24);
-  house('bld-house-ochre-back', 19, 24);
+  house('bld-house-weaver', 14, 1);
+  house('bld-house-chandler', 19, 2);
+  house('bld-house-reeve', 1, 6, true);
+  house('bld-house-miller', 1, 16, true);
+  house('bld-house-back-slate', 8, 24);
+  house('bld-house-back-tile', 13, 24);
+  house('bld-house-back-shingle', 19, 24);
 
   // The well in the middle of the square, on a ragged spread of flat stones set into the earth.
   placeObject(data, { key: 'mkt-well-stones', tx: 14, ty: 13, w: 2, h: 2, flat: true });
