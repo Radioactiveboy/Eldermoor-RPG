@@ -646,6 +646,254 @@ function signpost(): IsoModel {
   return m;
 }
 
+/** A wheel standing upright in the plane y = const: iron tyre, felloes, spokes and a hub. */
+function wheel(m: IsoModel, cx: number, y: number, r: number, dim = 1): void {
+  const rz = r * 36;
+  m.quad({ x: cx - r, y, z: rz * 2 }, { x: r * 2, y: 0, z: 0 }, { x: 0, y: 0, z: -rz * 2 }, (u, v) => {
+    const dx = u * 2 - 1;
+    const dy = v * 2 - 1;
+    const d = Math.hypot(dx, dy);
+    if (d > 1) return null;
+    if (d > 0.9) return darken(dy < -0.3 ? P.ironLight : P.iron, dim);
+    if (d > 0.74) return darken(d > 0.86 ? P.plankDark : dy < 0 ? 0xb08858 : P.plankLight, dim);
+    if (d < 0.18) return darken(d < 0.08 ? P.iron : P.plankDark, dim);
+    const a = Math.atan2(dy, dx) * 6 / Math.PI;
+    if (Math.abs(a - Math.round(a)) < 0.1 / Math.max(d, 0.3)) return darken(dx < 0 ? 0xb08858 : P.plankLight, dim);
+    return null;
+  });
+}
+
+/** Loose straw: streaky gold, paler on top. */
+const straw: Shader = (u, v) => {
+  const n = hash(Math.floor(u * 50), Math.floor(v * 14));
+  return n < 0.25 ? P.strawDark : n > 0.85 ? P.strawLight : P.straw;
+};
+
+/**
+ * A hay cart along x, its shafts resting on the ground at the -x end: a plank
+ * bed with slatted sides on two big spoked wheels, piled high with hay.
+ */
+function hayCart(): IsoModel {
+  const m = new IsoModel();
+  wheel(m, 1.2, 0.12, 0.36, 0.75);
+  // Shafts down to the ground.
+  for (const y of [0.3, 0.66]) {
+    m.quad({ x: 0.02, y, z: 1 }, { x: 0.48, y: 0, z: 14 }, { x: 0, y: 0.05, z: 0 }, P.plankLight);
+    m.quad({ x: 0.02, y: y + 0.05, z: 1 }, { x: 0.48, y: 0, z: 14 }, { x: 0, y: 0, z: -2 }, P.plankDark);
+  }
+  // The bed, and its slatted sides.
+  m.box(0.45, 0.18, 12, 1.5, 0.64, 4, { top: planks(4, P.plank, P.plankDark, P.plankLight), left: P.plank, right: P.plankDark });
+  const slats = (dim: number): Shader => (u, v) => ((v * 3) % 1 < 0.35 || u < 0.03 || u > 0.97 || Math.abs(u - 0.5) < 0.02 ? darken(P.plank, dim) : null);
+  // Hay heaped up in the bed: a few layers, each smaller, ragged at the edges.
+  const heap = [[0.5, 0.2, 16, 1.4, 0.6, 7], [0.58, 0.24, 23, 1.24, 0.52, 6], [0.7, 0.3, 29, 1.0, 0.42, 5], [0.86, 0.36, 34, 0.7, 0.3, 4]];
+  for (const [x, y, z, sx, sy, sz] of heap) {
+    m.box(x, y, z, sx, sy, sz, {
+      top: straw,
+      left: (u, v) => (v > 0.7 + 0.3 * hash(Math.floor(u * 40), 1) ? null : straw(u, v + 0.5)),
+      right: (u, v) => (v > 0.7 + 0.3 * hash(Math.floor(u * 30), 2) ? null : darken(straw(u, v) ?? P.straw, 0.8)),
+    });
+  }
+  // The near side's slats, with wisps of hay poking through and hanging over.
+  m.quad({ x: 0.45, y: 0.82, z: 26 }, { x: 1.5, y: 0, z: 0 }, { x: 0, y: 0, z: -10 }, slats(1));
+  m.quad({ x: 1.95, y: 0.18, z: 26 }, { x: 0, y: 0.64, z: 0 }, { x: 0, y: 0, z: -10 }, slats(0.75));
+  m.quad({ x: 0.5, y: 0.83, z: 24 }, { x: 1.4, y: 0, z: 0 }, { x: 0, y: 0, z: -8 }, (u, v) => (v > hash(Math.floor(u * 40), 7) * 0.9 ? null : straw(u, v)));
+  wheel(m, 1.2, 0.86, 0.36);
+  // A pitchfork leaning on the back of the cart.
+  m.quad({ x: 1.98, y: 0.5, z: 0 }, { x: 0.02, y: 0, z: 40 }, { x: 0.02, y: 0, z: 0 }, P.plankLight);
+  m.quad({ x: 1.96, y: 0.46, z: 40 }, { x: 0.06, y: 0.08, z: 0 }, { x: 0, y: 0, z: 8 }, (u) => (Math.floor(u * 5) % 2 ? null : P.iron));
+  return m;
+}
+
+/** A stone horse trough along x, brimming with water, moss on its foot and a bucket at one end. */
+function trough(): IsoModel {
+  const m = new IsoModel();
+  m.box(0.12, 0.28, 0, 1.76, 0.48, 13, {
+    top: (u, v) => {
+      if (u < 0.05 || u > 0.95 || v < 0.16 || v > 0.84) return u < 0.5 ? P.stoneLight : P.stone;
+      // Water: dark with the sky caught in it, and a few ripples.
+      const ripple = Math.sin(u * 60 + v * 8) > 0.92;
+      return ripple ? 0x8ab4d0 : v < 0.4 ? P.waterLight : P.water;
+    },
+    left: (u, v) => rubble(u * 110, v * 13 + 26, 39, 21),
+    right: (u, v) => darken(rubble(u * 30, v * 13 + 26, 39, 22), 0.78),
+  });
+  m.cylinder(1.88, 0.92, 0, 0.1, 9, (u, v) => (Math.abs(v - 0.3) < 0.1 ? P.iron : u < 0.4 ? P.plankLight : u > 0.7 ? P.plankDark : P.plank), (u, v) => (Math.hypot(u - 0.5, v - 0.5) < 0.38 ? P.water : P.plank));
+  return m;
+}
+
+/** What's pegged out on the washing line: where along it (0..1), how wide, what colour, and what it is. */
+const WASHING: Array<[number, number, number, 'shirt' | 'sheet' | 'hose' | 'apron']> = [
+  [0.06, 0.16, 0xeae4d4, 'shirt'],
+  [0.26, 0.28, 0xd8d0c0, 'sheet'],
+  [0.58, 0.07, 0x6a4a7a, 'hose'],
+  [0.67, 0.07, 0x6a4a7a, 'hose'],
+  [0.78, 0.15, 0x8a5a3a, 'apron'],
+];
+
+/**
+ * A washing line along y between two posts, sagging under the day's washing:
+ * a shirt, a sheet, a pair of hose and an apron, pegged out to dry.
+ */
+function washingLine(): IsoModel {
+  const m = new IsoModel();
+  const y0 = 0.2;
+  const y1 = 2.8;
+  const top = 46;
+  const lineZ = (t: number) => top - 2 - 7 * Math.sin(Math.PI * t);
+  const post = { top: P.barkLight, left: P.bark, right: P.barkDark };
+  m.box(0.46, y0 - 0.04, 0, 0.08, 0.08, top, post);
+  // The line: a thin rope sagging between the posts.
+  const segs = 12;
+  for (let i = 0; i < segs; i++) {
+    const ta = i / segs;
+    const tb = (i + 1) / segs;
+    m.quad({ x: 0.5, y: y0 + (y1 - y0) * ta, z: lineZ(ta) }, { x: 0, y: (y1 - y0) / segs, z: lineZ(tb) - lineZ(ta) }, { x: 0, y: 0, z: -1 }, P.linen);
+  }
+  for (const [at, w, colour, kind] of WASHING) {
+    const za = lineZ(at);
+    const zb = lineZ(at + w);
+    const drop = kind === 'sheet' ? 26 : kind === 'shirt' ? 18 : kind === 'hose' ? 20 : 16;
+    m.quad({ x: 0.5, y: y0 + (y1 - y0) * at, z: za }, { x: 0, y: (y1 - y0) * w, z: zb - za }, { x: 0, y: 0, z: -drop }, (u, v) => {
+      let c = colour;
+      if (kind === 'shirt') {
+        // Sleeves hanging at the sides, a body down the middle, and a collar.
+        const body = u > 0.25 && u < 0.75;
+        if (!body && v > 0.45) return null;
+        if (v > 0.95 - 0.05 * Math.sin(u * 20)) return null;
+        if (body && v < 0.1 && Math.abs(u - 0.5) < 0.08) c = darken(colour, 0.8);
+      } else if (kind === 'sheet') {
+        if (v > 0.92 + 0.08 * Math.sin(u * 9)) return null;
+        // A stripe woven along the edge, and folds where it hangs.
+        if (v > 0.8 && v < 0.85) c = 0x6a7ad0;
+      } else if (kind === 'hose') {
+        if (u < 0.15 || u > 0.85 || v > 0.96) return null;
+        if (v > 0.85) c = darken(colour, 0.7);
+      } else {
+        if (v > 0.9 || (v > 0.6 && (u < 0.1 || u > 0.9))) return null;
+        if (v < 0.1) c = darken(colour, 0.8);
+      }
+      const fold = Math.sin(u * Math.PI * 6);
+      c = fold > 0.75 ? lighten(c) : fold < -0.75 ? darken(c, 0.85) : c;
+      // Clothes pegs along the top.
+      if (v < 0.06 && (u < 0.1 || u > 0.9)) return P.plankLight;
+      return darken(c, 0.88);
+    });
+  }
+  m.box(0.46, y1 - 0.04, 0, 0.08, 0.08, top, post);
+  return m;
+}
+
+/** Grain sacks leaning together, one tied and one slumped open, and a basket of apples. */
+function sacks(): IsoModel {
+  const m = new IsoModel();
+  const sack = 0xc8b48c;
+  const side = (u: number, v: number) => {
+    const c = u < 0.35 ? lighten(sack) : u > 0.7 ? darken(sack, 0.72) : sack;
+    return Math.sin(u * 30 + v * 5) > 0.85 ? darken(c, 0.9) : c;
+  };
+  m.cylinder(0.32, 0.3, 0, 0.17, 16, side, sack);
+  m.cylinder(0.32, 0.3, 16, 0.09, 4, side, darken(sack, 0.85));
+  m.cylinder(0.32, 0.3, 17, 0.1, 1, () => P.strawDark, P.strawDark);
+  m.cylinder(0.62, 0.36, 0, 0.18, 12, side, (u, v) => (Math.hypot(u - 0.5, v - 0.5) < 0.32 ? 0xe8dcb8 : sack));
+  // A basket of red apples in front.
+  m.cylinder(0.45, 0.7, 0, 0.17, 7, (u, v) => ((Math.floor(u * 18) + Math.floor(v * 3)) % 2 ? P.strawDark : P.straw), P.strawDark);
+  for (const [x, y] of [[0.4, 0.66], [0.5, 0.64], [0.45, 0.74], [0.54, 0.72], [0.37, 0.75]]) {
+    m.cylinder(x, y, 7, 0.045, 2.5, (u) => (u < 0.4 ? 0xe86a5a : 0xa8302a), (u, v) => (u + v < 0.7 ? 0xf2a090 : 0xc8434a));
+  }
+  return m;
+}
+
+/** Where the road runs, in grid space: the middle of it in y at column x (as in MarketMap's roadMiddle). */
+function roadLine(x: number): number {
+  if (x >= 22) {
+    const t = Math.min(1, (x - 22) / (34 - 27));
+    return 18 - 1.2 * Math.sin(Math.PI * t);
+  }
+  // On into the square, carrying on the way it was heading and bending towards the well as it fades.
+  const d = x - 22;
+  return 18 - 0.54 * d - 0.2 * d * d;
+}
+
+/** Puddles lying in the ruts: where (x along the road), which rut, and how long. */
+const PUDDLES: Array<[number, number, number]> = [[23.4, -1, 0.42], [25.9, 1, 0.5], [29.8, -1, 0.38], [32.2, 1, 0.34]];
+
+/**
+ * Cart ruts worn into the road and on into the square: two grooves the width
+ * of an axle apart, with a ridge thrown up beside each and puddles lying in
+ * them, fading out as the road opens into the square. Painted flat into the
+ * ground; placed at the map's corner, as it is drawn in map coordinates.
+ */
+function ruts(): IsoModel {
+  const m = new IsoModel();
+  const x0 = 16;
+  const x1 = 34.5;
+  const ya = 11;
+  const yb = 21;
+  m.quad({ x: x0, y: ya, z: 0 }, { x: x1 - x0, y: 0, z: 0 }, { x: 0, y: yb - ya, z: 0 }, (u, v) => {
+    const gx = x0 + u * (x1 - x0);
+    const gy = ya + v * (yb - ya);
+    // Wobble the line a little so the ruts don't look ruled.
+    const mid = roadLine(gx) + 0.05 * Math.sin(gx * 2.3);
+    const fade = gx < 19 ? 0 : gx < 21.5 ? (gx - 19) / 2.5 : 1;
+    for (const side of [-1, 1]) {
+      const d = gy - (mid + side * 0.3);
+      for (const [px, ps, len] of PUDDLES) {
+        if (ps !== side) continue;
+        const e = ((gx - px) / len) ** 2 + (d / (0.15 + 0.03 * Math.sin(gx * 9))) ** 2;
+        if (e < 1) return e < 0.15 && d < 0 ? 0x9ab4c4 : e > 0.7 ? 0x4a5458 : 0x5a6e7c;
+        if (e < 1.4) return P.dirtDark;
+      }
+      if (hash(Math.floor(gx * 30), Math.floor(gy * 30)) > fade) continue;
+      if (Math.abs(d) < 0.045) return hash(Math.floor(gx * 40), side + 3) < 0.3 ? 0x523820 : P.dirtDark;
+      if (d > 0.045 && d < 0.075) return P.dirtLight;
+    }
+    return null;
+  });
+  return m;
+}
+
+/**
+ * A strip of cobbles laid along the front of a house, 3 tiles long and a tile
+ * deep, close-set against the wall and breaking up raggedly towards the square.
+ */
+function cobbles(): IsoModel {
+  const m = new IsoModel();
+  const cell = 0.17;
+  const seed = (i: number, j: number) => ({ x: (i + 0.2 + hash(i, j + 50) * 0.6) * cell, y: (j + 0.2 + hash(j + 70, i) * 0.6) * cell });
+  m.quad({ x: 0, y: 0, z: 0 }, { x: 3, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, (u, v) => {
+    const gx = u * 3;
+    const gy = v;
+    const ci = Math.floor(gx / cell);
+    const cj = Math.floor(gy / cell);
+    let d1 = Infinity;
+    let d2 = Infinity;
+    let best = { i: 0, j: 0, x: 0, y: 0 };
+    for (let j = cj - 1; j <= cj + 1; j++) {
+      for (let i = ci - 1; i <= ci + 1; i++) {
+        const s = seed(i, j);
+        const d = Math.hypot(gx - s.x, gy - s.y);
+        if (d < d1) {
+          d2 = d1;
+          d1 = d;
+          best = { i, j, ...s };
+        } else if (d < d2) d2 = d;
+      }
+    }
+    // Ragged towards the front, and thinning at the ends.
+    const edge = 0.55 + 0.2 * Math.sin(best.x * 3.1) + 0.1 * Math.sin(best.x * 7.3);
+    const ends = Math.min(best.x, 3 - best.x);
+    if (best.y > edge || ends < 0.05) return null;
+    if (best.y > edge - 0.2 && hash(best.i + 3, best.j + 9) < 0.4) return null;
+    if (d2 - d1 < 0.03) return hash(Math.floor(gx * 40), Math.floor(gy * 40)) < 0.3 ? P.moss : P.dirtDark;
+    let c = FIELDSTONE[Math.floor(hash(best.i, best.j + 5) * FIELDSTONE.length)];
+    const dx = gx - best.x;
+    const dy = gy - best.y;
+    if (d2 - d1 < 0.06) c = dx + dy < 0 ? mix(c, 0xdcdae2, 0.35) : darken(c, 0.7);
+    return c;
+  });
+  return m;
+}
+
 /** Roof tiles: rows of overlapping clay tiles, each a little different. */
 function tileRoof(base: number): Shader {
   const dark = darken(base, 0.72);
@@ -1126,4 +1374,10 @@ export function generateMarket(scene: Phaser.Scene): void {
   put('mkt-bench', bench());
   put('mkt-crates', crates());
   put('mkt-signpost', signpost());
+  put('mkt-haycart', hayCart());
+  put('mkt-trough', trough());
+  put('mkt-washing', washingLine());
+  put('mkt-sacks', sacks());
+  put('mkt-ruts', ruts(), false);
+  put('mkt-cobbles', cobbles(), false);
 }

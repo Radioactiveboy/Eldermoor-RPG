@@ -193,6 +193,23 @@ export function buildMarketMap(gateOpen = false): MapData {
   placeObject(data, { key: 'furn-barrels', tx: 7, ty: 11, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
   placeObject(data, { key: 'mkt-crates', tx: 24, ty: 14, w: 1, h: 1, shapes: [box(0.1, 0.15, 0.95, 0.95)] });
 
+  // Odds and ends that make it lived in: a hay cart by the road, a trough for the carters' horses,
+  // a washing line between the houses on the west side, and sacks and baskets by the stalls.
+  const set = (key: string, tx: number, ty: number, w: number, h: number, more: Partial<MapObject> = {}) => {
+    for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) if (data.props[y][x] !== Prop.Blocked) data.props[y][x] = Prop.None;
+    placeObject(data, { key, tx, ty, w, h, ...more });
+  };
+  set('mkt-haycart', 20, 20, 2, 1);
+  set('mkt-trough', 20, 11, 2, 1, { shapes: [box(0.1, 0.25, 1, 0.78), box(1, 0.25, 1.9, 0.78)] });
+  set('mkt-washing', 2, 10, 1, 3, { blocks: [[0, 0], [0, 2]], shapes: [circle(0.5, 0.2, 0.08), circle(0.5, 2.8, 0.08)] });
+  set('mkt-sacks', 14, 9, 1, 1, { shapes: [circle(0.45, 0.4, 0.3), circle(0.45, 0.7, 0.18)] });
+  set('mkt-sacks', 6, 11, 1, 1, { shapes: [circle(0.45, 0.4, 0.3), circle(0.45, 0.7, 0.18)] });
+
+  // The ground: cart ruts down the road and into the square, and cobbles laid along the house fronts.
+  placeObject(data, { key: 'mkt-ruts', tx: 0, ty: 0, w: 1, h: 1, flat: true });
+  for (const [tx, ty] of [[5, 4], [9, 4], [14, 4], [19, 5]]) placeObject(data, { key: 'mkt-cobbles', tx, ty, w: 3, h: 1, flat: true });
+  for (const [tx, ty] of [[4, 6], [4, 16]]) placeObject(data, { key: 'mkt-cobbles', tx, ty, w: 1, h: 3, flat: true, flipX: true });
+
   // A signpost where the road leaves the square, pointing the way home.
   placeObject(data, { key: 'mkt-signpost', tx: 27, ty: 19, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
   data.sights = [{
