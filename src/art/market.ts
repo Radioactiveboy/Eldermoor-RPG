@@ -546,50 +546,103 @@ function wellStones(): IsoModel {
   return m;
 }
 
-/** An iron lantern on a wooden post. Lit after dark (see the map's lights). */
+/**
+ * An iron lantern on a squared oak post: a rough stone footing, chamfered
+ * timber, an iron cap, and a tapered lantern with a pyramid hood and a ring
+ * on top. Lit after dark (see the map's lights).
+ */
 function lampPost(): IsoModel {
   const m = new IsoModel();
-  m.box(0.4, 0.4, 0, 0.2, 0.2, 4, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
-  m.box(0.45, 0.45, 4, 0.1, 0.1, 40, { top: P.barkLight, left: P.bark, right: P.barkDark });
-  m.box(0.38, 0.38, 44, 0.24, 0.24, 10, {
-    top: P.iron,
-    left: (u, v) => (u < 0.15 || u > 0.85 || v < 0.12 || v > 0.88 ? P.iron : P.glassLit),
-    right: (u, v) => (u < 0.15 || u > 0.85 || v < 0.12 || v > 0.88 ? P.iron : P.fireOrange),
+  // Footing: a couple of rough stones round the foot of the post.
+  m.box(0.36, 0.36, 0, 0.28, 0.28, 5, { top: (u, v) => rubble(u * 20, v * 6 + 2, 40, 3), left: (u, v) => rubble(u * 18, v * 5 + 30, 36, 4), right: (u, v) => darken(rubble(u * 18, v * 5 + 30, 36, 5), 0.8) });
+  // The post, with chamfered corners picked out light and dark.
+  m.box(0.45, 0.45, 5, 0.1, 0.1, 39, {
+    top: P.barkLight,
+    left: (u, v) => (u < 0.15 ? P.barkLight : hash(Math.floor(u * 4), Math.floor(v * 14)) < 0.12 ? P.barkDark : P.bark),
+    right: (u) => (u > 0.85 ? darken(P.barkDark, 0.8) : P.barkDark),
   });
-  m.box(0.42, 0.42, 54, 0.16, 0.16, 3, { top: P.ironLight, left: P.iron, right: P.iron });
+  m.box(0.43, 0.43, 42, 0.14, 0.14, 2, { top: P.ironLight, left: P.iron, right: 0x3a3a44 });
+  // The lantern: a frame of iron round panes of glowing glass, narrower at the foot.
+  const pane = (lit: number): Shader => (u, v) => {
+    const taper = v * 0.12;
+    if (u < 0.12 + taper || u > 0.88 - taper || v < 0.1 || v > 0.9) return P.iron;
+    if (Math.abs(u - 0.5) < 0.05) return 0x3a3a44;
+    return v < 0.4 ? mix(lit, 0xfff4d0, 0.4) : lit;
+  };
+  m.box(0.38, 0.38, 44, 0.24, 0.24, 10, { top: P.iron, left: pane(P.glassLit), right: pane(P.fireOrange) });
+  // A hood like a little pyramid, and a ring to lift it by.
+  m.quad({ x: 0.36, y: 0.64, z: 54 }, { x: 0.28, y: 0, z: 0 }, { x: 0.14, y: -0.14, z: 6 }, (u, v) => (v > 1 - Math.abs(u - 0.5) * 2 ? null : u < 0.5 ? P.ironLight : P.iron));
+  m.quad({ x: 0.64, y: 0.36, z: 54 }, { x: 0, y: 0.28, z: 0 }, { x: -0.14, y: 0.14, z: 6 }, (u, v) => (v > 1 - Math.abs(u - 0.5) * 2 ? null : 0x3a3a44));
+  m.quad({ x: 0.5, y: 0.5, z: 64 }, { x: 0.06, y: -0.06, z: 0 }, { x: 0, y: 0, z: -4 }, (u, v) => (Math.hypot(u - 0.5, v - 0.5) > 0.5 || Math.hypot(u - 0.5, v - 0.5) < 0.28 ? null : P.iron));
   return m;
 }
 
-/** A plank bench along x, to sit on facing +y. */
+/** A sturdy bench along x, to sit on facing +y: two boards on splayed legs with a stretcher between them. */
 function bench(): IsoModel {
   const m = new IsoModel();
-  const leg = { top: P.plank, left: P.plank, right: P.plankDark };
-  m.box(0.15, 0.4, 0, 0.1, 0.25, 10, leg);
-  m.box(0.75, 0.4, 0, 0.1, 0.25, 10, leg);
-  m.box(0.08, 0.35, 10, 0.84, 0.35, 3, { top: P.plankLight, left: P.plank, right: P.plankDark });
+  const leg = { top: P.plank, left: (u: number) => (u < 0.3 ? P.plankLight : P.plank), right: P.plankDark };
+  m.box(0.16, 0.4, 0, 0.09, 0.08, 10, leg);
+  m.box(0.75, 0.4, 0, 0.09, 0.08, 10, leg);
+  m.box(0.2, 0.42, 4, 0.6, 0.04, 2, { top: P.plank, left: P.plankDark, right: P.plankDark });
+  m.box(0.16, 0.57, 0, 0.09, 0.08, 10, leg);
+  m.box(0.75, 0.57, 0, 0.09, 0.08, 10, leg);
+  // Two seat boards, worn paler where people sit, with a gap between them.
+  const seat = (shift: number): Shader => (u, v) => {
+    const grain = Math.sin(u * 60 + v * 3 + shift) * Math.sin(u * 23 + shift);
+    const worn = Math.abs(u - 0.3) < 0.12 || Math.abs(u - 0.72) < 0.12;
+    if (grain > 0.85) return P.plankDark;
+    return worn ? mix(P.plankLight, 0xc8a078, 0.3) : P.plankLight;
+  };
+  m.box(0.08, 0.35, 10, 0.84, 0.17, 3, { top: seat(0), left: P.plank, right: P.plankDark });
+  m.box(0.08, 0.53, 10, 0.84, 0.17, 3, { top: seat(2), left: (u) => (u < 0.02 || u > 0.98 ? P.plankDark : P.plank), right: P.plankDark });
   return m;
 }
 
-/** A pile of wooden crates. */
+/** A pile of wooden crates: slatted, cross-braced and nailed, one with its lid off and straw spilling out. */
 function crates(): IsoModel {
   const m = new IsoModel();
-  const side = planks(3, P.plank, P.plankDark, P.plankLight, 6);
-  const crate = (x: number, y: number, z: number, s: number) =>
-    m.box(x, y, z, s, s, s * 30, { top: (u, v) => (u < 0.08 || u > 0.92 || v < 0.08 || v > 0.92 ? P.plankDark : P.plankLight), left: side, right: (u, v) => darken(side(u, v) ?? P.plank) });
-  crate(0.1, 0.15, 0, 0.55);
-  crate(0.45, 0.5, 0, 0.45);
-  crate(0.18, 0.22, 16.5, 0.42);
+  const face = (seed: number, dim = 1): Shader => (u, v) => {
+    // Frame boards round the edge, a diagonal brace, nail heads at the corners.
+    if ((u < 0.12 || u > 0.88) && (v < 0.12 || v > 0.88)) return (u * 20) % 2 < 1 && (v * 20) % 2 < 1 ? P.iron : darken(P.plankLight, dim);
+    if (u < 0.13 || u > 0.87 || v < 0.13 || v > 0.87) return darken(u < 0.03 || v < 0.03 ? 0xb08858 : P.plankLight, dim);
+    if (Math.abs(u - v) < 0.09) return darken(Math.abs(u - v) < 0.03 ? P.plankLight : 0x9a7048, dim);
+    const slat = (v * 3) % 1 < 0.1;
+    if (slat) return darken(0x3a2416, dim);
+    return darken(hash(Math.floor(u * 6), Math.floor(v * 3) + seed) < 0.3 ? 0x5a3c26 : P.plankDark, dim);
+  };
+  const top: Shader = (u, v) => (u < 0.1 || u > 0.9 || v < 0.1 || v > 0.9 ? P.plankLight : (v * 3) % 1 < 0.1 ? P.plankDark : P.plank);
+  const crate = (x: number, y: number, z: number, s: number, seed: number, open = false) =>
+    m.box(x, y, z, s, s, s * 30, {
+      top: open ? (u, v) => (u < 0.1 || u > 0.9 || v < 0.1 || v > 0.9 ? P.plankLight : hash(Math.floor(u * 20), Math.floor(v * 20)) < 0.5 ? P.straw : P.strawDark) : top,
+      left: face(seed),
+      right: face(seed + 1, 0.75),
+    });
+  crate(0.1, 0.15, 0, 0.55, 1);
+  crate(0.45, 0.5, 0, 0.45, 3, true);
+  // Straw poking up out of the open crate.
+  m.quad({ x: 0.5, y: 0.75, z: 13.5 }, { x: 0.36, y: 0, z: 0 }, { x: 0, y: 0, z: 4 }, (u, v) => (v > hash(Math.floor(u * 16), 4) ? null : P.straw));
+  crate(0.18, 0.22, 16.5, 0.42, 5);
   return m;
 }
 
-/** A signpost with arms pointing along the road. */
+/** A signpost: a round post with a cap, and arrow-shaped arms with their letters carved in. */
 function signpost(): IsoModel {
   const m = new IsoModel();
-  m.box(0.45, 0.45, 0, 0.1, 0.1, 50, { top: P.barkLight, left: P.bark, right: P.barkDark });
-  const board: Shader = (u, v) => (v < 0.2 || v > 0.8 || u < 0.03 ? P.plankDark : (u * 7 + v) % 1 < 0.5 && v > 0.4 && v < 0.6 ? P.ink : P.plankLight);
+  m.box(0.4, 0.4, 0, 0.2, 0.2, 3, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
+  m.cylinder(0.5, 0.5, 0, 0.055, 52, (u, v) => (hash(Math.floor(u * 6), Math.floor(v * 16)) < 0.12 ? P.barkDark : u < 0.3 ? P.barkLight : u > 0.7 ? P.barkDark : P.bark), P.barkLight);
+  m.cylinder(0.5, 0.5, 52, 0.075, 3, (u) => (u < 0.4 ? P.plankLight : P.plank), P.plankLight);
+  // An arm: a board with a pointed end, carved letters, and a darker edge.
+  const arm = (pointAt: 'start' | 'end'): Shader => (u, v) => {
+    const tip = pointAt === 'start' ? u : 1 - u;
+    if (tip < 0.16 && Math.abs(v - 0.5) > tip / 0.16 * 0.5) return null;
+    if (v < 0.14 || v > 0.86) return P.plankDark;
+    const carved = (u * 9) % 1 < 0.55 && v > 0.38 && v < 0.62 && tip > 0.22 && tip < 0.92 && hash(Math.floor(u * 9), 2) > 0.2;
+    if (carved) return P.ink;
+    return (Math.sin(u * 50 + v * 4) > 0.9) ? P.plank : P.plankLight;
+  };
   // One arm along -x (towards the market) and one along +y.
-  m.quad({ x: 0.0, y: 0.48, z: 46 }, { x: 0.5, y: 0, z: 0 }, { x: 0, y: 0, z: -9 }, board);
-  m.quad({ x: 0.56, y: 0.5, z: 36 }, { x: 0, y: 0.55, z: 0 }, { x: 0, y: 0, z: -9 }, board);
+  m.quad({ x: -0.05, y: 0.48, z: 47 }, { x: 0.55, y: 0, z: 0 }, { x: 0, y: 0, z: -10 }, arm('start'));
+  m.quad({ x: 0.56, y: 0.5, z: 37 }, { x: 0, y: 0.6, z: 0 }, { x: 0, y: 0, z: -10 }, arm('end'));
   return m;
 }
 
