@@ -15,6 +15,7 @@ import { generateMarket } from './market';
 import { generateMonastery } from './monastery';
 import { generateNpcs } from './npc';
 import { generatePortraits } from './portraits';
+import { generateWayfarers } from './wayfarers3d';
 import { generateProps } from './props';
 import { generateTavern } from './tavern';
 import { generateTiles } from './tiles';
@@ -33,6 +34,7 @@ export function generateArt(scene: Phaser.Scene): void {
   generateNpcs(scene);
   generateCreatures(scene);
   generateFolk(scene);
+  generateWayfarers(scene);
   generatePortraits(scene);
   generateInterior(scene);
   generateFarm(scene);

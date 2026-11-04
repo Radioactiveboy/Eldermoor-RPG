@@ -31,13 +31,14 @@ import { buildAbbeyMap, MOONPETAL } from '../world/AbbeyMap';
 import { buildChapelMap, buildInfirmaryMap, buildRefectoryMap, buildScriptoriumMap } from '../world/AbbeyRooms';
 import { buildDeepDenMap, buildDenMap } from '../world/DenMap';
 import { buildPlainsMap } from '../world/PlainsMap';
+import { PlainsEvents } from '../world/PlainsEvents';
 import { BAR_PICKUP, buildCellarMap, buildTavernHallMap, buildTavernMap, buildTavernRoomMap, CELLAR_RATS } from '../world/TavernMap';
 import { CHECKOUT_HOUR, MENU, RENT_OPTIONS, Tavern } from '../systems/Tavern';
 import { DICE_STAKE, HARLAN_DRINK, PELL_SONG, RAT_REWARD, SONG_PRICE, TAVERN_CHATTER, TAVERN_MUTTERS, TAVERN_TOASTS } from '../dialogue/tavern';
 import { Ambience } from '../world/Ambience';
 import { IsoMap } from '../world/IsoMap';
 import { AreaId, Bed, CropPatch, Door, MapData, Musing, Prop, Seat, Sight } from '../world/MapData';
-import { FoeKind, FOES } from '../systems/Combat';
+import { FoeKind, FOES, isOutlaw } from '../systems/Combat';
 import { cropKey } from '../art/farm';
 import type { InventoryTab } from './InventoryScene';
 import { generateMap } from '../world/MapGenerator';
@@ -189,7 +190,13 @@ const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   hare: [['hare-pelt', 1], ['raw-hare', 1]],
   boar: [['boar-tusk', 2], ['boar-meat', 2]],
   rat: [['rat-tail', 1]],
+  // The footpads' purses are counted out separately (see FOOTPAD_PURSE).
+  footpad: [],
+  cutpurse: [['hunting-knife', 1]],
 };
+
+/** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
+const FOOTPAD_PURSE: [number, number] = [8, 16];
 
 /** What the hero thinks over a beast they've brought down, and when one gets away. */
 const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
@@ -202,6 +209,8 @@ const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
   hare: { slain: 'A hare. The pelt is soft, and it would roast nicely over a hearth.', fled: 'Gone in a flash. Hares are quicker than they look.' },
   boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and there is a feast of meat on it.', fled: 'It crashed off into the thicket. Good riddance.' },
   rat: { slain: 'Rats. Big ones, too. I will take a tail or two to show Godric.', fled: 'It shot off into a hole in the wall. It will be back.' },
+  footpad: { slain: "That's the end of the Plains tithe. There's a purse on him, heavier than mine was.", fled: 'He ran for the trees and never looked back. I doubt he will try this road again.' },
+  cutpurse: { slain: "Nab won't be getting nervous on lonely roads any more. His knife is a good one.", fled: 'Gone, squealing, across the grass. So much for nerves.' },
 };
 
 /** Seconds sitting at a tavern table before a maid comes over, the first time, and between her visits after that. */
@@ -263,6 +272,8 @@ export class GameScene extends Phaser.Scene {
   npcs: Npc[] = [];
   /** Wild animals roaming the area. */
   creatures: Creature[] = [];
+  /** Chance meetings out on Adowvale Plains (see world/PlainsEvents.ts). */
+  private roadEvents?: PlainsEvents;
   /** Farmer Iran's hens, pottering about their run. */
   private hens: Hen[] = [];
   private cluckTimer = 0;
@@ -407,6 +418,8 @@ export class GameScene extends Phaser.Scene {
     this.chatterTimer = 3;
     this.marketWasOpen = marketOpen(this.clock.hour);
     this.creatures = this.spawnCreatures();
+    this.roadEvents?.shutdown();
+    this.roadEvents = this.area === 'plains' ? this.startRoadEvents() : undefined;
     const hens = this.map.data.hens;
     this.hens = (hens?.flock ?? []).map((h) => new Hen(this, this.map, hens!.pen, h.kind, h.gx, h.gy));
     const children = (this.map.data.children ?? []).map((c) => new Child(this, this.map, c.id, c.gx, c.gy));
@@ -613,6 +626,7 @@ export class GameScene extends Phaser.Scene {
       this.clock.update(dt);
     }
     this.updateCreatures(dt);
+    this.roadEvents?.update(dt);
     this.map.updateFading(this.player.sprite.x, this.player.sprite.y, this.player.sprite.depth, dt);
     this.updateHens(dt);
     this.siblings?.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
@@ -796,6 +810,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (action.startsWith('order:')) {
       this.placeOrder(action.slice(6) as ItemId);
+      return;
+    }
+    if (action.startsWith('road:')) {
+      this.roadEvents?.action(action.slice(5));
       return;
     }
     if (action.startsWith('rent:')) {
@@ -1241,6 +1259,48 @@ export class GameScene extends Phaser.Scene {
 
   // ------------------------------------------------------------ combat
 
+  /** Out on the plains: chance meetings on the road, with the people, beasts, talk and fights they need from the game. */
+  private startRoadEvents(): PlainsEvents {
+    return new PlainsEvents({
+      scene: this,
+      map: this.map,
+      player: () => ({ x: this.player.gx, y: this.player.gy }),
+      busy: () => this.busy || this.inCombat || !this.scene.isActive(),
+      hour: () => this.clock.hour,
+      addNpc: (id, gx, gy) => {
+        const npc = new Npc(this, this.map, id, gx, gy, undefined, this.clock.hour);
+        this.npcs.push(npc);
+        return npc;
+      },
+      removeNpc: (npc) => {
+        npc.destroy();
+        this.npcs = this.npcs.filter((n) => n !== npc);
+      },
+      talk: (npc) => this.startConversation(npc),
+      afterTalk: (fn) => {
+        const before = this.afterTalk;
+        this.afterTalk = () => {
+          before?.();
+          fn();
+        };
+      },
+      addCreature: (id, kind, gx, gy) => {
+        // Met by chance, so never counted among the foes defeated for good.
+        (this.map.data.creatures ??= []).push({ id, kind, gx, gy, respawns: true });
+        const creature = new Creature(this, this.map, id, kind, gx, gy);
+        this.creatures.push(creature);
+        return creature;
+      },
+      removeCreature: (creature) => {
+        creature.destroy();
+        this.creatures = this.creatures.filter((c) => c !== creature);
+      },
+      fight: (first) => this.startCombat(first),
+      hint: (text) => this.onHint?.(text),
+      give: (item, count) => this.give(item, count),
+    });
+  }
+
   private spawnCreatures(): Creature[] {
     const spawns = (this.map.data.creatures ?? []).filter((s) => !this.defeatedFoes.has(s.id));
     // Handy for testing fights against a pack: open the game with ?wolves=3.
@@ -1312,7 +1372,9 @@ export class GameScene extends Phaser.Scene {
     const pack = FOES[first.kind].packs;
     // (The Wolf Mother and her wolves are one pack.)
     const foes = this.creatures.filter(
-      (c) => c === first || (pack && c.active && FOES[c.kind].packs && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
+      (c) =>
+        c === first ||
+        (pack && c.active && FOES[c.kind].packs && isOutlaw(c.kind) === isOutlaw(first.kind) && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
     );
     const hunted = first.huntable;
     foes.forEach((c) => c.engage());
@@ -1341,6 +1403,7 @@ export class GameScene extends Phaser.Scene {
     const respawns = new Set((this.map.data.creatures ?? []).filter((s) => s.respawns).map((s) => s.id));
     for (const id of [...result.slain, ...result.fled]) if (!respawns.has(id)) this.defeatedFoes.add(id);
     this.fitCamera();
+    this.roadEvents?.fightOver();
     if (result.outcome === 'defeat') {
       this.knockedOut();
       return;
@@ -1352,6 +1415,17 @@ export class GameScene extends Phaser.Scene {
     } else {
       const slain = foes.filter((c) => result.slain.includes(c.id));
       for (const beast of slain) for (const [item, count] of SPOILS[beast.kind]) this.give(item, count);
+      const outlaws = slain.filter((c) => isOutlaw(c.kind));
+      if (outlaws.length > 0) {
+        const purse = outlaws.reduce((n) => n + Phaser.Math.Between(FOOTPAD_PURSE[0], FOOTPAD_PURSE[1]), 0);
+        Inventory.reward(purse);
+        GameAudio.coins();
+        QuestLog.writeDiary(
+          "Two footpads stopped me on the Lord's Road and asked for half my purse. I said no. They came at me with a cudgel and a knife, " +
+            (outlaws.length > 1 ? 'and I put them both down in the grass. ' : 'and I put one of them down in the grass; the other ran. ') +
+            `${outlaws.length > 1 ? 'Their purses' : 'His purse'} held ${purse} coins, no doubt taken from travellers before me.`,
+        );
+      }
       const after = AFTER_THE_FIGHT[foes[0].kind];
       this.onHint?.(slain.length > 0 ? after.slain : after.fled);
       if (this.area === 'cave' && this.creatures.every((c) => !c.active || foes.includes(c))) {
@@ -1450,6 +1524,7 @@ export class GameScene extends Phaser.Scene {
     }
     for (const npc of this.npcs) if (npc.present) list.push(this.npcInteraction(npc));
     for (const beast of this.creatures) if (beast.huntable) list.push(this.huntInteraction(beast));
+    if (this.roadEvents) list.push(...this.roadEvents.interactions());
     for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
     for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
     for (const sight of this.map.data.sights ?? []) {

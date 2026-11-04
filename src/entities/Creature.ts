@@ -22,6 +22,9 @@ const WAYS: Record<FoeKind, { shy: boolean; notice: number; leash: number; speed
   hare: { shy: true, notice: 0, leash: 5, speed: 1.8 },
   // Scurrying about their nests in the cellar, and quick to come at anyone with a lamp.
   rat: { shy: false, notice: 2.6, leash: 2, speed: 1.9 },
+  // Footpads only come to blows when talked into it (see world/PlainsEvents.ts): they never pick a fight by themselves.
+  footpad: { shy: false, notice: 0, leash: 1, speed: 1.4 },
+  cutpurse: { shy: false, notice: 0, leash: 1, speed: 1.5 },
 };
 /** Shy game bolts when the player sprints within this many tiles of it. */
 const STARTLE_RANGE = 6;
@@ -83,7 +86,8 @@ export class Creature implements Body {
     this.eight = !!art.eight;
     const scale = art.scale ?? 1;
     const small = kind === 'hare' || kind === 'rat';
-    this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : 1.4) * scale, (small ? 0.6 : 1) * scale);
+    const upright = kind === 'footpad' || kind === 'cutpurse';
+    this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : upright ? 1 : 1.4) * scale, (small ? 0.6 : 1) * scale);
     this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale);
     this.sprite.play({ key: this.animKey('sniff'), startFrame: Math.floor(Math.random() * 4) });
     if (!this.eight) this.sprite.setFlipX(Math.random() < 0.5);
@@ -175,6 +179,14 @@ export class Creature implements Body {
     this.setFrame(CREATURE_FRAME.dead);
     this.shadow.setVisible(false);
     this.sprite.setDepth(depthAt(this.gx, this.gy) - 1);
+  }
+
+  /** Taken off the map altogether (a pack that has moved on). */
+  destroy(): void {
+    this.state = 'gone';
+    this.map.bodies.delete(this);
+    this.sprite.destroy();
+    this.shadow.destroy();
   }
 
   /** Bolt away from (gx, gy) and vanish into the trees. */

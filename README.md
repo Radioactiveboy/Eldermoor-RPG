@@ -73,6 +73,14 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   satchel (handy for testing the stations)
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
   game sends it running, and in a fight it may bolt rather than stand
+- **Chance meetings on Adowvale Plains**: now and then, out on the plains, something happens along the Lord's Road.
+  Footpads (Rook and Nab) step out of the grass and ask for half your purse: pay, talk your way out (if you've killed
+  the Wolf Mother), or fight them. Jory the tinker has stopped to rest and will trade odds and ends. Mags the goatherd
+  has lost her goat, Clover: find her in the long grass, press E to **Lead** her, and bring her back. Hal, Lord Morten's
+  messenger, sits with a twisted ankle and would be glad of something to eat. At night a wolf pack may be out hunting.
+  What happens depends on the hour, and the same thing never happens twice running (see `world/PlainsEvents.ts`)
+- Add `?event=footpads` (or `tinker`, `goat`, `courier`, `wolves`) to the URL with `?area=plains` to have that meeting
+  happen a few seconds after arriving
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
   testing fights against several enemies)
 

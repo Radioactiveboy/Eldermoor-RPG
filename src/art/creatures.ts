@@ -15,6 +15,7 @@ import {
   wolfSheet,
   wolfSpec,
 } from './beasts3d';
+import { footpadSpec } from './wayfarers3d';
 
 /**
  * The wild animals, each modelled in 3D and drawn as pixel art (see
@@ -33,7 +34,7 @@ const WOLF_MOTHER_SIZE = 1.45;
  * systems/Combat.ts FOES).
  */
 export const CREATURE_ART: Record<
-  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'rat',
+  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'rat' | 'footpad' | 'cutpurse',
   {
     w: number;
     h: number;
@@ -53,6 +54,9 @@ export const CREATURE_ART: Record<
   boar: { ...boarSpec(), eight: true, tall: 24 },
   // The rats in the Crooked Tankard's cellar.
   rat: { ...ratSpec(), eight: true, tall: 13 },
+  // The footpads on the Lord's Road (their sheets are drawn in wayfarers3d.ts).
+  footpad: { ...footpadSpec(), eight: true, tall: 42 },
+  cutpurse: { ...footpadSpec(), eight: true, tall: 40 },
 };
 
 export function generateCreatures(scene: Phaser.Scene): void {
