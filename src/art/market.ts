@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, Shader } from './IsoModel';
+import { IsoModel, planks, Shader } from './IsoModel';
 import { MODEL_ART } from './interior';
 import { PALETTE as P } from './palette';
 
@@ -31,46 +31,179 @@ const AWNINGS: Record<StallKind, [number, number, number]> = {
 };
 
 /**
- * A market stall on a 2x2 footprint facing +y: a plank counter across the
- * front row with goods on top, four posts, and a striped awning high enough
- * that the stallholder (standing in the back row) is seen beneath it.
+ * A market stall on a 2x2 footprint facing +y: a trestle counter across the
+ * front row, draped with cloth and laid with goods, on four rough poles lashed
+ * together, under a striped canvas awning that sags between its beams and is
+ * hemmed with a fringed valance. The stallholder stands in the back row, in
+ * front of a rack of more stock, and is seen beneath the awning.
  * Closed for the night, the goods are gone and a sheet is roped over the counter.
  */
 function stall(kind: StallKind, closed = false): IsoModel {
   const m = new IsoModel();
   const [stripe, stripe2, cloth] = AWNINGS[kind];
-  const post = { top: P.barkLight, left: P.bark, right: P.barkDark };
   const counterTop = 24;
-  // Back posts first, so the counter and goods are painted over them.
-  m.box(0.08, 0.08, 0, 0.1, 0.1, 86, post);
-  m.box(1.82, 0.08, 0, 0.1, 0.1, 86, post);
-  // A crate or two behind the counter, for stock.
-  m.box(0.3, 0.25, 0, 0.45, 0.4, 16, { top: P.plankLight, left: planks(2, P.plank, P.plankDark, P.plankLight, 4), right: P.plankDark });
-  // The counter: a plank front with a cloth draped over the top.
-  const front = planks(3, P.plank, P.plankDark, P.plankLight, 2);
-  m.box(0.05, 1.0, 0, 1.9, 0.62, counterTop, {
-    top: lipped(cloth, lighten(cloth), 0.1),
-    left: (u, v) => (v < 0.22 ? (Math.floor(u * 16) % 2 ? stripe : cloth) : front(u, v)),
-    right: P.plankDark,
+  const backZ = 88;
+  const frontZ = 74;
+  const sag = 5;
+
+  // A rough pole: round, with bark grain, lit on its left.
+  const pole = (x: number, y: number, h: number) =>
+    m.cylinder(x, y, 0, 0.055, h, (u, v) => {
+      const grain = hash(Math.floor(u * 6), Math.floor(v * h / 3) + Math.floor(x * 10 + y * 7));
+      const c = u < 0.3 ? P.barkLight : u > 0.7 ? P.barkDark : P.bark;
+      return grain < 0.12 ? darken(c, 0.8) : c;
+    }, P.barkLight);
+  // Rope lashing where poles meet.
+  const lashing = (x: number, y: number, z: number) =>
+    m.cylinder(x, y, z - 4, 0.065, 4, (_u, v) => ((v * 4) % 1 < 0.3 ? P.strawDark : P.straw), P.straw);
+  const beam = { top: P.barkLight, left: (u: number, v: number) => (v < 0.3 ? P.barkLight : hash(Math.floor(u * 30), 2) < 0.15 ? P.barkDark : P.bark), right: P.barkDark };
+
+  // Back poles and the back beam, then the rack of stock behind the trader.
+  pole(0.12, 0.12, backZ);
+  pole(1.88, 0.12, backZ);
+  m.box(0.08, 0.08, backZ - 4, 1.84, 0.08, 3, beam);
+  backRack(m, kind, closed);
+
+  // The trestle counter: legs, a thick board top with cloth over it, and the cloth hanging down the front in folds.
+  for (const x of [0.2, 1.72]) {
+    m.box(x, 1.08, 0, 0.08, 0.06, counterTop - 2, { top: P.plank, left: P.plank, right: P.plankDark });
+    m.box(x, 1.5, 0, 0.08, 0.06, counterTop - 2, { top: P.plank, left: P.plank, right: P.plankDark });
+  }
+  // A sack and a basket tucked under the counter.
+  m.cylinder(0.62, 1.32, 0, 0.16, 10, (u, v) => (v < 0.2 ? darken(0xb8a47c, 0.85) : u < 0.35 ? 0xc8b48c : u > 0.7 ? 0x8a7a58 : 0xb8a47c), 0xa8946c);
+  m.cylinder(1.3, 1.3, 0, 0.15, 7, (u, v) => ((Math.floor(u * 18) + Math.floor(v * 4)) % 2 ? P.strawDark : P.straw), P.strawDark);
+  const fold = (u: number) => 0.5 + 0.5 * Math.sin(u * Math.PI * 14);
+  const hem = (v: number) => v > 0.82 && v < 0.92;
+  m.box(0.08, 1.02, counterTop - 3, 1.84, 0.62, 3, { top: P.plankLight, left: P.plank, right: P.plankDark });
+  // The cloth: across the top, then down the front and the right-hand end, a little ragged at the hem.
+  m.quad({ x: 0.06, y: 1.0, z: counterTop }, { x: 1.88, y: 0, z: 0 }, { x: 0, y: 0.66, z: 0 }, (u, v) => {
+    const n = hash(Math.floor(u * 50), Math.floor(v * 16));
+    return n < 0.08 ? darken(cloth, 0.9) : v > 0.9 ? lighten(cloth) : cloth;
+  });
+  m.quad({ x: 0.06, y: 1.66, z: counterTop }, { x: 1.88, y: 0, z: 0 }, { x: 0, y: 0, z: -17 }, (u, v) => {
+    if (v > 0.94 - 0.06 * Math.abs(Math.sin(u * 37))) return null;
+    const base = hem(v) ? stripe : cloth;
+    const f = fold(u);
+    return f < 0.18 ? darken(base, 0.78) : f > 0.85 ? lighten(base) : base;
+  });
+  m.quad({ x: 1.94, y: 1.0, z: counterTop }, { x: 0, y: 0.66, z: 0 }, { x: 0, y: 0, z: -17 }, (u, v) => {
+    if (v > 0.94 - 0.06 * Math.abs(Math.sin(u * 23))) return null;
+    const base = darken(hem(v) ? stripe : cloth, 0.8);
+    return fold(u * 0.5) < 0.2 ? darken(base, 0.8) : base;
   });
   if (closed) coverUp(m, counterTop);
   else goods(m, kind, counterTop);
-  // Front posts, then the sloping awning on top of everything.
-  m.box(0.08, 1.52, 0, 0.1, 0.1, 74, post);
-  m.box(1.82, 1.52, 0, 0.1, 0.1, 74, post);
-  const awning: Shader = (u, v) => {
+
+  // Front poles, lashed to the front beam.
+  pole(0.12, 1.66, frontZ);
+  pole(1.88, 1.66, frontZ);
+  m.box(0.08, 1.62, frontZ - 4, 1.84, 0.08, 3, beam);
+  for (const [x, y, z] of [[0.12, 0.12, backZ], [1.88, 0.12, backZ], [0.12, 1.66, frontZ], [1.88, 1.66, frontZ]] as const) lashing(x, y, z);
+
+  // The awning: canvas stretched from the back beam to the front, sagging between them.
+  // Drawn in strips from back to front so the dip in the middle shows.
+  const strips = 10;
+  const y0 = -0.04;
+  const y1 = 1.8;
+  const zAt = (t: number) => backZ + 2 + (frontZ - 2 - backZ) * t - sag * Math.sin(Math.PI * Math.min(1, t / 0.92));
+  const canvas = (u: number, t: number) => {
     const band = Math.floor(u * 10) % 2 === 0;
-    const base = band ? stripe : stripe2;
-    return v > 0.92 ? darken(base) : v < 0.06 ? darken(base, 0.85) : base;
+    let c = band ? stripe : stripe2;
+    // Light falls on the slope; the hollow in the middle is a touch darker, and the canvas is weathered.
+    const dip = Math.sin(Math.PI * Math.min(1, t / 0.92));
+    c = mix(c, 0x2a2430, 0.12 * dip);
+    const stain = hash(Math.floor(u * 24), Math.floor(t * 10) + 3);
+    if (stain < 0.07) c = darken(c, 0.88);
+    // Seams where the canvas widths are sewn together.
+    if ((u * 5) % 1 < 0.015) c = darken(c, 0.8);
+    return c;
   };
-  m.quad({ x: -0.06, y: -0.05, z: 90 }, { x: 2.12, y: 0, z: 0 }, { x: 0, y: 1.72, z: -16 }, awning);
-  // A scalloped valance hanging from the front edge.
-  m.quad({ x: -0.06, y: 1.67, z: 74 }, { x: 2.12, y: 0, z: 0 }, { x: 0, y: 0, z: -9 }, (u, v) => {
-    const scallop = 0.55 + 0.45 * Math.abs(Math.sin(u * Math.PI * 10));
-    if (v > scallop) return null;
-    return Math.floor(u * 10) % 2 === 0 ? darken(stripe, 0.9) : darken(stripe2, 0.9);
+  for (let i = 0; i < strips; i++) {
+    const ta = i / strips;
+    const tb = (i + 1) / strips;
+    const ya = y0 + (y1 - y0) * ta;
+    const yb = y0 + (y1 - y0) * tb;
+    const za = zAt(ta);
+    const zb = zAt(tb);
+    m.quad({ x: -0.06, y: ya, z: za }, { x: 2.12, y: 0, z: 0 }, { x: 0, y: yb - ya, z: zb - za }, (u, v) => {
+      const t = ta + (tb - ta) * v;
+      return t > 0.985 ? darken(canvas(u, t), 0.75) : canvas(u, t);
+    });
+  }
+  // The awning's side edge, seen on the right, hanging down a little.
+  m.quad({ x: 2.06, y: y0, z: zAt(0) }, { x: 0, y: y1 - y0, z: zAt(1) - zAt(0) }, { x: 0, y: 0, z: -6 }, (u, v) => {
+    const t = u;
+    if (v > 0.7 + 0.3 * Math.abs(Math.sin(u * Math.PI * 6))) return null;
+    const ext = zAt(t) - (zAt(0) + (zAt(1) - zAt(0)) * t);
+    if (v * 6 < -ext - 0.5) return null;
+    return darken(Math.floor(t * 8) % 2 ? stripe2 : stripe, 0.72);
   });
+  // A scalloped valance hanging from the front edge, with a fringe of tassels.
+  const vz = zAt(1);
+  m.quad({ x: -0.06, y: y1 - 0.02, z: vz }, { x: 2.12, y: 0, z: 0 }, { x: 0, y: 0, z: -12 }, (u, v) => {
+    const scallop = 0.6 + 0.3 * Math.abs(Math.sin(u * Math.PI * 10));
+    const tassel = (u * 40) % 1 < 0.35;
+    if (v > scallop + (tassel ? 0.12 : 0)) return null;
+    if (v > scallop) return P.gold;
+    const base = Math.floor(u * 10) % 2 === 0 ? stripe : stripe2;
+    if (v < 0.12) return darken(base, 0.7);
+    return v > scallop - 0.1 ? darken(base, 0.8) : darken(base, 0.92);
+  });
+
   return m;
+}
+
+/** Stock kept behind the trader: loaves on shelves, tools on a rack, hides over a rail. */
+function backRack(m: IsoModel, kind: StallKind, closed: boolean): void {
+  const wood = { top: P.plankLight, left: P.plank, right: P.plankDark };
+  if (kind === 'baker') {
+    // A crate of flour sacks, and a shelf of loaves against the back poles.
+    m.box(0.25, 0.2, 0, 0.5, 0.35, 14, { top: P.plankLight, left: planks(2, P.plank, P.plankDark, P.plankLight, 4), right: P.plankDark });
+    m.cylinder(0.42, 0.36, 14, 0.12, 8, (u) => (u < 0.4 ? 0xeee8dc : 0xc8c0b0), 0xf2ecdc);
+    m.cylinder(0.62, 0.34, 14, 0.1, 7, (u) => (u < 0.4 ? 0xeee8dc : 0xc8c0b0), 0xf2ecdc);
+    for (const z of [26, 42]) {
+      m.box(1.15, 0.14, z, 0.7, 0.2, 2, wood);
+      if (!closed) for (const x of [1.25, 1.45, 1.65]) m.cylinder(x, 0.24, z + 2, 0.08, 4, (u) => (u < 0.4 ? 0xd09048 : 0xa8642e), 0xd8a058);
+    }
+  } else if (kind === 'smith') {
+    // A tool rack hung with tongs, hammers and horseshoes, and a small anvil on a stump.
+    m.box(0.2, 0.14, 50, 1.6, 0.04, 3, wood);
+    if (!closed) {
+      for (let i = 0; i < 7; i++) {
+        const x = 0.3 + i * 0.22;
+        if (i % 3 === 0) {
+          m.box(x, 0.16, 32, 0.03, 0.02, 18, { top: P.iron, left: P.iron, right: P.iron });
+          m.box(x - 0.04, 0.16, 30, 0.1, 0.02, 4, { top: P.ironLight, left: P.ironLight, right: P.iron });
+        } else if (i % 3 === 1) {
+          m.quad({ x: x - 0.06, y: 0.17, z: 48 }, { x: 0.14, y: 0, z: 0 }, { x: 0, y: 0, z: -10 }, (u, v) => {
+            const d = Math.hypot(u - 0.5, (v - 0.45) * 1.2);
+            return d < 0.45 && d > 0.28 && v < 0.85 ? (u < 0.4 ? P.ironLight : P.iron) : null;
+          });
+        } else {
+          m.box(x, 0.16, 26, 0.03, 0.02, 22, { top: P.plank, left: P.plank, right: P.plankDark });
+          m.box(x - 0.05, 0.15, 24, 0.13, 0.05, 5, { top: P.ironLight, left: P.iron, right: P.iron });
+        }
+      }
+    }
+    m.cylinder(1.55, 0.4, 0, 0.16, 12, (u) => (u < 0.4 ? P.barkLight : P.bark), 0xb08860);
+    m.box(1.42, 0.33, 12, 0.26, 0.14, 6, { top: P.ironLight, left: P.iron, right: 0x3a3a44 });
+  } else {
+    // A rail along the back with hides thrown over it, and a bundle of rolled leather.
+    m.box(0.12, 0.16, 46, 1.76, 0.05, 3, wood);
+    if (!closed) {
+      const hides = [0x8f5c38, 0xa07a54, 0x6e4228, 0x7a7480];
+      hides.forEach((c, i) => {
+        const x = 0.2 + i * 0.4;
+        m.quad({ x, y: 0.2, z: 49 }, { x: 0.36, y: 0, z: 0 }, { x: 0, y: 0, z: -30 }, (u, v) => {
+          const edge = 0.75 + 0.2 * Math.sin(u * 11 + i) + 0.05 * Math.sin(u * 37);
+          if (v > edge || u < 0.04 * Math.sin(v * 9) + 0.02) return null;
+          const f = Math.sin(u * 14 + i) > 0.6 ? darken(c, 0.82) : c;
+          return v < 0.08 ? darken(c, 0.7) : f;
+        });
+      });
+    }
+    for (const [x, y] of [[1.45, 0.42], [1.62, 0.4], [1.54, 0.56]]) m.cylinder(x, y, 0, 0.09, 14, (u) => (u < 0.4 ? P.leatherLight : P.leather), P.leatherDark);
+  }
 }
 
 /** A sackcloth sheet over the bare counter, tied down with rope, for the night. */
@@ -79,45 +212,68 @@ function coverUp(m: IsoModel, z: number): void {
   const rope = (u: number) => Math.abs(u - 0.22) < 0.02 || Math.abs(u - 0.78) < 0.02;
   m.box(0.1, 1.03, z, 1.8, 0.56, 7, {
     top: (u, v) => (rope(u) ? P.strawDark : hash(Math.floor(u * 40), Math.floor(v * 12)) < 0.15 ? darken(sack, 0.9) : sack),
-    left: (u) => (rope(u) ? P.strawDark : darken(sack, 0.85)),
+    left: (u, v) => (rope(u) ? P.strawDark : v > 0.6 && Math.sin(u * 40) > 0.5 ? darken(sack, 0.75) : darken(sack, 0.85)),
     right: darken(sack, 0.7),
   });
+}
+
+/** A round loaf with a scored, glazed top. */
+function loaf(m: IsoModel, x: number, y: number, z: number, r: number, crust = 0xb8702e): void {
+  m.cylinder(x, y, z, r, 3, (u) => (u < 0.35 ? lighten(crust) : u > 0.7 ? darken(crust, 0.7) : crust), crust);
+  m.cylinder(x, y, z + 3, r * 0.78, 2, (u) => (u < 0.4 ? lighten(crust) : crust), (u, v) => (Math.abs(u - v) < 0.08 || Math.abs(u + v - 1) < 0.08 ? 0xe8c890 : lighten(crust)));
 }
 
 /** What each trader sets out on the counter. */
 function goods(m: IsoModel, kind: StallKind, z: number): void {
   if (kind === 'baker') {
-    // Loaves in a basket, a round cheese and a pie.
-    m.box(0.2, 1.08, z, 0.7, 0.42, 6, { top: P.strawDark, left: P.straw, right: P.strawDark });
-    for (const [x, y] of [[0.35, 1.2], [0.6, 1.25], [0.45, 1.38], [0.75, 1.4]]) {
-      m.cylinder(x, y, z + 5, 0.12, 4, (u) => (u < 0.4 ? 0xd09048 : 0xa8642e), 0xd09048);
-    }
-    m.cylinder(1.25, 1.3, z, 0.2, 7, (u) => (u < 0.5 ? 0xf2d27a : 0xc89a30), 0xfbe6a0);
-    m.cylinder(1.65, 1.3, z, 0.18, 5, (u) => (u < 0.4 ? 0xd09048 : 0x7a4420), 0xe8b060);
+    // A wicker basket of loaves, a long plait, a cheese with a wedge cut out, a pie, and a heap of rolls.
+    m.box(0.16, 1.06, z, 0.62, 0.44, 5, {
+      top: P.strawDark,
+      left: (u, v) => ((Math.floor(u * 24) + Math.floor(v * 3)) % 2 ? P.strawDark : P.straw),
+      right: (u, v) => ((Math.floor(u * 16) + Math.floor(v * 3)) % 2 ? darken(P.strawDark, 0.85) : P.strawDark),
+    });
+    for (const [x, y] of [[0.3, 1.18], [0.52, 1.2], [0.4, 1.36], [0.64, 1.38]]) loaf(m, x, y, z + 4, 0.11);
+    for (let i = 0; i < 5; i++) m.cylinder(0.9 + i * 0.07, 1.2 + i * 0.03, z, 0.06, 4, (u) => (u < 0.4 ? 0xd8a058 : 0xa8642e), 0xd8a058);
+    m.cylinder(1.3, 1.24, z, 0.19, 7, (u) => (u < 0.5 ? 0xf2d27a : 0xc89a30), (u, v) => (u > 0.5 && v > 0.5 && Math.abs(u - v) < 0.35 ? null : 0xfbe6a0));
+    m.cylinder(1.68, 1.22, z, 0.15, 4, (u) => (u < 0.4 ? 0xd09048 : 0x7a4420), (u, v) => ((Math.floor(u * 6) + Math.floor(v * 6)) % 2 ? 0xe8b060 : 0xc88a40));
+    for (const [x, y] of [[1.0, 1.44], [1.14, 1.48], [1.07, 1.38], [1.62, 1.48], [1.5, 1.5]]) loaf(m, x, y, z, 0.06, 0xc88038);
   } else if (kind === 'smith') {
-    // Blades laid out on a cloth, a helm, and a shield leaning on the counter.
-    m.quad({ x: 0.15, y: 1.08, z: z + 0.5 }, { x: 0.9, y: 0, z: 0 }, { x: 0, y: 0.45, z: 0 }, 0x3a3032);
-    for (const x of [0.25, 0.48, 0.71]) {
-      m.box(x, 1.12, z + 1, 0.06, 0.32, 1, { top: P.ironLight, left: P.iron, right: P.iron });
-      m.box(x - 0.03, 1.4, z + 1, 0.12, 0.03, 2, { top: P.gold, left: P.gold, right: P.gold });
+    // Blades on a dark cloth, with brass-wired hilts; a helm, a stack of horseshoes, and a shield propped in front.
+    m.quad({ x: 0.12, y: 1.06, z: z + 0.5 }, { x: 0.95, y: 0, z: 0 }, { x: 0, y: 0.5, z: 0 }, 0x3a3032);
+    for (const x of [0.22, 0.44, 0.66, 0.88]) {
+      m.box(x, 1.1, z + 1, 0.06, 0.32, 1, { top: (_u, v) => (v < 0.15 ? 0xe8e8f0 : P.ironLight), left: P.iron, right: P.iron });
+      m.box(x - 0.04, 1.42, z + 1, 0.14, 0.03, 2, { top: P.gold, left: P.gold, right: darken(P.gold) });
+      m.box(x, 1.45, z + 1, 0.06, 0.09, 2, { top: P.leather, left: P.leatherDark, right: P.leatherDark });
     }
-    m.cylinder(1.35, 1.3, z, 0.17, 8, (u) => (u < 0.35 ? P.ironLight : P.iron), P.stoneLight);
-    m.cylinder(1.35, 1.3, z, 0.24, 1, () => P.iron, P.ironLight);
-    // A round shield propped against the front of the counter.
-    m.quad({ x: 1.45, y: 1.66, z: 20 }, { x: 0.36, y: 0, z: 0 }, { x: 0, y: 0, z: -18 }, (u, v) => {
+    m.cylinder(1.3, 1.24, z, 0.16, 7, (u) => (u < 0.35 ? P.ironLight : P.iron), P.stoneLight);
+    m.cylinder(1.3, 1.24, z + 7, 0.12, 3, (u) => (u < 0.35 ? P.ironLight : P.iron), P.ironLight);
+    m.cylinder(1.3, 1.24, z, 0.22, 1, () => P.iron, P.ironLight);
+    for (let i = 0; i < 4; i++) {
+      m.quad({ x: 1.58, y: 1.14, z: z + i * 1.5 + 0.5 }, { x: 0.22, y: 0, z: 0 }, { x: 0, y: 0.2, z: 0 }, (u, v) => {
+        const d = Math.hypot(u - 0.5, v - 0.55);
+        return d < 0.48 && d > 0.3 && v < 0.9 ? (i === 3 ? P.ironLight : P.iron) : null;
+      });
+    }
+    // A round shield propped against the front of the counter: painted boards, an iron rim and a boss.
+    m.quad({ x: 1.42, y: 1.7, z: 21 }, { x: 0.38, y: 0, z: 0 }, { x: 0, y: 0, z: -19 }, (u, v) => {
       const d = (u - 0.5) ** 2 + (v - 0.5) ** 2;
       if (d > 0.25) return null;
-      if (d > 0.18) return P.iron;
-      if (d < 0.02) return P.ironLight;
-      return Math.floor(v * 5) % 2 ? P.plank : P.plankLight;
+      if (d > 0.19) return u < 0.4 ? P.ironLight : P.iron;
+      if (d < 0.012) return 0xe8e8f0;
+      if (d < 0.025) return P.ironLight;
+      return Math.abs(u - v) < 0.12 ? P.gold : Math.floor(v * 5) % 2 ? 0x2e4a7a : 0x3a5a8a;
     });
   } else {
-    // Folded hides in a pile, and a grey pelt draped over the end.
+    // Folded hides in a pile, a grey pelt draped over the end, belts in a coil, and a pair of boots.
     const hides = [0x8f5c38, 0x6e4228, 0xa07a54];
-    hides.forEach((c, i) => m.box(0.2 + i * 0.05, 1.1 + i * 0.03, z + i * 3, 0.65, 0.38, 3, { top: c, left: darken(c), right: darken(c, 0.6) }));
-    m.box(1.1, 1.05, z, 0.7, 0.5, 2, { top: 0x7a7480, left: 0x4b4652, right: 0x4b4652 });
-    m.quad({ x: 1.1, y: 1.62, z }, { x: 0.7, y: 0, z: 0 }, { x: 0, y: 0, z: -12 }, (u, v) => (v > 0.7 + 0.3 * Math.sin(u * 9) ? null : u < 0.3 ? 0xa29ca6 : 0x7a7480));
-    m.box(1.3, 1.15, z + 2, 0.25, 0.2, 6, { top: P.leatherLight, left: P.leather, right: P.leatherDark });
+    hides.forEach((c, i) => m.box(0.2 + i * 0.05, 1.1 + i * 0.03, z + i * 3, 0.65, 0.38, 3, { top: (u) => (Math.sin(u * 20 + i) > 0.7 ? lighten(c) : c), left: darken(c), right: darken(c, 0.6) }));
+    m.box(1.1, 1.05, z, 0.7, 0.5, 2, { top: (u, v) => (hash(Math.floor(u * 30), Math.floor(v * 10)) < 0.3 ? 0x8a8490 : 0x7a7480), left: 0x4b4652, right: 0x4b4652 });
+    m.quad({ x: 1.1, y: 1.62, z }, { x: 0.7, y: 0, z: 0 }, { x: 0, y: 0, z: -14 }, (u, v) => (v > 0.7 + 0.3 * Math.sin(u * 9) ? null : hash(Math.floor(u * 40), Math.floor(v * 10)) < 0.25 ? 0xa29ca6 : u < 0.3 ? 0x9a94a0 : 0x7a7480));
+    m.cylinder(1.28, 1.22, z + 2, 0.1, 3, (u) => (u < 0.4 ? P.leatherLight : P.leather), (u, v) => (((u - 0.5) ** 2 + (v - 0.5) ** 2) % 0.06 < 0.02 ? P.leatherDark : P.leather));
+    for (const x of [1.52, 1.66]) {
+      m.box(x, 1.18, z + 2, 0.1, 0.24, 3, { top: P.leatherDark, left: P.leather, right: P.leatherDark });
+      m.box(x, 1.18, z + 5, 0.1, 0.1, 9, { top: P.leatherDark, left: P.leatherLight, right: P.leather });
+    }
   }
 }
 
