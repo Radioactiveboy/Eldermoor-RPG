@@ -9,8 +9,6 @@ import { SMITHY } from './MarketMap';
 
 /** How often the mix is worked out again, in seconds. The sounds glide between, so this needn't be often. */
 const MIX_EVERY = 0.4;
-/** Tiles walked between footsteps (a stride). */
-const STRIDE = 0.62;
 /** The hours the monastery bell rings for the offices: Prime, Terce, Sext, None, Vespers, Compline. */
 const BELL_HOURS = [6, 9, 12, 15, 18, 21];
 
@@ -75,8 +73,7 @@ export class AmbientSounds {
   private readonly water: Array<{ x: number; y: number }> = [];
   private readonly hives?: { x: number; y: number };
   private mixTimer = 0;
-  private stride = 0;
-  private lastPos?: { x: number; y: number };
+  private footfalls?: number;
   private lastHour?: number;
 
   constructor(
@@ -102,9 +99,10 @@ export class AmbientSounds {
 
   /**
    * @param walking how loud a step is: 1 walking, less sneaking, more sprinting, 0 standing still
+   * @param footfalls the hero's footfall count (Player.footfalls): a step sounds each time it goes up
    */
-  update(dt: number, player: { x: number; y: number }, hour: number, npcs: Npc[], walking: number): void {
-    this.footsteps(player, walking);
+  update(dt: number, player: { x: number; y: number }, hour: number, npcs: Npc[], walking: number, footfalls: number): void {
+    this.footsteps(player, walking, footfalls);
     this.bells(hour);
     this.mixTimer -= dt;
     if (this.mixTimer > 0) return;
@@ -173,16 +171,11 @@ export class AmbientSounds {
     return Math.sqrt(best);
   }
 
-  private footsteps(player: { x: number; y: number }, walking: number): void {
-    const last = this.lastPos;
-    this.lastPos = { x: player.x, y: player.y };
-    if (!last || walking <= 0) return;
-    const moved = Math.hypot(player.x - last.x, player.y - last.y);
-    // A jump (a door, a road's end) isn't a step.
-    if (moved > 1) return;
-    this.stride += moved;
-    if (this.stride < STRIDE) return;
-    this.stride -= STRIDE;
+  /** A footstep each time one of the hero's feet comes down in the walk, so they keep time with the legs. */
+  private footsteps(player: { x: number; y: number }, walking: number, footfalls: number): void {
+    const last = this.footfalls;
+    this.footfalls = footfalls;
+    if (last === undefined || footfalls === last || walking <= 0) return;
     GameAudio.footstep(this.surface(player), walking);
   }
 

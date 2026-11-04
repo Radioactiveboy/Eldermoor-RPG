@@ -89,8 +89,8 @@ const LOOPS: Record<string, LoopDef> = {
   birds: { file: 'birds', peak: 0.08 },
   crickets: { file: 'crickets', peak: 0.075 },
   frogs: { file: 'frogs', peak: 0.1 },
-  crowd: { file: 'market', peak: 0.115 },
-  taproom: { file: 'taproom', peak: 0.15 },
+  crowd: { file: 'market', peak: 0.06 },
+  taproom: { file: 'taproom', peak: 0.075 },
   fire: { file: 'fire', peak: 0.44 },
   bees: { file: 'bees', peak: 0.08 },
   drips: { file: 'drips', peak: 0.25, echo: 0.6 },
@@ -410,7 +410,7 @@ export class Soundscape {
 
   /** A pot or tankard knocking on a table, or two mugs clinking. */
   private clink(t: number, level: number): void {
-    this.shot(SHOTS.clink, t, rand(0.05, 0.12) * level, { rate: [0.85, 1.15], lowpass: 6000 });
+    this.shot(SHOTS.clink, t, rand(0.04, 0.09) * level, { rate: [0.85, 1.15], lowpass: 6000 });
   }
 
   /** The smith at work: a run of ringing blows on the anvil. */

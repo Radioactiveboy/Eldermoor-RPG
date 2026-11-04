@@ -6,6 +6,9 @@ import { gridToScreen, Vec2 } from '../iso/IsoMath';
 import { IsoMap } from '../world/IsoMap';
 import { GridPoint } from '../systems/Pathfinding';
 
+/** The walk animation's speed at walking pace: 9 frames a second slowed to 7, two steps each four frames. */
+const WALK_CADENCE = 7 / 9;
+
 /**
  * The player lives in grid space (gx, gy in tiles). Every frame it moves,
  * resolves collisions against the map, then syncs its sprites to screen space.
@@ -26,6 +29,10 @@ export class Player {
   pose: 'stand' | 'sit' | 'work' = 'stand';
   /** Creeping along low and slow (hold Ctrl). Only changes how the hero looks; GameScene sets the pace. */
   sneaking = false;
+  /** Counts the hero's footfalls: one each time a foot comes down in the walk animation. */
+  footfalls = 0;
+  /** How fast they're going, as a multiple of walking pace (above 1 sprinting). */
+  private pace = 1;
   /** Screen-pixel nudge for the sprite, for lunges and flinches in a fight. */
   readonly offset = { x: 0, y: 0 };
 
@@ -35,6 +42,11 @@ export class Player {
     this.gy = gy;
     this.shadow = scene.add.image(0, 0, 'shadow');
     this.sprite = scene.add.sprite(0, 0, 'player', 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
+    // The walk is four frames: left foot forward, passing, right foot forward, passing.
+    // A foot lands on the first and third, so that's when a footstep sounds.
+    this.sprite.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
+      if (anim.key.startsWith('player-walk') && frame.index % 2 === 1) this.footfalls++;
+    });
     this.sync(false);
   }
 
@@ -77,6 +89,7 @@ export class Player {
       this.sync(false);
       return false;
     }
+    this.pace = speedMultiplier;
     let dir = input;
     const step = PLAYER_SPEED * speedMultiplier * dt;
     if (input.x !== 0 || input.y !== 0) {
@@ -219,7 +232,8 @@ export class Player {
     // Sneaking: hunched lower, with slow, careful steps.
     const low = this.sneaking && this.pose === 'stand';
     this.sprite.setScale(1, low ? 0.88 : 1);
-    this.sprite.anims.timeScale = low ? 0.6 : 1;
+    // An unhurried walk of about three and a half steps a second, quicker when sprinting.
+    this.sprite.anims.timeScale = low ? 0.5 : WALK_CADENCE * this.pace ** 0.6;
 
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
