@@ -301,13 +301,33 @@ function cupboard(): IsoModel {
   return m;
 }
 
+/**
+ * A barrel: oak staves bellied out in the middle, three iron hoops, and a lid of
+ * boards with a bung. Built from stacked rings so the belly shows.
+ */
 function barrel(cx: number, cy: number, m: IsoModel, h = 26): IsoModel {
-  const staves: Shader = (u, v) => {
-    if (Math.abs(v - 0.2) < 0.05 || Math.abs(v - 0.8) < 0.05) return u < 0.4 ? P.ironLight : P.iron;
-    if ((u * 9) % 1 < 0.1) return P.barkDark;
-    return u < 0.3 ? P.barkLight : u > 0.75 ? P.barkDark : P.bark;
-  };
-  return m.cylinder(cx, cy, 0, 0.3, h, staves, (u, v) => ((u + v) * 8 % 1 < 0.15 ? P.bark : P.barkLight));
+  const rings = 9;
+  const hoops = [0.12, 0.5, 0.88];
+  for (let i = 0; i < rings; i++) {
+    const t0 = i / rings;
+    const t1 = (i + 1) / rings;
+    const r = 0.25 + 0.05 * Math.sin(Math.PI * (t0 + t1) / 2);
+    const hooped = hoops.some((hz) => Math.abs((t0 + t1) / 2 - hz) < 0.5 / rings);
+    m.cylinder(cx, cy, h * t0, r, h / rings + 0.3, (u) => {
+      if (hooped) return u < 0.35 ? P.ironLight : u > 0.75 ? 0x3a3a44 : P.iron;
+      // Staves: a joint every few slices, and each stave a slightly different oak.
+      if (Math.floor(u * 24) % 3 === 0) return P.barkDark;
+      const stave = Math.floor(u * 8);
+      const c = stave % 3 === 0 ? P.barkLight : stave % 3 === 1 ? P.bark : 0x6e4a2e;
+      return u < 0.3 ? P.barkLight : u > 0.75 ? P.barkDark : c;
+    }, P.bark);
+  }
+  return m.cylinder(cx, cy, h, 0.26, 1, () => P.iron, (u, v) => {
+    const d = Math.hypot(u - 0.5, v - 0.5);
+    if (d > 0.42) return P.barkDark;
+    if (Math.hypot(u - 0.62, v - 0.58) < 0.07) return P.barkDark;
+    return (u * 5) % 1 < 0.1 ? P.bark : P.barkLight;
+  });
 }
 
 function barrels(): IsoModel {
