@@ -1611,7 +1611,7 @@ export function cobbModel(pose: Pose3D): Model {
  * head and what's on it just drop. Materials still see the grown-up's
  * coordinates, so their painting (hairlines, belts, patches) lands in the same places.
  */
-function asChild(m: Model, neck = 26, k = 0.68, w = 0.84): Model {
+export function asChild(m: Model, neck = 26, k = 0.68, w = 0.84): Model {
   const drop = neck * (1 - k);
   const solids = m.solids.map((s): Solid => {
     const head = s.cy >= neck;

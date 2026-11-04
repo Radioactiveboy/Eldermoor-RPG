@@ -1312,6 +1312,10 @@ interface FolkLook {
   tired?: boolean;
   /** Mail showing at the neck under the clothes. */
   mail?: boolean;
+  /** Painted first, behind everything (a hood's back). */
+  behind?: (c: PixelCanvas) => void;
+  /** Painted last, over everything, before the outline (a hood's rim, a mask, a hat). */
+  over?: (c: PixelCanvas, f: Frame) => void;
 }
 
 /**
@@ -1327,6 +1331,7 @@ function townsfolk(look: FolkLook): Painter {
     const jaw = look.jaw ?? 7;
     const hairTex = strands((x, y) => (x - CX) * 0.9 + (y - 30) * Math.sign(x - CX) * 0.3, 30, Math.round(look.hair % 97));
     const hairAt = (x: number, y: number, nx: number, ny: number) => tone(hair, lightness(nx * 0.8, ny * 0.8) + hairTex(x, y), x, y);
+    look.behind?.(c);
 
     // Behind the head: long hair down past the shoulders, a bun, curls, a plait.
     if (look.style === 'long') {
@@ -1482,6 +1487,7 @@ function townsfolk(look: FolkLook): Painter {
       c.set(CX - width - 1, EYE_Y + 9, P.gold);
       c.set(CX - width - 1, EYE_Y + 10, 0x9a7430);
     }
+    look.over?.(c, fr);
     finish(c);
   };
 }
@@ -1604,10 +1610,114 @@ const hero: Painter = (c, fr) => {
   finish(c);
 };
 
+// --- Folk met by chance on Adowvale Plains (see world/PlainsEvents.ts) -------------
+
+/** A hood drawn up round the face: its back behind the head, its rim over the brow and down the cheeks. */
+function hood(cloth: number): Pick<FolkLook, 'behind' | 'over'> {
+  const r = ramp(cloth);
+  const outer = (x: number, y: number) => {
+    const dx = x + 0.5 - CX;
+    const half = y < 46 ? 30 * Math.sqrt(Math.max(0, 1 - ((y + 0.5 - 46) / 34) ** 2)) : 30 + (y - 46) * 0.25;
+    return Math.abs(dx) <= half;
+  };
+  return {
+    behind: (c) => {
+      for (let y = 10; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          if (!outer(x, y)) continue;
+          const fold = y > 56 ? Math.sin((x - CX) * 0.4) * 0.07 : 0;
+          c.set(x, y, tone(r, lightness((x - CX) / 34, (y - 44) / 48, -0.02) + fold, x, y));
+        }
+      }
+    },
+    over: (c) => {
+      // The rim: everything inside the hood but outside the face's opening.
+      for (let y = 10; y < 76; y++) {
+        for (let x = 0; x < S; x++) {
+          if (!outer(x, y)) continue;
+          const nx = (x + 0.5 - CX) / 19.5;
+          const ny = (y + 0.5 - 50) / 24;
+          if (nx * nx + ny * ny < 1) continue;
+          const shade = nx * nx + ny * ny < 1.25 ? -0.25 : 0;
+          c.set(x, y, tone(r, lightness((x - CX) / 34, (y - 40) / 40, 0) + shade, x, y));
+        }
+      }
+    },
+  };
+}
+
+/** Rook, a footpad: a hard, narrow face in a dark hood, stubble, and an old scar. */
+const footpad = townsfolk({
+  skin: 0xd8a888, hair: 0x2a2224, style: 'short', cloth: 0x5a4a3a, shirt: 0x4a3e30,
+  iris: 0x4a5a3a, brow: 'stern', smile: 1, width: 15.5, jaw: 6, scar: true, look: -1, beard: 0x4a3e3a,
+  ...hood(0x3a3a44),
+});
+
+/** Nab, Rook's partner: bald and thickset, a red kerchief tied over his nose and mouth, small mean eyes. */
+const cutpurse = townsfolk({
+  skin: 0xe0a07c, hair: 0x5a4232, style: 'bald', cloth: 0x6a5a3e, shirt: P.linen,
+  iris: 0x3a2a20, brow: 'heavy', smile: 0, width: 18.5, jaw: 10, nose: 1, look: 1,
+  over: (c) => {
+    const k = ramp(0xa83a32);
+    const jaw = { skin: ramp(0xe0a07c), width: 18.5, jaw: 10, top: 22, chin: 70 };
+    for (let y = EYE_Y + 5; y < 82; y++) {
+      // Over the face from the bridge of the nose, and a point hanging under the chin.
+      const top = EYE_Y + 5;
+      const half = y < 71 ? (faceHalf(jaw, y) ?? 0) + 1.5 : Math.max(0, 12 - (y - 71) * 1.2);
+      for (let x = CX - 22; x <= CX + 22; x++) {
+        const dx = Math.abs(x + 0.5 - CX);
+        if (dx > half || y < top + (dx / 19) ** 2 * 3) continue;
+        const fold = Math.sin((x - CX) * 0.3 + y * 0.5) * 0.06;
+        c.set(x, y, tone(k, lightness((x - CX) / 22, (y - 58) / 22, 0.05) + fold, x, y));
+      }
+    }
+    // White spots on the red.
+    for (let y = EYE_Y + 8; y < 76; y += 5) for (let x = CX - 15 + ((y / 5) % 2) * 3; x < CX + 16; x += 6) if (c.get(x, y) !== null && Math.abs(x - CX) < (faceHalf(jaw, Math.min(y, 70)) ?? 0)) c.set(x, y, 0xe8dcc8);
+  },
+});
+
+/** Jory the tinker: a ginger beard, a slouched felt cap, a green smock and a broad, cheerful grin. */
+const tinker = townsfolk({
+  skin: 0xecb894, hair: 0xb4582a, style: 'curly', cloth: 0x5a6a3a, shirt: 0x8a6a44, cap: 0x4a4038,
+  iris: 0x4a6a8a, brow: 'arched', smile: 1, width: 18, jaw: 9, beard: 0xb4582a, blush: [0xd8604a, 0.6], freckles: true,
+});
+
+/** Mags, a goatherd girl: freckled and snub-nosed under a wide straw hat, her hair in plaits. */
+const goatherd = townsfolk({
+  skin: 0xecc0a0, hair: 0x6a4428, style: 'braid', cloth: 0x9a4a32, shirt: P.linen,
+  iris: 0x5a7a4a, brow: 'worried', smile: 0, width: 15, jaw: 6, lashes: true, freckles: true, blush: [0xe06a5a, 0.6],
+  over: (c) => {
+    const straw = ramp(0xd8b868);
+    const band = ramp(0x5a7a9a);
+    blob(c, CX, 22, 17, 11, straw, 0.05, (x, y) => ((x + y * 2) % 5 === 0 ? -0.06 : 0), (_x, y) => y < 30);
+    for (let x = CX - 17; x <= CX + 17; x++) for (let y = 26; y < 29; y++) c.set(x, y, tone(band, lightness((x - CX) / 20, 0), x, y));
+    for (let y = 27; y <= 35; y++) {
+      for (let x = CX - 36; x <= CX + 36; x++) {
+        const nx = (x + 0.5 - CX) / 36;
+        const ny = (y + 0.5 - 31) / 4.2;
+        if (nx * nx + ny * ny > 1) continue;
+        c.set(x, y, ny > 0.35 ? straw[1] : tone(straw, lightness(nx, -0.5, 0.05) + ((x * 3 + y) % 7 === 0 ? -0.08 : 0), x, y));
+      }
+    }
+  },
+});
+
+/** Hal, Lord Morten's messenger: a young, tired face, sandy hair under a blue cap with a feather. */
+const courier = townsfolk({
+  skin: 0xe6b896, hair: 0x8a6a3a, style: 'short', cloth: 0x2e4a7a, shirt: P.linen, cap: 0x2e4a7a, feather: 0xf0ece0,
+  iris: 0x5a6a8a, brow: 'worried', smile: 0, width: 16, jaw: 7, tired: true,
+  over: (c) => {
+    // A gold stripe down the tabard.
+    const gold = ramp(P.gold);
+    for (let y = 84; y < S; y++) for (let x = CX - 2; x <= CX + 2; x++) c.set(x, y, tone(gold, lightness((x - CX) / 4, 0), x, y));
+  },
+});
+
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
+  footpad, cutpurse, tinker, goatherd, courier,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */

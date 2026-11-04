@@ -75,6 +75,17 @@ export const SHOPS = {
     buyRate: 0.4,
     keeps: { ale: 3 },
   },
+  // Jory, a travelling tinker met now and then on the Lord's Road (see world/PlainsEvents.ts): odds and ends, and he'll buy most anything, cheaply.
+  tinker: {
+    name: "Jory's Pack",
+    keeper: 'tinker',
+    greeting: "Pots, pans, knives, needles, and a ring I'm fairly sure is silver. Have a rummage.",
+    refuse: "Even I can't sell that, friend.",
+    thanks: ['Clank clank, a pleasure.', "That'll see you right. Or I'll mend it free next time.", 'Done and dusted!'],
+    stock: [['hunting-knife', 1], ['buckler', 1], ['wool-hood', 1], ['walking-staff', 1], ['silver-ring', 1], ['honey-cake', 3], ['cheese', 2], ['mead', 2]],
+    buys: ['Food', 'Material', 'Clothing', 'Tool', 'Weapon', 'Armour'],
+    buyRate: 0.3,
+  },
 } satisfies Record<string, ShopDef>;
 
 export type ShopId = keyof typeof SHOPS;

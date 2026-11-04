@@ -10,11 +10,12 @@ import { fishermanScript } from '../dialogue/fisherman';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
 import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, MAID_CHORES, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
+import { courierScript, footpadScript, goatherdScript, SHAREABLE_FOOD, tinkerScript, Wayfarers } from '../dialogue/wayfarers';
 import { ROOM_COUNT, Tavern } from '../systems/Tavern';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
-import { Inventory } from '../systems/Inventory';
+import { Inventory, itemDef } from '../systems/Inventory';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
 import type { Body, IsoMap } from '../world/IsoMap';
@@ -47,6 +48,12 @@ interface NpcDef {
   talkRange?: number;
   /** Sits where they are (on a stool, say) rather than standing. */
   sits?: boolean;
+  /**
+   * Stays about where they were put (or sent), as one of the bodies that bump
+   * into each other rather than holding a tile: someone met by chance on the
+   * road (see world/PlainsEvents.ts), who may be sent off somewhere with goTo.
+   */
+  loiters?: boolean;
   /**
    * A tavern maid: goes round the room tidying (the map's chores) between orders, and
    * doesn't hover beside the hero while they sit; she comes over when it's time to ask.
@@ -142,6 +149,20 @@ function wolfStage(): WolfStage {
 function herbStage(): HerbStage {
   if (QuestLog.isDone('mother-medicine', 'moonpetal')) return 'picked';
   return QuestLog.hasFlag('may-pick-moonpetal') ? 'asked' : 'none';
+}
+
+/** The first thing in the satchel the hero could hand over to eat, if anything. */
+export function foodToShare(): (typeof SHAREABLE_FOOD)[number] | undefined {
+  return SHAREABLE_FOOD.find((id) => Inventory.count(id) > 0);
+}
+
+/** A chance meeting's conversation: `first` is whether they've met before. */
+function wayfarer(id: string, script: (first: boolean) => DialogueScript): () => DialogueScript {
+  return () => {
+    const first = !met.has(id);
+    met.add(id);
+    return script(first);
+  };
 }
 
 /** The militia grumble about their feet by day; after hours, they tell you the market is shut. */
@@ -267,6 +288,26 @@ const NPCS: Record<string, NpcDef> = {
   ada: { texture: 'folk-ada', sits: true, script: () => adaScript(Inventory.coins) },
   cobb: { texture: 'folk-cobb', sits: true, script: () => COBB },
   pell: { texture: 'folk-pell', script: () => pellScript(Inventory.coins) },
+  // Met by chance out on Adowvale Plains (see world/PlainsEvents.ts).
+  footpad: {
+    texture: 'folk-footpad',
+    loiters: true,
+    script: wayfarer('footpad', (first) => {
+      Wayfarers.toll = Math.ceil(Inventory.coins / 2);
+      return footpadScript(Wayfarers.toll, QuestLog.hasFlag('slew-wolf-mother'), !first);
+    }),
+  },
+  cutpurse: { texture: 'folk-cutpurse', loiters: true, script: () => ({ start: 'nab', nodes: { nab: { speaker: 'cutpurse', lines: ["Don't look at me. Talk to Rook."] } } }) },
+  tinker: { texture: 'folk-tinker', loiters: true, script: wayfarer('tinker', tinkerScript) },
+  goatherd: { texture: 'folk-goatherd', loiters: true, script: wayfarer('goatherd', (first) => goatherdScript(Wayfarers.goat, first)) },
+  courier: {
+    texture: 'folk-courier',
+    loiters: true,
+    script: wayfarer('courier', (first) => {
+      const food = foodToShare();
+      return courierScript(Wayfarers.courierFed, food && itemDef(food).name.toLowerCase(), first);
+    }),
+  },
   // The village militia, walking their rounds of the square, day and night.
   ...Object.fromEntries(
     [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),
@@ -362,7 +403,7 @@ export class Npc implements Body {
       this.facing = Math.floor(Math.random() * 8);
       this.wait = 1 + Math.random() * 3;
       map.bodies.add(this);
-    } else if (def.roam) {
+    } else if (def.roam || def.loiters) {
       this.facing = Math.floor(Math.random() * 8);
       this.wait = 1 + Math.random() * 4;
       map.bodies.add(this);
@@ -427,6 +468,29 @@ export class Npc implements Body {
     this.setVisible(!off, fade);
   }
 
+  /** Gone for good: off the map, out of everyone's way. */
+  destroy(): void {
+    this.map.bodies.delete(this);
+    if (!this.moves) this.map.setOccupied(Math.floor(this.gx), Math.floor(this.gy), false);
+    this.sprite.scene.tweens.killTweensOf([this.sprite, this.shadow]);
+    this.sprite.destroy();
+    this.shadow.destroy();
+  }
+
+  /** Walk off somewhere, then fade away and be gone (see {@link destroy}); `then` runs once they've gone. */
+  leave(to: Vec2, then?: () => void): void {
+    this.goTo(to, () => {
+      this.off = true;
+      this.map.bodies.delete(this);
+      this.speech = undefined;
+      this.setVisible(false, true);
+      this.sprite.scene.time.delayedCall(DOOR_FADE_MS + 50, () => {
+        this.destroy();
+        then?.();
+      });
+    });
+  }
+
   /** Say something out loud, in a bubble over their head, for a few seconds. */
   say(text: string, seconds = 5): void {
     this.speech = text;
@@ -465,7 +529,7 @@ export class Npc implements Body {
 
   /** Walks about (along the road, round the square, or home from the market) rather than standing in one place. */
   private get moves(): boolean {
-    return this.road.length > 0 || !!this.def.roam || this.commuting;
+    return this.road.length > 0 || !!this.def.roam || !!this.def.loiters || this.commuting;
   }
 
   private get commuting(): boolean {
@@ -709,6 +773,12 @@ export class Npc implements Body {
     }
     if (this.def.roam) {
       this.roamSomewhere(this.def.roam);
+      return;
+    }
+    if (this.def.loiters) {
+      // Shift about and look round now and then.
+      if (Math.random() < 0.5) this.facing = Math.floor(Math.random() * 8);
+      this.wait = 2 + Math.random() * 4;
       return;
     }
     const span = this.def.wander ?? 0;

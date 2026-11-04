@@ -32,7 +32,8 @@ export type SpeakerId =
   | 'mother' | 'pedlar' | 'pilgrim' | 'drover' | 'baker' | 'smith' | 'tanner' | 'guard' | 'iran'
   | 'tollguard' | 'carter' | 'herbwife' | 'fisherman' | 'porter' | 'gardener' | 'silent' | 'novice'
   | 'prior' | 'anselm' | 'cook' | 'scribe' | 'leofric'
-  | 'landlord' | 'nell' | 'rosie' | 'harlan' | 'fenwick' | 'sigrun' | 'ada' | 'cobb' | 'pell';
+  | 'landlord' | 'nell' | 'rosie' | 'harlan' | 'fenwick' | 'sigrun' | 'ada' | 'cobb' | 'pell'
+  | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier';
 
 export interface Speaker {
   name: string;
@@ -74,4 +75,10 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   ada: { name: 'Ada', portrait: 'portrait-ada', voice: { pitch: 290, spread: 0.14, wave: 'triangle' } },
   cobb: { name: 'Cobb', portrait: 'portrait-cobb', voice: { pitch: 150, spread: 0.18, wave: 'triangle' } },
   pell: { name: 'Pell the Minstrel', portrait: 'portrait-pell', voice: { pitch: 260, spread: 0.22, wave: 'sine' } },
+  // Met by chance on Adowvale Plains (see world/PlainsEvents.ts).
+  footpad: { name: 'Rook the Footpad', portrait: 'portrait-footpad', voice: { pitch: 150, spread: 0.1, wave: 'sawtooth' } },
+  cutpurse: { name: 'Nab', portrait: 'portrait-cutpurse', voice: { pitch: 120, spread: 0.2, wave: 'square' } },
+  tinker: { name: 'Jory the Tinker', portrait: 'portrait-tinker', voice: { pitch: 200, spread: 0.24, wave: 'triangle' } },
+  goatherd: { name: 'Mags', portrait: 'portrait-goatherd', voice: { pitch: 420, spread: 0.2, wave: 'triangle' } },
+  courier: { name: 'Hal the Messenger', portrait: 'portrait-courier', voice: { pitch: 210, spread: 0.12, wave: 'sine' } },
 };

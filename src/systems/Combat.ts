@@ -556,6 +556,37 @@ export const FOES = {
     packs: true,
     traits: [{ kind: 'rend', damage: 1, turns: 2 }],
   },
-} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean }>;
+  // Footpads who waylay travellers on the Lord's Road (see world/PlainsEvents.ts). They fight together, and run once it goes badly.
+  footpad: {
+    name: 'Footpad',
+    maxHp: 26,
+    ac: 12,
+    toHit: 4,
+    damage: { count: 1, sides: 6, bonus: 2 },
+    quickness: 2,
+    verb: 'swings his cudgel at',
+    xp: 70,
+    packs: true,
+    outlaw: true,
+  },
+  cutpurse: {
+    name: 'Cutpurse',
+    maxHp: 18,
+    ac: 13,
+    toHit: 4,
+    damage: { count: 1, sides: 4, bonus: 2 },
+    quickness: 4,
+    verb: 'slashes his knife at',
+    xp: 50,
+    packs: true,
+    outlaw: true,
+    skittish: 0.06,
+  },
+} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean }>;
+
+/** Footpads and their like: men, not beasts (they swing rather than bite, and only fight beside their own). */
+export function isOutlaw(kind: FoeKind): boolean {
+  return 'outlaw' in FOES[kind];
+}
 
 export type FoeKind = keyof typeof FOES;

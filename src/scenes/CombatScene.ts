@@ -26,6 +26,7 @@ import {
   diceText,
   FoeKind,
   FOES,
+  isOutlaw,
   Outcome,
   RALLY_TO_HIT,
   RollMode,
@@ -142,6 +143,16 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     start: 'The boar squeals, lowers its tusks and charges!',
     banner: 'A boar charges!',
     flee: 'squeals and crashes off into the thicket!',
+  },
+  footpad: {
+    start: 'Rook hefts his cudgel and Nab slides a knife out of his sleeve. They spread out, to come at you from both sides!',
+    banner: 'Footpads!',
+    flee: 'throws down his cudgel and runs for the trees!',
+  },
+  cutpurse: {
+    start: 'Nab slides a knife out of his sleeve and comes at you, low and quick!',
+    banner: 'Footpads!',
+    flee: 'squeals, drops his knife and legs it across the grass!',
   },
 };
 
@@ -274,6 +285,8 @@ export class CombatScene extends Phaser.Scene {
         ? `${FOE_TEXT.wolfmother.start}${this.foes.length > 1 ? ' Her wolves fan out round you.' : ''}`
         : this.foes.length > 1 && first.creature!.kind === 'rat'
         ? FOE_TEXT.rat.start
+        : this.foes.length > 1 && isOutlaw(first.creature!.kind)
+        ? FOE_TEXT.footpad.start
         : this.foes.length > 1
         ? this.world.map.data.underground
           ? 'Eyes shine in the lantern light. Wolves pad out of the dark, hackles raised. You are surrounded!'
@@ -288,7 +301,11 @@ export class CombatScene extends Phaser.Scene {
     for (const f of this.foes) f.creature!.faceTowards(here.x, here.y);
     this.world.player.faceTowards(first.pos().x, first.pos().y);
     this.world.frameFight(this.actors.map((a) => a.pos()));
-    this.banner(mother ? FOE_TEXT.wolfmother.banner : this.foes.length > 1 && first.creature!.kind !== 'rat' ? 'Wolves attack!' : FOE_TEXT[first.creature!.kind].banner);
+    this.banner(
+      mother ? FOE_TEXT.wolfmother.banner
+        : this.foes.length > 1 && first.creature!.kind !== 'rat' && !isOutlaw(first.creature!.kind) ? 'Wolves attack!'
+          : FOE_TEXT[first.creature!.kind].banner,
+    );
     await this.wait(900);
 
     if (!Inventory.equipped.mainHand) {
@@ -443,16 +460,17 @@ export class CombatScene extends Phaser.Scene {
         await this.rollDie(this.hero, r.roll, signed(hero.toHit));
         GameAudio.swing(false);
         await this.lunge(this.hero, foe, false);
-        const sum = `${r.roll} ${signed(hero.toHit)} = ${r.total} against its ${r.resistTotal}${r.steady ? ' (it stands firm, with advantage)' : ''}`;
+        const man = !!foe.creature && isOutlaw(foe.creature.kind);
+        const sum = `${r.roll} ${signed(hero.toHit)} = ${r.total} against ${man ? 'his' : 'its'} ${r.resistTotal}${r.steady ? ' (it stands firm, with advantage)' : ''}`;
         if (r.success) {
           GameAudio.hit(false);
           this.knockDown(foe);
           this.float(foe, 'Prone!', hex(STATUSES.prone.color));
-          this.log(`You shove the ${target.name}: ${sum}. It goes sprawling! Attacks against it roll with advantage.`);
+          this.log(`You shove the ${target.name}: ${sum}. ${man ? 'He' : 'It'} goes sprawling! Attacks against ${man ? 'him' : 'it'} roll with advantage.`);
         } else {
           this.float(foe, 'Holds firm', '#d8c8a4');
           void this.hop(foe.offset, 4, 0);
-          this.log(`You shove the ${target.name}: ${sum}. It keeps its feet.`);
+          this.log(`You shove the ${target.name}: ${sum}. ${man ? 'He keeps his' : 'It keeps its'} feet.`);
         }
         break;
       }
@@ -487,7 +505,7 @@ export class CombatScene extends Phaser.Scene {
     if (action.type === 'stand') {
       this.standUp(foe);
       await this.hop(foe.offset, 0, -4);
-      this.log(`The ${foe.c.name} scrambles back onto its feet.`);
+      this.log(`The ${foe.c.name} scrambles back onto ${isOutlaw(foe.creature!.kind) ? 'his' : 'its'} feet.`);
       return;
     }
     if (action.type === 'attack' && shouldHowl(this.battle, foe.c)) await this.howl(foe);
@@ -495,7 +513,7 @@ export class CombatScene extends Phaser.Scene {
       await this.attack(foe, this.actorOf(action.target));
     } else if (action.type === 'flee') {
       foe.c.fled = true;
-      GameAudio.yelp();
+      if (!isOutlaw(foe.creature!.kind)) GameAudio.yelp();
       this.log(`The ${foe.c.name} ${FOE_TEXT[foe.creature!.kind].flee}`);
       const from = this.hero.pos();
       await foe.creature!.flee(from.x, from.y);
@@ -664,7 +682,8 @@ export class CombatScene extends Phaser.Scene {
     await this.rollDie(attacker, r.roll, signed(r.total - r.roll), r.mode);
     if (attacker.creature) {
       attacker.creature.setFrame(CREATURE_FRAME.bite);
-      GameAudio.bite();
+      if (isOutlaw(attacker.creature.kind)) GameAudio.swing(false);
+      else GameAudio.bite();
     } else {
       GameAudio.swing(!!style.heavy);
     }
@@ -685,7 +704,7 @@ export class CombatScene extends Phaser.Scene {
       this.flash(target);
       this.float(target, r.crit ? `Critical! -${r.damage}` : `-${r.damage}`, r.crit ? '#ffd76a' : '#ff6b5a', r.crit);
       if (target.creature && !r.killed) {
-        GameAudio.yelp();
+        if (!isOutlaw(target.creature.kind)) GameAudio.yelp();
         target.creature.setFrame(CREATURE_FRAME.hurt);
         this.time.delayedCall(350, () => {
           if (target.c.hp > 0 && !target.c.fled && !this.battle.has(target.c, 'prone')) target.creature!.setFrame(CREATURE_FRAME.snarl);
@@ -727,7 +746,7 @@ export class CombatScene extends Phaser.Scene {
   /** Someone has dropped: a beast dies (and the hero earns its experience), or the hero blacks out. */
   private async fall(actor: Actor): Promise<void> {
     if (actor.creature) {
-      GameAudio.yelp();
+      if (!isOutlaw(actor.creature.kind)) GameAudio.yelp();
       actor.offset.y = 0;
       actor.creature.die();
       const xp = FOES[actor.creature.kind].xp;
