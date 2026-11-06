@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE as P } from './palette';
-import { PixelCanvas, seededRandom } from './PixelCanvas';
+import { PixelCanvas } from './PixelCanvas';
+import { boulder, grassTuft, pebbleScatter, toadstools, treeShade, wildFlowers } from './ground';
 import { oakTree, pineTree } from './trees';
 
 /**
@@ -15,6 +16,8 @@ export interface PropArt {
 
 export const TREE_ART: PropArt[] = [];
 export const ROCK_ART: PropArt[] = [];
+/** Apple trees, for orchards (see MapData.orchards). */
+export const APPLE_ART: PropArt[] = [];
 /** Small flat details baked into the ground layer (repeated by how common each is). */
 export const DECOR_KEYS: string[] = [];
 
@@ -23,79 +26,40 @@ function register(list: PropArt[], scene: Phaser.Scene, key: string, c: PixelCan
   list.push({ key, originY: (baseRow + 0.5) / c.height });
 }
 
-/** Dither: scatter darker pixels into shaded areas and lighter ones into lit areas. */
-function texture(c: PixelCanvas, rnd: () => number, pairs: Array<[number, number]>, chance: number): void {
+/** How many steps of lean each tree has for swaying in the wind (see world/Ambience.ts). */
+export const SWAY_STEPS = 2;
+
+/** The texture for a tree leaning `step` pixels downwind (negative for a tree drawn mirrored). */
+export function swayKey(key: string, step: number): string {
+  return step === 0 ? key : `${key}~sway${step}`;
+}
+
+/**
+ * A tree leant over in the wind: the crown moves sideways as one, a whole
+ * pixel at a time so it stays crisp, and the trunk bends over a few rows
+ * below it to follow, staying put where it leaves the ground.
+ */
+function leaning(c: PixelCanvas, by: number, still: number): PixelCanvas {
+  const out = new PixelCanvas(c.width, c.height);
+  const BEND = 7;
   for (let y = 0; y < c.height; y++) {
+    const t = Math.max(0, Math.min(1, (still - y) / BEND));
+    const dx = Math.round(by * t);
     for (let x = 0; x < c.width; x++) {
       const col = c.get(x, y);
-      if (col === null || rnd() > chance) continue;
-      for (const [from, to] of pairs) if (col === from) c.set(x, y, to);
+      if (col !== null) out.set(x + dx, y, col);
     }
   }
+  return out;
 }
 
-function rock(seed: number): PixelCanvas {
-  const c = new PixelCanvas(44, 34);
-  const rnd = seededRandom(seed);
-  const big = seed % 2 === 0;
-  c.ellipse(22, 20, big ? 17 : 14, big ? 12 : 10, P.stone, P.stoneDark, P.stoneLight);
-  c.ellipse(big ? 33 : 10, 25, 7, 5, P.stone, P.stoneDark, P.stoneLight);
-  // Crack and moss cap.
-  for (let i = 0; i < 6; i++) c.set(20 + i, 14 + Math.floor(i / 2), P.stoneDark);
-  for (let x = 12; x < 30; x++) {
-    for (let y = 8; y < 14; y++) if (c.get(x, y) !== null && rnd() < 0.45) c.set(x, y, rnd() < 0.5 ? P.moss : P.leafLight);
+/** `still`: the row of the trunk below which the tree doesn't move. */
+function registerTree(scene: Phaser.Scene, key: string, c: PixelCanvas, baseRow: number, still: number, list = TREE_ART): void {
+  register(list, scene, key, c, baseRow);
+  for (let step = 1; step <= SWAY_STEPS; step++) {
+    leaning(c, step, still).toTexture(scene, swayKey(key, step));
+    leaning(c, -step, still).toTexture(scene, swayKey(key, -step));
   }
-  texture(c, rnd, [[P.stone, P.stoneLight]], 0.06);
-  c.outline();
-  return c;
-}
-
-function flowers(seed: number, petal: number): PixelCanvas {
-  const c = new PixelCanvas(14, 10);
-  const rnd = seededRandom(seed);
-  for (let i = 0; i < 4; i++) {
-    const x = 2 + Math.floor(rnd() * 10);
-    const y = 3 + Math.floor(rnd() * 5);
-    c.set(x, y + 1, P.grassDark);
-    c.set(x, y, petal);
-    c.set(x - 1, y, petal);
-    c.set(x + 1, y, petal);
-    c.set(x, y - 1, petal);
-    c.set(x, y, P.flowerYellow === petal ? P.flowerWhite : P.flowerYellow);
-  }
-  return c;
-}
-
-function tuft(seed: number): PixelCanvas {
-  const c = new PixelCanvas(12, 9);
-  const rnd = seededRandom(seed);
-  for (let i = 0; i < 6; i++) {
-    const x = 2 + i + Math.floor(rnd() * 2);
-    const h = 3 + Math.floor(rnd() * 5);
-    for (let y = 0; y < h; y++) c.set(x + (y > h - 2 ? (i % 2 ? 1 : -1) : 0), 8 - y, y > h - 3 ? P.grassTip : P.leafDark);
-  }
-  return c;
-}
-
-function mushrooms(): PixelCanvas {
-  const c = new PixelCanvas(14, 12);
-  const one = (x: number, y: number, r: number) => {
-    c.rect(x - 1, y, 2, 3, P.linen);
-    c.ellipse(x, y, r, r * 0.6, P.mushroom, 0x8a2a28);
-    c.set(x - 1, y - 1, P.flowerWhite);
-  };
-  one(5, 6, 3.2);
-  one(10, 8, 2.2);
-  c.outline();
-  return c;
-}
-
-function pebbles(): PixelCanvas {
-  const c = new PixelCanvas(12, 7);
-  c.ellipse(4, 4, 2.5, 1.6, P.stoneLight, P.stone);
-  c.ellipse(8, 3, 1.8, 1.2, P.stone, P.stoneDark);
-  c.outline(P.stoneDark);
-  return c;
 }
 
 /** Soft oval shadows for characters and trees. */
@@ -116,28 +80,33 @@ function shadow(w: number, h: number): PixelCanvas {
 export function generateProps(scene: Phaser.Scene): void {
   TREE_ART.length = 0;
   ROCK_ART.length = 0;
+  APPLE_ART.length = 0;
   DECOR_KEYS.length = 0;
 
   // 'prop-tree' / 'prop-rock' stay as the first variants so old code still finds them.
-  // Three broadleaves and three pines, so the woods stay half and half.
-  register(TREE_ART, scene, 'prop-tree', oakTree(11, 0, 0), 86);
-  register(TREE_ART, scene, 'prop-tree-1', oakTree(23, 1, 1), 86);
-  register(TREE_ART, scene, 'prop-tree-2', oakTree(37, 2, 2), 86);
-  register(TREE_ART, scene, 'prop-pine', pineTree(5, 0), 91);
-  register(TREE_ART, scene, 'prop-pine-1', pineTree(9, 1), 91);
-  register(TREE_ART, scene, 'prop-pine-2', pineTree(14, 0), 91);
-  register(ROCK_ART, scene, 'prop-rock', rock(2), 30);
-  register(ROCK_ART, scene, 'prop-rock-1', rock(3), 30);
+  // Three broadleaves and three pines (and a birch), so the woods stay about half and half.
+  registerTree(scene, 'prop-tree', oakTree(11, 0, 0), 86, 74);
+  registerTree(scene, 'prop-tree-1', oakTree(23, 1, 1), 86, 74);
+  registerTree(scene, 'prop-tree-2', oakTree(37, 2, 2), 86, 74);
+  registerTree(scene, 'prop-pine', pineTree(5, 0), 91, 90);
+  registerTree(scene, 'prop-pine-1', pineTree(9, 1), 91, 90);
+  registerTree(scene, 'prop-pine-2', pineTree(14, 0), 91, 90);
+  // Birches, here and there among the others.
+  registerTree(scene, 'prop-birch', oakTree(41, 1, 0, 'birch'), 86, 76);
+  registerTree(scene, 'prop-apple', oakTree(53, 0, 0, 'apple'), 86, 74, APPLE_ART);
+  registerTree(scene, 'prop-apple-1', oakTree(61, 2, 0, 'apple'), 86, 74, APPLE_ART);
+  register(ROCK_ART, scene, 'prop-rock', boulder(2), 30);
+  register(ROCK_ART, scene, 'prop-rock-1', boulder(3), 30);
 
   // [key, art, weight]: higher weight shows up more often.
   const decor: Array<[string, PixelCanvas, number]> = [
-    ['decor-tuft', tuft(4), 4],
-    ['decor-tuft-1', tuft(12), 4],
-    ['decor-flowers-red', flowers(3, P.flowerRed), 2],
-    ['decor-flowers-yellow', flowers(5, P.flowerYellow), 2],
-    ['decor-flowers-blue', flowers(8, P.flowerBlue), 2],
-    ['decor-pebbles', pebbles(), 2],
-    ['decor-mushrooms', mushrooms(), 1],
+    ['decor-tuft', grassTuft(4), 4],
+    ['decor-tuft-1', grassTuft(12), 4],
+    ['decor-flowers-red', wildFlowers(3, P.flowerRed, 0x9a2e36, P.flowerYellow), 2],
+    ['decor-flowers-yellow', wildFlowers(5, P.flowerYellow, 0xc8a030, 0xa86a20), 2],
+    ['decor-flowers-blue', wildFlowers(8, P.flowerBlue, 0x4c66b0, P.flowerWhite), 2],
+    ['decor-pebbles', pebbleScatter(6), 2],
+    ['decor-mushrooms', toadstools(), 1],
   ];
   for (const [key, art, weight] of decor) {
     art.toTexture(scene, key);
@@ -145,5 +114,6 @@ export function generateProps(scene: Phaser.Scene): void {
   }
 
   shadow(28, 10).toTexture(scene, 'shadow');
-  shadow(52, 18).toTexture(scene, 'shadow-large');
+  // Trees throw a leafy, dappled pool of shade rather than a plain oval.
+  treeShade(60, 22, 5).toTexture(scene, 'shadow-large');
 }

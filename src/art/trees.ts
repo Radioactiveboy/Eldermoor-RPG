@@ -12,7 +12,7 @@ import { PixelCanvas, seededRandom } from './PixelCanvas';
  * one shading the tier beneath.
  */
 
-type Ramp = readonly number[];
+export type Ramp = readonly number[];
 
 /** Six steps of leaf, from the shade deep inside the crown to sunlit tips. */
 const OAK_RAMPS: Ramp[] = [
@@ -22,6 +22,12 @@ const OAK_RAMPS: Ramp[] = [
   // A darker, cooler one, like an old elm.
   [0x112420, 0x1b3a2c, 0x2a5638, 0x3d7240, 0x59904a, 0x84b260],
 ];
+/** Birch leaves are small and light, and let the sun through. */
+const BIRCH_LEAF: Ramp = [0x223a20, 0x365c2a, 0x548636, 0x76a442, 0x9cc455, 0xc8e07a];
+const APPLE_LEAF: Ramp = [0x18301e, 0x284a28, 0x3c6a32, 0x56883a, 0x76a448, 0xa2c460];
+/** Birch bark: chalk white, greying into the shade. */
+const BIRCH_BARK: Ramp = [0x3a3632, 0x6e6860, 0xa8a196, 0xcbc5b8, 0xe6e1d6, 0xf7f4ec];
+const APPLE: Ramp = [0x5a1418, 0x8e2224, 0xc0362e, 0xe0603e, 0xf4a070];
 const PINE_RAMPS: Ramp[] = [
   [0x0b1c16, 0x132f24, 0x1d4630, 0x295f3a, 0x3c7a45, 0x5c9a58],
   // Blue-green spruce.
@@ -31,7 +37,7 @@ const BARK: Ramp = [0x22150f, 0x352217, 0x4f3321, 0x6c4a2f, 0x8c6640, 0xa8835a];
 const MOSS = 0x56703a;
 
 /** Smooth value noise in 0..1, stable for a seed. */
-function noise2(seed: number): (x: number, y: number) => number {
+export function noise2(seed: number): (x: number, y: number) => number {
   const hash = (ix: number, iy: number) => {
     let h = (ix * 374761393 + iy * 668265263 + seed * 2147483647) | 0;
     h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -54,7 +60,7 @@ function noise2(seed: number): (x: number, y: number) => number {
  * A brightness buffer the size of the picture. `owner` says which part
  * (clump, tier, trunk) covers each pixel; parts drawn later stand in front.
  */
-class LightBuffer {
+export class LightBuffer {
   readonly owner: Int16Array;
   readonly value: Float32Array;
   constructor(readonly w: number, readonly h: number) {
@@ -115,7 +121,7 @@ class LightBuffer {
 }
 
 /** One step brighter or darker on the ramp a pixel's colour came from. */
-function nudge(c: PixelCanvas, x: number, y: number, ramp: Ramp, by: number): void {
+export function nudge(c: PixelCanvas, x: number, y: number, ramp: Ramp, by: number): void {
   const col = c.get(x, y);
   if (col === null) return;
   const i = ramp.indexOf(col);
@@ -185,12 +191,16 @@ interface Clump {
   r: number;
 }
 
+export type Broadleaf = 'oak' | 'apple' | 'birch';
+
 /**
- * A broadleaf tree, oak-like: a stout, slightly bent trunk forking into
- * limbs, under a round crown built up of leafy clumps. `shape` picks the
- * crown: 0 round, 1 tall, 2 broad and spreading.
+ * A broadleaf tree: a slightly bent trunk forking into limbs, under a crown
+ * built up of leafy clumps. For an oak, `shape` picks the crown (0 round,
+ * 1 tall, 2 broad and spreading) and `rampIndex` its greens. An apple tree
+ * is low and broad, hung with red apples; a birch is slim and white-barked,
+ * with a narrow, airy crown.
  */
-export function oakTree(seed: number, shape: 0 | 1 | 2, rampIndex: number): PixelCanvas {
+export function oakTree(seed: number, shape: 0 | 1 | 2, rampIndex: number, kind: Broadleaf = 'oak'): PixelCanvas {
   const W = 64;
   const H = 90;
   const BASE = 86;
@@ -198,7 +208,8 @@ export function oakTree(seed: number, shape: 0 | 1 | 2, rampIndex: number): Pixe
   const c = new PixelCanvas(W, H);
   const rnd = seededRandom(seed);
   const leafNoise = noise2(seed);
-  const leaf = OAK_RAMPS[rampIndex % OAK_RAMPS.length];
+  const leaf = kind === 'birch' ? BIRCH_LEAF : kind === 'apple' ? APPLE_LEAF : OAK_RAMPS[rampIndex % OAK_RAMPS.length];
+  const bark = kind === 'birch' ? BIRCH_BARK : BARK;
   const buf = new LightBuffer(W, H);
   const TRUNK = 0;
   const LIMB = 1;
@@ -210,15 +221,18 @@ export function oakTree(seed: number, shape: 0 | 1 | 2, rampIndex: number): Pixe
     { cx: CX, cy: 34, rx: 21, ry: 29 },
     { cx: CX, cy: 39, rx: 28, ry: 22 },
   ][shape];
+  if (kind === 'birch') Object.assign(crown, { cy: 34, rx: 16, ry: 28 });
+  if (kind === 'apple') Object.assign(crown, { cy: 43, rx: 26, ry: 20 });
   const crownBottom = crown.cy + crown.ry;
 
   // Trunk and limbs, drawn first so the leaves cover most of them.
   const bend = rnd() < 0.5 ? -2.5 : 2.5;
-  trunk(buf, TRUNK, CX + 1, BASE, crownBottom - 14, 5.2, 2.8, bend, rnd);
+  if (kind === 'birch') trunk(buf, TRUNK, CX + 1, BASE, crownBottom - 18, 3.2, 1.8, bend * 0.6, rnd);
+  else trunk(buf, TRUNK, CX + 1, BASE, crownBottom - 14, 5.2, 2.8, bend, rnd);
   const forkY = crownBottom - 8;
   // A low bough reaching out from the trunk below the leaves.
   const side = bend > 0 ? -1 : 1;
-  limb(buf, LIMB, CX + 1, crownBottom + 7, CX + 1 + side * 11, crownBottom - 3, 2, 1.1);
+  if (kind !== 'birch') limb(buf, LIMB, CX + 1, crownBottom + 7, CX + 1 + side * 11, crownBottom - 3, 2, 1.1);
   limb(buf, LIMB, CX + 1, forkY, CX - crown.rx * 0.55, crown.cy + 2, 2.6, 1.2);
   limb(buf, LIMB, CX + 1, forkY, CX + crown.rx * 0.5, crown.cy - 2, 2.4, 1.1);
   limb(buf, LIMB, CX + 1, forkY - 2, CX - 2, crown.cy - crown.ry * 0.5, 2.2, 1);
@@ -235,8 +249,14 @@ export function oakTree(seed: number, shape: 0 | 1 | 2, rampIndex: number): Pixe
       });
     }
   };
-  ring(6, 0.6, 0.6, -3, crown.rx * 0.4);
-  ring(4, 0.3, 0.28, 0, crown.rx * 0.42);
+  if (kind === 'birch') {
+    // Many small clumps, loosely spaced, so the crown is airy.
+    ring(7, 0.66, 0.72, -2, crown.rx * 0.34);
+    ring(4, 0.3, 0.38, 0, crown.rx * 0.36);
+  } else {
+    ring(6, 0.6, 0.6, -3, crown.rx * 0.4);
+    ring(4, 0.3, 0.28, 0, crown.rx * 0.42);
+  }
   // Front clumps hang lowest and are drawn last.
   const front = shape === 2 ? 4 : 3;
   for (let i = 0; i < front; i++) {
@@ -295,7 +315,9 @@ export function oakTree(seed: number, shape: 0 | 1 | 2, rampIndex: number): Pixe
     }
   }
 
-  buf.paint(c, (o) => (o >= FIRST_CLUMP ? leaf : BARK), 0.06);
+  // Birch bark is pale enough to stay light even on its shady side.
+  if (kind === 'birch') for (let i = 0; i < buf.value.length; i++) if (buf.owner[i] === TRUNK || buf.owner[i] === LIMB) buf.value[i] += 0.2;
+  buf.paint(c, (o) => (o >= FIRST_CLUMP ? leaf : bark), 0.06);
 
   // Sunlit leaf sprigs on the lit faces and a few dark ones in the shade, two pixels each.
   for (let y = 1; y < H; y++) {
@@ -320,8 +342,45 @@ export function oakTree(seed: number, shape: 0 | 1 | 2, rampIndex: number): Pixe
       if (open && buf.value[y * W + x] > 0.42) nudge(c, x, y, leaf, 1);
     }
   }
-  // A little moss on the shady side of the roots.
-  for (let y = BASE - 7; y <= BASE; y++) {
+  if (kind === 'birch') {
+    // The black marks across birch bark, and dark, cracked bark at the foot.
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const o = buf.ownerAt(x, y);
+        if (o !== TRUNK && o !== LIMB) continue;
+        if (y > BASE - 5) nudge(c, x, y, bark, -2);
+        else if (o === TRUNK && y % 3 === 0 && buf.ownerAt(x - 1, y) !== TRUNK && rnd() < 0.9) {
+          // A dash across part of the trunk, from one edge or the other.
+          const len = 3 + Math.floor(rnd() * 3);
+          const fromRight = rnd() < 0.5;
+          let end = x;
+          while (buf.ownerAt(end + 1, y) === TRUNK) end++;
+          for (let i = 0; i < len; i++) c.set(fromRight ? end - i : x + i, y, i === len - 1 ? bark[1] : bark[0]);
+        }
+      }
+    }
+  }
+  if (kind === 'apple') {
+    // Apples hanging all over the crown: most on its sunny face and along the rim, a few deep in the shade.
+    const apples: Array<[number, number]> = [];
+    for (let tries = 0; tries < 400 && apples.length < 16; tries++) {
+      const x = Math.round(crown.cx + (rnd() - 0.5) * crown.rx * 1.8);
+      const y = Math.round(crown.cy + (rnd() - 0.4) * crown.ry * 1.6);
+      if (buf.ownerAt(x, y) < FIRST_CLUMP || buf.ownerAt(x + 1, y + 1) < FIRST_CLUMP) continue;
+      if (apples.some(([ax, ay]) => Math.abs(ax - x) < 4 && Math.abs(ay - y) < 4)) continue;
+      apples.push([x, y]);
+    }
+    for (const [x, y] of apples) {
+      const lit = buf.value[y * W + x] > 0.4 ? 1 : 0;
+      c.set(x, y, APPLE[2 + lit]);
+      c.set(x + 1, y, APPLE[1 + lit]);
+      c.set(x, y + 1, APPLE[1 + lit]);
+      c.set(x + 1, y + 1, APPLE[0 + lit]);
+      if (lit) c.set(x, y, APPLE[4]);
+    }
+  }
+  // A little moss on the shady side of an oak's roots.
+  if (kind !== 'birch') for (let y = BASE - 7; y <= BASE; y++) {
     for (let x = CX; x < W; x++) {
       if (buf.ownerAt(x, y) === TRUNK && buf.ownerAt(x + 1, y) !== TRUNK && rnd() < 0.6) c.set(x, y, MOSS);
     }

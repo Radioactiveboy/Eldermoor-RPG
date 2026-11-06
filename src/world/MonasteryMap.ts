@@ -137,6 +137,8 @@ export function buildMonasteryMap(open = false): MapData {
     spawn: entry,
     music: 'monastery',
     decor: 0.38,
+    // Behind the wall, the brothers' orchard.
+    orchards: [{ x0: 0, y0: 0, x1: W, y1: WALL_Y }],
     entries: { plains: entry, gate: { x: GATE_X + 2, y: WALL_Y + 1.6 } },
     doors: [],
     npcs: [],

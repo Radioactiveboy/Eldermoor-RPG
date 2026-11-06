@@ -281,6 +281,8 @@ export interface MapData {
   musings?: Musing[];
   /** How much of the grass has flowers, tufts and pebbles on it (0..1; 0.22 if not given). */
   decor?: number;
+  /** Tile rectangles (x0, y0 inclusive; x1, y1 exclusive) where the trees are apple trees. */
+  orchards?: Array<{ x0: number; y0: number; x1: number; y1: number }>;
   /** Road tiles in order from one end to the other, for travellers to wander along. */
   road?: Array<{ x: number; y: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
