@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
+import { oakTree, pineTree } from './trees';
 
 /**
  * Standing props (trees, rocks) and flat ground decorations (flowers, tufts).
@@ -31,83 +32,6 @@ function texture(c: PixelCanvas, rnd: () => number, pairs: Array<[number, number
       for (const [from, to] of pairs) if (col === from) c.set(x, y, to);
     }
   }
-}
-
-function oak(seed: number): PixelCanvas {
-  const W = 64;
-  const H = 90;
-  const c = new PixelCanvas(W, H);
-  const rnd = seededRandom(seed);
-  const j = () => Math.round((rnd() - 0.5) * 6);
-
-  // Trunk with flared roots.
-  c.shadedRect(28, 54, 9, 32, P.bark, P.barkDark, P.barkLight);
-  c.shadedRect(25, 82, 15, 4, P.bark, P.barkDark, P.barkLight);
-  c.rect(23, 85, 4, 2, P.bark);
-  c.rect(38, 85, 4, 2, P.barkDark);
-  for (let y = 58; y < 84; y += 5) c.set(31 + (y % 3), y, P.barkDark);
-  // A low branch poking out.
-  c.rect(37, 62, 6, 3, P.bark);
-  c.rect(42, 59, 3, 4, P.bark);
-
-  // Canopy: back clumps first, front clumps last, each shaded on its own.
-  const clumps: Array<[number, number, number, number]> = [
-    [32 + j(), 14, 12, 10],
-    [20 + j(), 22, 12, 11],
-    [44 + j(), 22, 12, 11],
-    [32, 30, 20, 16],
-    [14, 38 + j(), 11, 10],
-    [50, 38 + j(), 11, 10],
-    [24 + j(), 44, 13, 10],
-    [42 + j(), 45, 13, 10],
-  ];
-  for (const [x, y, rx, ry] of clumps) c.ellipse(x, y, rx, ry, P.leaf, P.leafDark, P.leafLight);
-  texture(c, rnd, [[P.leafDark, P.leafDeep], [P.leafLight, P.leafGlow], [P.leaf, P.leafLight]], 0.12);
-  // Shadow cast by the canopy onto the trunk.
-  for (let x = 28; x < 37; x++) if (c.get(x, 55) === P.bark || c.get(x, 55) === P.barkLight) c.set(x, 55, P.barkDark);
-  c.outline();
-  return c;
-}
-
-function pine(seed: number): PixelCanvas {
-  const W = 52;
-  const H = 96;
-  const c = new PixelCanvas(W, H);
-  const rnd = seededRandom(seed);
-  const cx = 26;
-
-  c.shadedRect(23, 70, 7, 22, P.bark, P.barkDark, P.barkLight);
-  c.rect(21, 89, 11, 3, P.barkDark);
-
-  // Four tiers, widest at the bottom, each with a ragged lower edge.
-  const tiers: Array<[number, number, number]> = [
-    [4, 28, 9],
-    [16, 46, 15],
-    [32, 64, 20],
-    [48, 80, 24],
-  ];
-  for (const [top, bottom, half] of tiers) {
-    for (let y = top; y <= bottom; y++) {
-      const t = (y - top) / (bottom - top);
-      const w = Math.max(1, Math.round(half * t + 1));
-      for (let x = cx - w; x <= cx + w; x++) {
-        const rel = (x - cx) / w;
-        let col: number = P.pine;
-        if (rel > 0.25) col = P.pineDark;
-        else if (rel < -0.55 && t > 0.2) col = P.pineLight;
-        c.set(x, y, col);
-      }
-    }
-    for (let x = cx - half; x <= cx + half; x += 2) {
-      const drop = 1 + Math.floor(rnd() * 3);
-      for (let d = 1; d <= drop; d++) c.set(x, bottom + d, x > cx + 4 ? P.pineDark : P.pine);
-    }
-  }
-  texture(c, rnd, [[P.pine, P.pineLight], [P.pineDark, P.pineDark]], 0.1);
-  c.set(cx, 2, P.pine);
-  c.set(cx, 3, P.pine);
-  c.outline();
-  return c;
 }
 
 function rock(seed: number): PixelCanvas {
@@ -195,10 +119,13 @@ export function generateProps(scene: Phaser.Scene): void {
   DECOR_KEYS.length = 0;
 
   // 'prop-tree' / 'prop-rock' stay as the first variants so old code still finds them.
-  register(TREE_ART, scene, 'prop-tree', oak(11), 86);
-  register(TREE_ART, scene, 'prop-tree-1', oak(23), 86);
-  register(TREE_ART, scene, 'prop-pine', pine(5), 91);
-  register(TREE_ART, scene, 'prop-pine-1', pine(9), 91);
+  // Three broadleaves and three pines, so the woods stay half and half.
+  register(TREE_ART, scene, 'prop-tree', oakTree(11, 0, 0), 86);
+  register(TREE_ART, scene, 'prop-tree-1', oakTree(23, 1, 1), 86);
+  register(TREE_ART, scene, 'prop-tree-2', oakTree(37, 2, 2), 86);
+  register(TREE_ART, scene, 'prop-pine', pineTree(5, 0), 91);
+  register(TREE_ART, scene, 'prop-pine-1', pineTree(9, 1), 91);
+  register(TREE_ART, scene, 'prop-pine-2', pineTree(14, 0), 91);
   register(ROCK_ART, scene, 'prop-rock', rock(2), 30);
   register(ROCK_ART, scene, 'prop-rock-1', rock(3), 30);
 
