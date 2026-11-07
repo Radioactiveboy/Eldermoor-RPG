@@ -49,6 +49,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   is saved. **Continue** on the title screen, or **Load Last Save** in the pause menu,
   brings you back to that moment. Any bed added to a map (`MapData.beds`) is another save point
 - **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, back to main menu)
+- **Settings → Resolution**: native, 75% or 50% of the screen's own resolution (lower is faster on slow machines). **Interface size**: Auto (bigger on large monitors, e.g. 150% at 2560×1440) or 75% to 200%
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
@@ -186,12 +187,13 @@ src/
   public/audio/ambience/  The ambient recordings (MP3) and CREDITS.md with their sources and licences
   tools/build-ambience.py Cuts, loops and levels those recordings from the originals
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
-  settings/Settings.ts    Volume settings, saved in the browser
+  settings/Settings.ts    Volume and display settings, saved in the browser
+  ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
   scenes/BootScene.ts     Generates the art, repaints the hero when gear changes, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
-  scenes/SettingsScene.ts Volume sliders + fullscreen, opened from either menu
+  scenes/SettingsScene.ts Volume sliders, resolution, interface size and fullscreen, opened from either menu
   scenes/GameScene.ts     World, camera, input, doors between areas, talking
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning

@@ -1,3 +1,4 @@
+import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
@@ -663,7 +664,7 @@ export class CombatScene extends Phaser.Scene {
     arrow.fillTriangle(-12, -16, 12, -16, 0, 0).strokeTriangle(-12, -16, 12, -16, 0, 0);
     const bob = this.tweens.add({ targets: arrow, scale: { from: 1, to: 0.8 }, duration: 300, yoyo: true, repeat: -1 });
     const labels: Phaser.GameObjects.Text[] = [];
-    const zoom = this.world.cameras.main.zoom;
+    const zoom = this.world.cameras.main.zoom / Display.zoom;
     foes.forEach((f, i) => {
       const actor = this.actorOf(f);
       const head = this.headOf(actor);
@@ -1500,8 +1501,8 @@ export class CombatScene extends Phaser.Scene {
   private headOf(actor: Actor): Vec2 {
     const cam = this.world.cameras.main;
     return {
-      x: (actor.sprite.x - cam.worldView.x) * cam.zoom,
-      y: (actor.sprite.y - actor.height - cam.worldView.y) * cam.zoom - 10,
+      x: (actor.sprite.x - cam.worldView.x) * (cam.zoom / Display.zoom),
+      y: (actor.sprite.y - actor.height - cam.worldView.y) * (cam.zoom / Display.zoom) - 10,
     };
   }
 

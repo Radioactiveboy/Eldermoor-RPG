@@ -1,3 +1,4 @@
+import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { itemScale } from '../art/items';
 import { GameAudio } from '../audio/Audio';
@@ -141,8 +142,8 @@ export class UIScene extends Phaser.Scene {
     if (e.type !== 'added' && e.type !== 'rewarded') return;
     const cam = this.world.cameras.main;
     const sprite = this.world.player.sprite;
-    const x = (sprite.x - cam.worldView.x) * cam.zoom;
-    const y = (sprite.y - cam.worldView.y) * cam.zoom - 48 * cam.zoom;
+    const x = (sprite.x - cam.worldView.x) * (cam.zoom / Display.zoom);
+    const y = (sprite.y - cam.worldView.y) * (cam.zoom / Display.zoom) - 48 * (cam.zoom / Display.zoom);
     const [iconKey, label] = e.type === 'added' ? [itemDef(e.id).icon, `+${e.count} ${itemDef(e.id).name}`] : ['item-coin', `+${e.coins} coins`];
     const icon = this.add.image(0, 0, iconKey).setScale(itemScale(2)).setOrigin(1, 0.5);
     const text = this.add
@@ -163,9 +164,9 @@ export class UIScene extends Phaser.Scene {
     if (this.world.inCombat || !this.world.player) return;
     const cam = this.world.cameras.main;
     const sprite = this.world.player.sprite;
-    const x = (sprite.x - cam.worldView.x) * cam.zoom;
+    const x = (sprite.x - cam.worldView.x) * (cam.zoom / Display.zoom);
     // A little above where "+1 Carrot" pops, so a reward and its XP don't sit on top of each other.
-    const y = (sprite.y - cam.worldView.y) * cam.zoom - 48 * cam.zoom - 22;
+    const y = (sprite.y - cam.worldView.y) * (cam.zoom / Display.zoom) - 48 * (cam.zoom / Display.zoom) - 22;
     const pop = this.add
       .text(Math.round(x), Math.round(y), `+${e.amount} XP`, {
         fontFamily: UI_FONT, fontSize: '13px', color: '#f2d27a', stroke: '#000000', strokeThickness: 3, fontStyle: 'bold',
@@ -201,9 +202,9 @@ export class UIScene extends Phaser.Scene {
     const underground = !!game.map.data.underground;
     const ambient = underground ? UNDERGROUND : indoor ? this.indoorAmbient(outdoor) : outdoor;
     const sprite = game.player.sprite;
-    const toScreen = (x: number, y: number) => ({ x: (x - cam.worldView.x) * cam.zoom, y: (y - cam.worldView.y) * cam.zoom });
+    const toScreen = (x: number, y: number) => ({ x: (x - cam.worldView.x) * (cam.zoom / Display.zoom), y: (y - cam.worldView.y) * (cam.zoom / Display.zoom) });
     const lantern = indoor && !underground ? null : toScreen(sprite.x, sprite.y - 20);
-    this.lighting.update(ambient, lantern, cam.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)));
+    this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)));
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock);
     this.minimap!.update(sprite, cam.worldView, outdoor.color);
@@ -338,7 +339,7 @@ export class UIScene extends Phaser.Scene {
     this.progressLabel.setVisible(!!c);
     if (!c) return;
     const sprite = this.world.player.sprite;
-    const zoom = this.world.cameras.main.zoom;
+    const zoom = this.world.cameras.main.zoom / Display.zoom;
     const p = toScreen(sprite.x, sprite.y);
     const w = 64;
     const h = 9;

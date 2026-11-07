@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Display } from '../ui/Display';
 import { GameAudio } from '../audio/Audio';
 import { MAP_HEIGHT, MAP_SEED, MAP_WIDTH } from '../config';
 import { IsoMap } from '../world/IsoMap';
@@ -27,11 +28,16 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     this.leaving = false;
+    // The drifting map is drawn at the screen's resolution; the menu on top in interface pixels (see ui/Display).
+    Display.worldCameras.add(this.cameras.main);
+    Display.fitCameras(this, [this.cameras.main]);
+    this.cameras.main.setOrigin(0.5);
     this.buildBackdrop();
     const backdrop = [...this.children.list];
     this.buildOverlay();
     this.buildUi();
-    this.uiCam = this.cameras.add(0, 0, this.scale.width, this.scale.height);
+    this.uiCam = this.cameras.add(0, 0, this.game.scale.width, this.game.scale.height);
+    Display.fitCameras(this, [this.uiCam]);
     this.uiCam.ignore(backdrop);
     this.cameras.main.ignore([this.veil, this.fireflies, this.ui]);
     this.layout();
@@ -126,8 +132,8 @@ export class MainMenuScene extends Phaser.Scene {
 
   private layout(): void {
     const { width, height } = this.scale;
-    this.cameras.main.setSize(width, height);
-    this.uiCam.setSize(width, height);
+    this.cameras.main.setSize(this.game.scale.width, this.game.scale.height);
+    this.uiCam.setSize(this.game.scale.width, this.game.scale.height);
     this.veil.clear();
     this.veil.fillStyle(0x07060b, 0.55);
     this.veil.fillRect(0, 0, width, height);

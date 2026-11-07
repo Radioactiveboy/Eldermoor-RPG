@@ -1,3 +1,4 @@
+import { Display } from './Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 
@@ -117,7 +118,7 @@ export function makeSlider(
   const hit = scene.add.zone(0, 0, width + 24, 34).setInteractive({ useHandCursor: true, draggable: true });
   container.add(hit);
   const fromPointer = (p: Phaser.Input.Pointer) => {
-    const local = container.getWorldTransformMatrix().applyInverse(p.x, p.y);
+    const local = container.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
     set((local.x + width / 2) / width, true);
   };
   hit.on('pointerdown', fromPointer);

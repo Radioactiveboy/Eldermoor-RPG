@@ -1,3 +1,4 @@
+import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { itemScale } from '../art/items';
 import { STATION_H, STATION_POINTS, STATION_RES } from '../art/stations';
@@ -125,7 +126,7 @@ export class StationScene extends Phaser.Scene {
     this.dim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.6).setOrigin(0).setInteractive();
     this.dim.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (this.drag || this.work || this.popup) return;
-      const local = this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
+      const local = this.window.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
       if (Math.abs(local.x) > PANEL_W / 2 + 10 || Math.abs(local.y) > PANEL_H / 2 + 10) this.close();
     });
 
@@ -279,7 +280,7 @@ export class StationScene extends Phaser.Scene {
           this.showHover(`All your ${itemDef(stack.id).name.toLowerCase()} is in the ${this.alchemy ? 'still' : 'pot'} already.`);
           return;
         }
-        this.drag = { from: { bag: i }, id: stack.id, startX: p.x, startY: p.y };
+        this.drag = { from: { bag: i }, id: stack.id, startX: Display.point(p).x, startY: Display.point(p).y };
       });
       this.content.add(hit);
     }
@@ -445,7 +446,7 @@ export class StationScene extends Phaser.Scene {
     hit.on('pointerout', () => this.showHover(undefined));
     hit.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.work || this.popup) return;
-      this.drag = { from: { slot: i }, id, startX: p.x, startY: p.y };
+      this.drag = { from: { slot: i }, id, startX: Display.point(p).x, startY: Display.point(p).y };
     });
     this.content.add(hit);
   }
@@ -781,12 +782,12 @@ export class StationScene extends Phaser.Scene {
     const d = this.drag;
     if (!d || !p.isDown) return;
     if (!d.ghost) {
-      if (Math.hypot(p.x - d.startX, p.y - d.startY) < DRAG_START) return;
-      d.ghost = this.add.image(p.x, p.y, itemDef(d.id).icon).setScale(itemScale(2.8 * this.window.scale)).setAlpha(0.9).setDepth(50);
+      if (Math.hypot(Display.point(p).x - d.startX, Display.point(p).y - d.startY) < DRAG_START) return;
+      d.ghost = this.add.image(Display.point(p).x, Display.point(p).y, itemDef(d.id).icon).setScale(itemScale(2.8 * this.window.scale)).setAlpha(0.9).setDepth(50);
       this.tweens.add({ targets: d.ghost, scale: d.ghost.scale * 1.15, duration: 120, yoyo: true });
       GameAudio.hover();
     }
-    d.ghost.setPosition(p.x, p.y);
+    d.ghost.setPosition(Display.point(p).x, Display.point(p).y);
     const local = this.local(p);
     const over = this.slotAt(local.x, local.y);
     this.slotGlow.forEach((glow, i) => glow('bag' in d.from && (over === i || (over === undefined && this.workRect.contains(local.x, local.y) && i === this.slots.indexOf(undefined)))));
@@ -827,7 +828,7 @@ export class StationScene extends Phaser.Scene {
   }
 
   private local(p: Phaser.Input.Pointer): Phaser.Math.Vector2 {
-    return this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
+    return this.window.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
   }
 
   private slotAt(x: number, y: number): number | undefined {

@@ -1,3 +1,4 @@
+import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { itemScale } from '../art/items';
 import { GameAudio } from '../audio/Audio';
@@ -101,7 +102,7 @@ export class ShopScene extends Phaser.Scene {
     this.dim.on('pointerup', (p: Phaser.Input.Pointer) => {
       // Clicking outside the window closes it (but not letting go of something dragged out there).
       if (this.drag || this.picker) return;
-      const local = this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
+      const local = this.window.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
       if (Math.abs(local.x) > this.panelW / 2 + 10 || Math.abs(local.y) > this.panelH / 2 + 10) this.close();
     });
 
@@ -316,7 +317,7 @@ export class ShopScene extends Phaser.Scene {
     hit.on('pointerout', () => draw(false));
     hit.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.picker) return;
-      this.drag = { side, id: entry.id, count: entry.count, startX: p.x, startY: p.y };
+      this.drag = { side, id: entry.id, count: entry.count, startX: Display.point(p).x, startY: Display.point(p).y };
     });
     this.content.add(hit);
   }
@@ -387,11 +388,11 @@ export class ShopScene extends Phaser.Scene {
     const d = this.drag;
     if (!d || !p.isDown) return;
     if (!d.ghost) {
-      if (Math.hypot(p.x - d.startX, p.y - d.startY) < DRAG_START) return;
-      d.ghost = this.add.image(p.x, p.y, itemDef(d.id).icon).setScale(itemScale(2.6 * this.window.scale)).setAlpha(0.9).setDepth(50);
+      if (Math.hypot(Display.point(p).x - d.startX, Display.point(p).y - d.startY) < DRAG_START) return;
+      d.ghost = this.add.image(Display.point(p).x, Display.point(p).y, itemDef(d.id).icon).setScale(itemScale(2.6 * this.window.scale)).setAlpha(0.9).setDepth(50);
       this.tweens.add({ targets: d.ghost, scale: d.ghost.scale * 1.15, duration: 120, yoyo: true });
     }
-    d.ghost.setPosition(p.x, p.y);
+    d.ghost.setPosition(Display.point(p).x, Display.point(p).y);
     const over = this.gridAt(p);
     const target: Side = d.side === 'shop' ? 'bag' : 'shop';
     this.gridGlow[target]?.(over === target);
@@ -421,7 +422,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private gridAt(p: Phaser.Input.Pointer): Side | undefined {
-    const local = this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
+    const local = this.window.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
     if (this.grids.shop.contains(local.x, local.y)) return 'shop';
     if (this.grids.bag.contains(local.x, local.y)) return 'bag';
     return undefined;
@@ -552,7 +553,7 @@ export class ShopScene extends Phaser.Scene {
     const hi = this.add.text(barX + barW, barY + 18, `${pk.max}`, bodyStyle(12, THEME.dimText)).setOrigin(0.5, 0);
     const track = this.add.zone(barX + barW / 2, barY, barW + 28, 34).setInteractive({ useHandCursor: true, draggable: true });
     const fromPointer = (p: Phaser.Input.Pointer) => {
-      const local = this.pickerUi!.getWorldTransformMatrix().applyInverse(p.x, p.y);
+      const local = this.pickerUi!.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
       const f = Phaser.Math.Clamp((local.x - barX) / barW, 0, 1);
       this.setQty(1 + Math.round(f * (pk.max - 1)));
     };

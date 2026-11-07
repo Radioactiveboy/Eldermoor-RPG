@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Display } from '../ui/Display';
 import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SNEAK, SPRINT_MULTIPLIER, SPRINT_NOTICE } from '../config';
 import { Child, Siblings } from '../entities/Child';
@@ -2430,7 +2431,8 @@ export class GameScene extends Phaser.Scene {
   private setupCamera(): void {
     const cam = this.cameras.main;
     // Pixel art looks best zoomed in, but phones need to see more of the map.
-    cam.setZoom(Phaser.Math.Clamp(this.scale.width / 640, 1, CAMERA_ZOOM.default));
+    cam.setZoom(Phaser.Math.Clamp(Display.page.width / 640, 1, CAMERA_ZOOM.default) * Display.render);
+    // (The camera works in canvas pixels, so its zoom includes the screen's pixel density; see ui/Display.)
     cam.setBackgroundColor(this.map.backgroundColor);
     cam.roundPixels = true;
     this.fitCamera();
@@ -2471,7 +2473,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       if (this.busy) return;
       const cam = this.cameras.main;
-      cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), CAMERA_ZOOM.min, CAMERA_ZOOM.max));
+      cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), CAMERA_ZOOM.min * Display.render, CAMERA_ZOOM.max * Display.render));
       this.fitCamera();
     });
 
