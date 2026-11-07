@@ -78,7 +78,7 @@ function hideAway(data: MapData): void {
     hearth.anim = undefined;
   }
   data.lights = [{ gx: 3.5, gy: 2.5, z: 60, radius: 120, flicker: 0 }];
-  data.npcs = [{ id: 'iran-hiding', gx: 5.5, gy: 4.4, looking: { x: -1, y: 0 } }];
+  data.npcs = [{ id: 'iran-hiding', gx: 5.5, gy: 4.4, looking: { x: 0.4, y: 1 } }];
   data.children = [
     { id: 'hetty', gx: 4.6, gy: 4.5 },
     { id: 'pip', gx: 5.5, gy: 3.4 },
