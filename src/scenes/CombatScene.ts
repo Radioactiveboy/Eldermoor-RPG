@@ -93,13 +93,13 @@ interface MenuOption {
 /** How the waiting options are shown: the hotbar of skills, or a row of buttons (targets, food) above it. */
 type MenuStyle = 'hotbar' | 'list';
 
-const FONT = 'Georgia, "Times New Roman", serif';
+const FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 const BTN_H = 46;
 const GAP = 8;
 const MARGIN = 14;
 /** Below this width the list buttons go in two columns. */
 const NARROW = 760;
-const CHIP_W = 72;
+const CHIP_W = 88;
 const CHIP_H = 92;
 const LOG_LINES = 4;
 
@@ -1075,7 +1075,7 @@ export class CombatScene extends Phaser.Scene {
     else marker.fillTriangle(SLOT - 9, 3.5, SLOT - 3.5, 13, SLOT - 14.5, 13).strokeTriangle(SLOT - 9, 3.5, SLOT - 3.5, 13, SLOT - 14.5, 13);
     parts.push(marker);
     if (i < SLOT_KEY_LABELS.length) {
-      parts.push(this.add.text(6, 3, SLOT_KEY_LABELS[i], { fontFamily: FONT, fontSize: '12px', color: THEME.text, stroke: '#000000', strokeThickness: 3, fontStyle: 'bold' }));
+      parts.push(this.add.text(6, 3, SLOT_KEY_LABELS[i], { fontFamily: FONT, fontSize: '13px', color: THEME.text, stroke: '#000000', strokeThickness: 3, fontStyle: 'bold' }));
     }
     if (a.stamina) {
       // Its stamina cost in a little dark pill in the corner, with a bolt.
@@ -1085,7 +1085,7 @@ export class CombatScene extends Phaser.Scene {
       pill.fillStyle(0x000000, 0.72).fillRoundedRect(SLOT - 29, SLOT - 17, 26, 14, 5);
       pill.fillStyle(col, 1).fillTriangle(SLOT - 24, SLOT - 9, SLOT - 19, SLOT - 15, SLOT - 20, SLOT - 9).fillTriangle(SLOT - 21, SLOT - 10, SLOT - 20, SLOT - 4, SLOT - 16, SLOT - 11);
       parts.push(pill);
-      parts.push(this.add.text(SLOT - 5, SLOT - 10, `${a.stamina}`, { fontFamily: FONT, fontSize: '11px', color: hex(col), fontStyle: 'bold' }).setOrigin(1, 0.5));
+      parts.push(this.add.text(SLOT - 5, SLOT - 10, `${a.stamina}`, { fontFamily: FONT, fontSize: '12px', color: hex(col), fontStyle: 'bold' }).setOrigin(1, 0.5));
     }
     const shade = this.add.graphics();
     parts.push(shade);
@@ -1130,7 +1130,7 @@ export class CombatScene extends Phaser.Scene {
     // Once nothing's left to spend, End turn glows to say so.
     const nudge = this.heroActing && !this.budget.action;
     const label = this.add.text(END_W / 2, SLOT / 2 - 7, 'End turn', { fontFamily: FONT, fontSize: '16px', color: THEME.text }).setOrigin(0.5);
-    const key = this.add.text(END_W / 2, SLOT / 2 + 12, 'Space', { fontFamily: FONT, fontSize: '11px', color: THEME.dimText }).setOrigin(0.5);
+    const key = this.add.text(END_W / 2, SLOT / 2 + 12, 'Space', { fontFamily: FONT, fontSize: '12px', color: THEME.dimText }).setOrigin(0.5);
     const button = this.add.container(x, y, [bg, label, key]);
     const draw = (on: boolean) => {
       bg.clear();
@@ -1180,7 +1180,7 @@ export class CombatScene extends Phaser.Scene {
       bars.fillStyle(0x000000, 0.6).fillRoundedRect(x, y, w, 13, 4);
       if (t > 0.02) bars.fillStyle(fill, 1).fillRoundedRect(x, y, Math.max(8, w * Phaser.Math.Clamp(t, 0, 1)), 13, 4);
       bars.lineStyle(1, THEME.gold, 0.5).strokeRoundedRect(x, y, w, 13, 4);
-      block.add(this.add.text(x + w / 2, y + 6.5, text, { fontFamily: FONT, fontSize: '10px', color: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5));
+      block.add(this.add.text(x + w / 2, y + 6.5, text, { fontFamily: FONT, fontSize: '11px', color: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5));
     };
     block.add([name, bars]);
     const hp = c.hp / c.maxHp;
@@ -1190,7 +1190,7 @@ export class CombatScene extends Phaser.Scene {
     let tx = x;
     for (const s of c.statuses) {
       const def = STATUSES[s.id];
-      const tag = this.add.text(tx, 63, def.name, { fontFamily: FONT, fontSize: '10px', color: hex(def.color), stroke: '#000000', strokeThickness: 2 });
+      const tag = this.add.text(tx, 63, def.name, { fontFamily: FONT, fontSize: '11px', color: hex(def.color), stroke: '#000000', strokeThickness: 2 });
       block.add(tag);
       tx += tag.width + 6;
     }
@@ -1400,7 +1400,7 @@ export class CombatScene extends Phaser.Scene {
       if (beast) portrait.setScale(Math.min(1, (CHIP_W - 4) / portrait.width, 46 / portrait.height));
       if (c.side === 'party') portrait.setCrop(0, 4, 32, 40);
       const name = this.add
-        .text(CHIP_W / 2, 56, c.side === 'party' ? 'You' : c.name, { fontFamily: FONT, fontSize: '11px', color: active ? THEME.goldText : THEME.text })
+        .text(CHIP_W / 2, 56, c.side === 'party' ? 'You' : c.name, { fontFamily: FONT, fontSize: '12px', color: active ? THEME.goldText : THEME.text })
         .setOrigin(0.5, 0);
       if (name.width > CHIP_W - 6) name.setScale((CHIP_W - 6) / name.width);
       const bar = this.add.graphics();
@@ -1410,7 +1410,7 @@ export class CombatScene extends Phaser.Scene {
       bar.fillStyle(t > 0.5 ? 0x5fae3c : t > 0.25 ? 0xd9a22a : 0xc8352a, 1);
       bar.fillRect(8, 73, (CHIP_W - 16) * t, 5);
       const hp = this.add
-        .text(CHIP_W / 2, 79, out ? (c.fled ? 'fled' : 'down') : `${c.hp}/${c.maxHp}`, { fontFamily: FONT, fontSize: '10px', color: THEME.dimText })
+        .text(CHIP_W / 2, 79, out ? (c.fled ? 'fled' : 'down') : `${c.hp}/${c.maxHp}`, { fontFamily: FONT, fontSize: '11px', color: THEME.dimText })
         .setOrigin(0.5, 0);
       chip.add([bg, portrait, name, bar, hp]);
       // A little tag for each effect on them, down the card's left edge.
@@ -1420,7 +1420,7 @@ export class CombatScene extends Phaser.Scene {
           const pill = this.add.graphics();
           pill.fillStyle(def.color, 0.95).fillRoundedRect(3, 4 + k * 14, 26, 12, 4);
           pill.lineStyle(1, 0x000000, 0.7).strokeRoundedRect(3, 4 + k * 14, 26, 12, 4);
-          const tag = this.add.text(16, 10 + k * 14, def.tag, { fontFamily: FONT, fontSize: '8px', color: '#140c06', fontStyle: 'bold' }).setOrigin(0.5);
+          const tag = this.add.text(16, 10 + k * 14, def.tag, { fontFamily: FONT, fontSize: '9px', color: '#140c06', fontStyle: 'bold' }).setOrigin(0.5);
           chip.add([pill, tag]);
         });
       }

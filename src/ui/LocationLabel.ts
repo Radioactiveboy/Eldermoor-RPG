@@ -37,7 +37,7 @@ export class LocationLabel {
     this.title = scene.add
       .text(0, 0, '', { fontFamily: UI_FONT, fontSize: '14px', color: '#e8c977', fontStyle: 'bold' })
       .setOrigin(0.5, 0);
-    this.place = scene.add.text(0, 0, '', { fontFamily: UI_FONT, fontSize: '12px', color: UI_COLORS.textMuted }).setOrigin(0.5, 0);
+    this.place = scene.add.text(0, 0, '', { fontFamily: UI_FONT, fontSize: '13px', color: UI_COLORS.textMuted }).setOrigin(0.5, 0);
   }
 
   /** The area the player is now in, and its map for finding the landmarks in it. */

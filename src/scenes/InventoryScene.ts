@@ -18,7 +18,7 @@ const PAD = 28;
 const DETAILS_W = 250;
 /** Below this screen width the details go under the grid instead of beside it. */
 const NARROW = 660;
-const BODY_FONT = 'Georgia, "Times New Roman", serif';
+const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 const SLOT_FILL = 0x0d0a10;
 
 type Selection = { kind: 'bag'; index: number } | { kind: 'slot'; slot: EquipSlot } | undefined;

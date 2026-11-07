@@ -16,8 +16,9 @@ import { SleepScene } from './scenes/SleepScene';
 import { StationScene } from './scenes/StationScene';
 import { InterludeScene } from './scenes/InterludeScene';
 
-// Wait (briefly) for the menu font so text isn't first drawn in a fallback font.
-Promise.race([document.fonts.load('40px Cinzel'), new Promise((resolve) => setTimeout(resolve, 2000))])
+// Wait (briefly) for the fonts so text isn't first drawn in a fallback (Phaser won't redraw it when they arrive).
+const fonts = ['40px Cinzel', 'bold 40px Cinzel', '16px Merriweather', 'bold 16px Merriweather', 'italic 16px Merriweather'];
+Promise.race([Promise.all(fonts.map((f) => document.fonts.load(f))), new Promise((resolve) => setTimeout(resolve, 2500))])
   .catch(() => undefined)
   .then(startGame);
 

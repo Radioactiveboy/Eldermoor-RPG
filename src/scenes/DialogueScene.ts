@@ -57,7 +57,7 @@ function boxLayout(screenW: number): BoxLayout {
 const TYPE_SPEED = 42;
 /** Extra pause after punctuation, in seconds. */
 const PAUSES: Record<string, number> = { '.': 0.22, '!': 0.22, '?': 0.22, ',': 0.1, ';': 0.12, ':': 0.12 };
-const TEXT_FONT = 'Georgia, "Times New Roman", serif';
+const TEXT_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 
 /**
  * Conversation box: the speaker's portrait (which talks and blinks), their

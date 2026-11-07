@@ -12,7 +12,7 @@ export interface StationSceneData {
   station: string;
 }
 
-const BODY_FONT = 'Georgia, "Times New Roman", serif';
+const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 const SLOT_FILL = 0x0d0a10;
 const SLOT = 54;
 const GAP = 6;
@@ -504,16 +504,16 @@ export class StationScene extends Phaser.Scene {
           const have = Inventory.count(id) >= n;
           const ic = this.add.image(ix, y + 34, itemDef(id).icon).setScale(itemScale(1.5));
           if (!have) ic.setAlpha(0.4);
-          const t = this.add.text(ix + 12, y + 34, n > 1 ? `×${n}` : '', { fontFamily: BODY_FONT, fontSize: '11px', color: have ? '#3a1a08' : '#a03020' }).setOrigin(0, 0.5);
+          const t = this.add.text(ix + 12, y + 34, n > 1 ? `×${n}` : '', { fontFamily: BODY_FONT, fontSize: '12px', color: have ? '#3a1a08' : '#a03020' }).setOrigin(0, 0.5);
           this.content.add([ic, t]);
           ix += n > 1 ? 40 : 28;
         }
         if (Crafting.hasMade(r) || r.known) {
-          const ready = this.add.text(x0 + BOOK_W - 18, y + 4, can ? 'ready' : '', { fontFamily: BODY_FONT, fontSize: '11px', fontStyle: 'italic', color: '#3a7a2a' }).setOrigin(1, 0);
+          const ready = this.add.text(x0 + BOOK_W - 18, y + 4, can ? 'ready' : '', { fontFamily: BODY_FONT, fontSize: '12px', fontStyle: 'italic', color: '#3a7a2a' }).setOrigin(1, 0);
           this.content.add(ready);
         }
       } else {
-        const hint = this.add.text(x0 + 60, y + 22, r.hint, { fontFamily: BODY_FONT, fontSize: '11px', fontStyle: 'italic', color: '#6a5030', wordWrap: { width: BOOK_W - 80 } });
+        const hint = this.add.text(x0 + 60, y + 22, r.hint, { fontFamily: BODY_FONT, fontSize: '12px', fontStyle: 'italic', color: '#6a5030', wordWrap: { width: BOOK_W - 80 } });
         this.content.add(hint);
       }
       const hit = this.add.zone(x0 + BOOK_W / 2, y + rowH / 2 - 2, BOOK_W - 20, rowH - 4).setInteractive({ useHandCursor: known });

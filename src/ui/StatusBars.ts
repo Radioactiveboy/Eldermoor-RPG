@@ -46,7 +46,7 @@ export class StatusBars {
     this.frame = scene.add.graphics();
     this.bars = scene.add.graphics();
     this.levelText = scene.add
-      .text(0, 0, String(this.shownLevel), { fontFamily: UI_FONT, fontSize: '10px', color: '#f2d27a', fontStyle: 'bold' })
+      .text(0, 0, String(this.shownLevel), { fontFamily: UI_FONT, fontSize: '11px', color: '#f2d27a', fontStyle: 'bold' })
       .setOrigin(0.5);
   }
 

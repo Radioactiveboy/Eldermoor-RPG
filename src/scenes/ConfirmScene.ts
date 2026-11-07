@@ -73,7 +73,7 @@ export class ConfirmScene extends Phaser.Scene {
     let y = PAD + question.height + 8;
     const note = data.note
       ? this.add
-          .text(0, y - 4, data.note, { fontFamily: UI_FONT, fontSize: '12px', color: TEXT, align: 'center', wordWrap: { width: W - PAD * 2 } })
+          .text(0, y - 4, data.note, { fontFamily: UI_FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: W - PAD * 2 } })
           .setOrigin(0.5, 0)
           .setAlpha(0.8)
       : undefined;

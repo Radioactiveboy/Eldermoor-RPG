@@ -291,7 +291,7 @@ export class UIScene extends Phaser.Scene {
     const touch = this.sys.game.device.input.touch;
     const style = (color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
       fontFamily: UI_FONT,
-      fontSize: '12px',
+      fontSize: '13px',
       color,
       stroke: '#000000',
       strokeThickness: 3,
@@ -308,7 +308,7 @@ export class UIScene extends Phaser.Scene {
       cap.fillRoundedRect(-6, -6, 12, 12, 2);
       cap.fillStyle(0xb8a888, 1);
       cap.fillRect(-6, 4, 12, 2);
-      const keyText = this.add.text(0, -1, 'E', { fontFamily: UI_FONT, fontSize: '9px', color: '#1c1712', fontStyle: 'bold' }).setOrigin(0.5);
+      const keyText = this.add.text(0, -1, 'E', { fontFamily: UI_FONT, fontSize: '10px', color: '#1c1712', fontStyle: 'bold' }).setOrigin(0.5);
       row.push({ obj: this.add.container(0, 0, [cap, keyText]), w: 12 });
     }
     for (const [text, color] of [[action, '#ffffff'], [target, '#ffff00']]) {

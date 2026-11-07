@@ -20,7 +20,7 @@ const INK_FADED = '#8a7458';
 const RUBRIC = '#8e2f22';
 const PARCHMENT = 0xefe1c0;
 const PARCHMENT_EDGE = 0xd9c49a;
-const BODY_FONT = 'Georgia, "Times New Roman", serif';
+const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 
 type Section = 'tasks' | 'quests' | 'diary';
 

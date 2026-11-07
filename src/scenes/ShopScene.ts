@@ -23,7 +23,7 @@ const MID = 56;
 const LABEL_H = 28;
 /** Below this screen width the grids stack instead of sitting side by side. */
 const NARROW = 760;
-const BODY_FONT = 'Georgia, "Times New Roman", serif';
+const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 const SLOT_FILL = 0x0d0a10;
 /** Pixels the pointer must move before a press on a slot becomes a drag. */
 const DRAG_START = 8;
@@ -302,7 +302,7 @@ export class ShopScene extends Phaser.Scene {
     if (price === 0) icon.setAlpha(0.35);
     this.content.add(icon);
     if (price > 0) {
-      const tag = this.add.text(x + 4, y + 2, `${price}`, { fontFamily: BODY_FONT, fontSize: '12px', color: THEME.goldText, fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 });
+      const tag = this.add.text(x + 4, y + 2, `${price}`, { fontFamily: BODY_FONT, fontSize: '13px', color: THEME.goldText, fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 });
       this.content.add(tag);
     }
     if (entry.count > 1) {
