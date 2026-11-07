@@ -307,7 +307,7 @@ function drawFireFrame(c: PixelCanvas, w: number, h: number, frame: number, seed
   const rnd = seededRandom(seed);
   const phase = (frame / FIRE_FRAMES) * Math.PI * 2;
   const base = h - 2;
-  const lean = 0.42;
+  const lean = 0.62;
   // A warm glow round the foot of the fire, faint, under everything else.
   for (let y = base - 8; y <= base + 1; y++) {
     for (let x = 0; x < w; x++) {
@@ -322,6 +322,8 @@ function drawFireFrame(c: PixelCanvas, w: number, h: number, frame: number, seed
     const tall = (1 - Math.abs(across) * 1.5) * (h - 8) * (0.7 + rnd() * 0.3);
     return {
       x: w / 2 + across * (w - 8) + (rnd() - 0.5) * 2,
+      // Each springs from its own height, so the fire's foot is ragged, not ruled straight.
+      foot: Math.floor(rnd() * 4),
       tall,
       wide: (w / count) * (0.8 + rnd() * 0.5),
       speed: 1 + Math.floor(rnd() * 2),
@@ -334,9 +336,11 @@ function drawFireFrame(c: PixelCanvas, w: number, h: number, frame: number, seed
     const tall = t.tall * life;
     for (let y = 0; y < tall; y++) {
       const v = y / tall;
+      // Rounded off at the very bottom.
+      const round = Math.sqrt(Math.min(1, (y + 1) / 4));
       // Curling over downwind as it rises, and whipping side to side more near the tip.
       const cx = t.x + lean * Math.pow(v, 1.6) * tall * 0.55 + Math.sin(v * 5.5 - phase * t.speed + t.off) * v * 2.4;
-      const half = (t.wide / 2) * Math.pow(1 - v, 0.75) * (1 + 0.25 * Math.sin(v * 9 + phase * 2 + t.off));
+      const half = (t.wide / 2) * round * Math.pow(1 - v, 0.75) * (1 + 0.25 * Math.sin(v * 9 + phase * 2 + t.off));
       for (let x = Math.floor(cx - half - 1); x <= Math.ceil(cx + half + 1); x++) {
         const d = Math.abs(x + 0.5 - cx) / Math.max(0.6, half);
         if (d > 1) continue;
@@ -346,13 +350,13 @@ function drawFireFrame(c: PixelCanvas, w: number, h: number, frame: number, seed
         const band = heat > 0.82 ? 0 : heat > 0.66 ? 1 : heat > 0.52 ? 2 : heat > 0.4 ? 3 : heat > 0.28 ? 4 : heat > 0.16 ? 5 : 6;
         // The edges flicker a little: some edge pixels missing.
         if (d > 0.82 && smoothNoise(x * 0.7, y * 0.5 - frame * 1.3, seed + 3) < 0.35) continue;
-        c.set(x, base - y, FLAME_RAMP[band]);
+        c.set(x, base - t.foot - y, FLAME_RAMP[band]);
       }
     }
     // A wisp of flame breaking off the tip, drifting up and downwind.
     const lift = ((frame * t.speed) % FIRE_FRAMES) / FIRE_FRAMES;
     const wx = t.x + lean * tall * 0.55 + lift * 4;
-    const wy = base - tall - 2 - lift * 7;
+    const wy = base - t.foot - tall - 2 - lift * 7;
     const r = 1.6 * (1 - lift);
     for (let y = Math.floor(wy - r); y <= wy + r; y++) {
       for (let x = Math.floor(wx - r); x <= wx + r; x++) {
@@ -360,11 +364,11 @@ function drawFireFrame(c: PixelCanvas, w: number, h: number, frame: number, seed
       }
     }
   }
-  // The red-hot bed of embers at the foot.
-  for (let x = 2; x < w - 2; x++) {
+  // A few red-hot embers scattered round the foot (no hard line: the burning thatch or ground under it is the bed).
+  for (let x = 3; x < w - 3; x++) {
     const k = smoothNoise(x * 0.6, frame * 0.8, seed + 7);
-    c.set(x, base, k > 0.55 ? P.fireYellow : P.fireOrange);
-    c.set(x, base + 1, k > 0.5 ? P.fireRed : 0x6e1e14);
+    const edge = Math.abs(x - w / 2) / (w / 2);
+    if (k > 0.5 + edge * 0.3) c.set(x, base - Math.floor(k * 3), k > 0.7 ? P.fireYellow : P.fireOrange);
   }
   // Sparks, rising and drifting on the wind.
   for (let i = 0; i < 7; i++) {

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { IsoModel, lipped, planks, RenderedModel, Shader } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
-import { scorch } from './scorch';
+import { mixColor, scorch, smoothNoise } from './scorch';
 
 /**
  * The family home: log walls, floorboards, furniture and the cottage seen from
@@ -384,13 +384,66 @@ function doormat(): IsoModel {
 
 // ---------------------------------------------------------------- outside
 
+/**
+ * Where the cottage's thatch is alight on the raid morning, as places on the
+ * front roof slope: `u` along the ridge (0 the far gable, 1 the door end), `v`
+ * down the slope (0 the ridge, 1 the eaves), and `r` how far the burn has
+ * spread, in tiles. The roof is charred and glowing there, and the raid
+ * stands its flames on those same spots (see {@link roofPoint}).
+ */
+export const ROOF_BLAZES: Array<{ u: number; v: number; r: number; size: 'big' | 'small' }> = [
+  { u: 0.2, v: 0.05, r: 0.55, size: 'big' },
+  { u: 0.56, v: 0.06, r: 0.62, size: 'big' },
+  { u: 0.86, v: 0.08, r: 0.46, size: 'big' },
+  { u: 0.36, v: 0.5, r: 0.4, size: 'small' },
+  { u: 0.74, v: 0.58, r: 0.36, size: 'small' },
+  { u: 0.08, v: 0.86, r: 0.3, size: 'small' },
+];
+
+const COTTAGE = { S: 3, H: 64, R: 46, o: 0.28 };
+
+/** A point on the cottage's front roof slope (u along, v down; see {@link ROOF_BLAZES}), in the model's grid and height. */
+export function roofPoint(u: number, v: number): { x: number; y: number; z: number } {
+  const { S, H, R, o } = COTTAGE;
+  return { x: -o + u * (S + o * 2), y: S / 2 + v * (S / 2 + o), z: H + R - v * (R + 8) };
+}
+
+/** Thatch with fire eating into it at the {@link ROOF_BLAZES}: lit orange round about, sooty nearer, and charred and glowing at the heart. */
+function alight(shade: Shader): Shader {
+  const { S, o } = COTTAGE;
+  const across = S + o * 2;
+  const down = S / 2 + o;
+  return (u, v) => {
+    const c = shade(u, v);
+    if (c === null) return null;
+    let d = Infinity;
+    for (const b of ROOF_BLAZES) {
+      // Distance in tiles, squashed a little up the slope so the burn spreads along the thatch more than up it.
+      const raw = Math.hypot((u - b.u) * across, (v - b.v) * down * 1.3) / b.r;
+      d = Math.min(d, raw + (smoothNoise(u * 22, v * 11, 61) - 0.5) * 0.55);
+    }
+    if (d < 0.6) {
+      const k = smoothNoise(u * 60, v * 30, 67);
+      if (k > 0.66) return P.fireYellow;
+      if (k > 0.55) return P.fireOrange;
+      if (k > 0.45) return P.fireRed;
+      return k > 0.3 ? 0x2a1a16 : 0x161214;
+    }
+    if (d < 1) {
+      const k = smoothNoise(u * 60, v * 30, 71);
+      if (k > 0.7) return P.ember;
+      return mixColor(c, 0x2a2224, 0.75 - (d - 0.6) * 0.8);
+    }
+    // Firelight on the thatch round about.
+    if (d < 1.8) return mixColor(c, 0xf08a3a, (1.8 - d) * 0.4);
+    return c;
+  };
+}
+
 /** The family cottage as seen from the village: log walls, thatched gable roof, chimney. */
-function cottage(ruined = false): { model: IsoModel; windows: Array<[number, number]> } {
+function cottage(ruined = false, burning = false): { model: IsoModel; windows: Array<[number, number]> } {
   const m = new IsoModel();
-  const S = 3; // footprint, in tiles
-  const H = 64;
-  const R = 46;
-  const o = 0.28;
+  const { S, H, R, o } = COTTAGE; // footprint in tiles; wall height, roof rise and overhang
   const logs = planks(10, P.log, P.logDark, P.logLight, 3);
   const thatch: Shader = (u, v) => {
     const row = Math.floor(v * 9);
@@ -516,7 +569,7 @@ function cottage(ruined = false): { model: IsoModel; windows: Array<[number, num
   }
   // Overhang of the back slope past the gable, then the front slope over everything.
   m.quad({ x: S, y: S / 2, z: H + R }, { x: o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, P.thatchDark);
-  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, thatch);
+  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, burning ? alight(thatch) : thatch);
   // Ridge cap.
   m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: P.thatchLight, left: P.thatchDark, right: P.thatchDark });
   // A bench and a water barrel by the door.
@@ -549,6 +602,7 @@ export function generateInterior(scene: Phaser.Scene): void {
   register(scene, 'furn-doormat', doormat().render(false));
   register(scene, 'bld-cottage', cottage().model.render());
   register(scene, 'bld-cottage-burnt', cottage(true).model.render());
+  register(scene, 'bld-cottage-burning', cottage(false, true).model.render());
 
   // The hearth as a strip of frames with the fire flickering.
   const base = hearth().render();

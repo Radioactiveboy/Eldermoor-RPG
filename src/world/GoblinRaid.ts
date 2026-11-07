@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { fenceKey, FENCE_MASKS } from '../art/farm';
+import { roofPoint, ROOF_BLAZES } from '../art/interior';
 import { GameAudio } from '../audio/Audio';
 import { HERO_NAME } from '../config';
 import type { Creature } from '../entities/Creature';
@@ -52,7 +53,7 @@ const BRUTE_CRIES = ['BREAK THE DOOR!', 'Take everything. Leave nothing standing
 function farmCorners(data: MapData): { home?: MapObject; hut?: MapObject; coop?: MapObject } {
   const objects = data.objects ?? [];
   return {
-    home: objects.find((o) => o.key === 'bld-cottage'),
+    home: objects.find((o) => o.key === 'bld-cottage' || o.key === 'bld-cottage-burning'),
     hut: objects.find((o) => o.key === 'bld-hut'),
     coop: objects.find((o) => o.key === 'farm-coop'),
   };
@@ -93,6 +94,8 @@ export function raidWorld(data: MapData): void {
   trampleGarden(data);
   const { home, coop } = farmCorners(data);
   if (home) {
+    // The thatch already alight (the flames themselves are lit by the RaidDirector, on the same spots).
+    home.key = 'bld-cottage-burning';
     for (const [dx, dy, k] of [[4, 3, 0], [6, 5, 1], [2, 4, 2]] as const) decal(data, `decal-trampled-${k}`, home.tx + dx, home.ty + dy);
   }
   if (coop) {
@@ -158,17 +161,13 @@ const RAIDERS: Array<{ id: string; kind: FoeKind; at: Vec2 }> = [
   { id: 'raid-torch-2', kind: 'goblintorch', at: { x: 3.4, y: -1.3 } },
 ];
 
-/** Fires on the cottage and about the yard: where (relative to the house), which art, and how far up. */
-const FIRES: Array<{ at: Vec2; art: 'fire-big' | 'fire-small'; z: number; scale?: number }> = [
-  { at: { x: 1.1, y: 1.7 }, art: 'fire-big', z: 70, scale: 1.35 },
-  { at: { x: 2.0, y: 0.9 }, art: 'fire-big', z: 82, scale: 1.2 },
-  { at: { x: 0.5, y: 2.4 }, art: 'fire-big', z: 58, scale: 1.1 },
-  { at: { x: 1.6, y: 0.4 }, art: 'fire-big', z: 88, scale: 1 },
-  { at: { x: 0.4, y: 1.0 }, art: 'fire-small', z: 72, scale: 1.3 },
-  { at: { x: 2.4, y: 1.9 }, art: 'fire-small', z: 62, scale: 1.2 },
-  { at: { x: 2.7, y: 2.6 }, art: 'fire-small', z: 24 },
-  { at: { x: 0.6, y: 3.3 }, art: 'fire-small', z: 0 },
-];
+/** The flames on the cottage roof, one on each of its blazes: where (relative to the house), which art, how far up, and how big. */
+const FIRES: Array<{ at: Vec2; art: 'fire-big' | 'fire-small'; z: number; scale: number }> = ROOF_BLAZES.map((b, i) => {
+  const p = roofPoint(b.u, b.v);
+  const big = b.size === 'big';
+  // The flame's foot sunk a few pixels into the glowing char, so it grows out of the thatch.
+  return { at: { x: p.x, y: p.y }, art: big ? 'fire-big' : 'fire-small', z: p.z - (big ? 6 : 3), scale: big ? 1.3 - (i % 2) * 0.12 : 1.15 };
+});
 
 /** A raider's voice: a bubble over its head when it shrieks something. */
 class Cry implements Speaker {
@@ -260,7 +259,12 @@ export class RaidDirector {
     });
     for (const f of FIRES) this.light(home.tx + f.at.x, home.ty + f.at.y, f.art, f.z, f.scale, depthAt(home.tx + 3, home.ty + 3) + 1);
     // Smoke rising off the thatch.
-    (this.h.map.data.chimneys ??= []).push({ gx: home.tx + 1.3, gy: home.ty + 1.4, z: 120 }, { gx: home.tx + 2, gy: home.ty + 0.8, z: 110 });
+    (this.h.map.data.chimneys ??= []).push(
+      ...ROOF_BLAZES.filter((b) => b.size === 'big').map((b) => {
+        const p = roofPoint(b.u, b.v);
+        return { gx: home.tx + p.x, gy: home.ty + p.y, z: p.z + 50 };
+      }),
+    );
     GameAudio.playMusic('raid');
     this.h.scene.time.delayedCall(300, () => this.cutscene());
   }
