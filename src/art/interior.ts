@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { IsoModel, lipped, planks, RenderedModel, Shader } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
+import { scorch } from './scorch';
 
 /**
  * The family home: log walls, floorboards, furniture and the cottage seen from
@@ -22,6 +23,10 @@ export const MODEL_ART: Record<string, ModelArt> = {};
 /** Height of the room's back walls, in pixels. */
 export const WALL_HEIGHT = 84;
 
+export function registerModel(scene: Phaser.Scene, key: string, m: RenderedModel): PixelCanvas {
+  return register(scene, key, m);
+}
+
 function register(scene: Phaser.Scene, key: string, m: RenderedModel): PixelCanvas {
   const tex = m.canvas.toTexture(scene, key);
   MODEL_ART[key] = { key, originX: m.anchorX / tex.width, originY: m.anchorY / tex.height };
@@ -36,7 +41,7 @@ const hash = (a: number, b: number) => {
 
 // ---------------------------------------------------------------- walls
 
-type WallKind = 'plain' | 'window' | 'door' | 'shelf';
+export type WallKind = 'plain' | 'window' | 'door' | 'shelf';
 
 /** Log wall, with an optional window, door or hanging shelf cut into it. */
 function wallShader(kind: WallKind, side: 'back' | 'side', index: number): Shader {
@@ -87,11 +92,11 @@ function wallShader(kind: WallKind, side: 'back' | 'side', index: number): Shade
   };
 }
 
-function makeWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', kind: WallKind, index: number): void {
+export function makeWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', kind: WallKind, index: number, wrap?: (s: Shader) => Shader): void {
   const m = new IsoModel();
   const H = WALL_HEIGHT;
   const cap = 0.14;
-  const shade = wallShader(kind, side, index);
+  const shade = wrap ? wrap(wallShader(kind, side, index)) : wallShader(kind, side, index);
   if (side === 'back') {
     // Runs along x at y = 0, facing the room (+y).
     m.quad({ x: 0, y: 0, z: H }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, shade);
@@ -157,7 +162,7 @@ export function floorTile(seed: number, w: number, h: number): PixelCanvas {
 
 // ---------------------------------------------------------------- furniture
 
-function hearth(): IsoModel {
+export function hearth(): IsoModel {
   const m = new IsoModel();
   const stones: Shader = (u, v) => {
     const row = Math.floor(v * 5);
@@ -219,7 +224,7 @@ function paintFlames(c: PixelCanvas, ax: number, ay: number, frame: number): voi
   for (let i = 0; i < 3; i++) c.set(bx + Math.round((rnd() - 0.5) * 16), by - 18 - rnd() * 6, P.ember);
 }
 
-function bed(): IsoModel {
+export function bed(): IsoModel {
   const m = new IsoModel();
   const wood = { top: P.barkLight, left: lipped(P.bark, P.barkLight), right: P.barkDark };
   // Headboard against the back, then frame, mattress, quilt, pillow, footboard.
@@ -242,7 +247,7 @@ function bed(): IsoModel {
   return m;
 }
 
-function strawBed(): IsoModel {
+export function strawBed(): IsoModel {
   const m = new IsoModel();
   const straw: Shader = (u, v) => (hash(Math.floor(u * 40), Math.floor(v * 30)) < 0.3 ? P.strawDark : P.straw);
   m.box(0.08, 0, 0, 0.84, 1.9, 8, { top: straw, left: P.strawDark, right: P.strawDark });
@@ -255,7 +260,7 @@ function strawBed(): IsoModel {
   return m;
 }
 
-function table(): IsoModel {
+export function table(): IsoModel {
   const m = new IsoModel();
   const leg = { top: P.bark, left: P.bark, right: P.barkDark };
   for (const [x, y] of [[0.12, 0.12], [1.78, 0.12], [0.12, 0.78], [1.78, 0.78]]) m.box(x, y, 0, 0.1, 0.1, 26, leg);
@@ -267,7 +272,7 @@ function table(): IsoModel {
   return m;
 }
 
-function stool(): IsoModel {
+export function stool(): IsoModel {
   const m = new IsoModel();
   for (const [x, y] of [[0.3, 0.3], [0.62, 0.3], [0.3, 0.62], [0.62, 0.62]]) {
     m.box(x, y, 0, 0.08, 0.08, 14, { top: P.bark, left: P.bark, right: P.barkDark });
@@ -276,7 +281,7 @@ function stool(): IsoModel {
   return m;
 }
 
-function cupboard(): IsoModel {
+export function cupboard(): IsoModel {
   const m = new IsoModel();
   const front: Shader = (u, v) => {
     const x = u * 32;
@@ -330,7 +335,7 @@ function barrel(cx: number, cy: number, m: IsoModel, h = 26): IsoModel {
   });
 }
 
-function barrels(): IsoModel {
+export function barrels(): IsoModel {
   const m = new IsoModel();
   // Both kept inside the tile, so neither sticks out in front of what stands next to them.
   barrel(0.3, 0.3, m);
@@ -338,7 +343,7 @@ function barrels(): IsoModel {
   return m;
 }
 
-function chest(): IsoModel {
+export function chest(): IsoModel {
   const m = new IsoModel();
   const band: Shader = (u, v) => {
     if (Math.abs(u - 0.2) < 0.05 || Math.abs(u - 0.8) < 0.05) return P.iron;
@@ -350,7 +355,7 @@ function chest(): IsoModel {
 }
 
 /** Flat woven rug, baked into the floor. */
-function rug(): IsoModel {
+export function rug(): IsoModel {
   const m = new IsoModel();
   m.quad({ x: 0, y: 0, z: 0 }, { x: 2.6, y: 0, z: 0 }, { x: 0, y: 2, z: 0 }, (u, v) => {
     const e = Math.min(u, v, 1 - u, 1 - v);
@@ -376,7 +381,7 @@ function doormat(): IsoModel {
 // ---------------------------------------------------------------- outside
 
 /** The family cottage as seen from the village: log walls, thatched gable roof, chimney. */
-function cottage(): { model: IsoModel; windows: Array<[number, number]> } {
+function cottage(ruined = false): { model: IsoModel; windows: Array<[number, number]> } {
   const m = new IsoModel();
   const S = 3; // footprint, in tiles
   const H = 64;
@@ -422,23 +427,68 @@ function cottage(): { model: IsoModel; windows: Array<[number, number]> } {
   };
 
   const frontWindows: Array<[number, number]> = [[0.16, 0.34], [0.64, 0.82]];
+  // Burnt by the goblins: walls blackened from the top down, windows and door gone to black holes,
+  // the thatch burnt away to a few charred tufts over bare, broken rafters.
+  const burn = (shade: Shader, seed: number, amount: number, holes = 0): Shader =>
+    ruined ? scorch(shade, seed, { amount, holes, climb: 0.7, grain: 1.2, embers: true }, [9, 6]) : shade;
+  const gutted: Shader = (u, v) => {
+    // Windows and door burnt out: black holes, a jagged sliver of shutter left here and there.
+    return ruined && (hash(Math.floor(u * 40), Math.floor(v * 30)) < 0.85) ? P.ink : P.barkDark;
+  };
+  const wallOf = (windows: Array<[number, number]>, door: [number, number] | null, dark: boolean): Shader => {
+    const base = wall(windows, door, dark);
+    if (!ruined) return base;
+    return (u, v) => {
+      const y = v * H;
+      for (const [a, b] of windows) if (u > a && u < b && y > 20 && y < 38) return gutted(u, v);
+      if (door && u > door[0] + 0.02 && u < door[1] - 0.02 && y > 16) return gutted(u, v);
+      return base(u, v);
+    };
+  };
   // Back roof slope (drawn first; the front slope and gable cover most of it).
-  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, thatch);
-  // Chimney poking up through the back slope.
+  if (!ruined) m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, thatch);
+  // Chimney poking up through the back slope (the stone stands, even when all else burns).
   m.box(0.55, 0.45, H, 0.45, 0.45, R + 24, {
     top: P.soot,
-    left: (u, v) => ((v * 8) % 1 < 0.15 || (u * 3 + Math.floor(v * 8) * 0.5) % 1 < 0.1 ? P.mortar : P.stone),
-    right: (_u, v) => ((v * 8) % 1 < 0.15 ? P.mortar : P.stoneDark),
+    left: burn((u, v) => ((v * 8) % 1 < 0.15 || (u * 3 + Math.floor(v * 8) * 0.5) % 1 < 0.1 ? P.mortar : P.stone), 21, 0.35),
+    right: burn((_u, v) => ((v * 8) % 1 < 0.15 ? P.mortar : P.stoneDark), 22, 0.35),
   });
+  if (ruined) {
+    // Charred rafters, front and back, a few broken off short, and what's left of the ridge beam, sagging.
+    const char = { left: 0x2a2224 };
+    const rafters: Array<[number, number]> = [[-0.1, 1], [0.7, 0.55], [1.35, 1], [2.05, 0.4], [2.75, 0.85]];
+    for (const [x, len] of rafters) {
+      m.quad({ x, y: S / 2, z: H + R }, { x: 0, y: (-S / 2 - o) * len, z: (-R - 8) * len }, { x: 0.1, y: 0, z: 0 }, char.left);
+    }
+    // Remnants of thatch, black and smouldering, clinging to the back eaves.
+    m.quad({ x: -o, y: 0.5, z: H + 14 }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -0.5 - o, z: -22 }, burn(thatch, 23, 0.75, 0.9));
+  }
   // Walls: the front (+y) face with windows, the side (+x) face with the door.
-  m.quad({ x: 0, y: S, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, wall(frontWindows, null, false));
-  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, wall([[0.1, 0.26]], [0.37, 0.63], true));
-  // Gable triangle above the door.
-  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: R }, (u, v) => {
+  m.quad({ x: 0, y: S, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, burn(wallOf(frontWindows, null, false), 24, 0.45, 0.35));
+  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, burn(wallOf([[0.1, 0.26]], [0.37, 0.63], true), 25, 0.45, 0.35));
+  // Gable triangle above the door (burnt down to a jagged stump).
+  m.quad({ x: S, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: R }, burn((u, v) => {
     if (v > 1 - Math.abs(u * 2 - 1)) return null;
+    if (ruined && v > 0.25 + Math.sin(u * 23) * 0.12 + Math.sin(u * 7.3) * 0.1) return null;
     if (Math.abs(u - 0.5) < 0.05 && v > 0.25 && v < 0.5) return P.ink; // vent
     return v < 0.06 ? P.logDark : darken(logs(u, v) ?? P.log);
-  });
+  }, 26, 0.6));
+  if (ruined) {
+    // The front rafters over everything, a couple snapped and hanging.
+    const rafters: Array<[number, number]> = [[-0.2, 1], [0.6, 0.35], [1.3, 0.8], [2.0, 1], [2.7, 0.5], [S + 0.15, 0.9]];
+    for (const [x, len] of rafters) {
+      m.quad({ x, y: S / 2, z: H + R }, { x: 0, y: (S / 2 + o) * len, z: (-R - 8) * len }, { x: 0.1, y: 0, z: 0 }, (u) => (u < 0.5 ? 0x3a2e2a : 0x2a2224));
+    }
+    // The ridge beam, sagging in the middle.
+    m.quad({ x: -o, y: S / 2, z: H + R - 2 }, { x: (S + o * 2) * 0.55, y: 0, z: -9 }, { x: 0, y: 0, z: 3 }, P.ink);
+    m.quad({ x: -o + (S + o * 2) * 0.55, y: S / 2, z: H + R - 11 }, { x: (S + o * 2) * 0.45, y: 0, z: 9 }, { x: 0, y: 0, z: 3 }, 0x2a2224);
+    // Scraps of charred thatch still hanging off the front eaves.
+    m.quad({ x: -o, y: S, z: H + 2 }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: o, z: -10 }, burn(thatch, 27, 0.8, 1.1));
+    // The bench by the door, burnt, and the water barrel knocked over in the mud.
+    m.box(S + 0.05, 0.25, 0, 0.3, 0.7, 7, { top: 0x2a2224, left: 0x3a2e2a, right: P.ink });
+    m.quad({ x: S + 0.1, y: 2.2, z: 1 }, { x: 0.5, y: 0.15, z: 0 }, { x: 0, y: 0, z: 9 }, burn(lipped(P.bark, P.barkLight), 28, 0.5));
+    return { model: m, windows: [] };
+  }
   // Overhang of the back slope past the gable, then the front slope over everything.
   m.quad({ x: S, y: S / 2, z: H + R }, { x: o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, P.thatchDark);
   m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, thatch);
@@ -473,6 +523,7 @@ export function generateInterior(scene: Phaser.Scene): void {
   register(scene, 'furn-rug', rug().render(false));
   register(scene, 'furn-doormat', doormat().render(false));
   register(scene, 'bld-cottage', cottage().model.render());
+  register(scene, 'bld-cottage-burnt', cottage(true).model.render());
 
   // The hearth as a strip of frames with the fire flickering.
   const base = hearth().render();

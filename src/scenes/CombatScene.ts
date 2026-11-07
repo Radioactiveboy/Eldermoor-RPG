@@ -26,6 +26,8 @@ import {
   diceText,
   FoeKind,
   FOES,
+  isArmed,
+  isGoblin,
   isOutlaw,
   Outcome,
   RALLY_TO_HIT,
@@ -43,6 +45,20 @@ import type { GameScene } from './GameScene';
 
 export interface CombatSceneData {
   foes: Creature[];
+  /**
+   * A fight the hero can't win (the goblins' raid): from this round on, or
+   * sooner if the hero gets the better of the leader, every blow of theirs
+   * lands and every one of the hero's goes wide, until they're beaten.
+   */
+  doom?: {
+    round: number;
+    /** The foe whose being hurt brings it on early. */
+    leader?: string;
+    /** What the log says as it turns. */
+    text: string;
+    /** Why Flee can't be used. */
+    trapped: string;
+  };
 }
 
 /** How a fight ended, and which beasts are gone for good. */
@@ -110,6 +126,9 @@ const SLOT_KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', 
 const PACK_NAMES: Partial<Record<FoeKind, string[]>> = {
   wolf: ['Grey Wolf', 'Scarred Wolf', 'Lean Wolf', 'Old Wolf', 'Young Wolf', 'Black Wolf'],
   rat: ['Cellar Rat', 'Fat Rat', 'Mangy Rat', 'Bold Rat', 'One-eared Rat', 'Big Rat'],
+  goblin: ['Goblin Cutter', 'Scarred Cutter', 'Snaggletooth', 'One-ear'],
+  goblinspear: ['Goblin Spearman', 'Painted Spearman', 'Bone-neck'],
+  goblintorch: ['Goblin Firebrand', 'Sooty Firebrand', 'Grinning Firebrand'],
 };
 
 /** How each kind of beast's fight reads: how it starts, the banner, and how it runs off. */
@@ -153,6 +172,26 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     start: 'Nab slides a knife out of his sleeve and comes at you, low and quick!',
     banner: 'Footpads!',
     flee: 'squeals, drops his knife and legs it across the grass!',
+  },
+  goblin: {
+    start: 'The goblin bares its tusks and comes at you, cleaver high!',
+    banner: 'Goblins!',
+    flee: 'shrieks and scuttles away!',
+  },
+  goblinspear: {
+    start: 'The goblin levels its spear at your belly and hisses.',
+    banner: 'Goblins!',
+    flee: 'shrieks and scuttles away!',
+  },
+  goblintorch: {
+    start: 'The goblin waves its torch in your face, cackling.',
+    banner: 'Goblins!',
+    flee: 'shrieks and scuttles away, torch and all!',
+  },
+  goblinbrute: {
+    start: 'The Goblin Brute bangs its club on its shield and roars. Its goblins swarm round you, shrieking!',
+    banner: 'The Goblin Brute!',
+    flee: 'backs off, snarling.',
   },
 };
 
@@ -199,6 +238,8 @@ export class CombatScene extends Phaser.Scene {
   private budget: TurnBudget = { action: false, bonus: false };
   private heroActing = false;
   private aiming?: AbilityId;
+  private doom?: CombatSceneData['doom'];
+  private doomed = false;
 
   constructor() {
     super('Combat');
@@ -214,6 +255,8 @@ export class CombatScene extends Phaser.Scene {
     this.budget = { action: false, bonus: false };
     this.heroActing = false;
     this.aiming = undefined;
+    this.doom = data.doom;
+    this.doomed = false;
 
     const stats = this.world.stats;
     stats.health = Math.max(1, Math.round(stats.health));
@@ -285,6 +328,10 @@ export class CombatScene extends Phaser.Scene {
         ? `${FOE_TEXT.wolfmother.start}${this.foes.length > 1 ? ' Her wolves fan out round you.' : ''}`
         : this.foes.length > 1 && first.creature!.kind === 'rat'
         ? FOE_TEXT.rat.start
+        : this.foes.some((f) => f.creature!.kind === 'goblinbrute')
+        ? FOE_TEXT.goblinbrute.start
+        : this.foes.length > 1 && isGoblin(first.creature!.kind)
+        ? 'Goblins swarm round you, shrieking and cackling!'
         : this.foes.length > 1 && isOutlaw(first.creature!.kind)
         ? FOE_TEXT.footpad.start
         : this.foes.length > 1
@@ -303,7 +350,8 @@ export class CombatScene extends Phaser.Scene {
     this.world.frameFight(this.actors.map((a) => a.pos()));
     this.banner(
       mother ? FOE_TEXT.wolfmother.banner
-        : this.foes.length > 1 && first.creature!.kind !== 'rat' && !isOutlaw(first.creature!.kind) ? 'Wolves attack!'
+        : this.foes.some((f) => f.creature!.kind === 'goblinbrute') ? FOE_TEXT.goblinbrute.banner
+        : this.foes.length > 1 && first.creature!.kind !== 'rat' && !isArmed(first.creature!.kind) ? 'Wolves attack!'
           : FOE_TEXT[first.creature!.kind].banner,
     );
     await this.wait(900);
@@ -323,6 +371,7 @@ export class CombatScene extends Phaser.Scene {
     await this.wait(500);
 
     while (this.battle.outcome() === 'ongoing') {
+      await this.checkDoom();
       const c = this.battle.current;
       const actor = this.actorOf(c);
       this.drawOrder();
@@ -513,11 +562,47 @@ export class CombatScene extends Phaser.Scene {
       await this.attack(foe, this.actorOf(action.target));
     } else if (action.type === 'flee') {
       foe.c.fled = true;
-      if (!isOutlaw(foe.creature!.kind)) GameAudio.yelp();
+      this.cry(foe);
       this.log(`The ${foe.c.name} ${FOE_TEXT[foe.creature!.kind].flee}`);
       const from = this.hero.pos();
       await foe.creature!.flee(from.x, from.y);
     }
+  }
+
+  /** A beast's yelp, or a goblin's shriek, as it's hurt (footpads just grunt). */
+  private cry(actor: Actor): void {
+    const kind = actor.creature?.kind;
+    if (!kind) return;
+    if (isGoblin(kind)) GameAudio.shriek(kind === 'goblinbrute');
+    else if (!isOutlaw(kind)) GameAudio.yelp();
+  }
+
+  /**
+   * A fight that can't be won turns: once its round comes (or the hero has the
+   * leader badly hurt, or only the leader is left), the foes can't miss and the
+   * hero can't hit, until the hero goes down.
+   */
+  private async checkDoom(): Promise<void> {
+    const doom = this.doom;
+    if (!doom || this.doomed) return;
+    const leader = doom.leader ? this.foes.find((f) => f.c.id === doom.leader) : undefined;
+    const leaderHurt = !!leader && leader.c.hp < leader.c.maxHp * 0.5;
+    const alone = this.battle.standing('foes').length <= 1;
+    if (this.battle.round < doom.round && !leaderHurt && !alone) return;
+    this.doomed = true;
+    const hero = this.hero.c;
+    this.battle.fate = {
+      decide: (attacker) => (attacker.side === 'foes' ? 'hit' : 'miss'),
+      minDamage: () => Math.ceil(hero.maxHp * 0.2),
+    };
+    if (leader && leader.c.hp < leader.c.maxHp * 0.5) leader.c.hp = Math.ceil(leader.c.maxHp * 0.5);
+    for (const f of this.foes) if (this.battle.isUp(f.c)) this.battle.addStatus(f.c, 'rallied', 99);
+    GameAudio.warHorn();
+    this.world.cameras.main.shake(400, 0.008);
+    this.banner('Overwhelmed!');
+    this.log(doom.text);
+    this.drawOrder();
+    await this.wait(1100);
   }
 
   /** A pack leader's howl rouses the rest of the pack. */
@@ -531,7 +616,11 @@ export class CombatScene extends Phaser.Scene {
       this.battle.addStatus(f.c, 'rallied', 2);
       this.float(f, 'Rallied', hex(STATUSES.rallied.color));
     }
-    this.log(`The ${leader.c.name} throws back her head and howls. Her wolves answer, eyes blazing (${signed(RALLY_TO_HIT)} to hit for 2 turns).`);
+    this.log(
+      isGoblin(leader.creature!.kind)
+        ? `The ${leader.c.name} bangs its club on its shield and bellows. Its goblins shriek back, wild-eyed (${signed(RALLY_TO_HIT)} to hit for 2 turns).`
+        : `The ${leader.c.name} throws back her head and howls. Her wolves answer, eyes blazing (${signed(RALLY_TO_HIT)} to hit for 2 turns).`,
+    );
     this.drawOrder();
     await this.wait(700);
   }
@@ -682,7 +771,7 @@ export class CombatScene extends Phaser.Scene {
     await this.rollDie(attacker, r.roll, signed(r.total - r.roll), r.mode);
     if (attacker.creature) {
       attacker.creature.setFrame(CREATURE_FRAME.bite);
-      if (isOutlaw(attacker.creature.kind)) GameAudio.swing(false);
+      if (isArmed(attacker.creature.kind)) GameAudio.swing(false);
       else GameAudio.bite();
     } else {
       GameAudio.swing(!!style.heavy);
@@ -704,7 +793,7 @@ export class CombatScene extends Phaser.Scene {
       this.flash(target);
       this.float(target, r.crit ? `Critical! -${r.damage}` : `-${r.damage}`, r.crit ? '#ffd76a' : '#ff6b5a', r.crit);
       if (target.creature && !r.killed) {
-        if (!isOutlaw(target.creature.kind)) GameAudio.yelp();
+        this.cry(target);
         target.creature.setFrame(CREATURE_FRAME.hurt);
         this.time.delayedCall(350, () => {
           if (target.c.hp > 0 && !target.c.fled && !this.battle.has(target.c, 'prone')) target.creature!.setFrame(CREATURE_FRAME.snarl);
@@ -725,7 +814,11 @@ export class CombatScene extends Phaser.Scene {
       }
       if (r.rend) {
         this.float(target, 'Bleeding', hex(STATUSES.bleeding.color));
-        this.log(`The bite tears; ${whom} ${target === this.hero ? 'are' : 'is'} bleeding.`);
+        this.log(
+          attacker.creature?.kind === 'goblintorch'
+            ? `The flames catch; ${whom} ${target === this.hero ? 'are' : 'is'} burning.`
+            : `The bite tears; ${whom} ${target === this.hero ? 'are' : 'is'} bleeding.`,
+        );
       }
     } else {
       this.float(target, 'Miss', '#d8c8a4');
@@ -746,7 +839,7 @@ export class CombatScene extends Phaser.Scene {
   /** Someone has dropped: a beast dies (and the hero earns its experience), or the hero blacks out. */
   private async fall(actor: Actor): Promise<void> {
     if (actor.creature) {
-      if (!isOutlaw(actor.creature.kind)) GameAudio.yelp();
+      this.cry(actor);
       actor.offset.y = 0;
       actor.creature.die();
       const xp = FOES[actor.creature.kind].xp;
@@ -873,6 +966,7 @@ export class CombatScene extends Phaser.Scene {
       hasWeapon: !!Inventory.equipped.mainHand,
       hasFood: this.foodOptions().length > 0,
       spareWeapon: this.spareWeapons().length > 0,
+      trapped: this.doom?.trapped,
     };
   }
 

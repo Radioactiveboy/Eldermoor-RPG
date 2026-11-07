@@ -193,6 +193,11 @@ const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   // The footpads' purses are counted out separately (see FOOTPAD_PURSE).
   footpad: [],
   cutpurse: [['hunting-knife', 1]],
+  // Nothing taken from the goblins: the raid ends with the hero on the ground (see world/GoblinRaid.ts).
+  goblin: [],
+  goblinspear: [],
+  goblintorch: [],
+  goblinbrute: [],
 };
 
 /** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
@@ -211,6 +216,10 @@ const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
   rat: { slain: 'Rats. Big ones, too. I will take a tail or two to show Godric.', fled: 'It shot off into a hole in the wall. It will be back.' },
   footpad: { slain: "That's the end of the Plains tithe. There's a purse on him, heavier than mine was.", fled: 'He ran for the trees and never looked back. I doubt he will try this road again.' },
   cutpurse: { slain: "Nab won't be getting nervous on lonely roads any more. His knife is a good one.", fled: 'Gone, squealing, across the grass. So much for nerves.' },
+  goblin: { slain: 'It lies twitching in the mud. There are so many more of them.', fled: 'It scuttles off, cackling.' },
+  goblinspear: { slain: 'One less. There are so many more of them.', fled: 'It scuttles off, cackling.' },
+  goblintorch: { slain: 'Its torch hisses out in the mud.', fled: 'It scuttles off, waving its torch.' },
+  goblinbrute: { slain: 'The Brute is down.', fled: 'The Brute backs away, laughing.' },
 };
 
 /** Seconds sitting at a tavern table before a maid comes over, the first time, and between her visits after that. */

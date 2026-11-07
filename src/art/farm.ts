@@ -131,6 +131,9 @@ export function cropKey(kind: CropKind, ripe: boolean): string {
 /** Fence pieces connect to their neighbours: N = -y, S = +y, W = -x, E = +x. */
 export const FENCE = { N: 1, S: 2, W: 4, E: 8 } as const;
 
+/** Every shape of fence piece, by which sides it joins up on. */
+export const FENCE_MASKS = Array.from({ length: 16 }, (_, i) => i);
+
 export function fenceKey(mask: number): string {
   return `fence-${mask}`;
 }

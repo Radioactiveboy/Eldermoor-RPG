@@ -15,6 +15,7 @@ import {
   wolfSheet,
   wolfSpec,
 } from './beasts3d';
+import { BRUTE_SIZE, goblinSpec } from './goblins3d';
 import { footpadSpec } from './wayfarers3d';
 
 /**
@@ -34,7 +35,7 @@ const WOLF_MOTHER_SIZE = 1.45;
  * systems/Combat.ts FOES).
  */
 export const CREATURE_ART: Record<
-  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'rat' | 'footpad' | 'cutpurse',
+  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute',
   {
     w: number;
     h: number;
@@ -57,6 +58,11 @@ export const CREATURE_ART: Record<
   // The footpads on the Lord's Road (their sheets are drawn in wayfarers3d.ts).
   footpad: { ...footpadSpec(), eight: true, tall: 42 },
   cutpurse: { ...footpadSpec(), eight: true, tall: 40 },
+  // The goblins who raid the Hollow (their sheets are drawn in goblins3d.ts).
+  goblin: { ...goblinSpec('goblin'), eight: true, tall: 32 },
+  goblinspear: { ...goblinSpec('goblinspear'), eight: true, tall: 34 },
+  goblintorch: { ...goblinSpec('goblintorch'), eight: true, tall: 34 },
+  goblinbrute: { ...goblinSpec('goblinbrute'), eight: true, tall: 34 * BRUTE_SIZE },
 };
 
 export function generateCreatures(scene: Phaser.Scene): void {
