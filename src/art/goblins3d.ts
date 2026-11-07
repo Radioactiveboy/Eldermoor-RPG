@@ -308,7 +308,11 @@ function goblinModel(pose: Pose3D, look: GoblinLook, act: Act = 'rest'): Model {
   // Eyes: little points of yellow under the brow, squeezed shut when hurt.
   const shut = act === 'hurt';
   for (const side of [-1, 1]) {
+    // A dark, sunken socket round each eye, so the glint stands out against the green.
+    details.push({ x: side * 2.7 * k, y: hy + 0.6, z: hz + 3.5 * k, color: darker(darker(skin[1])) });
+    details.push({ x: side * 1.7 * k, y: hy + 1.6, z: hz + 3.8 * k, color: darker(darker(skin[1])) });
     details.push({ x: side * 1.7 * k, y: hy + 0.6, z: hz + 3.9 * k, color: shut ? darker(skin[1]) : look.eye });
+    if (!shut) details.push({ x: side * 2.2 * k, y: hy + 0.6, z: hz + 3.8 * k, color: look.eye });
   }
   // A grim slash of a mouth between the tusks.
   details.push({ x: -0.8 * k, y: hy - 1.6 * k, z: hz + 3.9 * k, color: 0x2a1a14 });
@@ -430,7 +434,7 @@ function shieldSolids(h: V3, act: Act, w: number): Solid[] {
 
 /** The cutter: olive green, a hide vest and a topknot, and a rusty cleaver. */
 export const GOBLIN_CUTTER: GoblinLook = {
-  skin: [0x7a9440, 0x52682a, 0x9ab45a],
+  skin: [0x7e9a42, 0x48601f, 0xa8c46a],
   mottle: [0x5e7430, 0x40521e, 0x7a9440],
   kilt: [0x6a5236, 0x4a3824, 0x86684a],
   vest: [0x5a4430, 0x3e2e20, 0x765a40],
@@ -443,7 +447,7 @@ export const GOBLIN_CUTTER: GoblinLook = {
 
 /** The spearman: mossy grey-green, red war paint, a leather cap, a necklace of bones, and a spear taller than it is. */
 export const GOBLIN_SPEAR: GoblinLook = {
-  skin: [0x6a8460, 0x4a5e42, 0x88a27c],
+  skin: [0x6c8862, 0x3f5238, 0x94b088],
   mottle: [0x52684a, 0x3a4a34, 0x6a8460],
   kilt: [0x5a5a46, 0x3e3e30, 0x76765e],
   paint: [0xb02c22, 0x7e1e18, 0xd04a3c],
@@ -455,7 +459,7 @@ export const GOBLIN_SPEAR: GoblinLook = {
 
 /** The firebrand: sallow yellow-green, a ragged brown hood and cape, a hatchet, and a burning torch. */
 export const GOBLIN_TORCH: GoblinLook = {
-  skin: [0x96a048, 0x6a7230, 0xb4bc66],
+  skin: [0x9aa44a, 0x5e6626, 0xc2ca74],
   mottle: [0x747c34, 0x525822, 0x96a048],
   kilt: [0x5e4632, 0x423020, 0x7a5c44],
   hood: [0x5a4232, 0x3e2c20, 0x745640],
@@ -473,7 +477,7 @@ export const GOBLIN_TORCH: GoblinLook = {
  * nail-studded club.
  */
 export const GOBLIN_BRUTE: GoblinLook = {
-  skin: [0x52683a, 0x384a26, 0x6e8650],
+  skin: [0x56703c, 0x2e3e1e, 0x7a9658],
   mottle: [0x40522c, 0x2c3a1c, 0x52683a],
   kilt: [0x3e3430, 0x2a2220, 0x564a44],
   vest: [0x4a3a2e, 0x32261e, 0x645040],
@@ -507,7 +511,7 @@ export const BRUTE_SIZE = 1.3;
 
 /** A goblin's frame: wide enough to fit it lying down. */
 export function goblinSpec(kind: GoblinKind): FrameSpec {
-  return kind === 'goblinbrute' ? { w: 64, h: 64, feetY: 58, groundShade: 5 } : { w: 48, h: 48, feetY: 43, groundShade: 4 };
+  return kind === 'goblinbrute' ? { w: 64, h: 64, feetY: 58, groundShade: 5, creases: true } : { w: 48, h: 48, feetY: 43, groundShade: 4, creases: true };
 }
 
 /** Every solid and detail scaled up about the feet. */

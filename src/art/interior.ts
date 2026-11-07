@@ -162,7 +162,11 @@ export function floorTile(seed: number, w: number, h: number): PixelCanvas {
 
 // ---------------------------------------------------------------- furniture
 
-export function hearth(): IsoModel {
+/**
+ * @param inside what shows in the firebox's opening, given the point across it (x, -20..20) and down it (y, 0..40),
+ *   if not the usual sooty dark (the cold hearth after the raid paints its ashes here)
+ */
+export function hearth(inside?: (x: number, y: number) => number | undefined): IsoModel {
   const m = new IsoModel();
   const stones: Shader = (u, v) => {
     const row = Math.floor(v * 5);
@@ -185,7 +189,7 @@ export function hearth(): IsoModel {
       const x = (u - 0.5) * 64;
       const y = v * 40;
       const top = 12 + (x * x) / 40;
-      if (Math.abs(x) < 20 && y > top) return y > 36 ? P.ink : P.soot;
+      if (Math.abs(x) < 20 && y > top) return inside?.(x, y) ?? (y > 36 ? P.ink : P.soot);
       return stones(u, v);
     },
     right: stonesDark,
@@ -445,6 +449,27 @@ function cottage(ruined = false): { model: IsoModel; windows: Array<[number, num
       return base(u, v);
     };
   };
+  if (ruined) {
+    // What shows through the burnt-out roof and the holes in the walls: the inside, not the grass under it.
+    // The floor, charred and heaped with ash and fallen thatch...
+    const boards = planks(9, P.plankDark, P.ink, P.plank, 5);
+    m.quad({ x: 0, y: 0, z: 0 }, { x: S, y: 0, z: 0 }, { x: 0, y: S, z: 0 }, burn((u, v) => {
+      const n = hash(Math.floor(u * 30), Math.floor(v * 30));
+      if (n < 0.12) return P.ashLight;
+      if (n < 0.3) return P.ash;
+      return darken(boards(u, v) ?? P.plankDark);
+    }, 19, 0.7));
+    // ...the insides of the two far walls, blackened and broken off ragged at the top...
+    const inner = (seed: number): Shader => burn((u, v) => {
+      if (v < 0.12 + Math.abs(Math.sin(u * 17 + seed)) * 0.18) return null;
+      return darken(darken(logs(u, v * 0.86) ?? P.log));
+    }, seed, 0.75, 0.4);
+    m.quad({ x: 0, y: 0, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, inner(17));
+    m.quad({ x: 0, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, inner(18));
+    // ...and the bed and table inside, burnt to frames.
+    m.box(0.3, 0.3, 0, 0.8, 1.4, 9, { top: 0x2a2224, left: 0x3a2e2a, right: P.ink });
+    m.box(1.4, 1.2, 0, 1, 0.6, 14, { top: 0x3a2e2a, left: 0x2a2224, right: P.ink });
+  }
   // Back roof slope (drawn first; the front slope and gable cover most of it).
   if (!ruined) m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, thatch);
   // Chimney poking up through the back slope (the stone stands, even when all else burns).

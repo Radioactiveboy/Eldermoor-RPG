@@ -168,9 +168,14 @@ function brokenChest(): IsoModel {
 
 /** The hearth gone cold: ash and blackened logs in the firebox. */
 function coldHearth(): IsoModel {
-  const m = hearth();
-  m.box(0.45, 0.45, 0, 1.1, 0.3, 3, { top: (u, v) => (hash(Math.floor(u * 20), Math.floor(v * 8)) < 0.3 ? P.ashLight : P.ash), left: P.ashDark, right: P.ashDark });
-  m.box(0.6, 0.55, 3, 0.8, 0.1, 2, { top: CHAR_LIGHT, left: CHAR, right: P.ink });
+  // The ashes and a burnt log lie inside the opening, painted on its back rather than stood in front of the stones.
+  const m = hearth((x, y) => {
+    if (y > 33) return hash(Math.floor(x + 20), Math.floor(y)) < 0.3 ? P.ashLight : P.ash;
+    if (y > 29 && Math.abs(x + 2) < 11) return y < 30.5 ? CHAR_LIGHT : hash(Math.floor(x + 20), 3) < 0.12 ? P.ember : CHAR;
+    return y > 24 ? P.ashDark : P.soot;
+  });
+  // A little ash spilled out onto the hearthstone in front.
+  m.box(0.55, 0.82, 0, 0.9, 0.16, 1, { top: (u, v) => (hash(Math.floor(u * 20), Math.floor(v * 6)) < 0.3 ? P.ashLight : P.ash), left: P.ashDark, right: P.ashDark });
   return burnt(m, 361, { amount: 0.2 });
 }
 
@@ -287,26 +292,88 @@ const feathers = (seed: number) =>
 
 export const FIRE_FRAMES = 6;
 
+/** Hottest to coolest: the white-hot heart, yellow, orange, red, and the dark red at the edges and tips. */
+const FLAME_RAMP = [0xfff6d0, P.fireYellow, 0xf8a83a, P.fireOrange, P.fireRed, 0xa8301e, 0x6e1e14];
+
 /**
- * Flames as a strip of frames: a ragged sheet of fire licking up from its base,
- * with a hot yellow heart and red tips, and sparks flying off the top.
+ * Flames as a strip of looping frames. Rather than a flat sheet, the fire is a
+ * cluster of separate tongues, each one a tapering curl that rises from a hot
+ * base, leans downwind (to screen right, the way the smoke drifts) and whips
+ * about as it climbs. Each is shaded from a white-hot core out to dark red
+ * edges, so it reads as round and lit from within. Wisps break off the tips,
+ * a soft glow sits round the base, and sparks rise and drift on the wind.
  */
 function drawFireFrame(c: PixelCanvas, w: number, h: number, frame: number, seed: number): void {
-  const rnd = seededRandom(seed + frame * 97);
+  const rnd = seededRandom(seed);
+  const phase = (frame / FIRE_FRAMES) * Math.PI * 2;
   const base = h - 2;
-  for (let x = 2; x < w - 2; x++) {
-    const across = Math.abs(x - w / 2) / (w / 2 - 2);
-    const tall = (1 - across * across) * (h - 10) * (0.55 + 0.45 * smoothNoise(x * 0.35, frame * 0.9, seed));
-    for (let y = 0; y < tall; y++) {
-      const t = y / tall;
-      const sway = Math.round(Math.sin(t * 4 + frame * 1.7 + x * 0.3) * t * 2);
-      const col = t < 0.3 ? P.fireYellow : t < 0.65 ? P.fireOrange : P.fireRed;
-      // Holes in the flame near the top, so it flickers rather than stands like a wall.
-      if (t > 0.6 && smoothNoise(x * 0.5, y * 0.4 + frame, seed + 5) < 0.4) continue;
-      c.set(x + sway, base - y, col);
+  const lean = 0.42;
+  // A warm glow round the foot of the fire, faint, under everything else.
+  for (let y = base - 8; y <= base + 1; y++) {
+    for (let x = 0; x < w; x++) {
+      const d = Math.hypot((x - w / 2) / (w * 0.5), (y - base + 2) / 7);
+      if (d < 1) c.set(x, y, 0xff9a3a, Math.round((1 - d) * 70));
     }
   }
-  for (let i = 0; i < 5; i++) c.set(Math.floor(rnd() * w), Math.floor(rnd() * h * 0.4), P.ember);
+  // The tongues: tall ones in the middle, shorter towards the sides; drawn tallest first so the small ones sit in front.
+  const count = Math.max(3, Math.round(w / 6));
+  const tongues = Array.from({ length: count }, (_, i) => {
+    const across = (i + 0.5) / count - 0.5;
+    const tall = (1 - Math.abs(across) * 1.5) * (h - 8) * (0.7 + rnd() * 0.3);
+    return {
+      x: w / 2 + across * (w - 8) + (rnd() - 0.5) * 2,
+      tall,
+      wide: (w / count) * (0.8 + rnd() * 0.5),
+      speed: 1 + Math.floor(rnd() * 2),
+      off: rnd() * Math.PI * 2,
+    };
+  }).sort((p, q) => q.tall - p.tall);
+  for (const t of tongues) {
+    // Each tongue swells and gutters in its own time (whole cycles per loop, so the strip loops cleanly).
+    const life = 0.78 + 0.22 * Math.sin(phase * t.speed + t.off);
+    const tall = t.tall * life;
+    for (let y = 0; y < tall; y++) {
+      const v = y / tall;
+      // Curling over downwind as it rises, and whipping side to side more near the tip.
+      const cx = t.x + lean * Math.pow(v, 1.6) * tall * 0.55 + Math.sin(v * 5.5 - phase * t.speed + t.off) * v * 2.4;
+      const half = (t.wide / 2) * Math.pow(1 - v, 0.75) * (1 + 0.25 * Math.sin(v * 9 + phase * 2 + t.off));
+      for (let x = Math.floor(cx - half - 1); x <= Math.ceil(cx + half + 1); x++) {
+        const d = Math.abs(x + 0.5 - cx) / Math.max(0.6, half);
+        if (d > 1) continue;
+        // The windward side a touch hotter than the lee, so it looks lit from within and round.
+        const side = (x + 0.5 - cx) / Math.max(0.6, half);
+        const heat = (1 - v * 0.85) * (1 - d * d * 0.75) * (1 - side * 0.08);
+        const band = heat > 0.82 ? 0 : heat > 0.66 ? 1 : heat > 0.52 ? 2 : heat > 0.4 ? 3 : heat > 0.28 ? 4 : heat > 0.16 ? 5 : 6;
+        // The edges flicker a little: some edge pixels missing.
+        if (d > 0.82 && smoothNoise(x * 0.7, y * 0.5 - frame * 1.3, seed + 3) < 0.35) continue;
+        c.set(x, base - y, FLAME_RAMP[band]);
+      }
+    }
+    // A wisp of flame breaking off the tip, drifting up and downwind.
+    const lift = ((frame * t.speed) % FIRE_FRAMES) / FIRE_FRAMES;
+    const wx = t.x + lean * tall * 0.55 + lift * 4;
+    const wy = base - tall - 2 - lift * 7;
+    const r = 1.6 * (1 - lift);
+    for (let y = Math.floor(wy - r); y <= wy + r; y++) {
+      for (let x = Math.floor(wx - r); x <= wx + r; x++) {
+        if (Math.hypot(x - wx, y - wy) <= r) c.set(x, y, lift < 0.4 ? P.fireOrange : P.fireRed);
+      }
+    }
+  }
+  // The red-hot bed of embers at the foot.
+  for (let x = 2; x < w - 2; x++) {
+    const k = smoothNoise(x * 0.6, frame * 0.8, seed + 7);
+    c.set(x, base, k > 0.55 ? P.fireYellow : P.fireOrange);
+    c.set(x, base + 1, k > 0.5 ? P.fireRed : 0x6e1e14);
+  }
+  // Sparks, rising and drifting on the wind.
+  for (let i = 0; i < 7; i++) {
+    const startX = w * (0.25 + rnd() * 0.5);
+    const along = ((frame / FIRE_FRAMES + i / 7) % 1);
+    const sx = startX + along * w * 0.35;
+    const sy = base - h * 0.35 - along * h * 0.6;
+    if (sy > 0) c.set(sx, sy, along < 0.5 ? P.fireYellow : P.ember);
+  }
 }
 
 /** Registers a sheet of flames and art keys for it standing on the ground and at heights above it (a roof). */

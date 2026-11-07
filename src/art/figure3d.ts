@@ -123,6 +123,12 @@ export interface FrameSpec {
   feetY: number;
   /** Body-space height under which the light falls off towards the ground. */
   groundShade?: number;
+  /**
+   * Draw a dark line inside the figure wherever one part stands well in front
+   * of another (an arm across the body, the head over the shoulders), so the
+   * parts read apart at small sizes.
+   */
+  creases?: boolean;
 }
 
 /** The folk's frame (see character.ts). */
@@ -194,6 +200,7 @@ export function renderFrame(model: Model, angleDeg: number, spec: FrameSpec = PE
     }
   }
 
+  if (spec.creases) crease(c, depth, FRAME_W, FRAME_H);
   // Eyes and other marks, where nothing nearer hides them.
   for (const d of model.details) {
     const w = toWorld([d.x, d.y, d.z]);
@@ -206,6 +213,34 @@ export function renderFrame(model: Model, angleDeg: number, spec: FrameSpec = PE
     if (NEAR - along <= depth[py * FRAME_W + px] + 0.9) c.set(px, py, d.color);
   }
   return c;
+}
+
+/** Darkens the far side of every sharp step in depth between neighbouring pixels (see FrameSpec.creases). */
+function crease(c: PixelCanvas, depth: Float32Array, w: number, h: number): void {
+  const STEP = 3.2;
+  const marks: number[] = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const d = depth[y * w + x];
+      if (d === Infinity) continue;
+      for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const e = depth[ny * w + nx];
+        if (e !== Infinity && d - e > STEP) {
+          marks.push(y * w + x);
+          break;
+        }
+      }
+    }
+  }
+  for (const i of marks) {
+    const col = c.get(i % w, Math.floor(i / w));
+    if (col === null) continue;
+    const r = ((col >> 16) & 0xff) * 0.55;
+    const g = ((col >> 8) & 0xff) * 0.55;
+    const b = (col & 0xff) * 0.6;
+    c.set(i % w, Math.floor(i / w), (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b));
+  }
 }
 
 /** The colour a surface shows, lit: the light and normal pick one of its tones. */
