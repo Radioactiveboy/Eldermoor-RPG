@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
-import { MedicineStage, MOTHER_INTRO, motherScript } from '../dialogue/mother';
+import { MedicineStage, MOTHER_ASLEEP, MOTHER_DOZING, MOTHER_INTRO, motherScript } from '../dialogue/mother';
 import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
-import { FeedStage, iranScript } from '../dialogue/iran';
+import { FeedStage, IRAN_HIDING, iranScript } from '../dialogue/iran';
 import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
@@ -78,6 +78,8 @@ export const NpcWorld = {
   now: 0,
   /** Hours from now until the clock next reads an hour (TimeOfDay.hoursUntil). */
   hoursUntil: (_hour: number) => 0,
+  /** Mother is lying in her bed (see world/MotherRoutine.ts), so she's drowsy when spoken to. */
+  motherInBed: false,
 };
 
 /** How Godric's job of clearing his cellar of rats stands. */
@@ -198,10 +200,17 @@ function feedStage(): FeedStage {
 }
 
 const NPCS: Record<string, NpcDef> = {
+  // Modelled in 3D (art/mother3d.ts): she goes about her day round the cottage (see world/MotherRoutine.ts).
   mother: {
-    texture: 'npc-mother',
-    anim: 'mother-idle',
-    script: () => (QuestLog.has('mother-medicine') ? motherScript(medicineStage()) : MOTHER_INTRO),
+    texture: 'folk-mother',
+    loiters: true,
+    script: () => {
+      if (!QuestLog.has('mother-medicine')) return MOTHER_INTRO;
+      const stage = medicineStage();
+      // Woken in her bed, she's drowsy, unless the hero has brought her tincture.
+      if (NpcWorld.motherInBed && stage === 'well') return MOTHER_ASLEEP;
+      return NpcWorld.motherInBed && stage !== 'tincture' ? MOTHER_DOZING : motherScript(stage);
+    },
   },
   pedlar: { texture: 'folk-pedlar', script: traveller('pedlar', PEDLAR), wander: 7 },
   pilgrim: { texture: 'folk-pilgrim', script: traveller('pilgrim', PILGRIM), wander: 5 },
@@ -223,6 +232,8 @@ const NPCS: Record<string, NpcDef> = {
       return iranScript(feedStage(), first);
     },
   },
+  // After the raid: Iran crouched in the corner of his hut with his children, too frightened to go out.
+  'iran-hiding': { texture: 'folk-iran', sits: true, script: () => IRAN_HIDING },
   // Old Tobin, on his stool on the far shore of the lake, watching his float.
   fisherman: {
     texture: 'folk-fisherman',
@@ -370,6 +381,13 @@ export class Npc implements Body {
   private errand?: { route: Vec2[]; then?: () => void };
   /** For a maid, the spot she's on her way to tidy (see MapData.chores). */
   private chore?: { x: number; y: number; face: Vec2 };
+  /** Sat down for now (Mother at the table), whether or not they always sit. */
+  sitting = false;
+  /**
+   * Out of sight but still there to talk to (Mother lying in her bed, which is
+   * drawn with her in it): `prompt` is where the talk prompt goes instead.
+   */
+  private tucked?: { prompt: { x: number; y: number } };
 
   /**
    * @param commute for a trader, their walk home (see MapData.Commute)
@@ -491,6 +509,36 @@ export class Npc implements Body {
     });
   }
 
+  /** Stand somewhere at once (no walking), e.g. getting up out of bed. */
+  placeAt(gx: number, gy: number): void {
+    this.errand = undefined;
+    this.route = [];
+    this.gx = gx;
+    this.gy = gy;
+    this.sync(false);
+  }
+
+  /** Face a grid direction and stay so (sat at the table, looking at it). */
+  turnTo(dir: Vec2): void {
+    this.face(dir);
+    this.sync(false);
+  }
+
+  /**
+   * Hide them while they're drawn as part of something else (Mother in her
+   * bed), but keep them there to be spoken to, with the prompt at `prompt`
+   * (a world pixel); or, with no prompt, bring them back into view.
+   */
+  tuck(prompt?: { x: number; y: number }): void {
+    this.tucked = prompt && { prompt };
+    this.speech = prompt ? undefined : this.speech;
+    this.setVisible(!prompt);
+  }
+
+  get isTucked(): boolean {
+    return !!this.tucked;
+  }
+
   /** Say something out loud, in a bubble over their head, for a few seconds. */
   say(text: string, seconds = 5): void {
     this.speech = text;
@@ -507,12 +555,19 @@ export class Npc implements Body {
 
   /** The top of their head, where a speech bubble's tail points. */
   get speechPoint(): { x: number; y: number } {
-    return { x: this.sprite.x, y: this.sprite.y - FEET_Y + 7 };
+    if (this.tucked) return { x: this.tucked.prompt.x, y: this.tucked.prompt.y + 10 };
+    return { x: this.sprite.x, y: this.sprite.y - FEET_Y + 7 + (this.seated ? 8 : 0) };
   }
 
   /** World position just above their head, for the talk prompt. */
   get promptPoint(): { x: number; y: number } {
-    return { x: this.sprite.x, y: this.sprite.y - FEET_Y - 6 };
+    if (this.tucked) return this.tucked.prompt;
+    return { x: this.sprite.x, y: this.sprite.y - FEET_Y - 6 + (this.seated ? 8 : 0) };
+  }
+
+  /** Sitting down, always or for now. */
+  private get seated(): boolean {
+    return !!this.def.sits || this.sitting;
   }
 
   script(): DialogueScript {
@@ -538,6 +593,7 @@ export class Npc implements Body {
 
   /** Turn to face a point (Mother is only drawn facing forward, so she just mirrors). */
   faceTowards(gx: number, gy: number): void {
+    if (this.tucked) return;
     if (this.def.anim) {
       const screenDx = gridToScreen(gx - this.gx, gy - this.gy).x;
       if (Math.abs(screenDx) > 4) this.sprite.setFlipX(screenDx < 0);
@@ -587,6 +643,8 @@ export class Npc implements Body {
       if (!paused) this.standAbout(dt, player);
       return;
     }
+    // In bed, or sat at the table: staying as they are.
+    if (this.tucked || this.sitting) return;
     // (A maid at work doesn't stop to stare at someone sitting down.)
     const noticed = this.distanceTo(player.x, player.y) < NOTICE_RANGE && !(this.def.bustles && NpcWorld.sitting);
     if (paused || noticed) {
@@ -870,11 +928,11 @@ export class Npc implements Body {
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x, p.y);
     // Seated, drawn in front of the seat (as the player is).
-    const d = (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.def.sits ? 2 : 0);
+    const d = (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.seated ? 2 : 0);
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
     if (this.def.anim) return;
-    const pose = moving ? 'walk' : this.def.sits ? 'sit' : 'idle';
+    const pose = moving ? 'walk' : this.seated ? 'sit' : 'idle';
     // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored,
     // unless the figure is modelled in 3D and has all eight drawn (see figure3d.ts).
     const names: string[] = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];

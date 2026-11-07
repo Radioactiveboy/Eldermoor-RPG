@@ -493,11 +493,19 @@ export function iranModel(pose: Pose3D): Model {
   const beard: Tones = [0x8a807a, 0x625a56, 0xa8a09a];
   const straw: Tones = [P.straw, P.strawDark, P.strawLight];
   const boots: Tones = [P.barkDark, P.ink, P.bark];
-  const b = pose.bob;
+  // Sitting is sitting on the floor (huddled in a corner of the hut, after the raid): knees up, everything lower.
+  const sit = !!pose.sit;
+  const b = pose.bob + (sit ? 5.5 : 0);
   const s = pose.stride;
   const solids: Solid[] = [];
 
   for (const side of [-1, 1]) {
+    if (sit) {
+      solids.push(...limb([side * 2.4, 4, 0], [side * 2.4, 8.4, 5.6], 2, 1.8, trouser));
+      solids.push(...limb([side * 2.4, 8.4, 5.6], [side * 2.4, 2.2, 7.2], 1.8, 1.6, trouser));
+      solids.push({ cx: side * 2.4, cy: 1.3, cz: 8.2, rx: 1.8, ry: 1.4, rz: 2.7, material: boots });
+      continue;
+    }
     const swing = s * side;
     const lift = swing < 0 ? 0.9 : 0;
     solids.push(...limb([side * 2.3, 12 - b * 0.5, 0], [side * 2.3, 3.6 + lift, swing * 2.4], 2, 1.7, trouser));
@@ -517,10 +525,12 @@ export function iranModel(pose: Pose3D): Model {
   for (const side of [-1, 1]) {
     const swing = -s * side * 2;
     solids.push({ cx: side * 4.9, cy: 24.6 - b, cz: 0.5, rx: 2.4, ry: 2.2, rz: 2.4, material: smock });
-    const elbow: [number, number, number] = [side * 6, 20.2 - b, 0.6 + swing * 0.5];
+    // (Sat on the floor, his arms round his knees.)
+    const elbow: [number, number, number] = sit ? [side * 5.6, 19.4 - b, 3.4] : [side * 6, 20.2 - b, 0.6 + swing * 0.5];
+    const hand: [number, number, number] = sit ? [side * 1.4, 9.6, 7.6] : [side * 6.2, 16.6 - b, 1.4 + swing];
     solids.push(...limb([side * 5.4, 24 - b, 0.5], elbow, 1.8, 1.6, sleeve));
-    solids.push(...limb(elbow, [side * 6.2, 16.6 - b, 1.4 + swing], 1.6, 1.5, sleeve));
-    solids.push({ cx: side * 6.2, cy: 15.6 - b, cz: 1.6 + swing, rx: 1.7, ry: 1.8, rz: 1.7, material: skin });
+    solids.push(...limb(elbow, hand, 1.6, 1.5, sleeve));
+    solids.push({ cx: hand[0], cy: hand[1] - 1, cz: hand[2] + 0.2, rx: 1.7, ry: 1.8, rz: 1.7, material: skin });
   }
 
   // Head pushed forward, grey beard, and the hat.

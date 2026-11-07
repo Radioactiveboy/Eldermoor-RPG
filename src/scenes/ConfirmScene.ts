@@ -8,6 +8,8 @@ export interface ConfirmSceneData {
   note?: string;
   yes?: string;
   no?: string;
+  /** Only the one answer (yes): something the hero has to do, such as go to sleep. */
+  only?: boolean;
   /** Called once with the answer, as the box closes. */
   onAnswer: (yes: boolean) => void;
 }
@@ -76,11 +78,9 @@ export class ConfirmScene extends Phaser.Scene {
           .setAlpha(0.8)
       : undefined;
     if (note) y += note.height + 4;
-    const options = [
-      this.makeOption(1, data.yes ?? 'Yes', y, () => answer(true)),
-      this.makeOption(2, data.no ?? 'No', y + ROW, () => answer(false)),
-    ];
-    y += ROW * 2 + PAD - 6;
+    const options = [this.makeOption(1, data.yes ?? 'Yes', y, () => answer(true))];
+    if (!data.only) options.push(this.makeOption(2, data.no ?? 'No', y + ROW, () => answer(false)));
+    y += ROW * options.length + PAD - 6;
     this.boxH = y;
 
     const frame = this.add.graphics();
@@ -92,7 +92,7 @@ export class ConfirmScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     for (const key of ['ONE', 'NUMPAD_ONE', 'Y', 'ENTER', 'E']) kb.on(`keydown-${key}`, () => answer(true));
-    for (const key of ['TWO', 'NUMPAD_TWO', 'N', 'ESC']) kb.on(`keydown-${key}`, () => answer(false));
+    if (!data.only) for (const key of ['TWO', 'NUMPAD_TWO', 'N', 'ESC']) kb.on(`keydown-${key}`, () => answer(false));
 
     this.layout();
     this.scale.on('resize', this.layout, this);

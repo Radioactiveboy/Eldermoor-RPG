@@ -6,7 +6,7 @@ import { Creature } from '../entities/Creature';
 import { Hen } from '../entities/Hen';
 import { Npc, NpcWorld } from '../entities/Npc';
 import { SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
-import { EGG_REWARD, FEED_MONEY, SIBLING_BANTER, SIBLING_GREETINGS, SIBLING_THANKS } from '../dialogue/iran';
+import { EGG_REWARD, FEED_MONEY, SIBLING_BANTER, SIBLING_GREETINGS, SIBLING_SCARED, SIBLING_SCARED_HELLO, SIBLING_THANKS } from '../dialogue/iran';
 import { Player } from '../entities/Player';
 import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
@@ -49,6 +49,9 @@ import type { SleepSceneData } from './SleepScene';
 import type { ConfirmSceneData } from './ConfirmScene';
 import type { StationSceneData } from './StationScene';
 import { Crafting, Recipe } from '../systems/Crafting';
+import type { InterludeSceneData } from './InterludeScene';
+import { MotherRoutine } from '../world/MotherRoutine';
+import { RAID_BLACKOUT, RAID_DOOM, RaidDirector, raidStage, raidWorld, ruinWorld } from '../world/GoblinRaid';
 
 type MoveKeys = Record<
   'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'sneak' | 'fastForward',
@@ -67,6 +70,10 @@ export interface GameSceneData {
   load?: SaveData;
   /** Just woke up after sleeping this many hours. */
   slept?: number;
+  /** Ran back indoors from the goblins in the yard. */
+  raidRetreat?: boolean;
+  /** Coming round in the burnt-out cottage, after the raid. */
+  raidAftermath?: boolean;
 }
 
 /** Things the HUD can show the player as a speech-like hint. */
@@ -252,7 +259,8 @@ function wakingThought(hour: number, area: AreaId): string {
 
 /** Builds the map for an area. */
 function buildArea(area: AreaId): MapData {
-  if (area === 'home') return buildHomeMap();
+  const raid = raidStage();
+  if (area === 'home') return buildHomeMap(raid === 'over');
   if (area === 'market') return buildMarketMap(QuestLog.hasFlag('paid-toll'));
   if (area === 'plains') return buildPlainsMap();
   if (area === 'monastery') return buildMonasteryMap(QuestLog.hasFlag('monastery-open'));
@@ -264,12 +272,43 @@ function buildArea(area: AreaId): MapData {
   if (area === 'den') return buildDenMap();
   if (area === 'deepden') return buildDeepDenMap();
   if (area === 'cave') return buildCaveMap();
-  if (area === 'hut') return buildHutMap();
+  if (area === 'hut') return buildHutMap(raid === 'over');
   if (area === 'tavern') return buildTavernMap();
   if (area === 'tavern-hall') return buildTavernHallMap();
   if (area === 'tavern-room') return buildTavernRoomMap(Tavern.room ?? 1);
   if (area === 'cellar') return buildCellarMap();
-  return generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
+  const world = generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
+  if (raid === 'morning') raidWorld(world);
+  if (raid === 'over') ruinWorld(world);
+  return world;
+}
+
+/**
+ * Handy for testing the goblin raid: ?raid=night starts with the tincture in
+ * the satchel and Mother's errand otherwise done; ?raid=morning wakes on the
+ * morning of the raid; ?raid=after comes round in the ruins.
+ */
+function raidTestStart(clock: TimeOfDay): void {
+  const params = new URLSearchParams(window.location.search);
+  const which = params.get('raid');
+  if (!which) return;
+  // (An ?hour=, if given, wins.)
+  const setHour = (hour: number) => !params.has('hour') && clock.setHour(hour);
+  QuestLog.start('mother-medicine', ['talk', 'leave', 'find', 'moonpetal', 'willow', 'brew']);
+  if (which === 'night') {
+    Inventory.add('fever-tincture', 1);
+    setHour(20);
+    return;
+  }
+  QuestLog.complete('mother-medicine', 'return');
+  if (which === 'morning') {
+    QuestLog.setFlag('raid-morning');
+    setHour(6.2);
+  } else if (which === 'after') {
+    QuestLog.setFlag('raid-over');
+    QuestLog.start('the-raid');
+    setHour(13);
+  }
 }
 
 export class GameScene extends Phaser.Scene {
@@ -353,6 +392,12 @@ export class GameScene extends Phaser.Scene {
   private chatterTimer = 3;
   /** An order just placed with a maid, to fetch once the conversation closes. */
   private ordered?: ItemId;
+  /** Mother going about her day, at home. */
+  private motherRoutine?: MotherRoutine;
+  /** The goblins' raid, on the morning it happens. */
+  private raid?: RaidDirector;
+  /** In the fight the goblins can't lose. */
+  private raidFight = false;
 
   constructor() {
     super('Game');
@@ -394,6 +439,7 @@ export class GameScene extends Phaser.Scene {
         const [id, n] = part.split(':');
         if (id in ITEMS) Inventory.add(id as ItemId, Math.max(1, Number(n) || 1));
       }
+      raidTestStart(this.clock);
     }
     this.area = data.load?.area ?? data.area ?? 'home';
     // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
@@ -422,6 +468,11 @@ export class GameScene extends Phaser.Scene {
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
     this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking, n.hours));
+    const mother = this.someone('mother');
+    NpcWorld.motherInBed = false;
+    this.motherRoutine = mother ? new MotherRoutine(mother, this.map, () => this.seat) : undefined;
+    this.motherRoutine?.settle(this.clock.hour);
+    this.raidFight = false;
     this.service = undefined;
     this.serviceTimer = SERVICE_FIRST;
     this.chatterTimer = 3;
@@ -432,7 +483,10 @@ export class GameScene extends Phaser.Scene {
     const hens = this.map.data.hens;
     this.hens = (hens?.flock ?? []).map((h) => new Hen(this, this.map, hens!.pen, h.kind, h.gx, h.gy));
     const children = (this.map.data.children ?? []).map((c) => new Child(this, this.map, c.id, c.gx, c.gy));
-    this.siblings = children.length > 0 ? new Siblings(children, SIBLING_BANTER, () => this.siblingHello()) : undefined;
+    const scared = raidStage() === 'over';
+    this.siblings = children.length > 0
+      ? new Siblings(children, scared ? SIBLING_SCARED : SIBLING_BANTER, () => (scared ? SIBLING_SCARED_HELLO[0] : this.siblingHello()))
+      : undefined;
     this.syncCrops();
     this.syncGathered();
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
@@ -458,10 +512,21 @@ export class GameScene extends Phaser.Scene {
     GameAudio.playMusic(this.map.data.music ?? 'world');
     this.cameras.main.fadeIn(450, 0, 0, 0);
 
+    this.raid = undefined;
+    if (raidStage() === 'morning' && (this.area === 'world' || this.area === 'home')) {
+      this.raid = this.startRaid();
+      if (this.area === 'world') this.raid.beginOutside();
+      else this.raid.beginInside(!!data.raidRetreat);
+    }
     if (data.knockedOut) {
       this.time.delayedCall(1200, () => this.onHint?.('I came to on the cottage floor, aching all over. That wolf is still out there.'));
     }
-    if (data.slept !== undefined) {
+    if (data.raidAftermath) {
+      this.cameAround();
+    } else if (data.slept !== undefined && raidStage() === 'morning') {
+      this.time.delayedCall(900, () => this.onHint?.('Shouting. Screaming, outside, and the smell of smoke. What in the world is going on out there?'));
+      this.time.delayedCall(5200, () => this.onHint?.("Mother is still asleep. I'd better go and see."));
+    } else if (data.slept !== undefined) {
       this.time.delayedCall(1000, () => this.onHint?.(wakingThought(this.clock.hour, this.area)));
     } else if (data.load) {
       const waking = this.area === 'tavern-room' ? 'I wake in my room above the Crooked Tankard. The day is waiting.' : 'I wake in my own bed. The day is waiting.';
@@ -517,7 +582,8 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.area === 'tavern') this.enteredTavern();
     if (this.area === 'cellar') this.enteredCellar();
-    if (this.area === 'hut' && !this.visited.has('hut')) {
+    if (raidStage() === 'over') this.enteredAfterRaid();
+    else if (this.area === 'hut' && !this.visited.has('hut')) {
       this.time.delayedCall(900, () => this.onHint?.('Warm, smoky, and loud. Iran was not exaggerating about the children.'));
     }
     // Finding somewhere new is worth a little experience (not the hero's own home).
@@ -551,7 +617,7 @@ export class GameScene extends Phaser.Scene {
 
   /** People besides the NPCs who can say things in speech bubbles (Iran's children), for the HUD. */
   get speakers(): Speaker[] {
-    return this.siblings?.speakers ?? [];
+    return [...(this.siblings?.speakers ?? []), ...(this.raid?.speakers ?? [])];
   }
 
   /** Into the Wolf Mother's den: Brother Wystan's errand moves on, and the first time the hero takes it in. */
@@ -622,7 +688,9 @@ export class GameScene extends Phaser.Scene {
     this.setSneaking(wantsSneak);
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : wantsSneak ? SNEAK.speed : 1);
     this.sprinting = wantsSprint && moved;
+    this.motherRoutine?.update(dt, this.clock.hour, this.busy);
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
+    this.raid?.update(dt, this.busy || this.inCombat);
     this.updateMarketHours();
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
@@ -796,8 +864,39 @@ export class GameScene extends Phaser.Scene {
     GameAudio.questChime();
     QuestLog.writeDiary(
       'Gave Mother the tincture, warm, by the fire. She made a face at the taste and said it was just as foul as her own mother\'s, ' +
-        'which she says is how you know it works. She slept the whole night through without coughing once. I sat up and listened to her breathe.',
+        'which she says is how you know it works. She was asleep before I had tucked her in, and not coughing once. Tomorrow we will see.',
     );
+    // That's the day done: she goes to bed, and so must the hero.
+    QuestLog.setFlag('raid-pending');
+    this.afterTalk = () => this.time.delayedCall(250, () => this.askToSleep());
+  }
+
+  /**
+   * After the tincture: "Get some sleep, and hope she's better in the morning."
+   * There's only the one answer, and it's straight to bed till dawn.
+   */
+  private askToSleep(): void {
+    if (!this.takeControls()) {
+      this.time.delayedCall(300, () => this.askToSleep());
+      return;
+    }
+    if (this.seat) this.standUp();
+    const bed = this.map.data.beds?.find((b) => b.id === 'home-bed');
+    const data: ConfirmSceneData = {
+      question: 'I should get some sleep.',
+      note: 'Mother has had her tincture. All I can do now is rest, and hope to see her improved in the morning.',
+      yes: 'Go to sleep until morning',
+      only: true,
+      onAnswer: () => {
+        if (!bed) {
+          this.release();
+          return;
+        }
+        this.player.faceTowards(bed.gx, bed.gy);
+        this.sleep(bed, this.clock.hoursUntil(6));
+      },
+    };
+    this.scene.launch('Confirm', data);
   }
 
   /** A trader's stall: buy and sell. Opened from the conversation with them (see dialogue/market.ts). */
@@ -938,6 +1037,17 @@ export class GameScene extends Phaser.Scene {
         return;
       case 'give-tincture':
         this.gaveMotherTincture();
+        return;
+      case 'found-iran':
+        QuestLog.complete('the-raid', 'search');
+        QuestLog.complete('the-raid', 'outside');
+        if (QuestLog.isDone('the-raid', 'iran')) return;
+        QuestLog.complete('the-raid', 'iran');
+        QuestLog.writeDiary(
+          'Found Iran on the floor of his hut with Pip and Hetty, the fire out and the shutters closed. They are alive, thank the gods. ' +
+            'He saw the big goblin, the one in iron, carry something out of our door wrapped in a quilt, and the whole band went off north, ' +
+            'up past the cave and into the trees. Mother. It has to have been Mother.',
+        );
         return;
       case 'anselm-moonpetal':
         if (QuestLog.hasFlag('may-pick-moonpetal')) return;
@@ -1213,6 +1323,14 @@ export class GameScene extends Phaser.Scene {
       this.onHint?.("I can't sleep yet. Mother wants to speak with me.");
       return;
     }
+    if (raidStage() === 'pending' && bed.id === 'home-bed') {
+      this.askToSleep();
+      return;
+    }
+    if (raidStage() === 'morning') {
+      this.onHint?.("Sleep? With all that shouting outside? Something is very wrong.");
+      return;
+    }
     if (bed.id === 'tavern-room' && !Tavern.renting(this.clock.elapsedHours)) {
       this.onHint?.('My time in this room is up. I should see Godric downstairs if I want to stay another night.');
       return;
@@ -1232,6 +1350,11 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.fadeOut(900, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.clock.advance(hours);
+      // The night after the tincture: and in the morning, the goblins.
+      if (raidStage() === 'pending') {
+        QuestLog.clearFlag('raid-pending');
+        QuestLog.setFlag('raid-morning');
+      }
       this.stats.heal(this.stats.maxHealth);
       this.stats.restoreStamina(this.stats.maxStamina);
       const save = this.makeSave(bed);
@@ -1365,7 +1488,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** A beast has spotted the player (or the player has gone after some game): it and any of its pack close by fight. */
-  startCombat(first: Creature): void {
+  startCombat(first: Creature, raid?: Creature[]): void {
     if (this.busy || this.inCombat) {
       first.disengage();
       return;
@@ -1380,17 +1503,19 @@ export class GameScene extends Phaser.Scene {
     // Only beasts that hunt in packs (wolves) bring the rest of the pack with them.
     const pack = FOES[first.kind].packs;
     // (The Wolf Mother and her wolves are one pack.)
-    const foes = this.creatures.filter(
+    const foes = raid ?? this.creatures.filter(
       (c) =>
         c === first ||
         (pack && c.active && FOES[c.kind].packs && isOutlaw(c.kind) === isOutlaw(first.kind) && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
     );
+    this.raidFight = !!raid;
     const hunted = first.huntable;
     foes.forEach((c) => c.engage());
     if (first.kind === 'rat') GameAudio.squeak();
+    else if (raid) GameAudio.shriek(true);
     else if (!hunted) GameAudio.growl();
     GameAudio.playMusic('battle');
-    const data: CombatSceneData = { foes };
+    const data: CombatSceneData = { foes, doom: raid ? RAID_DOOM : undefined };
     this.scene.launch('Combat', data);
     this.scene.get('Combat').events.once('combat-ended', (result: CombatResult) => this.endCombat(result, foes));
   }
@@ -1413,6 +1538,11 @@ export class GameScene extends Phaser.Scene {
     for (const id of [...result.slain, ...result.fled]) if (!respawns.has(id)) this.defeatedFoes.add(id);
     this.fitCamera();
     this.roadEvents?.fightOver();
+    if (this.raidFight) {
+      // However it went, it ends the same way.
+      this.raidDefeat();
+      return;
+    }
     if (result.outcome === 'defeat') {
       this.knockedOut();
       return;
@@ -1504,6 +1634,115 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  // ------------------------------------------------------------ the goblin raid
+
+  /** The raid's hold on this scene: its goblins, its fights, and running back indoors. */
+  private startRaid(): RaidDirector {
+    return new RaidDirector({
+      scene: this,
+      map: this.map,
+      player: () => ({ x: this.player.gx, y: this.player.gy }),
+      follow: () => this.fitCamera(),
+      hint: (text) => this.onHint?.(text),
+      hold: () => this.takeControls(),
+      release: () => this.release(),
+      addCreature: (id, kind, gx, gy) => {
+        const creature = new Creature(this, this.map, id, kind, gx, gy);
+        this.creatures.push(creature);
+        return creature;
+      },
+      fight: (foes) => {
+        this.busy = false;
+        this.startCombat(foes[0], foes);
+      },
+      ask: (question, note, yes, no, onAnswer) => {
+        const data: ConfirmSceneData = { question, note, yes, no, onAnswer };
+        this.scene.launch('Confirm', data);
+      },
+      retreat: () => {
+        this.busy = true;
+        this.player.setPath([]);
+        GameAudio.door();
+        this.cameras.main.fadeOut(350, 0, 0, 0);
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+          this.scene.restart({ area: 'home', entry: 'door', raidRetreat: true } satisfies GameSceneData);
+        });
+      },
+      mother: () => this.someone('mother'),
+      backAway: (to) => {
+        const path = this.pathTo({ x: Math.floor(to.x), y: Math.floor(to.y) });
+        if (path) this.player.setPath(path);
+      },
+    });
+  }
+
+  /**
+   * Beaten by the goblins: a few moments half remembered in the dark, then
+   * coming round hours later in the ruins of the cottage. The game is saved
+   * there (in the scorched straw bed), so there's no going back.
+   */
+  private raidDefeat(): void {
+    this.busy = true;
+    GameAudio.stopMusic();
+    this.cameras.main.fadeOut(1600, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      const data: InterludeSceneData = {
+        lines: RAID_BLACKOUT,
+        onDone: () => {
+          QuestLog.clearFlag('raid-morning');
+          QuestLog.clearFlag('raid-pending');
+          QuestLog.setFlag('raid-over');
+          QuestLog.start('the-raid');
+          this.clock.advance(this.clock.hoursUntil(13));
+          this.stats.health = Math.max(1, Math.round(this.stats.maxHealth * 0.3));
+          this.stats.restoreStamina(this.stats.maxStamina * 0.4);
+          const save: SaveData = {
+            version: SAVE_VERSION,
+            savedAt: Date.now(),
+            savePoint: 'home-bed',
+            area: 'home',
+            position: { x: 3.4, y: 2.2 },
+            hours: this.clock.elapsedHours,
+            health: this.stats.health,
+            stamina: this.stats.stamina,
+            sections: SaveGame.collect(),
+          };
+          SaveGame.write(save);
+          this.scene.restart({ load: save, raidAftermath: true } satisfies GameSceneData);
+        },
+      };
+      this.scene.launch('Interlude', data);
+    });
+  }
+
+  /** Coming round on the floor of the burnt-out cottage. */
+  private cameAround(): void {
+    const say = (ms: number, text: string) => this.time.delayedCall(ms, () => this.onHint?.(text));
+    say(1400, 'My head... Everything hurts. How long was I lying here?');
+    say(6000, 'Mother? MOTHER!');
+    say(10500, "She's gone. The roof's gone. And there's blood... all over the floor by her bed.");
+    QuestLog.writeDiary(
+      'Goblins. A whole band of them came down on the farm at first light, burning and smashing and screaming, with a great brute in iron ' +
+        'at their head. I went out to fight them and they beat me to the ground. When I came to it was past midday. The cottage is burnt ' +
+        'to its rafters and everything in it is broken or gone. There is blood by her bed. Mother is gone.',
+    );
+  }
+
+  /** Walking about after the raid: the cottage, the yard, Iran's hut. */
+  private enteredAfterRaid(): void {
+    if (this.area === 'world') {
+      QuestLog.complete('the-raid', 'search');
+      QuestLog.complete('the-raid', 'outside');
+      if (!QuestLog.hasFlag('saw-ruined-yard')) {
+        QuestLog.setFlag('saw-ruined-yard');
+        this.time.delayedCall(900, () => this.onHint?.('The farm... all of it. The garden trampled flat, the fences down, and smoke still rising from the thatch.'));
+        this.time.delayedCall(6000, () => this.onHint?.("No sign of her. No travellers on the road, either. Iran's hut is still standing. Maybe he saw something."));
+      }
+    } else if (this.area === 'hut') {
+      this.time.delayedCall(900, () => this.onHint?.('Dark and cold in here, and the fire out. Iran is huddled on the floor with Pip and Hetty.'));
+    }
+  }
+
   /** Beaten: black out, and come round at home with a little health. */
   private knockedOut(): void {
     this.stats.heal(this.stats.maxHealth * 0.35);
@@ -1575,7 +1814,7 @@ export class GameScene extends Phaser.Scene {
   private npcInteraction(npc: Npc): Interaction {
     const head = npc.promptPoint;
     return {
-      key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
+      key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id.replace(/-hiding$/, '') as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
       promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
       // Godric can be called over from a stool at his bar without getting up.
       run: () => this.startConversation(npc, npc.id === 'landlord' && this.seat?.name === 'tavern-bar'),
@@ -1820,6 +2059,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (sight.thought) {
       this.onHint?.(sight.thought);
+      if (sight.id === 'ruin-mother-bed') QuestLog.complete('the-raid', 'search');
       return;
     }
     const flag = `saw-${sight.id}`;

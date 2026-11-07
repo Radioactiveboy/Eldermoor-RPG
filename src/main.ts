@@ -14,6 +14,7 @@ import { SettingsScene } from './scenes/SettingsScene';
 import { ShopScene } from './scenes/ShopScene';
 import { SleepScene } from './scenes/SleepScene';
 import { StationScene } from './scenes/StationScene';
+import { InterludeScene } from './scenes/InterludeScene';
 
 // Wait (briefly) for the menu font so text isn't first drawn in a fallback font.
 Promise.race([document.fonts.load('40px Cinzel'), new Promise((resolve) => setTimeout(resolve, 2000))])
@@ -31,7 +32,7 @@ function startGame(): void {
       height: window.innerHeight,
     },
     // Later scenes draw on top of earlier ones.
-    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, CombatScene, JournalScene, InventoryScene, ShopScene, StationScene, SleepScene, ConfirmScene, PauseScene, SettingsScene],
+    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, CombatScene, JournalScene, InventoryScene, ShopScene, StationScene, SleepScene, ConfirmScene, InterludeScene, PauseScene, SettingsScene],
   });
   // Handy for poking at the game from the browser console while developing.
   if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;

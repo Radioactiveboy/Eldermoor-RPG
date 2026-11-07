@@ -58,8 +58,16 @@ export class QuestTracker {
     const quest = QuestLog.focused;
     // Before anything has begun, Mother is waiting; once every errand is done, the world is the hero's to wander.
     const begun = QuestLog.all.length > 0;
-    const title = quest ? quest.def.title : begun ? 'Free to roam' : 'At home';
-    const step = quest ? (QuestLog.current(quest)?.text ?? 'Return to whoever gave you this quest') : begun ? 'Mother is mending. Explore, hunt and cook.' : 'Speak with Mother';
+    // (The night of the tincture, and the morning after, before the goblins' raid starts its own quest.)
+    const raid = QuestLog.hasFlag('raid-morning') ? 'morning' : QuestLog.hasFlag('raid-pending') ? 'night' : undefined;
+    const title = quest ? quest.def.title : raid === 'morning' ? 'Dawn' : raid === 'night' ? 'Rest' : begun ? 'Free to roam' : 'At home';
+    const step = quest
+      ? (QuestLog.current(quest)?.text ?? 'Return to whoever gave you this quest')
+      : raid === 'morning'
+        ? 'Find out what the shouting is outside'
+        : raid === 'night'
+          ? 'Get some sleep, and hope Mother is better in the morning'
+          : begun ? 'Mother is mending. Explore, hunt and cook.' : 'Speak with Mother';
     const text = `${title}|${step}`;
     if (text === this.shownText) return;
     const changed = this.shownText !== '';
