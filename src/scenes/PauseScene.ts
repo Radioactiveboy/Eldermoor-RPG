@@ -87,7 +87,7 @@ export class PauseScene extends Phaser.Scene {
       const y = -h / 2 + 96 + i * 30;
       return [
         this.add.text(-60, y, key, bodyStyle(17, THEME.goldText)).setOrigin(1, 0),
-        this.add.text(-40, y, action, { ...bodyStyle(16), fontFamily: 'Georgia, "Times New Roman", serif' }),
+        this.add.text(-40, y, action, { ...bodyStyle(16), fontFamily: 'Merriweather, Georgia, "Times New Roman", serif' }),
       ];
     });
     const back = makeButton(this, 0, h / 2 - 46, 'Back', () => this.showControls(false), 200);
@@ -103,7 +103,7 @@ export class PauseScene extends Phaser.Scene {
     const warning = this.add
       .text(0, -22, 'Anything since you last slept will be lost.', {
         ...bodyStyle(16, THEME.dimText),
-        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontFamily: 'Merriweather, Georgia, "Times New Roman", serif',
         align: 'center',
         wordWrap: { width: PANEL_W - 60 },
       })

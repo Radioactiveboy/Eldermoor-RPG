@@ -12,7 +12,7 @@ import { AmbientMix, SILENCE, Soundscape, Surface } from './Soundscape';
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave' | 'monastery' | 'tavern';
+export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave' | 'monastery' | 'tavern' | 'raid' | 'ruin';
 
 interface TrackDef {
   bpm: number;
@@ -80,6 +80,37 @@ const TRACKS: Record<TrackName, TrackDef> = {
     scale: [57, 59, 60, 62, 64, 65, 67, 69],
     melodyChance: 0.25,
     padCutoff: 600,
+  },
+  // The goblins at the door: a pounding war drum under a low, grinding drone.
+  raid: {
+    bpm: 132,
+    chords: [
+      [38, 41, 45], // Dm
+      [37, 40, 44], // C# dim
+      [38, 41, 45],
+      [39, 43, 46], // Eb
+    ],
+    barsPerChord: 1,
+    arp: [0, -1, 0, 3, -1, 0, 5, -1],
+    scale: [62, 63, 65, 66, 69, 70, 72],
+    melodyChance: 0.1,
+    padCutoff: 420,
+    drums: 'X.x.X.xxX.x.X.Xx',
+  },
+  // After: the cottage in ashes. Very slow, sparse, and low.
+  ruin: {
+    bpm: 44,
+    chords: [
+      [45, 48, 52], // Am
+      [41, 44, 48], // Fm, darker than home's F
+      [40, 43, 47], // Em
+      [45, 48, 52],
+    ],
+    barsPerChord: 2,
+    arp: [0, -1, -1, 2, -1, -1, -1, -1],
+    scale: [57, 59, 60, 62, 64, 65, 68],
+    melodyChance: 0.12,
+    padCutoff: 420,
   },
   // A fight: quicker, darker and restless, rocking between D minor and its neighbours.
   battle: {
@@ -635,6 +666,82 @@ class AudioEngine {
     rattle.start(t);
     o.stop(t + 1);
     rattle.stop(t + 1);
+  }
+
+  /** A goblin's shriek: a harsh, wavering cry, rising then cracking. The Brute's is a deep bellow. */
+  shriek(big = false): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const base = big ? 150 : 520 + Math.random() * 260;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(base, t);
+    o.frequency.linearRampToValueAtTime(base * 1.6, t + 0.12);
+    o.frequency.linearRampToValueAtTime(base * 0.9, t + (big ? 0.6 : 0.34));
+    // A fast warble on the pitch: the cackle in it.
+    const warble = ctx.createOscillator();
+    warble.frequency.value = big ? 11 : 17;
+    const depth = ctx.createGain();
+    depth.gain.value = base * 0.12;
+    warble.connect(depth).connect(o.frequency);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = big ? 600 : 1500;
+    f.Q.value = 1.4;
+    const g = ctx.createGain();
+    const len = big ? 0.7 : 0.4;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(big ? 0.22 : 0.12, t + 0.03);
+    g.gain.linearRampToValueAtTime(0, t + len);
+    o.connect(f).connect(g).connect(this.sfxBus);
+    o.start(t);
+    warble.start(t);
+    o.stop(t + len + 0.05);
+    warble.stop(t + len + 0.05);
+  }
+
+  /** A goblin war horn: a long, rough, falling blast. */
+  warHorn(): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    for (const [freq, peak] of [[98, 0.16], [147, 0.08], [196, 0.04]] as const) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(freq * 0.9, t);
+      o.frequency.linearRampToValueAtTime(freq, t + 0.25);
+      o.frequency.linearRampToValueAtTime(freq * 0.86, t + 1.6);
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 900;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peak, t + 0.2);
+      g.gain.setValueAtTime(peak, t + 1.2);
+      g.gain.linearRampToValueAtTime(0, t + 1.7);
+      o.connect(f).connect(g).connect(this.sfxBus);
+      if (this.reverb) g.connect(this.reverb);
+      o.start(t);
+      o.stop(t + 1.8);
+    }
+  }
+
+  /** Something heavy splintering: a door broken in. */
+  smash(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.thump(0);
+    this.thump(0.03);
+    this.noise(t, 0.35, 'lowpass', 2400, 300, 0.7, 0.7);
+    for (let i = 0; i < 5; i++) this.noise(t + 0.05 + i * 0.06, 0.05, 'highpass', 2600, 1800, 0.9, 0.25);
+  }
+
+  /** A heavy blow on a barred door. */
+  bang(): void {
+    if (!this.unlocked) return;
+    this.thump(0);
+    this.noise(this.ctx!.currentTime, 0.12, 'lowpass', 900, 200, 0.7, 0.5);
   }
 
   /** Something swung quickly through the air. */

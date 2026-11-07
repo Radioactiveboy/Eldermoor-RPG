@@ -96,6 +96,12 @@ export class IsoModel {
     return this;
   }
 
+  /** Repaints every face drawn so far through `fn` (scorching a piece of furniture, say). */
+  mapShaders(fn: (shade: Shader, index: number) => Shader): this {
+    this.faces.forEach((f, i) => (f.shade = fn(f.shade, i)));
+    return this;
+  }
+
   render(outline = true): RenderedModel {
     let minX = Infinity;
     let minY = Infinity;

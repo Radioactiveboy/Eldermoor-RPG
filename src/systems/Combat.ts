@@ -188,6 +188,13 @@ export class Battle {
   round = 1;
   private turn = 0;
   private readonly rng: Rng;
+  /**
+   * A fight that's already decided (the goblins' raid): once set, it says
+   * whether each attack hits or misses, whatever the dice would have said,
+   * and the least damage a hit does. The d20 shown is still one that would
+   * give that result, so the fight reads as plain bad luck.
+   */
+  fate?: { decide: (attacker: Combatant, target: Combatant) => 'hit' | 'miss' | undefined; minDamage?: (attacker: Combatant) => number };
 
   constructor(defs: CombatantDef[], rng: Rng = Math.random) {
     this.rng = rng;
@@ -372,9 +379,19 @@ export class Battle {
 
   attack(attacker: Combatant, target: Combatant, opts: AttackOptions = {}): AttackResult {
     const mode = this.rollMode(attacker, target);
-    const { roll, rolls } = this.d20(mode);
-    const total = roll + this.toHitAgainst(attacker, target, opts);
+    let { roll, rolls } = this.d20(mode);
+    const bonus = this.toHitAgainst(attacker, target, opts);
     const ac = this.armourOf(target);
+    const fated = this.fate?.decide(attacker, target);
+    if (fated) {
+      // A roll that gives what fate has decided: enough to hit (never a 1), or too little (never a 20).
+      const need = Math.max(2, ac - bonus);
+      roll = fated === 'hit'
+        ? need > 19 ? 20 : need + Math.floor(this.rng() * (20 - need))
+        : need <= 2 ? 1 : 1 + Math.floor(this.rng() * Math.min(19, need - 1));
+      rolls = [roll];
+    }
+    const total = roll + bonus;
     const crit = roll === 20;
     const hit = roll !== 1 && (crit || total >= ac);
     const result: AttackResult = { attacker, target, roll, rolls, mode, total, ac, hit, crit, damage: 0, killed: false };
@@ -388,6 +405,7 @@ export class Battle {
         result.charged = true;
       }
       if (opts.half) damage = Math.max(1, Math.floor(damage / 2));
+      if (fated === 'hit' && this.fate?.minDamage) damage = Math.max(damage, this.fate.minDamage(attacker));
       result.damage = damage;
       target.hp = Math.max(0, target.hp - damage);
       result.killed = target.hp === 0;
@@ -582,7 +600,60 @@ export const FOES = {
     outlaw: true,
     skittish: 0.06,
   },
-} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean }>;
+  // The goblins who raid the Hollow (see world/GoblinRaid.ts): vicious little things that come in a mob, led by a Brute.
+  goblin: {
+    name: 'Goblin Cutter',
+    maxHp: 14,
+    ac: 12,
+    toHit: 4,
+    damage: { count: 1, sides: 6, bonus: 1 },
+    quickness: 3,
+    verb: 'hacks its cleaver at',
+    xp: 35,
+    packs: true,
+    goblin: true,
+  },
+  goblinspear: {
+    name: 'Goblin Spearman',
+    maxHp: 16,
+    ac: 12,
+    toHit: 4,
+    damage: { count: 1, sides: 8, bonus: 0 },
+    quickness: 2,
+    verb: 'jabs its spear at',
+    xp: 40,
+    packs: true,
+    goblin: true,
+    traits: [{ kind: 'trip', dc: 8 }],
+  },
+  goblintorch: {
+    name: 'Goblin Firebrand',
+    maxHp: 12,
+    ac: 11,
+    toHit: 3,
+    damage: { count: 1, sides: 4, bonus: 2 },
+    quickness: 4,
+    verb: 'swings its torch at',
+    xp: 30,
+    packs: true,
+    goblin: true,
+    traits: [{ kind: 'rend', damage: 1, turns: 2 }],
+  },
+  goblinbrute: {
+    name: 'Goblin Brute',
+    maxHp: 72,
+    ac: 16,
+    toHit: 6,
+    damage: { count: 2, sides: 6, bonus: 3 },
+    quickness: 1,
+    verb: 'brings its club down on',
+    xp: 220,
+    packs: true,
+    goblin: true,
+    stubborn: true,
+    traits: [{ kind: 'howl', cooldown: 3 }, { kind: 'steady' }],
+  },
+} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean; goblin?: boolean }>;
 
 /** Footpads and their like: men, not beasts (they swing rather than bite, and only fight beside their own). */
 export function isOutlaw(kind: FoeKind): boolean {
@@ -590,3 +661,18 @@ export function isOutlaw(kind: FoeKind): boolean {
 }
 
 export type FoeKind = keyof typeof FOES;
+
+/** Goblins: they swing weapons rather than bite, and only fight beside their own. */
+export function isGoblin(kind: FoeKind): boolean {
+  return 'goblin' in FOES[kind];
+}
+
+/** Who fights beside whom: beasts with beasts, footpads with footpads, goblins with goblins. */
+export function faction(kind: FoeKind): 'beast' | 'outlaw' | 'goblin' {
+  return isGoblin(kind) ? 'goblin' : isOutlaw(kind) ? 'outlaw' : 'beast';
+}
+
+/** Fights with a weapon in its hands (so it swings and grunts, rather than bites and yelps). */
+export function isArmed(kind: FoeKind): boolean {
+  return isOutlaw(kind) || isGoblin(kind);
+}

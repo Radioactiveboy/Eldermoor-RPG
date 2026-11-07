@@ -7,6 +7,10 @@ export interface SettingsData {
   ambienceVolume: number; // 0..1
   /** Whether the minimap is shown (M toggles it). */
   showMinimap: boolean;
+  /** How many canvas pixels to draw per screen pixel, for sharpness; 0 matches the screen. */
+  renderScale: number;
+  /** How big the menus, HUD and text are drawn; 0 picks a size to suit the screen. */
+  uiScale: number;
 }
 
 const STORAGE_KEY = 'eldermoor.settings';
@@ -17,6 +21,8 @@ const DEFAULTS: SettingsData = {
   effectsVolume: 0.8,
   ambienceVolume: 0.8,
   showMinimap: true,
+  renderScale: 0,
+  uiScale: 0,
 };
 
 type Listener = (s: SettingsData) => void;

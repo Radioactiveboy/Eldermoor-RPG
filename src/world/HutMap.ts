@@ -9,7 +9,7 @@ export const HUT_ROOM_H = 6;
  * table in the middle, and the door out on the left wall. His two children,
  * Pip and Hetty, are at home squabbling (see entities/Child.ts).
  */
-export function buildHutMap(): MapData {
+export function buildHutMap(hiding = false): MapData {
   const terrain: Terrain[][] = [];
   const props: Prop[][] = [];
   for (let y = 0; y < HUT_ROOM_H; y++) {
@@ -60,7 +60,28 @@ export function buildHutMap(): MapData {
   add('stool', 1, 2);
   add('stool', 4, 2);
   add('chest', 0, 5, 1, 1, { flipX: true });
+  if (hiding) hideAway(data);
   // Iran's pan over the fire: cook here (see systems/Crafting.ts).
-  data.sights = [...(data.sights ?? []), { id: 'hut-hearth', gx: 3, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'hut-hearth' }];
+  else data.sights = [...(data.sights ?? []), { id: 'hut-hearth', gx: 3, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'hut-hearth' }];
   return data;
+}
+
+/**
+ * After the raid: the fire put out so no smoke shows from the chimney, the
+ * shutters closed, and Iran on the floor by the beds with his arms round Pip
+ * and Hetty, waiting for the goblins to come back.
+ */
+function hideAway(data: MapData): void {
+  const hearth = data.objects?.find((o) => o.key === 'furn-hearth');
+  if (hearth) {
+    hearth.key = 'furn-hearth-cold';
+    hearth.anim = undefined;
+  }
+  data.lights = [{ gx: 3.5, gy: 2.5, z: 60, radius: 120, flicker: 0 }];
+  data.npcs = [{ id: 'iran-hiding', gx: 5.5, gy: 4.4, looking: { x: 0.4, y: 1 } }];
+  data.children = [
+    { id: 'hetty', gx: 4.6, gy: 4.5 },
+    { id: 'pip', gx: 5.5, gy: 3.4 },
+  ];
+  data.seats = [];
 }

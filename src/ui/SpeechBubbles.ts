@@ -60,7 +60,7 @@ export class SpeechBubbles {
   /** A cream bubble with a little tail pointing down at the speaker; its origin is the tail's tip. */
   private make(text: string): Phaser.GameObjects.Container {
     const label = this.scene.add
-      .text(0, 0, text, { fontFamily: UI_FONT, fontSize: '12px', color: '#2a2018', align: 'center', wordWrap: { width: MAX_WIDTH } })
+      .text(0, 0, text, { fontFamily: UI_FONT, fontSize: '13px', color: '#2a2018', align: 'center', wordWrap: { width: MAX_WIDTH } })
       .setOrigin(0.5, 1);
     const w = label.width + PAD * 2;
     const h = label.height + PAD * 2;

@@ -25,6 +25,11 @@ const WAYS: Record<FoeKind, { shy: boolean; notice: number; leash: number; speed
   // Footpads only come to blows when talked into it (see world/PlainsEvents.ts): they never pick a fight by themselves.
   footpad: { shy: false, notice: 0, leash: 1, speed: 1.4 },
   cutpurse: { shy: false, notice: 0, leash: 1, speed: 1.5 },
+  // The raiding goblins are set on by the story (see world/GoblinRaid.ts), never by wandering close.
+  goblin: { shy: false, notice: 0, leash: 2.5, speed: 1.9 },
+  goblinspear: { shy: false, notice: 0, leash: 2.5, speed: 1.7 },
+  goblintorch: { shy: false, notice: 0, leash: 3, speed: 2 },
+  goblinbrute: { shy: false, notice: 0, leash: 1.5, speed: 1.3 },
 };
 /** Shy game bolts when the player sprints within this many tiles of it. */
 const STARTLE_RANGE = 6;
@@ -86,8 +91,9 @@ export class Creature implements Body {
     this.eight = !!art.eight;
     const scale = art.scale ?? 1;
     const small = kind === 'hare' || kind === 'rat';
-    const upright = kind === 'footpad' || kind === 'cutpurse';
-    this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : upright ? 1 : 1.4) * scale, (small ? 0.6 : 1) * scale);
+    const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin');
+    const big = kind === 'goblinbrute';
+    this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : big ? 1.5 : upright ? 1 : 1.4) * scale, (small ? 0.6 : big ? 1.3 : 1) * scale);
     this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale);
     this.sprite.play({ key: this.animKey('sniff'), startFrame: Math.floor(Math.random() * 4) });
     if (!this.eight) this.sprite.setFlipX(Math.random() < 0.5);

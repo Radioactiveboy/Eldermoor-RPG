@@ -112,12 +112,47 @@ export function motherScript(stage: MedicineStage): DialogueScript {
           'Brewed it yourself? Oh, look at it glow. Just like my mother used to make. Give it here, then, and help me sit up.',
           '*sip* ...Ugh! Just as foul as hers was. That is how you know it works.',
           `I can feel it already, ${HERO_NAME}. Warm, all the way down. I think I shall sleep tonight. Thank you, my love. Thank you.`,
+          "And so should you. You look half dead on your feet. Go on, off to bed with you, and we'll see how I am in the morning.",
         ],
         action: 'give-tincture',
       },
     },
   };
 }
+
+/** Woken while she's lying down in her bed: drowsy, and wanting to be let be. */
+export const MOTHER_DOZING: DialogueScript = {
+  start: 'greet',
+  nodes: {
+    greet: {
+      speaker: 'mother',
+      lines: [`Mm? ...Oh, it's you, ${HERO_NAME}. I was only resting my eyes.`],
+      choices: [
+        { text: 'How are you feeling?', next: 'feeling' },
+        { text: 'Sorry, Mother. Go back to sleep.', next: 'sleep' },
+      ],
+    },
+    feeling: {
+      speaker: 'mother',
+      lines: ['Like a wrung-out dishcloth. *cough* It eases a little when I lie still.', 'Wake me if you find that moonpetal, love.'],
+    },
+    sleep: {
+      speaker: 'mother',
+      lines: ['Mm. Mind the fire...'],
+    },
+  },
+};
+
+/** Asleep after her tincture: breathing easy at last, and not to be woken. */
+export const MOTHER_ASLEEP: DialogueScript = {
+  start: 'asleep',
+  nodes: {
+    asleep: {
+      speaker: 'mother',
+      lines: ['*slow, easy breathing* ...Mm. So warm... five more minutes, love...'],
+    },
+  },
+};
 
 /** Once she's had her tincture and is mending. */
 export const MOTHER_WELL: DialogueScript = {

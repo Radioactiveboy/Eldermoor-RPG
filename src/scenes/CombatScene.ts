@@ -1,3 +1,4 @@
+import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
@@ -26,6 +27,8 @@ import {
   diceText,
   FoeKind,
   FOES,
+  isArmed,
+  isGoblin,
   isOutlaw,
   Outcome,
   RALLY_TO_HIT,
@@ -43,6 +46,20 @@ import type { GameScene } from './GameScene';
 
 export interface CombatSceneData {
   foes: Creature[];
+  /**
+   * A fight the hero can't win (the goblins' raid): from this round on, or
+   * sooner if the hero gets the better of the leader, every blow of theirs
+   * lands and every one of the hero's goes wide, until they're beaten.
+   */
+  doom?: {
+    round: number;
+    /** The foe whose being hurt brings it on early. */
+    leader?: string;
+    /** What the log says as it turns. */
+    text: string;
+    /** Why Flee can't be used. */
+    trapped: string;
+  };
 }
 
 /** How a fight ended, and which beasts are gone for good. */
@@ -77,13 +94,13 @@ interface MenuOption {
 /** How the waiting options are shown: the hotbar of skills, or a row of buttons (targets, food) above it. */
 type MenuStyle = 'hotbar' | 'list';
 
-const FONT = 'Georgia, "Times New Roman", serif';
+const FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 const BTN_H = 46;
 const GAP = 8;
 const MARGIN = 14;
 /** Below this width the list buttons go in two columns. */
 const NARROW = 760;
-const CHIP_W = 72;
+const CHIP_W = 88;
 const CHIP_H = 92;
 const LOG_LINES = 4;
 
@@ -110,6 +127,9 @@ const SLOT_KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', 
 const PACK_NAMES: Partial<Record<FoeKind, string[]>> = {
   wolf: ['Grey Wolf', 'Scarred Wolf', 'Lean Wolf', 'Old Wolf', 'Young Wolf', 'Black Wolf'],
   rat: ['Cellar Rat', 'Fat Rat', 'Mangy Rat', 'Bold Rat', 'One-eared Rat', 'Big Rat'],
+  goblin: ['Goblin Cutter', 'Scarred Cutter', 'Snaggletooth', 'One-ear'],
+  goblinspear: ['Goblin Spearman', 'Painted Spearman', 'Bone-neck'],
+  goblintorch: ['Goblin Firebrand', 'Sooty Firebrand', 'Grinning Firebrand'],
 };
 
 /** How each kind of beast's fight reads: how it starts, the banner, and how it runs off. */
@@ -153,6 +173,26 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     start: 'Nab slides a knife out of his sleeve and comes at you, low and quick!',
     banner: 'Footpads!',
     flee: 'squeals, drops his knife and legs it across the grass!',
+  },
+  goblin: {
+    start: 'The goblin bares its tusks and comes at you, cleaver high!',
+    banner: 'Goblins!',
+    flee: 'shrieks and scuttles away!',
+  },
+  goblinspear: {
+    start: 'The goblin levels its spear at your belly and hisses.',
+    banner: 'Goblins!',
+    flee: 'shrieks and scuttles away!',
+  },
+  goblintorch: {
+    start: 'The goblin waves its torch in your face, cackling.',
+    banner: 'Goblins!',
+    flee: 'shrieks and scuttles away, torch and all!',
+  },
+  goblinbrute: {
+    start: 'The Goblin Brute bangs its club on its shield and roars. Its goblins swarm round you, shrieking!',
+    banner: 'The Goblin Brute!',
+    flee: 'backs off, snarling.',
   },
 };
 
@@ -199,6 +239,8 @@ export class CombatScene extends Phaser.Scene {
   private budget: TurnBudget = { action: false, bonus: false };
   private heroActing = false;
   private aiming?: AbilityId;
+  private doom?: CombatSceneData['doom'];
+  private doomed = false;
 
   constructor() {
     super('Combat');
@@ -214,6 +256,8 @@ export class CombatScene extends Phaser.Scene {
     this.budget = { action: false, bonus: false };
     this.heroActing = false;
     this.aiming = undefined;
+    this.doom = data.doom;
+    this.doomed = false;
 
     const stats = this.world.stats;
     stats.health = Math.max(1, Math.round(stats.health));
@@ -285,6 +329,10 @@ export class CombatScene extends Phaser.Scene {
         ? `${FOE_TEXT.wolfmother.start}${this.foes.length > 1 ? ' Her wolves fan out round you.' : ''}`
         : this.foes.length > 1 && first.creature!.kind === 'rat'
         ? FOE_TEXT.rat.start
+        : this.foes.some((f) => f.creature!.kind === 'goblinbrute')
+        ? FOE_TEXT.goblinbrute.start
+        : this.foes.length > 1 && isGoblin(first.creature!.kind)
+        ? 'Goblins swarm round you, shrieking and cackling!'
         : this.foes.length > 1 && isOutlaw(first.creature!.kind)
         ? FOE_TEXT.footpad.start
         : this.foes.length > 1
@@ -303,7 +351,8 @@ export class CombatScene extends Phaser.Scene {
     this.world.frameFight(this.actors.map((a) => a.pos()));
     this.banner(
       mother ? FOE_TEXT.wolfmother.banner
-        : this.foes.length > 1 && first.creature!.kind !== 'rat' && !isOutlaw(first.creature!.kind) ? 'Wolves attack!'
+        : this.foes.some((f) => f.creature!.kind === 'goblinbrute') ? FOE_TEXT.goblinbrute.banner
+        : this.foes.length > 1 && first.creature!.kind !== 'rat' && !isArmed(first.creature!.kind) ? 'Wolves attack!'
           : FOE_TEXT[first.creature!.kind].banner,
     );
     await this.wait(900);
@@ -323,6 +372,7 @@ export class CombatScene extends Phaser.Scene {
     await this.wait(500);
 
     while (this.battle.outcome() === 'ongoing') {
+      await this.checkDoom();
       const c = this.battle.current;
       const actor = this.actorOf(c);
       this.drawOrder();
@@ -513,11 +563,47 @@ export class CombatScene extends Phaser.Scene {
       await this.attack(foe, this.actorOf(action.target));
     } else if (action.type === 'flee') {
       foe.c.fled = true;
-      if (!isOutlaw(foe.creature!.kind)) GameAudio.yelp();
+      this.cry(foe);
       this.log(`The ${foe.c.name} ${FOE_TEXT[foe.creature!.kind].flee}`);
       const from = this.hero.pos();
       await foe.creature!.flee(from.x, from.y);
     }
+  }
+
+  /** A beast's yelp, or a goblin's shriek, as it's hurt (footpads just grunt). */
+  private cry(actor: Actor): void {
+    const kind = actor.creature?.kind;
+    if (!kind) return;
+    if (isGoblin(kind)) GameAudio.shriek(kind === 'goblinbrute');
+    else if (!isOutlaw(kind)) GameAudio.yelp();
+  }
+
+  /**
+   * A fight that can't be won turns: once its round comes (or the hero has the
+   * leader badly hurt, or only the leader is left), the foes can't miss and the
+   * hero can't hit, until the hero goes down.
+   */
+  private async checkDoom(): Promise<void> {
+    const doom = this.doom;
+    if (!doom || this.doomed) return;
+    const leader = doom.leader ? this.foes.find((f) => f.c.id === doom.leader) : undefined;
+    const leaderHurt = !!leader && leader.c.hp < leader.c.maxHp * 0.5;
+    const alone = this.battle.standing('foes').length <= 1;
+    if (this.battle.round < doom.round && !leaderHurt && !alone) return;
+    this.doomed = true;
+    const hero = this.hero.c;
+    this.battle.fate = {
+      decide: (attacker) => (attacker.side === 'foes' ? 'hit' : 'miss'),
+      minDamage: () => Math.ceil(hero.maxHp * 0.2),
+    };
+    if (leader && leader.c.hp < leader.c.maxHp * 0.5) leader.c.hp = Math.ceil(leader.c.maxHp * 0.5);
+    for (const f of this.foes) if (this.battle.isUp(f.c)) this.battle.addStatus(f.c, 'rallied', 99);
+    GameAudio.warHorn();
+    this.world.cameras.main.shake(400, 0.008);
+    this.banner('Overwhelmed!');
+    this.log(doom.text);
+    this.drawOrder();
+    await this.wait(1100);
   }
 
   /** A pack leader's howl rouses the rest of the pack. */
@@ -531,7 +617,11 @@ export class CombatScene extends Phaser.Scene {
       this.battle.addStatus(f.c, 'rallied', 2);
       this.float(f, 'Rallied', hex(STATUSES.rallied.color));
     }
-    this.log(`The ${leader.c.name} throws back her head and howls. Her wolves answer, eyes blazing (${signed(RALLY_TO_HIT)} to hit for 2 turns).`);
+    this.log(
+      isGoblin(leader.creature!.kind)
+        ? `The ${leader.c.name} bangs its club on its shield and bellows. Its goblins shriek back, wild-eyed (${signed(RALLY_TO_HIT)} to hit for 2 turns).`
+        : `The ${leader.c.name} throws back her head and howls. Her wolves answer, eyes blazing (${signed(RALLY_TO_HIT)} to hit for 2 turns).`,
+    );
     this.drawOrder();
     await this.wait(700);
   }
@@ -574,7 +664,7 @@ export class CombatScene extends Phaser.Scene {
     arrow.fillTriangle(-12, -16, 12, -16, 0, 0).strokeTriangle(-12, -16, 12, -16, 0, 0);
     const bob = this.tweens.add({ targets: arrow, scale: { from: 1, to: 0.8 }, duration: 300, yoyo: true, repeat: -1 });
     const labels: Phaser.GameObjects.Text[] = [];
-    const zoom = this.world.cameras.main.zoom;
+    const zoom = this.world.cameras.main.zoom / Display.zoom;
     foes.forEach((f, i) => {
       const actor = this.actorOf(f);
       const head = this.headOf(actor);
@@ -682,7 +772,7 @@ export class CombatScene extends Phaser.Scene {
     await this.rollDie(attacker, r.roll, signed(r.total - r.roll), r.mode);
     if (attacker.creature) {
       attacker.creature.setFrame(CREATURE_FRAME.bite);
-      if (isOutlaw(attacker.creature.kind)) GameAudio.swing(false);
+      if (isArmed(attacker.creature.kind)) GameAudio.swing(false);
       else GameAudio.bite();
     } else {
       GameAudio.swing(!!style.heavy);
@@ -704,7 +794,7 @@ export class CombatScene extends Phaser.Scene {
       this.flash(target);
       this.float(target, r.crit ? `Critical! -${r.damage}` : `-${r.damage}`, r.crit ? '#ffd76a' : '#ff6b5a', r.crit);
       if (target.creature && !r.killed) {
-        if (!isOutlaw(target.creature.kind)) GameAudio.yelp();
+        this.cry(target);
         target.creature.setFrame(CREATURE_FRAME.hurt);
         this.time.delayedCall(350, () => {
           if (target.c.hp > 0 && !target.c.fled && !this.battle.has(target.c, 'prone')) target.creature!.setFrame(CREATURE_FRAME.snarl);
@@ -725,7 +815,11 @@ export class CombatScene extends Phaser.Scene {
       }
       if (r.rend) {
         this.float(target, 'Bleeding', hex(STATUSES.bleeding.color));
-        this.log(`The bite tears; ${whom} ${target === this.hero ? 'are' : 'is'} bleeding.`);
+        this.log(
+          attacker.creature?.kind === 'goblintorch'
+            ? `The flames catch; ${whom} ${target === this.hero ? 'are' : 'is'} burning.`
+            : `The bite tears; ${whom} ${target === this.hero ? 'are' : 'is'} bleeding.`,
+        );
       }
     } else {
       this.float(target, 'Miss', '#d8c8a4');
@@ -746,7 +840,7 @@ export class CombatScene extends Phaser.Scene {
   /** Someone has dropped: a beast dies (and the hero earns its experience), or the hero blacks out. */
   private async fall(actor: Actor): Promise<void> {
     if (actor.creature) {
-      if (!isOutlaw(actor.creature.kind)) GameAudio.yelp();
+      this.cry(actor);
       actor.offset.y = 0;
       actor.creature.die();
       const xp = FOES[actor.creature.kind].xp;
@@ -873,6 +967,7 @@ export class CombatScene extends Phaser.Scene {
       hasWeapon: !!Inventory.equipped.mainHand,
       hasFood: this.foodOptions().length > 0,
       spareWeapon: this.spareWeapons().length > 0,
+      trapped: this.doom?.trapped,
     };
   }
 
@@ -981,7 +1076,7 @@ export class CombatScene extends Phaser.Scene {
     else marker.fillTriangle(SLOT - 9, 3.5, SLOT - 3.5, 13, SLOT - 14.5, 13).strokeTriangle(SLOT - 9, 3.5, SLOT - 3.5, 13, SLOT - 14.5, 13);
     parts.push(marker);
     if (i < SLOT_KEY_LABELS.length) {
-      parts.push(this.add.text(6, 3, SLOT_KEY_LABELS[i], { fontFamily: FONT, fontSize: '12px', color: THEME.text, stroke: '#000000', strokeThickness: 3, fontStyle: 'bold' }));
+      parts.push(this.add.text(6, 3, SLOT_KEY_LABELS[i], { fontFamily: FONT, fontSize: '13px', color: THEME.text, stroke: '#000000', strokeThickness: 3, fontStyle: 'bold' }));
     }
     if (a.stamina) {
       // Its stamina cost in a little dark pill in the corner, with a bolt.
@@ -991,7 +1086,7 @@ export class CombatScene extends Phaser.Scene {
       pill.fillStyle(0x000000, 0.72).fillRoundedRect(SLOT - 29, SLOT - 17, 26, 14, 5);
       pill.fillStyle(col, 1).fillTriangle(SLOT - 24, SLOT - 9, SLOT - 19, SLOT - 15, SLOT - 20, SLOT - 9).fillTriangle(SLOT - 21, SLOT - 10, SLOT - 20, SLOT - 4, SLOT - 16, SLOT - 11);
       parts.push(pill);
-      parts.push(this.add.text(SLOT - 5, SLOT - 10, `${a.stamina}`, { fontFamily: FONT, fontSize: '11px', color: hex(col), fontStyle: 'bold' }).setOrigin(1, 0.5));
+      parts.push(this.add.text(SLOT - 5, SLOT - 10, `${a.stamina}`, { fontFamily: FONT, fontSize: '12px', color: hex(col), fontStyle: 'bold' }).setOrigin(1, 0.5));
     }
     const shade = this.add.graphics();
     parts.push(shade);
@@ -1036,7 +1131,7 @@ export class CombatScene extends Phaser.Scene {
     // Once nothing's left to spend, End turn glows to say so.
     const nudge = this.heroActing && !this.budget.action;
     const label = this.add.text(END_W / 2, SLOT / 2 - 7, 'End turn', { fontFamily: FONT, fontSize: '16px', color: THEME.text }).setOrigin(0.5);
-    const key = this.add.text(END_W / 2, SLOT / 2 + 12, 'Space', { fontFamily: FONT, fontSize: '11px', color: THEME.dimText }).setOrigin(0.5);
+    const key = this.add.text(END_W / 2, SLOT / 2 + 12, 'Space', { fontFamily: FONT, fontSize: '12px', color: THEME.dimText }).setOrigin(0.5);
     const button = this.add.container(x, y, [bg, label, key]);
     const draw = (on: boolean) => {
       bg.clear();
@@ -1086,7 +1181,7 @@ export class CombatScene extends Phaser.Scene {
       bars.fillStyle(0x000000, 0.6).fillRoundedRect(x, y, w, 13, 4);
       if (t > 0.02) bars.fillStyle(fill, 1).fillRoundedRect(x, y, Math.max(8, w * Phaser.Math.Clamp(t, 0, 1)), 13, 4);
       bars.lineStyle(1, THEME.gold, 0.5).strokeRoundedRect(x, y, w, 13, 4);
-      block.add(this.add.text(x + w / 2, y + 6.5, text, { fontFamily: FONT, fontSize: '10px', color: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5));
+      block.add(this.add.text(x + w / 2, y + 6.5, text, { fontFamily: FONT, fontSize: '11px', color: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5));
     };
     block.add([name, bars]);
     const hp = c.hp / c.maxHp;
@@ -1096,7 +1191,7 @@ export class CombatScene extends Phaser.Scene {
     let tx = x;
     for (const s of c.statuses) {
       const def = STATUSES[s.id];
-      const tag = this.add.text(tx, 63, def.name, { fontFamily: FONT, fontSize: '10px', color: hex(def.color), stroke: '#000000', strokeThickness: 2 });
+      const tag = this.add.text(tx, 63, def.name, { fontFamily: FONT, fontSize: '11px', color: hex(def.color), stroke: '#000000', strokeThickness: 2 });
       block.add(tag);
       tx += tag.width + 6;
     }
@@ -1306,7 +1401,7 @@ export class CombatScene extends Phaser.Scene {
       if (beast) portrait.setScale(Math.min(1, (CHIP_W - 4) / portrait.width, 46 / portrait.height));
       if (c.side === 'party') portrait.setCrop(0, 4, 32, 40);
       const name = this.add
-        .text(CHIP_W / 2, 56, c.side === 'party' ? 'You' : c.name, { fontFamily: FONT, fontSize: '11px', color: active ? THEME.goldText : THEME.text })
+        .text(CHIP_W / 2, 56, c.side === 'party' ? 'You' : c.name, { fontFamily: FONT, fontSize: '12px', color: active ? THEME.goldText : THEME.text })
         .setOrigin(0.5, 0);
       if (name.width > CHIP_W - 6) name.setScale((CHIP_W - 6) / name.width);
       const bar = this.add.graphics();
@@ -1316,7 +1411,7 @@ export class CombatScene extends Phaser.Scene {
       bar.fillStyle(t > 0.5 ? 0x5fae3c : t > 0.25 ? 0xd9a22a : 0xc8352a, 1);
       bar.fillRect(8, 73, (CHIP_W - 16) * t, 5);
       const hp = this.add
-        .text(CHIP_W / 2, 79, out ? (c.fled ? 'fled' : 'down') : `${c.hp}/${c.maxHp}`, { fontFamily: FONT, fontSize: '10px', color: THEME.dimText })
+        .text(CHIP_W / 2, 79, out ? (c.fled ? 'fled' : 'down') : `${c.hp}/${c.maxHp}`, { fontFamily: FONT, fontSize: '11px', color: THEME.dimText })
         .setOrigin(0.5, 0);
       chip.add([bg, portrait, name, bar, hp]);
       // A little tag for each effect on them, down the card's left edge.
@@ -1326,7 +1421,7 @@ export class CombatScene extends Phaser.Scene {
           const pill = this.add.graphics();
           pill.fillStyle(def.color, 0.95).fillRoundedRect(3, 4 + k * 14, 26, 12, 4);
           pill.lineStyle(1, 0x000000, 0.7).strokeRoundedRect(3, 4 + k * 14, 26, 12, 4);
-          const tag = this.add.text(16, 10 + k * 14, def.tag, { fontFamily: FONT, fontSize: '8px', color: '#140c06', fontStyle: 'bold' }).setOrigin(0.5);
+          const tag = this.add.text(16, 10 + k * 14, def.tag, { fontFamily: FONT, fontSize: '9px', color: '#140c06', fontStyle: 'bold' }).setOrigin(0.5);
           chip.add([pill, tag]);
         });
       }
@@ -1406,8 +1501,8 @@ export class CombatScene extends Phaser.Scene {
   private headOf(actor: Actor): Vec2 {
     const cam = this.world.cameras.main;
     return {
-      x: (actor.sprite.x - cam.worldView.x) * cam.zoom,
-      y: (actor.sprite.y - actor.height - cam.worldView.y) * cam.zoom - 10,
+      x: (actor.sprite.x - cam.worldView.x) * (cam.zoom / Display.zoom),
+      y: (actor.sprite.y - actor.height - cam.worldView.y) * (cam.zoom / Display.zoom) - 10,
     };
   }
 

@@ -154,3 +154,73 @@ export const SIBLING_GREETINGS: ChildLine[][] = [
 export const SIBLING_THANKS: ChildLine[][] = [
   [['hetty', `${HERO_NAME}! Da says you saved the hens!`], ['pip', 'We had eggs for breakfast. I had three.'], ['hetty', 'He had FOUR.']],
 ];
+
+/**
+ * After the goblins came: Iran on the floor of his hut with his arms round his
+ * children, the fire out so no smoke shows. He tells what he saw from the window.
+ */
+export const IRAN_HIDING: DialogueScript = {
+  start: 'greet',
+  nodes: {
+    greet: {
+      speaker: 'iran',
+      lines: [
+        `${HERO_NAME}? Gods, ${HERO_NAME}, you're alive! Shut the door! Shut it, and keep away from the window.`,
+        "We saw your roof go up. I thought... I thought they'd done for you both.",
+      ],
+      action: 'found-iran',
+      choices: [
+        { text: 'Where is my mother? Did you see her?', next: 'mother' },
+        { text: 'What were those things?', next: 'goblins' },
+        { text: 'Are the children hurt?', next: 'children' },
+      ],
+    },
+    mother: {
+      speaker: 'iran',
+      lines: [
+        "I saw... I saw the big one come out of your door. The one in iron, with the shield. He had something over his shoulder, wrapped in a quilt.",
+        `I couldn't see if... I'm sorry, ${HERO_NAME}. I'm so sorry. They went off north, up past the cave, into the trees. Whooping, all of them, like it was a feast day.`,
+      ],
+      choices: [
+        { text: "Then she's alive. She has to be. I'm going after her.", next: 'after' },
+        { text: 'What were those things?', next: 'goblins' },
+      ],
+    },
+    goblins: {
+      speaker: 'iran',
+      lines: [
+        "Goblins. My grandfather used to tell of them, coming down out of the hills in a bad winter. I always thought it was a tale to keep us in at night.",
+        "They took every one of my hens. Wrung their necks and hung them off their belts. Fired the coop, and laughed while it burned.",
+      ],
+      choices: [
+        { text: 'Did you see my mother?', next: 'mother' },
+        { text: "I'm going after them.", next: 'after' },
+      ],
+    },
+    children: {
+      speaker: 'iran',
+      lines: ["No. No, thank the gods. We hid under the bed when the horn blew. Hetty kept Pip quiet with her hand over his mouth.", 'Brave girl. Braver than her da.'],
+      choices: [{ text: 'Did you see my mother?', next: 'mother' }],
+    },
+    after: {
+      speaker: 'iran',
+      lines: [
+        "Alone? Look at you, you can hardly stand. There were a score of them, and the big one...",
+        "Get word to Adowvale first. The militia, Lord Morten, somebody. I'm staying here with these two. I'm not leaving them, not for anything.",
+      ],
+    },
+  },
+};
+
+/** Iran's children, huddled in the corner after the raid. */
+export const SIBLING_SCARED: ChildLine[][] = [
+  [['pip', 'Are they coming back?'], ['hetty', "Shh. Da says they're gone."], ['pip', "You don't know that."]],
+  [['hetty', 'I can still smell the smoke.'], ['pip', "I'm not crying. It's the smoke."]],
+  [['pip', 'They took Speckle. And the rooster.'], ['hetty', 'Pip, be quiet.']],
+  [['hetty', 'I want Mam.'], ['pip', '...Me too.']],
+];
+
+/** What they whisper when the hero comes in after the raid. */
+export const SIBLING_SCARED_HELLO: ChildLine[][] = [
+  [['hetty', `${HERO_NAME}! Da, it's ${HERO_NAME}!`], ['pip', 'Did you fight them? Did you win?']],
+];

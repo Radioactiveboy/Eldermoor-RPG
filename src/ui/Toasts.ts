@@ -71,7 +71,7 @@ export class Toasts {
     const announce = t.kind === 'quest' || t.kind === 'level';
     const body = s.add
       .text(0, 0, t.text, {
-        fontFamily: t.kind === 'thought' ? UI_FONT : THEME.font,
+        fontFamily: announce ? THEME.font : UI_FONT,
         fontSize: announce ? '22px' : t.kind === 'sign' ? '17px' : '16px',
         color: announce ? THEME.text : '#f3e9d2',
         fontStyle: t.kind === 'thought' ? 'italic' : 'normal',

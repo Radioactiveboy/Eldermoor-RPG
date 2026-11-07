@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 
 /** Shared look for HUD widgets: dark leather panels with gold trim. */
-export const UI_FONT = 'Georgia, "Times New Roman", serif';
+export const UI_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 
 export const UI_COLORS = {
   panel: 0x1c1712,

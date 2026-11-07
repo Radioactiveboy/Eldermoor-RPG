@@ -88,6 +88,22 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 80,
   },
+  'the-raid': {
+    id: 'the-raid',
+    title: 'Ashes',
+    giver: 'Myself',
+    summary:
+      'Goblins came out of the north woods at dawn and fell on the farm. I tried to stop them, and they beat me senseless. When I came ' +
+      "to, the cottage was burnt to its rafters, there was blood all over the floor, and Mother was gone. I have to find out what " +
+      'they did with her.',
+    objectives: [
+      { id: 'search', text: 'Search what is left of the cottage' },
+      { id: 'outside', text: 'Go outside and look for Mother' },
+      { id: 'iran', text: "See if Farmer Iran and his children are safe" },
+      { id: 'mother', text: 'Find out what the goblins did with Mother' },
+    ],
+    xp: 300,
+  },
   'cellar-rats': {
     id: 'cellar-rats',
     title: 'Rats in the Cellar',

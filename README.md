@@ -49,6 +49,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   is saved. **Continue** on the title screen, or **Load Last Save** in the pause menu,
   brings you back to that moment. Any bed added to a map (`MapData.beds`) is another save point
 - **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, back to main menu)
+- **Settings → Resolution**: native, 75% or 50% of the screen's own resolution (lower is faster on slow machines). **Interface size**: Auto (bigger on large monitors, e.g. 150% at 2560×1440) or 75% to 200%
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
@@ -83,6 +84,21 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   happen a few seconds after arriving
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
   testing fights against several enemies)
+- **Mother's day**: once you've first spoken to her, Mother goes about the cottage by the clock. She's in bed
+  from 21:00 till 07:00 and naps 13:30 to 15:00 (talk to her there and she's drowsy), sits at the table for
+  breakfast (07:00), dinner (12:00) and supper (18:00), and the rest of the time potters between the hearth,
+  the cupboard, the barrels, the window and the chest (see `world/MotherRoutine.ts`)
+- **The goblin raid**: give Mother her tincture and you're told to get some sleep, with only the one answer;
+  you sleep till dawn. You wake to shouting: outside, goblins (cutters, a spearman and torch-bearing
+  firebrands, led by an armoured Goblin Brute with a shield) are trampling the garden and setting the roof
+  alight. Choose to **stand and fight**, or **retreat inside**, where they beat the door down. Either way the
+  fight is scripted: from the third round (or sooner, if you get the better of the Brute) every blow of theirs
+  lands, every one of yours misses, and you can't flee. You come round at 13:00 in the burnt-out cottage, with
+  blood on the floor and Mother gone. The farm is ruined, the road travellers have fled, and Farmer Iran is
+  huddled in his hut with Pip and Hetty. A new quest, **Ashes**, starts (see `world/GoblinRaid.ts`)
+- Add `?raid=night` to start at 20:00 with the tincture in the satchel (talk to Mother to give it to her),
+  `?raid=morning` to wake on the morning of the raid, or `?raid=after` to start in the ruins (add `&area=world`
+  or `&area=hut` to start outside or in Iran's hut)
 
 ## Project layout
 
@@ -94,7 +110,10 @@ src/
   world/MapData.ts        Terrain + prop types, walkability table
   world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest,
                           and Old Tobin fishing on the far shore of the lake)
-  world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out
+  world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out (and the burnt-out
+                          ruin of it after the goblin raid)
+  world/MotherRoutine.ts  Mother's day round the cottage: bed, the table at mealtimes, pottering about
+  world/GoblinRaid.ts     The goblins' raid: the farm under attack and after, and the scripted morning itself
   world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses,
                           militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
   world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map (120x120), open grass, copses, a mere
@@ -136,6 +155,7 @@ src/
                           who wander up and down the road, and the militia on their rounds
   entities/Hen.ts         Farmer Iran's hens: peck, strut about the run, scurry from the hero, roost at night
   entities/Child.ts       Children who chatter to each other in speech bubbles and say hello as you come near
+  scenes/InterludeScene.ts A few half-remembered lines in the dark between scenes (beaten in the raid)
   entities/Creature.ts    Wild animals: wander and sniff near their den, start a fight when you come close
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
@@ -143,6 +163,12 @@ src/
   art/tavern.ts           The Crooked Tankard inside: bar counter pieces, kegs, bottle shelf, stairs, trapdoor,
                           notice board, laid tables, washstand, sacks and the passage's runner
   art/rats.ts             The cellar rats
+  art/goblins3d.ts        The raiding goblins, modelled in 3D: cutters, a spearman, torch-bearing firebrands,
+                          and the Goblin Brute in iron with a shield
+  art/mother3d.ts         Mother, modelled in 3D, so she can walk about, sit and turn
+  art/scorch.ts           Fire damage: wraps any shader (or finished texture) so it comes out charred and holed
+  art/ruin.ts             After the raid: burnt walls and furniture, blood and ash on the floor, fires, and burnt
+                          copies of the farm's fences, coop and hut
   art/tollgate.ts         Lord Morten's toll gate (shut and open), the palisade, the guards' booth and his banner
   art/monastery.ts        Saint Elda's: the wall, gatehouse, chapel, bell tower, shrines, statue, bean rows,
                           beehive skeps and water lilies
@@ -161,12 +187,13 @@ src/
   public/audio/ambience/  The ambient recordings (MP3) and CREDITS.md with their sources and licences
   tools/build-ambience.py Cuts, loops and levels those recordings from the originals
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
-  settings/Settings.ts    Volume settings, saved in the browser
+  settings/Settings.ts    Volume and display settings, saved in the browser
+  ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
   scenes/BootScene.ts     Generates the art, repaints the hero when gear changes, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
-  scenes/SettingsScene.ts Volume sliders + fullscreen, opened from either menu
+  scenes/SettingsScene.ts Volume sliders, resolution, interface size and fullscreen, opened from either menu
   scenes/GameScene.ts     World, camera, input, doors between areas, talking
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning

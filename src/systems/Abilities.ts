@@ -38,6 +38,8 @@ export interface AbilityContext {
   /** Something in the satchel to eat, and a weapon in the satchel to take up. */
   hasFood: boolean;
   spareWeapon: boolean;
+  /** Why there's no running from this fight, if there isn't (surrounded at home, with Mother inside). */
+  trapped?: string;
 }
 
 export interface AbilityDef {
@@ -133,6 +135,7 @@ export const ABILITIES: AbilityDef[] = [
     target: 'self',
     blurb: 'Run for it. If you fail, your turn is wasted.',
     details: (ctx) => [`Roll d20 ${signed(ctx.hero.quickness)} against ${ctx.battle.fleeDc(ctx.hero)}`, '+2 for each extra foe still standing'],
+    blocked: (ctx) => ctx.trapped,
   },
   // ------------------------------------------------ bonus actions
   {

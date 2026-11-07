@@ -1,3 +1,4 @@
+import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { DiaryEntry, QuestLog, QuestState } from '../systems/Quests';
@@ -20,7 +21,7 @@ const INK_FADED = '#8a7458';
 const RUBRIC = '#8e2f22';
 const PARCHMENT = 0xefe1c0;
 const PARCHMENT_EDGE = 0xd9c49a;
-const BODY_FONT = 'Georgia, "Times New Roman", serif';
+const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 
 type Section = 'tasks' | 'quests' | 'diary';
 
@@ -156,7 +157,7 @@ export class JournalScene extends Phaser.Scene {
     this.dim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.55).setOrigin(0).setInteractive();
     this.dim.on('pointerup', (p: Phaser.Input.Pointer) => {
       // Clicking outside the book closes it.
-      const local = this.book.getWorldTransformMatrix().applyInverse(p.x, p.y);
+      const local = this.book.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
       if (Math.abs(local.x) > this.bookW / 2 + 80 || Math.abs(local.y) > BOOK_H / 2 + 40) this.close();
     });
 

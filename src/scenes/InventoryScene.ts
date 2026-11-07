@@ -1,3 +1,4 @@
+import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { itemScale } from '../art/items';
 import { GameAudio } from '../audio/Audio';
@@ -18,7 +19,7 @@ const PAD = 28;
 const DETAILS_W = 250;
 /** Below this screen width the details go under the grid instead of beside it. */
 const NARROW = 660;
-const BODY_FONT = 'Georgia, "Times New Roman", serif';
+const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 const SLOT_FILL = 0x0d0a10;
 
 type Selection = { kind: 'bag'; index: number } | { kind: 'slot'; slot: EquipSlot } | undefined;
@@ -75,7 +76,7 @@ export class InventoryScene extends Phaser.Scene {
     this.dim.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (this.drag?.ghost) return;
       // Clicking outside the window closes it.
-      const local = this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
+      const local = this.window.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
       if (Math.abs(local.x) > this.panelW / 2 + 10 || Math.abs(local.y) > this.panelH / 2 + 10) this.close();
     });
 
@@ -255,7 +256,7 @@ export class InventoryScene extends Phaser.Scene {
       const x = x0 + (i % COLS) * (SLOT + GAP);
       const y = y0 + Math.floor(i / COLS) * (SLOT + GAP);
       const selected = this.selection?.kind === 'bag' && this.selection.index === i;
-      const press = stack ? (p: Phaser.Input.Pointer) => (this.drag = { index: i, startX: p.x, startY: p.y }) : undefined;
+      const press = stack ? (p: Phaser.Input.Pointer) => (this.drag = { index: i, startX: Display.point(p).x, startY: Display.point(p).y }) : undefined;
       this.bagSlots[i] = { x, y };
       this.bagIcons[i] = this.makeSlot(x, y, stack?.id, stack?.count ?? 0, selected, () => this.select(stack ? { kind: 'bag', index: i } : undefined), press);
     });
@@ -433,19 +434,19 @@ export class InventoryScene extends Phaser.Scene {
     if (!d) return;
     if (!p.isDown) return this.cancelDrag();
     if (!d.ghost) {
-      if (Phaser.Math.Distance.Between(p.x, p.y, d.startX, d.startY) < DRAG_START) return;
+      if (Phaser.Math.Distance.Between(Display.point(p).x, Display.point(p).y, d.startX, d.startY) < DRAG_START) return;
       const stack = Inventory.bag[d.index];
       if (!stack) return this.cancelDrag();
       // Lift the item: a copy follows the pointer and its slot looks empty.
       d.ghost = this.add
-        .image(p.x, p.y, itemDef(stack.id).icon)
+        .image(Display.point(p).x, Display.point(p).y, itemDef(stack.id).icon)
         .setScale(itemScale(2.8 * this.window.scale))
         .setDepth(10)
         .setAlpha(0.9);
       this.bagIcons[d.index]?.setAlpha(0.25);
       GameAudio.click();
     }
-    d.ghost.setPosition(p.x, p.y);
+    d.ghost.setPosition(Display.point(p).x, Display.point(p).y);
     const over = this.slotAt(p);
     this.dropMarker?.clear();
     if (over >= 0 && over !== d.index) {
@@ -480,7 +481,7 @@ export class InventoryScene extends Phaser.Scene {
 
   /** Which satchel slot is under the pointer, or -1. */
   private slotAt(p: Phaser.Input.Pointer): number {
-    const local = this.window.getWorldTransformMatrix().applyInverse(p.x, p.y);
+    const local = this.window.getWorldTransformMatrix().applyInverse(Display.point(p).x, Display.point(p).y);
     return this.bagSlots.findIndex((s) => s && local.x >= s.x && local.x < s.x + SLOT && local.y >= s.y && local.y < s.y + SLOT);
   }
 

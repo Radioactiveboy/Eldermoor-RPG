@@ -5,6 +5,9 @@ import { generateCreatures } from './creatures';
 import { generateCritters } from './critters';
 import { generateFarm } from './farm';
 import { generateFishing } from './fishing';
+import { generateGoblins } from './goblins3d';
+import { generateMother } from './mother3d';
+import { generateRuin } from './ruin';
 import { generateFolk } from './folk';
 import { generateHenFarm } from './henfarm';
 import { generateHero } from './hero3d';
@@ -50,4 +53,8 @@ export function generateArt(scene: Phaser.Scene): void {
   generateAbbey(scene);
   generateTavern(scene);
   generateWillow(scene);
+  generateMother(scene);
+  generateGoblins(scene);
+  // Last: it makes burnt copies of art drawn above.
+  generateRuin(scene);
 }
