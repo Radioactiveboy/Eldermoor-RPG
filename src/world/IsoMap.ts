@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TILE_WIDTH } from '../config';
 import { MODEL_ART, WALL_HEIGHT } from '../art/interior';
 import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
-import { DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
+import { APPLE_ART, DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
 import { BlendLayer, blendTileKey, EDGE_VARIANTS, TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { BakedLayer } from './BakedLayer';
@@ -72,7 +72,7 @@ export class IsoMap {
   /** Tiles taken by things that can move, like NPCs. */
   private readonly occupied = new Set<number>();
   /** Tree sprites by tile index, so they can sway when shaken. */
-  readonly trees = new Map<number, { image: Phaser.GameObjects.Image; pine: boolean }>();
+  readonly trees = new Map<number, { image: Phaser.GameObjects.Image; pine: boolean; apple: boolean }>();
   /** Crop sprites by tile index (see MapData.crops). */
   readonly crops = new Map<number, Phaser.GameObjects.Image>();
   /** Foam along the lake's edge, by tile index: its texture key (see blendTileKey). */
@@ -249,7 +249,8 @@ export class IsoMap {
   /** Which tree or rock art stands on a tile (stable per tile), and its collision outline. */
   private propArt(prop: Prop, tx: number, ty: number): { art: (typeof TREE_ART)[number]; shape: string } {
     const isTree = prop === Prop.Tree;
-    const options = isTree ? TREE_ART : ROCK_ART;
+    const orchard = isTree && (this.data.orchards ?? []).some((o) => tx >= o.x0 && tx < o.x1 && ty >= o.y0 && ty < o.y1);
+    const options = orchard ? APPLE_ART : isTree ? TREE_ART : ROCK_ART;
     const art = options[Math.floor(tileHash(tx, ty, 6) * options.length)];
     return { art, shape: !isTree ? 'rock' : art.key.includes('pine') ? 'pine' : 'oak' };
   }
@@ -544,6 +545,6 @@ export class IsoMap {
     img.setOrigin(0.5, art.originY).setDepth(depth);
     // Mirror half the props so the forest doesn't look stamped.
     img.setFlipX(tileHash(tx, ty, 7) < 0.5);
-    if (isTree) this.trees.set(ty * this.data.width + tx, { image: img, pine: art.key.includes('pine') });
+    if (isTree) this.trees.set(ty * this.data.width + tx, { image: img, pine: art.key.includes('pine'), apple: art.key.includes('apple') });
   }
 }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
+import { SWAY_STEPS, swayKey } from '../art/props';
 import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import type { TimeOfDay } from '../systems/TimeOfDay';
 import type { IsoMap } from './IsoMap';
@@ -84,13 +85,19 @@ export class Ambience {
   private sparrowTimer = 3;
   private smokeTimer = 0;
   private leafTimer = 1;
+  private windTimer = 0;
+  /** Each tree's still texture, from before the wind started leaning it. */
+  private readonly treeKeys = new Map<Phaser.GameObjects.Image, string>();
 
   constructor(scene: Phaser.Scene, map: IsoMap, clock: TimeOfDay) {
     this.scene = scene;
     this.map = map;
     this.clock = clock;
     this.dressWater();
-    for (const t of map.trees.values()) this.treeImages.push(t.image);
+    for (const t of map.trees.values()) {
+      this.treeImages.push(t.image);
+      this.treeKeys.set(t.image, t.image.texture.key);
+    }
     for (let i = 0; i < 3; i++) this.clouds.push(this.makeCloud(true));
   }
 
@@ -115,6 +122,7 @@ export class Ambience {
     this.updateClouds(dt);
     this.updateSmoke(dt);
     this.updateLeaves(dt, view);
+    this.updateWind(dt, view);
   }
 
   /** Fireflies' glow, for the night-time lighting. */
@@ -468,5 +476,32 @@ export class Ambience {
     // Swaying side to side as it falls, drifting with the wind.
     this.scene.tweens.add({ targets: leaf, x: { from: x, to: x + drift }, angle: 270, duration: 3000 });
     this.scene.tweens.add({ targets: leaf, scaleX: { from: 1, to: 0.3 }, duration: 300, yoyo: true, repeat: 5 });
+  }
+  /**
+   * The wind in the trees: gusts roll across the woods from the west, and
+   * each crown leans a pixel or two downwind as one passes, then rights
+   * itself. Pines are stiffer than the broadleaves. The leaning is done with
+   * ready-made textures (see art/props.ts), so the art stays pixel-crisp.
+   */
+  private updateWind(dt: number, view: Phaser.Geom.Rectangle): void {
+    this.windTimer -= dt;
+    if (this.windTimer > 0) return;
+    this.windTimer = 0.12;
+    const t = this.time;
+    // How gusty it is just now: slow swells, sometimes nearly still.
+    const gust = Math.max(0, 0.45 + 0.4 * Math.sin(t * 0.21) * Math.sin(t * 0.47 + 1.3) + 0.15 * Math.sin(t * 0.9));
+    for (const image of this.treeImages) {
+      const key = this.treeKeys.get(image);
+      if (!key || !view.contains(image.x, image.y - image.height * 0.5)) continue;
+      // Being shaken by the hero: leave it be.
+      if (image.angle !== 0) continue;
+      const wave = Math.sin(t * 1.7 - image.x * 0.011 + (image.y % 37) * 0.05);
+      const stiff = key.includes('pine') ? 0.7 : 1;
+      const lean = gust * stiff * (0.5 + 0.5 * wave) * 2.6;
+      const step = Math.min(SWAY_STEPS, Math.floor(lean));
+      // A mirrored tree leans the other way in its own texture, so it bends with the rest.
+      const want = swayKey(key, image.flipX ? -step : step);
+      if (image.texture.key !== want) image.setTexture(want);
+    }
   }
 }

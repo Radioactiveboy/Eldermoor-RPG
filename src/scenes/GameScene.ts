@@ -1648,7 +1648,7 @@ export class GameScene extends Phaser.Scene {
     return {
       key: `tree:${tx},${ty}`, label: 'Shake the tree', gx: tx + 0.5, gy: ty + 0.5, range: 1.45,
       promptX: p.x, promptY: p.y - 40, tile: { x: tx, y: ty },
-      run: () => this.shakeTree(tx, ty, tree.image, tree.pine),
+      run: () => this.shakeTree(tx, ty, tree.image, tree.pine, tree.apple),
     };
   }
 
@@ -1732,7 +1732,7 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  private shakeTree(tx: number, ty: number, image: Phaser.GameObjects.Image, pine: boolean): void {
+  private shakeTree(tx: number, ty: number, image: Phaser.GameObjects.Image, pine: boolean, apple = false): void {
     // The tree sways (pivoting at its base) while leaves drift down.
     const sway = this.tweens.add({ targets: image, angle: { from: -3, to: 3 }, duration: 110, yoyo: true, repeat: -1 });
     const leaves = this.time.addEvent({ delay: 140, loop: true, callback: () => this.dropLeaf(image, pine) });
@@ -1751,6 +1751,11 @@ export class GameScene extends Phaser.Scene {
           stop();
           Farm.shake(tx, ty, this.clock.day);
           const roll = Math.random();
+          // An apple tree nearly always gives an apple or two.
+          if (apple) {
+            this.give('apple', roll < 0.4 ? 2 : 1);
+            return;
+          }
           const found: ItemId | undefined = pine ? (roll < 0.7 ? 'pinecone' : undefined) : roll < 0.55 ? 'apple' : roll < 0.8 ? 'stick' : undefined;
           if (found) this.give(found, 1);
           else this.onHint?.(pine ? 'Only a shower of needles.' : 'Just a few leaves. Nothing worth keeping.');
