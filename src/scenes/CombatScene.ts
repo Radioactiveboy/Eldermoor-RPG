@@ -39,7 +39,8 @@ import {
   weaponEffectText,
 } from '../systems/Combat';
 import { Experience } from '../systems/Experience';
-import { Inventory, itemDef, ItemId, weaponOf } from '../systems/Inventory';
+import { FightTally, lootLine } from '../systems/FightTally';
+import { Inventory, InventoryEvent, itemDef, ItemId, weaponOf } from '../systems/Inventory';
 import { abilityIconKey, ensureAbilityIcons } from '../ui/AbilityIcons';
 import { PORTRAIT_SIZE } from '../art/portraits';
 import { bodyStyle, THEME, titleStyle } from '../ui/Widgets';
@@ -104,6 +105,14 @@ const NARROW = 760;
 const CHIP_W = 88;
 const CHIP_H = 92;
 const LOG_LINES = 4;
+/** Lines kept for the full fight log (L, or the Log button above the last few lines). */
+const HISTORY_LINES = 400;
+/** How long a critical hit freezes everything, for weight. */
+const CRIT_PAUSE = 170;
+/** How far a blow knocks its target back, in screen pixels (a critical twice as far). */
+const KNOCKBACK = 6;
+/** The end-of-fight card stays this long unless dismissed. */
+const SUMMARY_MS = 6500;
 
 // The hotbar along the bottom (laid out at this size, then scaled down to fit narrower windows).
 const SLOT = 60;
@@ -221,6 +230,12 @@ export class CombatScene extends Phaser.Scene {
   private orderBar!: Phaser.GameObjects.Container;
   private logBox!: Phaser.GameObjects.Container;
   private logLines: string[] = [];
+  /** Every line of this fight, for the full log. */
+  private history: string[] = [];
+  /** The full log, while it's open, and how far it's scrolled up from the newest line (pixels). */
+  private logPanel?: Phaser.GameObjects.Container;
+  private logScroll = 0;
+  private tally = new FightTally();
   private menuBox!: Phaser.GameObjects.Container;
   private hotbar!: Phaser.GameObjects.Container;
   private tooltip!: Phaser.GameObjects.Container;
@@ -253,6 +268,10 @@ export class CombatScene extends Phaser.Scene {
     this.menuResolve = undefined;
     this.menuOnSelect = undefined;
     this.logLines = [];
+    this.history = [];
+    this.logPanel = undefined;
+    this.logScroll = 0;
+    this.tally = new FightTally();
     this.targetZones = [];
     this.budget = { action: false, bonus: false };
     this.heroActing = false;
@@ -310,7 +329,17 @@ export class CombatScene extends Phaser.Scene {
       if (this.menuStyle === 'hotbar') this.pickId('end');
       else this.pick(this.selected);
     });
-    for (const key of ['ESC', 'BACKSPACE']) kb.on(`keydown-${key}`, () => this.pickId('back'));
+    for (const key of ['ESC', 'BACKSPACE']) kb.on(`keydown-${key}`, () => (this.logPanel ? this.toggleLog(false) : this.pickId('back')));
+    kb.on('keydown-L', () => this.toggleLog());
+    kb.on('keydown-PAGE_UP', () => this.scrollLog(120));
+    kb.on('keydown-PAGE_DOWN', () => this.scrollLog(-120));
+    this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
+      if (this.logPanel) this.scrollLog(-dy);
+    });
+    const levelled = Experience.onChange((e) => {
+      if (e.type === 'levelled') this.tally.levelled(e.level);
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, levelled);
 
     this.scale.on('resize', this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off('resize', this.layout, this));
@@ -399,6 +428,7 @@ export class CombatScene extends Phaser.Scene {
     const hero = this.hero.c;
     this.budget = { action: true, bonus: true };
     this.heroActing = true;
+    this.tally.turns++;
     if (start.stood) {
       this.budget.bonus = false;
       this.float(this.hero, 'On your feet', THEME.text);
@@ -647,6 +677,7 @@ export class CombatScene extends Phaser.Scene {
   /** A bleeding wound hurts as the turn begins. */
   private async bleed(actor: Actor, amount: number): Promise<void> {
     if (actor === this.hero) this.world.stats.damage(amount);
+    this.tally.hurt(actor.c, amount);
     this.flash(actor);
     this.float(actor, `-${amount}`, hex(STATUSES.bleeding.color));
     this.log(`${this.nameOf(actor, true)} ${actor === this.hero ? 'bleed' : 'bleeds'} for ${amount}.`);
@@ -805,15 +836,20 @@ export class CombatScene extends Phaser.Scene {
     const verb = style.verb ?? attacker.c.verb;
     const dice = r.mode === 0 ? '' : ` (${r.mode > 0 ? 'advantage' : 'disadvantage'}: rolled ${r.rolls.join(' and ')})`;
     const sum = `${r.roll} ${signed(r.total - r.roll)} = ${r.total} against armour ${r.ac}${dice}`;
+    this.tally.attack(r);
     if (r.hit) {
       GameAudio.hit(r.crit, !!style.heavy);
       if (target === this.hero) {
         GameAudio.hurt();
         this.world.stats.damage(r.damage);
         this.world.cameras.main.shake(160, r.crit ? 0.012 : 0.006);
+      } else if (r.crit) {
+        this.world.cameras.main.shake(140, 0.007);
       }
       this.flash(target);
-      this.float(target, r.crit ? `Critical! -${r.damage}` : `-${r.damage}`, r.crit ? '#ffd76a' : '#ff6b5a', r.crit);
+      this.damageNumber(target, r.damage, r.crit);
+      if (r.crit) await this.critPause();
+      await this.knockBack(attacker, target, r.crit || !!style.heavy);
       if (target.creature && !r.killed) {
         this.cry(target);
         target.creature.setFrame(CREATURE_FRAME.hurt);
@@ -926,6 +962,7 @@ export class CombatScene extends Phaser.Scene {
     } else {
       this.banner('You got away!', true);
     }
+    this.toggleLog(false);
     await this.wait(1700);
     this.hero.sprite.clearTint();
     this.hero.offset.x = this.hero.offset.y = 0;
@@ -935,14 +972,81 @@ export class CombatScene extends Phaser.Scene {
       alpha: 0,
       duration: 300,
       onComplete: () => {
+        // The world hands out the spoils as it hears the fight is over: note what it gives, for the card.
+        const taken = Inventory.onChange((e: InventoryEvent) => {
+          if (e.type === 'added') this.tally.took(e.id, e.count);
+          else if (e.type === 'rewarded') this.tally.coins += e.coins;
+        });
         this.events.emit('combat-ended', { outcome, slain, fled } satisfies CombatResult);
-        this.scene.stop();
+        taken();
+        // A fight that was always going to be lost, or one the hero lost, goes straight on to what comes next.
+        if (outcome === 'defeat' || this.doom) this.scene.stop();
+        else this.showSummary(outcome, slain.length);
       },
     });
   }
 
+  /**
+   * The card at the end of a fight: how long it took, the damage dealt and
+   * taken, the experience earned and what was taken from the fallen. It
+   * fades by itself, or at a click or Enter. The world carries on beneath it.
+   */
+  private showSummary(outcome: Outcome, slain: number): void {
+    const t = this.tally;
+    const title = outcome === 'escaped' ? 'You got away' : slain === 0 ? (this.foes.length > 1 ? 'They got away' : 'It got away') : 'Victory';
+    const loot = [...t.loot].map(([id, n]) => lootLine(itemDef(id as ItemId).name, n));
+    if (t.coins > 0) loot.push(`${t.coins} coin${t.coins === 1 ? '' : 's'}`);
+    const swings = t.hits + t.misses;
+    const rows: Array<[string, string]> = [
+      ['Rounds', `${this.battle.round}  (${t.turns} turn${t.turns === 1 ? '' : 's'} of yours)`],
+      ['Damage dealt', `${t.dealt}`],
+      ['Damage taken', `${t.taken}`],
+    ];
+    if (swings > 0) rows.push(['Blows landed', `${t.hits} of ${swings}${t.crits > 0 ? `, ${t.crits} critical` : ''}`]);
+    rows.push(['Experience', t.xp > 0 ? `+${t.xp}` : 'none']);
+    if (t.levels.length > 0) rows.push(['Level', `${t.levels[t.levels.length - 1]}!`]);
+    if (outcome === 'victory' && slain > 0) rows.push(['Taken', loot.length > 0 ? loot.join(', ') : 'nothing worth keeping']);
+
+    const { width, height } = this.scale;
+    const w = Math.min(width - MARGIN * 2, 380);
+    const card = this.add.container(0, 0).setDepth(30);
+    const head = this.add.text(w / 2, 14, title, titleStyle(width < NARROW ? 22 : 26)).setOrigin(0.5, 0);
+    if (outcome !== 'victory' || slain === 0) head.setColor(THEME.text);
+    const items: Phaser.GameObjects.GameObject[] = [head];
+    let y = 14 + head.height + 10;
+    for (const [label, value] of rows) {
+      const l = this.add.text(18, y, label, { fontFamily: FONT, fontSize: '14px', color: THEME.dimText });
+      const v = this.add
+        .text(w - 18, y, value, { fontFamily: FONT, fontSize: '14px', color: label === 'Level' ? THEME.goldText : THEME.text, align: 'right', wordWrap: { width: w - 150 } })
+        .setOrigin(1, 0);
+      items.push(l, v);
+      y += Math.max(l.height, v.height) + 6;
+    }
+    const hint = this.add.text(w / 2, y + 4, 'Click or press Enter to close', { fontFamily: FONT, fontSize: '11px', color: THEME.dimText }).setOrigin(0.5, 0);
+    items.push(hint);
+    const h = y + 4 + hint.height + 12;
+    const bg = this.add.graphics();
+    bg.fillStyle(THEME.panel, 0.95).fillRoundedRect(0, 0, w, h, 10);
+    bg.lineStyle(2, THEME.gold, 0.8).strokeRoundedRect(0, 0, w, h, 10);
+    card.add([bg, ...items]);
+    card.setPosition(Math.round(width / 2 - w / 2), Math.round(Math.max(MARGIN, height * 0.3 - h / 2))).setAlpha(0);
+    card.setSize(w, h).setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
+    this.tweens.add({ targets: card, alpha: 1, y: card.y + 6, duration: 220, ease: 'Cubic.easeOut' });
+
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      this.tweens.add({ targets: card, alpha: 0, duration: 250, onComplete: () => this.scene.stop() });
+    };
+    card.on('pointerup', close);
+    this.input.keyboard!.once('keydown-ENTER', close);
+    this.time.delayedCall(SUMMARY_MS, close);
+  }
+
   /** Experience for a kill. A level gained mid-fight counts at once: the new health is there to use. */
   private gainXp(xp: number, reason: string): void {
+    this.tally.gained(xp);
     Experience.gain(xp, reason);
     const stats = this.world.stats;
     if (stats.maxHealth !== this.hero.c.maxHp) {
@@ -1478,7 +1582,10 @@ export class CombatScene extends Phaser.Scene {
   private log(line: string): void {
     this.logLines.push(line);
     if (this.logLines.length > LOG_LINES) this.logLines.shift();
+    this.history.push(line);
+    if (this.history.length > HISTORY_LINES) this.history.shift();
     this.layoutLog();
+    if (this.logPanel) this.drawLogPanel();
   }
 
   /** The last few lines of what happened: above the hotbar's left side, or above the buttons when there's a list to choose from. */
@@ -1511,6 +1618,96 @@ export class CombatScene extends Phaser.Scene {
       y += t.height + 3;
       this.logBox.add(t);
     }
+    // A tab on the box's top edge opens the whole fight's log.
+    const tab = this.add
+      .text(left + w - 10, top - 2, this.logPanel ? 'Close log (L)' : `Full log (L)`, {
+        fontFamily: FONT, fontSize: '12px', color: THEME.goldText, backgroundColor: '#000000aa', padding: { x: 7, y: 3 },
+      })
+      .setOrigin(1, 1)
+      .setInteractive({ useHandCursor: true });
+    tab.on('pointerup', () => this.toggleLog());
+    this.logBox.add(tab);
+  }
+
+  /** Opens (or closes) the whole fight's log: a panel in the middle that scrolls with the wheel, a drag, or Page Up / Down. */
+  private toggleLog(open = !this.logPanel): void {
+    if (!open) {
+      this.logPanel?.destroy();
+      this.logPanel = undefined;
+      this.layoutLog();
+      return;
+    }
+    this.logScroll = 0;
+    this.drawLogPanel();
+    this.layoutLog();
+  }
+
+  private scrollLog(by: number): void {
+    if (!this.logPanel) return;
+    this.logScroll = Math.max(0, this.logScroll + by);
+    this.drawLogPanel();
+  }
+
+  private drawLogPanel(): void {
+    this.logPanel?.destroy();
+    const { width, height } = this.scale;
+    const w = Math.min(width - MARGIN * 2, 680);
+    const h = Math.min(height - 220, 460);
+    const x = Math.round(width / 2 - w / 2);
+    const y = Math.max(MARGIN, Math.round(height * 0.42 - h / 2));
+    const panel = this.add.container(0, 0).setDepth(20);
+    const bg = this.add.graphics();
+    bg.fillStyle(THEME.panel, 0.96).fillRoundedRect(x, y, w, h, 10);
+    bg.lineStyle(2, THEME.gold, 0.7).strokeRoundedRect(x, y, w, h, 10);
+    // Swallows clicks, and lets the log be dragged up and down.
+    const hit = this.add.zone(x, y, w, h).setOrigin(0).setInteractive();
+    let dragFrom: number | undefined;
+    hit.on('pointerdown', (p: Phaser.Input.Pointer) => (dragFrom = p.y));
+    hit.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (dragFrom === undefined || !p.isDown) return;
+      const by = p.y - dragFrom;
+      dragFrom = p.y;
+      this.logScroll = Math.max(0, this.logScroll + by);
+      this.drawLogPanel();
+    });
+    hit.on('pointerup', () => (dragFrom = undefined));
+    const title = this.add.text(x + 16, y + 10, 'Fight log', { ...bodyStyle(17, THEME.goldText), fontFamily: FONT });
+    const hint = this.add
+      .text(x + w - 16, y + 14, 'Scroll or drag · L to close', { fontFamily: FONT, fontSize: '12px', color: THEME.dimText })
+      .setOrigin(1, 0);
+    panel.add([bg, hit, title, hint]);
+    // The lines, newest at the bottom, clipped to the panel.
+    const top = y + 40;
+    const viewH = h - 52;
+    const body = this.add.container(0, 0);
+    const texts = this.history.map((line, i) =>
+      this.add.text(x + 16, 0, line, {
+        fontFamily: FONT, fontSize: '14px', color: i === this.history.length - 1 ? THEME.text : THEME.dimText, wordWrap: { width: w - 40 },
+      }),
+    );
+    const total = texts.reduce((n, t) => n + t.height + 4, 0);
+    const maxScroll = Math.max(0, total - viewH);
+    this.logScroll = Math.min(this.logScroll, maxScroll);
+    let ty = top + Math.min(0, viewH - total) + this.logScroll;
+    if (total < viewH) ty = top;
+    for (const t of texts) {
+      t.setY(ty);
+      ty += t.height + 4;
+      body.add(t);
+    }
+    const shape = this.make.graphics({}, false).fillRect(x, top, w, viewH);
+    body.setMask(shape.createGeometryMask());
+    panel.add(body);
+    panel.once(Phaser.GameObjects.Events.DESTROY, () => shape.destroy());
+    // A thin bar showing where in the fight this is.
+    if (maxScroll > 0) {
+      const barH = Math.max(24, (viewH * viewH) / total);
+      const at = 1 - this.logScroll / maxScroll;
+      const bar = this.add.graphics();
+      bar.fillStyle(THEME.gold, 0.6).fillRoundedRect(x + w - 8, top + (viewH - barH) * at, 4, barH, 2);
+      panel.add(bar);
+    }
+    this.logPanel = panel;
   }
 
   private layout(): void {
@@ -1621,12 +1818,63 @@ export class CombatScene extends Phaser.Scene {
     return new Promise((resolve) => this.tweens.add({ targets: offset, x, y, duration: ms, ease: 'Sine.easeOut', onComplete: () => resolve() }));
   }
 
-  /** Flash red when struck. */
+  /** Flash when struck: a white blink as the blow lands, then red. */
   private flash(actor: Actor): void {
-    actor.sprite.setTintFill(0xff5040);
-    this.time.delayedCall(90, () => actor.sprite.clearTint());
-    this.time.delayedCall(170, () => actor.sprite.setTintFill(0xff5040));
-    this.time.delayedCall(250, () => actor.sprite.clearTint());
+    actor.sprite.setTintFill(0xffffff);
+    this.time.delayedCall(60, () => actor.sprite.setTintFill(0xff5040));
+    this.time.delayedCall(130, () => actor.sprite.clearTint());
+    this.time.delayedCall(200, () => actor.sprite.setTintFill(0xff5040));
+    this.time.delayedCall(270, () => actor.sprite.clearTint());
+  }
+
+  /**
+   * The damage a blow did, popping out over the target's head and drifting
+   * up to one side; a critical is bigger, gold, and shakes.
+   */
+  private damageNumber(target: Actor, damage: number, crit: boolean): void {
+    const p = this.headOf(target);
+    const drift = (Math.random() < 0.5 ? -1 : 1) * (10 + Math.random() * 14);
+    const t = this.add
+      .text(p.x, p.y - 2, `${damage}`, {
+        fontFamily: FONT, fontSize: crit ? '34px' : '26px', color: crit ? '#ffd76a' : '#ff6b5a', stroke: '#1a0806', strokeThickness: crit ? 6 : 5, fontStyle: 'bold',
+      })
+      .setOrigin(0.5, 1)
+      .setScale(0.3);
+    this.tweens.add({ targets: t, scale: crit ? 1.25 : 1, duration: 150, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, x: p.x + drift, y: p.y - (crit ? 54 : 42), duration: 1000, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, delay: crit ? 900 : 700, duration: 350, onComplete: () => t.destroy() });
+    if (crit) {
+      this.tweens.add({ targets: t, angle: { from: -8, to: 8 }, duration: 60, yoyo: true, repeat: 3 });
+      const word = this.add
+        .text(p.x, p.y - 36, 'Critical!', { fontFamily: FONT, fontSize: '16px', color: '#ffe9a8', stroke: '#000000', strokeThickness: 4, fontStyle: 'bold' })
+        .setOrigin(0.5, 1)
+        .setAlpha(0);
+      this.tweens.add({ targets: word, alpha: 1, y: p.y - 62, duration: 300, ease: 'Cubic.easeOut' });
+      this.tweens.add({ targets: word, alpha: 0, delay: 900, duration: 350, onComplete: () => word.destroy() });
+    }
+  }
+
+  /** A critical hit freezes everything for a heartbeat, with a pale flash, so it lands with weight. */
+  private async critPause(): Promise<void> {
+    const { width, height } = this.scale;
+    const glare = this.add.rectangle(0, 0, width, height, 0xfff2cc, 0.22).setOrigin(0).setDepth(5);
+    this.tweens.pauseAll();
+    this.world.tweens.pauseAll();
+    await this.wait(CRIT_PAUSE);
+    this.world.tweens.resumeAll();
+    this.tweens.resumeAll();
+    this.tweens.add({ targets: glare, alpha: 0, duration: 180, onComplete: () => glare.destroy() });
+  }
+
+  /** The target rocks back from the blow, away from whoever struck it, and settles. */
+  private async knockBack(attacker: Actor, target: Actor, hard: boolean): Promise<void> {
+    const dx = target.sprite.x - attacker.sprite.x;
+    const dy = target.sprite.y - attacker.sprite.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const push = KNOCKBACK * (hard ? 2 : 1);
+    const home = { x: target.offset.x, y: target.offset.y };
+    await this.nudge(target.offset, home.x + (dx / len) * push, home.y + (dy / len) * push * 0.6, 70);
+    await this.nudge(target.offset, home.x, home.y, 160);
   }
 
   private wait(ms: number): Promise<void> {

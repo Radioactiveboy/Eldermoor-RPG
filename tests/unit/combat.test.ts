@@ -119,8 +119,8 @@ describe('attack rolls', () => {
 
   it("adds a boar's charge only to its first attack", () => {
     const boar = { id: 'boar', side: 'foes' as const, hp: 30, ...FOES.boar };
-    const { battle, a, b } = fight([hero({ ac: 5 }), boar], face(10), face(2, 8), face(6, 6), face(10), face(2, 8));
-    expect(battle.attack(b, a)).toMatchObject({ charged: true, damage: 2 + 2 + 6 });
+    const { battle, a, b } = fight([hero({ ac: 5 }), boar], face(10), face(2, 6), face(2, 6), face(6, 6), face(10), face(2, 6), face(2, 6));
+    expect(battle.attack(b, a)).toMatchObject({ charged: true, damage: 2 + 2 + 3 + 6 });
     expect(battle.attack(b, a).charged).toBeUndefined();
   });
 });

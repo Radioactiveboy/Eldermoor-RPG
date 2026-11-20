@@ -21,7 +21,15 @@ npm run build    # type-check + production build into dist/
 npm test             # unit tests (Vitest) for the game rules: combat, XP, satchel, crafting, quests, saving
 npm run test:watch   # the same, re-running as you edit
 npm run test:smoke   # builds, then opens every ?area= in headless Chromium and fails on any page error
+npm run sim          # the balance table: 1,000 simulated fights per foe and pack size, hero levels 1-6
 ```
+
+`npm run sim` (`tools/balance.ts`) plays fights with no screen, using the real rules in `systems/Combat.ts`
+and a hero who follows a few rules of thumb with a typical kit for each level (`systems/CombatSim.ts`). It prints
+the win rate, rounds to win and health lost for every fight the game sets up. Add `-- --weapons` to compare
+the weapons at level 1, `-- --fights 5000` for steadier numbers, or `-- --markdown` for a table to paste.
+`tests/unit/balance.test.ts` checks the tuning targets (a lone wolf nearly always won at level 1, two wolves about
+3 times in 4, the Wolf Mother's den about 60% at levels 3-4), so a change to `FOES` that moves them fails the tests.
 
 The unit tests live in `tests/unit/` and run in Node, without Phaser, so they cover the pure systems in
 `src/systems/`. Dice are scripted rather than random (`scripted(...)` and `face(...)` in `tests/unit/helpers.ts`),
@@ -174,6 +182,8 @@ src/
   systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, advantage,
                           conditions (prone, dazed...), fleeing, how beasts choose their moves, and the
                           beasts' stats and traits (FOES)
+  systems/CombatSim.ts    Headless fights for tuning FOES: a seeded rng, a typical kit per level, simple hero tactics
+  systems/FightTally.ts   The sums for the end-of-fight card: damage each way, blows, XP, spoils
   systems/Abilities.ts    The hero's combat skills: action or bonus action, stamina, cooldowns, levels
   ui/AbilityIcons.ts      The hotbar's skill icons, painted with canvas gradients and glows into textures
   entities/Player.ts      Movement, collision, click-to-move path following
@@ -218,6 +228,7 @@ src/
   public/audio/sfx/       The fight sounds, cries and voice barks (MP3) and CREDITS.md
   tools/build-ambience.py Cuts, loops and levels the ambient recordings from the originals
   tools/build-sound.py    Does the same for the music, fight sounds and voice barks
+  tools/balance.ts        The balance table from the fight simulator (`npm run sim`)
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
   settings/Settings.ts    Volume and display settings, saved in the browser
   ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
@@ -245,6 +256,7 @@ src/
   ui/Toasts.ts            "New quest" banners and the hero's passing thoughts
 tests/
   unit/*.test.ts          Vitest tests for src/systems (Combat, Experience, Inventory, Crafting, Quests, SaveGame)
+  unit/balance.test.ts    The simulator, the balance targets and the fight tally
   unit/helpers.ts         Scripted dice and a fake localStorage for the tests
   smoke/smoke.mjs         Playwright smoke test: every ?area= loads without errors
 .github/workflows/
@@ -398,6 +410,14 @@ tests/
   hard to shove, and the Wolf Mother howls to rally her pack (+2 to hit). Wolves
   also gang up (+2 to hit in a pack) and may bolt when badly hurt. Lose and you
   wake up at home. The clock stops during a fight.
+
+  Blows land with weight: the damage pops up over the one struck, who blinks
+  white then red and rocks back, and a critical hit freezes the fight for a
+  heartbeat with a pale flash. The last few lines of the log sit above the
+  hotbar; **L** (or the Full log tab) opens the whole fight's log, which scrolls
+  with the wheel, a drag or Page Up / Down. A won fight ends with a card: rounds,
+  damage dealt and taken, blows landed, experience, any level gained, and what
+  was taken from the fallen (`systems/FightTally.ts` keeps the sums).
 
   To add a skill: an id and entry in `ABILITIES` (cost, stamina, cooldown, level,
   the numbers for its tooltip), a painter in `ui/AbilityIcons.ts`, and what it
