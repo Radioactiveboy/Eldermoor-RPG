@@ -175,7 +175,7 @@ export const ABILITIES: AbilityDef[] = [
     cost: 'bonus',
     target: 'self',
     blurb: 'Take up a weapon from your satchel.',
-    details: () => ['Fists roll d4 damage; a weapon d6 plus its Attack'],
+    details: () => ['Fists roll d4 damage; a weapon its own die (d4 to d8) plus its Attack'],
     blocked: (ctx) => (ctx.spareWeapon ? undefined : 'No weapon in your satchel.'),
   },
 ];

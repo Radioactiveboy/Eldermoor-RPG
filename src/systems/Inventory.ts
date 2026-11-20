@@ -1,3 +1,4 @@
+import { FIST_DIE, Weapon, WEAPON_DIE, weaponEffectText } from './Combat';
 import { SaveGame } from './SaveGame';
 
 /**
@@ -31,6 +32,8 @@ export interface ItemDef {
   slot?: EquipSlot;
   defence?: number;
   attack?: number;
+  /** Held in the main hand: its damage die and its own rule in a fight (see systems/Combat.ts). Without one, a d6. */
+  weapon?: Weapon;
   /** Food: what eating it restores. */
   eat?: { health?: number; stamina?: number };
   /** Drunk rather than eaten (ale, mead): "Drink" in the satchel, and a gulp instead of a crunch. */
@@ -176,6 +179,7 @@ export const ITEMS = {
     stack: 1,
     slot: 'mainHand',
     attack: 2,
+    weapon: { die: 6 },
     value: 5,
   },
   'straw-hat': {
@@ -251,6 +255,7 @@ export const ITEMS = {
     stack: 1,
     slot: 'mainHand',
     attack: 3,
+    weapon: { die: 6, verb: 'slash your hunting knife at' },
     value: 14,
   },
   'short-sword': {
@@ -261,7 +266,53 @@ export const ITEMS = {
     stack: 1,
     slot: 'mainHand',
     attack: 5,
+    weapon: { die: 6 },
     value: 40,
+  },
+  // Four weapons that each fight their own way (see WeaponEffect in systems/Combat.ts).
+  spear: {
+    name: 'Ash Spear',
+    description: 'A long ash shaft with a leaf-shaped iron head. Plant the butt and let them run onto it: the old way with boar.',
+    icon: 'item-spear',
+    category: 'Weapon',
+    stack: 1,
+    slot: 'mainHand',
+    attack: 3,
+    weapon: { die: 8, verb: 'thrust your spear at', effect: { kind: 'set', toHit: 1 } },
+    value: 26,
+  },
+  hatchet: {
+    name: "Woodman's Hatchet",
+    description: 'A short-hafted axe with a bearded head, made for splitting kindling. It bites deep and leaves a nasty wound.',
+    icon: 'item-hatchet',
+    category: 'Weapon',
+    stack: 1,
+    slot: 'mainHand',
+    attack: 3,
+    weapon: { die: 6, verb: 'chop your hatchet at', effect: { kind: 'cleave', chance: 0.35, damage: 2, turns: 2 } },
+    value: 20,
+  },
+  sling: {
+    name: 'Leather Sling',
+    description: "Two plaited cords and a leather pouch, and a bag of smooth river stones. A shepherd's weapon: it hits before they reach you.",
+    icon: 'item-sling',
+    category: 'Weapon',
+    stack: 1,
+    slot: 'mainHand',
+    attack: 2,
+    weapon: { die: 4, verb: 'sling a stone at', effect: { kind: 'opening' } },
+    value: 9,
+  },
+  cudgel: {
+    name: 'Blackthorn Cudgel',
+    description: 'A knobbed blackthorn club, hardened in the fire and heavy at the end. One good crack and they see stars.',
+    icon: 'item-cudgel',
+    category: 'Weapon',
+    stack: 1,
+    slot: 'mainHand',
+    attack: 2,
+    weapon: { die: 6, verb: 'bring your cudgel down on', effect: { kind: 'daze', chance: 0.3, turns: 1 } },
+    value: 12,
   },
   buckler: {
     name: 'Oak Buckler',
@@ -510,6 +561,13 @@ export function itemDef(id: ItemId): ItemDef {
   return ITEMS[id];
 }
 
+/** The rules of whatever's held in the main hand: its own, a d6 for anything else held, or bare fists. */
+export function weaponOf(id: ItemId | undefined): Weapon {
+  if (!id) return { die: FIST_DIE, verb: 'throw a punch at' };
+  const def = itemDef(id);
+  return { die: WEAPON_DIE, verb: `swing your ${def.name.toLowerCase()} at`, ...def.weapon };
+}
+
 /** What an item does, one line each, for item details ("Eat: +15 stamina", "Defence +1"). */
 export function itemEffects(def: ItemDef): string[] {
   const lines: string[] = [];
@@ -519,6 +577,11 @@ export function itemEffects(def: ItemDef): string[] {
   if (def.slot) lines.push(`Worn: ${EQUIP_SLOTS.find((s) => s.id === def.slot)!.label}`);
   if (def.defence) lines.push(`Defence +${def.defence}`);
   if (def.attack) lines.push(`Attack +${def.attack}`);
+  if (def.slot === 'mainHand') {
+    const w = { die: WEAPON_DIE, ...def.weapon };
+    lines.push(`Damage d${w.die}${def.attack ? `+${def.attack}` : ''}`);
+    if (w.effect) lines.push(weaponEffectText(w.effect));
+  }
   return lines;
 }
 

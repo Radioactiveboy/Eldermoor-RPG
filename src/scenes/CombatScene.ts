@@ -36,9 +36,10 @@ import {
   shouldHowl,
   STATUSES,
   TurnStart,
+  weaponEffectText,
 } from '../systems/Combat';
 import { Experience } from '../systems/Experience';
-import { Inventory, itemDef, ItemId } from '../systems/Inventory';
+import { Inventory, itemDef, ItemId, weaponOf } from '../systems/Inventory';
 import { abilityIconKey, ensureAbilityIcons } from '../ui/AbilityIcons';
 import { PORTRAIT_SIZE } from '../art/portraits';
 import { bodyStyle, THEME, titleStyle } from '../ui/Widgets';
@@ -364,6 +365,7 @@ export class CombatScene extends Phaser.Scene {
           : 'You have nothing in your hands but your fists.',
       );
     }
+    if (this.hero.c.weapon?.kind === 'opening') await this.openingShot();
     this.log('Roll for initiative!');
     const rolls = this.battle.rollInitiative();
     await Promise.all(rolls.map((r) => this.rollDie(this.actorOf(r.who), r.roll, signed(r.who.quickness))));
@@ -421,6 +423,23 @@ export class CombatScene extends Phaser.Scene {
     this.budget = { action: false, bonus: false };
     this.clearMenu();
     this.buildHotbar(false);
+  }
+
+  /** A sling (or any ranged weapon): one free shot as the foes close in, before anyone rolls for initiative. */
+  private async openingShot(): Promise<void> {
+    if (this.battle.standing('foes').length === 0) return;
+    this.log('You whirl your sling as they close in: a free shot before the fight begins.');
+    const strike = ABILITIES.find((x) => x.id === 'strike')!;
+    this.aiming = strike.id;
+    const target = await this.chooseTarget(strike);
+    this.aiming = undefined;
+    this.clearMenu();
+    if (!target) {
+      this.log('You hold your stone.');
+      return;
+    }
+    await this.attack(this.hero, this.actorOf(target));
+    await this.wait(300);
   }
 
   /** Spend what a skill costs, once the hero is committed to it. */
@@ -725,7 +744,9 @@ export class CombatScene extends Phaser.Scene {
   private weaponOptions(): MenuOption[] {
     return this.spareWeapons().map((index) => {
       const def = itemDef(Inventory.bag[index]!.id);
-      return { id: `${index}`, label: `Take ${def.name}`, hint: `Take it up as your weapon: ${signed(def.attack ?? 0)} attack, and d6 damage.` };
+      const w = weaponOf(Inventory.bag[index]!.id);
+      const effect = w.effect ? ` ${weaponEffectText(w.effect)}.` : '';
+      return { id: `${index}`, label: `Take ${def.name}`, hint: `Take it up as your weapon: ${signed(def.attack ?? 0)} attack, and d${w.die} damage.${effect}` };
     });
   }
 
@@ -801,7 +822,7 @@ export class CombatScene extends Phaser.Scene {
         });
       }
       const how = r.crit ? 'A natural 20, a critical hit!' : 'Hit!';
-      this.log(`${who} ${verb} ${whom}: ${sum}. ${how} ${r.damage} damage.${r.charged ? ' The charge puts weight behind it.' : ''}`);
+      this.log(`${who} ${verb} ${whom}: ${sum}. ${how} ${r.damage} damage.${r.charged ? ' The charge puts weight behind it.' : ''}${r.set ? ` Your spear is set against its charge (+${r.set} to hit).` : ''}`);
       if (r.trip) {
         const save = `${r.trip.roll} ${signed(r.trip.total - r.trip.roll)} = ${r.trip.total} against ${r.trip.dc}`;
         if (r.trip.fell) {
@@ -821,6 +842,14 @@ export class CombatScene extends Phaser.Scene {
             : `The bite tears; ${whom} ${target === this.hero ? 'are' : 'is'} bleeding.`,
         );
       }
+      if (r.cleaved) {
+        this.float(target, 'Bleeding', hex(STATUSES.bleeding.color));
+        this.log(`The hatchet bites deep; ${whom} is bleeding.`);
+      }
+      if (r.dazed && !r.killed) {
+        this.float(target, 'Dazed', hex(STATUSES.dazed.color));
+        this.log(`The cudgel cracks home; ${whom} ${target === this.hero ? 'reel' : 'reels'}, dazed: attacks roll with disadvantage next turn.`);
+      }
     } else {
       // A shield (or a guard) turns the blow with a clang; otherwise it whistles past.
       if (target === this.hero && (Inventory.equipped.offHand || this.battle.has(target.c, 'guarded'))) GameAudio.block();
@@ -828,7 +857,7 @@ export class CombatScene extends Phaser.Scene {
       this.float(target, 'Miss', '#d8c8a4');
       void this.hop(target.offset, target === this.hero ? -6 : 6, 0);
       const how = r.roll === 1 ? 'A 1: a clumsy miss.' : 'Miss.';
-      this.log(`${who} ${verb} ${whom}: ${sum}. ${how}`);
+      this.log(`${who} ${verb} ${whom}: ${sum}. ${how}${r.set ? ` (Your spear was set against its charge: +${r.set} to hit.)` : ''}`);
     }
     this.drawOrder();
 
@@ -925,7 +954,7 @@ export class CombatScene extends Phaser.Scene {
   /** The hero's numbers, from their level and what they're wearing and wielding. */
   private heroStats(): CombatantDef {
     const gear = Inventory.totals;
-    const weapon = Inventory.equipped.mainHand;
+    const weapon = weaponOf(Inventory.equipped.mainHand);
     const stats = this.world.stats;
     return {
       id: 'hero',
@@ -935,9 +964,10 @@ export class CombatScene extends Phaser.Scene {
       maxHp: stats.maxHealth,
       ac: 10 + gear.defence,
       toHit: 3 + gear.attack + Experience.toHitBonus,
-      damage: { count: 1, sides: weapon ? 6 : 4, bonus: gear.attack + Experience.damageBonus },
+      damage: { count: 1, sides: weapon.die, bonus: gear.attack + Experience.damageBonus },
       quickness: 2,
-      verb: weapon ? `swing your ${itemDef(weapon).name.toLowerCase()} at` : 'throw a punch at',
+      verb: weapon.verb!,
+      weapon: weapon.effect,
     };
   }
 

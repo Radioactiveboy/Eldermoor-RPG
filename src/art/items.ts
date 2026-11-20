@@ -2219,6 +2219,229 @@ const PAINTERS: Record<string, (c: Ctx) => void> = {
       sword(c, 70, 13);
     }),
 
+  spear: (c) =>
+    at(c, 64, 64, Math.PI / 4, () => {
+      // A long ash shaft, a leaf-shaped iron head on a socket, bound with leather below it.
+      const len = 84;
+      drop(c, () => {
+        roundRect(c, -4, -len + 30, 8, len * 2 - 30, 4);
+        c.fillStyle = '#7a5030';
+        c.fill();
+      });
+      roundRect(c, -4, -len + 30, 8, len * 2 - 32, 4);
+      fillInk(c, lin(c, -4, 0, 4, 0, WOOD), 3);
+      // The head: a long leaf of steel with a ridge down the middle.
+      const head = () => {
+        c.beginPath();
+        c.moveTo(0, -len - 4);
+        c.quadraticCurveTo(13, -len + 18, 6, -len + 34);
+        c.lineTo(-6, -len + 34);
+        c.quadraticCurveTo(-13, -len + 18, 0, -len - 4);
+        c.closePath();
+      };
+      drop(c, () => {
+        head();
+        c.fillStyle = '#8a929a';
+        c.fill();
+      });
+      head();
+      c.fillStyle = lin(c, -12, 0, 12, 0, STEEL);
+      c.fill();
+      ink(c, 3);
+      c.beginPath();
+      c.moveTo(0, -len + 2);
+      c.lineTo(0, -len + 32);
+      c.strokeStyle = 'rgba(60,70,80,0.7)';
+      c.lineWidth = 2;
+      c.stroke();
+      // The socket, and a leather binding under it.
+      roundRect(c, -5.5, -len + 32, 11, 12, 3);
+      fillInk(c, lin(c, -5.5, 0, 5.5, 0, STEEL), 2.5);
+      roundRect(c, -5.5, -len + 46, 11, 14, 3);
+      fillInk(c, lin(c, -5.5, 0, 5.5, 0, LEATHER), 2.5);
+      c.strokeStyle = 'rgba(0,0,0,0.5)';
+      c.lineWidth = 1.4;
+      for (let y = -len + 49; y < -len + 59; y += 4) {
+        c.beginPath();
+        c.moveTo(-5.5, y);
+        c.lineTo(5.5, y + 2.5);
+        c.stroke();
+      }
+      // An iron butt-spike.
+      c.beginPath();
+      c.moveTo(-4.5, len - 4);
+      c.lineTo(4.5, len - 4);
+      c.lineTo(0, len + 6);
+      c.closePath();
+      fillInk(c, lin(c, -4.5, 0, 4.5, 0, STEEL), 2.5);
+    }),
+
+  hatchet: (c) =>
+    at(c, 60, 68, Math.PI / 5, () => {
+      // A short ash haft, curving at the foot, with a bearded iron head.
+      const haft = () => {
+        c.beginPath();
+        c.moveTo(-5, -44);
+        c.lineTo(5, -44);
+        c.quadraticCurveTo(7, 10, 9, 46);
+        c.quadraticCurveTo(2, 52, -5, 46);
+        c.quadraticCurveTo(-5, 10, -5, -44);
+        c.closePath();
+      };
+      drop(c, haft);
+      haft();
+      fillInk(c, lin(c, -6, 0, 8, 0, WOOD), 3);
+      c.strokeStyle = 'rgba(59,34,16,0.6)';
+      c.lineWidth = 1.5;
+      for (const y of [-10, 14, 30]) {
+        c.beginPath();
+        c.moveTo(-2, y);
+        c.lineTo(3, y + 8);
+        c.stroke();
+      }
+      // The head: a poll behind the haft, and the blade sweeping down into a beard.
+      const head = () => {
+        c.beginPath();
+        c.moveTo(-12, -50);
+        c.lineTo(6, -50);
+        c.quadraticCurveTo(22, -56, 34, -62);
+        c.quadraticCurveTo(42, -42, 36, -18);
+        c.quadraticCurveTo(24, -24, 14, -30);
+        c.lineTo(6, -36);
+        c.lineTo(-12, -36);
+        c.closePath();
+      };
+      drop(c, () => {
+        head();
+        c.fillStyle = '#6a727a';
+        c.fill();
+      });
+      head();
+      c.fillStyle = lin(c, 0, -60, 30, -24, STEEL);
+      c.fill();
+      ink(c, 3);
+      // The bright, sharpened edge.
+      c.beginPath();
+      c.moveTo(33, -59);
+      c.quadraticCurveTo(39, -42, 34, -21);
+      c.strokeStyle = 'rgba(255,255,255,0.85)';
+      c.lineWidth = 2.5;
+      c.stroke();
+      // A wedge driven into the eye.
+      roundRect(c, -4, -53, 8, 6, 2);
+      fillInk(c, lin(c, 0, -53, 0, -47, WOOD), 2);
+    }),
+
+  sling: (c) => {
+    // Two plaited cords curling from a loop to a leather pouch holding a stone.
+    const cord = (pts: Pt[]) => {
+      c.beginPath();
+      c.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i + 1 < pts.length; i += 2) c.quadraticCurveTo(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]);
+      c.strokeStyle = INK;
+      c.lineWidth = 7;
+      c.lineCap = 'round';
+      c.stroke();
+      c.strokeStyle = '#c8a878';
+      c.lineWidth = 3.5;
+      c.stroke();
+      c.setLineDash([3, 4]);
+      c.strokeStyle = '#7a5a34';
+      c.lineWidth = 3.5;
+      c.stroke();
+      c.setLineDash([]);
+    };
+    drop(c, () => {
+      cord([[22, 20], [10, 56], [44, 74]]);
+      cord([[30, 16], [70, 20], [84, 64]]);
+    });
+    // The finger loop.
+    c.beginPath();
+    c.arc(25, 16, 8, 0, Math.PI * 2);
+    c.strokeStyle = INK;
+    c.lineWidth = 7;
+    c.stroke();
+    c.strokeStyle = '#c8a878';
+    c.lineWidth = 3.5;
+    c.stroke();
+    // The pouch, cupped round a smooth grey stone.
+    drop(c, () => {
+      smooth(c, [[38, 70], [64, 62], [92, 60], [100, 84], [84, 106], [52, 104], [36, 90]]);
+      c.fillStyle = '#5a3418';
+      c.fill();
+    });
+    ellipse(c, 70, 78, 15, 12);
+    fillInk(c, rad(c, 64, 72, 18, [
+      [0, '#e8e8e0'],
+      [0.6, '#9a9a94'],
+      [1, '#4a4a46'],
+    ]), 3);
+    shine(c, 65, 72, 6, 4, -0.4, 0.7);
+    smooth(c, [[38, 80], [58, 90], [86, 88], [100, 80], [96, 100], [70, 110], [44, 102]]);
+    fillInk(c, lin(c, 40, 80, 100, 110, LEATHER), 3);
+    c.strokeStyle = 'rgba(240,200,150,0.5)';
+    c.lineWidth = 1.5;
+    c.setLineDash([3, 3]);
+    c.beginPath();
+    c.moveTo(46, 94);
+    c.quadraticCurveTo(70, 104, 94, 92);
+    c.stroke();
+    c.setLineDash([]);
+    // A second stone waiting its turn.
+    ellipse(c, 102, 30, 10, 8, 0.3);
+    fillInk(c, rad(c, 98, 26, 12, [
+      [0, '#d8d4c8'],
+      [0.6, '#8a8680'],
+      [1, '#3e3c38'],
+    ]), 2.5);
+    shine(c, 99, 26, 4, 2.5, 0.3, 0.6);
+  },
+
+  cudgel: (c) =>
+    at(c, 62, 66, Math.PI / 4, () => {
+      // A blackthorn club: a thin grip swelling to a heavy knobbed head.
+      const club = () => {
+        c.beginPath();
+        c.moveTo(-5, 50);
+        c.quadraticCurveTo(-6, 10, -10, -30);
+        c.quadraticCurveTo(-20, -48, -12, -64);
+        c.quadraticCurveTo(0, -76, 12, -64);
+        c.quadraticCurveTo(20, -48, 10, -30);
+        c.quadraticCurveTo(6, 10, 5, 50);
+        c.quadraticCurveTo(0, 54, -5, 50);
+        c.closePath();
+      };
+      drop(c, club);
+      club();
+      fillInk(c, lin(c, -16, 0, 16, 0, [
+        [0, '#1e120a'],
+        [0.4, '#6a4426'],
+        [0.6, '#7c5030'],
+        [1, '#1e120a'],
+      ]), 3);
+      // The knobs where thorns were trimmed off.
+      for (const [x, y, r] of [[-13, -44, 4], [12, -52, 4.5], [-6, -62, 3.5], [8, -36, 3.5], [-9, -22, 3]] as Array<[number, number, number]>) {
+        ellipse(c, x, y, r, r * 0.85);
+        fillInk(c, rad(c, x - 1, y - 1, r + 1, [
+          [0, '#a07044'],
+          [1, '#3a2210'],
+        ]), 2);
+      }
+      shine(c, -4, -56, 4, 8, 0.2, 0.35);
+      // A leather wrist thong through the foot.
+      roundRect(c, -6.5, 28, 13, 18, 3);
+      fillInk(c, lin(c, -6.5, 0, 6.5, 0, LEATHER), 2.5);
+      c.beginPath();
+      c.moveTo(0, 50);
+      c.bezierCurveTo(-18, 62, 4, 74, 10, 58);
+      c.strokeStyle = INK;
+      c.lineWidth = 5;
+      c.stroke();
+      c.strokeStyle = '#8a5530';
+      c.lineWidth = 2.5;
+      c.stroke();
+    }),
+
   // ---------------------------------------------------------------- clothing & armour
   tunic: (c) => {
     // A linen tunic, sleeves out, laced at the neck.
@@ -2773,6 +2996,10 @@ const ICONS: Array<[string, string]> = [
   ['item-honeycake', 'honey-cake'],
   ['item-knife', 'hunting-knife'],
   ['item-sword', 'short-sword'],
+  ['item-spear', 'spear'],
+  ['item-hatchet', 'hatchet'],
+  ['item-sling', 'sling'],
+  ['item-cudgel', 'cudgel'],
   ['item-buckler', 'buckler'],
   ['item-ironcap', 'iron-cap'],
   ['item-jerkin', 'jerkin'],

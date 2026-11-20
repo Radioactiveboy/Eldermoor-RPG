@@ -1,6 +1,6 @@
 import type { Tones } from './character';
 import { Detail, Hit, limb, Solid } from './figure3d';
-import type { HeroFrame, HeroLook } from './hero3d';
+import { HERO_BOOTS, HeroFrame, HeroLook } from './hero3d';
 import { PALETTE as P } from './palette';
 import type { EquipSlot, ItemId } from '../systems/Inventory';
 
@@ -23,6 +23,52 @@ const ASH: Tones = [P.ash, P.ashDark, P.ashLight];
 const ASH_KNOT: Tones = [P.ashDark, P.ashDark, P.ash];
 const GRIP: Tones = [P.leather, P.leatherDark, P.leatherLight];
 const IRON: Tones = [P.iron, P.iron, P.ironLight];
+const STEEL: Tones = [0x9aa2ac, 0x5c626c, 0xdfe6ec];
+const SKIN: Tones = [P.skin, P.skinShade, 0xffdcb6];
+const LINEN: Tones = [P.linen, P.linenDark, 0xf0e4c4];
+const ANTLER: Tones = [0xd8c8a8, 0x9a8668, 0xf0e6cc];
+const BLACKTHORN: Tones = [0x6e4a2c, 0x3a2414, 0x936640];
+
+type V3 = [number, number, number];
+
+function norm(v: V3): V3 {
+  const l = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / l, v[1] / l, v[2] / l];
+}
+
+/** `p` moved `t` along `d`. */
+function along(p: V3, d: V3, t: number): V3 {
+  return [p[0] + d[0] * t, p[1] + d[1] * t, p[2] + d[2] * t];
+}
+
+/** The right hand closed round a grip, drawn over it. */
+function fist(at: V3): Solid {
+  return { cx: at[0], cy: at[1], cz: at[2], rx: 1.55, ry: 1.5, rz: 1.65, material: SKIN };
+}
+
+/**
+ * Which way something held in the right hand points: down and forward from
+ * the hand, a little out from the body, as though carried ready (seated, it
+ * lies forward across the knees).
+ */
+function heldDir(f: HeroFrame): V3 {
+  return f.pose.sit ? norm([-0.35, -0.25, 1]) : norm([-0.4, -0.85, 0.45]);
+}
+
+/** A direction square to `d` that points down and back (an axe's blade, hanging from its haft). */
+function underside(d: V3): V3 {
+  return norm([0, -d[2], d[1]]);
+}
+
+/** A weapon in the right hand, from `back` units behind the fist to `reach` beyond it. */
+function heldWeapon(build: (f: HeroFrame, d: V3) => Solid[]): GearLook {
+  return {
+    model: (f) => {
+      const d = heldDir(f);
+      return { solids: [...build(f, d), fist(f.hand)] };
+    },
+  };
+}
 
 /** A long ash staff in the right hand: knotted, a worn knob at the top, a leather grip and an iron-shod foot. */
 const walkingStaff: GearLook = {
@@ -82,11 +128,248 @@ const strawHat: GearLook = {
   },
 };
 
+/** A long ash spear carried upright like the staff, its leaf-shaped head standing over the hero's hood. */
+const spear: GearLook = {
+  adjust: (l) => ({ ...l, holding: true }),
+  model: ({ pose, hand }) => {
+    const [x, , z] = hand;
+    const sit = !!pose.sit;
+    const foot: V3 = sit ? [x, 0.4, z + 0.8] : [x, 0.4, z + 1.2 - pose.stride * 0.6];
+    const top: V3 = sit ? [x - 1.2, 40, z - 3.4] : [x, 43.2 - pose.bob, z - 1];
+    const up = norm([top[0] - foot[0], top[1] - foot[1], top[2] - foot[2]]);
+    const len = Math.hypot(top[0] - foot[0], top[1] - foot[1], top[2] - foot[2]);
+    const socket = along(foot, up, len - 5.2);
+    const solids: Solid[] = [
+      ...limb(foot, socket, 0.55, 0.55, ASH, 0.4).map((p) => ({ ...p, soft: true })),
+      // The leather binding and iron socket under the head.
+      ...limb(along(socket, up, -1.6), socket, 0.75, 0.75, GRIP, 0.4),
+      ...limb(socket, along(socket, up, 0.9), 0.7, 0.6, IRON, 0.3),
+      // The leaf: widest a third of the way up, tapering to the point.
+      ...[0.4, 1.1, 1.8, 2.5, 3.2, 3.9, 4.6].map((t, i) => {
+        const p = along(socket, up, 0.9 + t);
+        const r = [0.75, 1.05, 1.15, 1, 0.8, 0.55, 0.35][i];
+        return { cx: p[0], cy: p[1], cz: p[2], rx: r, ry: 0.55, rz: r, material: STEEL };
+      }),
+      fist(hand),
+    ];
+    return { solids };
+  },
+};
+
+/** A plain blade with an antler grip, hanging point-down from the hand. */
+const huntingKnife = heldWeapon((f, d) => [
+  ...limb(along(f.hand, d, -1.3), along(f.hand, d, 1.2), 0.6, 0.6, ANTLER, 0.3),
+  { ...pointAt(along(f.hand, d, 1.3)), rx: 0.9, ry: 0.9, rz: 0.9, material: IRON },
+  ...limb(along(f.hand, d, 1.6), along(f.hand, d, 5.8), 0.6, 0.25, STEEL, 0.3),
+]);
+
+/** Good village steel: a crossguard, a long tapering blade, a brass pommel. */
+const shortSword = heldWeapon((f, d) => {
+  const guard = along(f.hand, d, 1.5);
+  return [
+    { ...pointAt(along(f.hand, d, -1.7)), rx: 0.8, ry: 0.8, rz: 0.8, material: [P.gold, 0xa8802a, P.goldLight] },
+    ...limb(along(f.hand, d, -1.2), guard, 0.55, 0.55, GRIP, 0.3),
+    ...limb([guard[0] - 1.7, guard[1], guard[2]], [guard[0] + 1.7, guard[1], guard[2]], 0.5, 0.5, IRON, 0.3),
+    ...limb(along(f.hand, d, 1.8), along(f.hand, d, 11.5), 0.7, 0.3, STEEL, 0.3),
+  ];
+});
+
+/** A short ash haft with a bearded iron head, hanging head-down. */
+const hatchet = heldWeapon((f, d) => {
+  const e = underside(d);
+  const head = along(f.hand, d, 6.6);
+  const solids: Solid[] = [...limb(along(f.hand, d, -1.2), along(f.hand, d, 7.4), 0.55, 0.6, ASH, 0.3)];
+  // The head: a poll behind the haft, and the blade widening into a beard below it.
+  solids.push({ ...pointAt(along(head, e, -0.9)), rx: 0.8, ry: 0.8, rz: 0.8, material: IRON });
+  for (const [t, w] of [[0.3, 0.9], [1.1, 1.1], [1.9, 1.4], [2.7, 1.7]]) {
+    for (const k of [-1, 0, 1]) {
+      const p = along(along(head, e, t), d, (k * w) / 1.6);
+      solids.push({ cx: p[0], cy: p[1], cz: p[2], rx: 0.6, ry: 0.6, rz: 0.6, material: t > 2.5 ? STEEL : IRON });
+    }
+  }
+  return solids;
+});
+
+/** A knobbed blackthorn club, thin at the grip and heavy at the end. */
+const cudgel = heldWeapon((f, d) => {
+  const end = along(f.hand, d, 7.2);
+  return [
+    ...limb(along(f.hand, d, -1.3), end, 0.5, 1.05, BLACKTHORN, 0.3),
+    { ...pointAt(end), rx: 1.55, ry: 1.55, rz: 1.55, material: BLACKTHORN },
+    // Knots where the thorns were trimmed.
+    ...[[0.9, 0.6, 0], [-0.8, 0.2, 0.7], [0.3, -0.9, -0.6], [-0.4, 0.8, -0.9]].map(([dx, dy, dz]) => ({
+      cx: end[0] + dx, cy: end[1] + dy, cz: end[2] + dz, rx: 0.65, ry: 0.65, rz: 0.65, material: [0x6c4a2c, 0x3a2414, 0x8c6440] as Tones,
+    })),
+  ];
+});
+
+/** Two plaited cords from the fist to a leather pouch with a stone in it, swinging at the hero's side. */
+const sling: GearLook = {
+  model: (f) => {
+    const [x, y, z] = f.hand;
+    const pouch: V3 = f.pose.sit ? [x - 1.2, y - 3.2, z + 1.4] : [x - 1.2, y - 6.6, z + 0.8 - f.pose.stride * 0.8];
+    const cord: Tones = [0xd8bc8c, 0x9a7a50, 0xf0dcb0];
+    const solids: Solid[] = [
+      ...limb([x - 0.5, y - 1, z], [pouch[0] - 0.4, pouch[1] + 0.6, pouch[2] - 0.5], 0.4, 0.4, cord, 0.3),
+      ...limb([x + 0.3, y - 1, z + 0.4], [pouch[0] + 0.4, pouch[1] + 0.6, pouch[2] + 0.5], 0.4, 0.4, cord, 0.3),
+      { cx: pouch[0], cy: pouch[1], cz: pouch[2], rx: 1.6, ry: 1.1, rz: 1.6, material: [P.leatherLight, P.leather, 0xb07a4c] },
+      { cx: pouch[0], cy: pouch[1] + 0.8, cz: pouch[2], rx: 1, ry: 0.85, rz: 1, material: [P.stoneLight, P.stone, 0xc8c6ce] },
+      fist(f.hand),
+    ];
+    return { solids };
+  },
+};
+
+/** A small round oak shield rimmed with iron, strapped to the left forearm and carried a little forward. */
+const buckler: GearLook = {
+  adjust: (l) => ({ ...l, shield: true }),
+  model: (f) => {
+    const arm = f.arms[1];
+    const mid: V3 = [(arm.mid[0] + arm.end[0]) / 2, (arm.mid[1] + arm.end[1]) / 2, (arm.mid[2] + arm.end[2]) / 2];
+    // Domed, and faced out and forward, so it reads as a round shield from every side.
+    const c: V3 = f.pose.sit ? [mid[0] + 1.4, mid[1] + 0.4, mid[2] + 1] : [mid[0] + 1.4, mid[1], mid[2] + 1.4];
+    const out = norm([1, 0, 1]);
+    const oak: Tones = [P.plankLight, P.plank, P.logLight];
+    const face = (h: Hit): Tones => {
+      const facing = h.nx * out[0] + h.nz * out[2];
+      if (facing > 0.93) return [P.ironLight, P.iron, 0xc4c4d0];
+      if (facing < 0.5) return IRON;
+      // Planks running up and down.
+      return Math.floor((h.x - h.z + 20) / 1.2) % 2 === 0 ? oak : [P.plank, P.plankDark, P.plankLight];
+    };
+    return { solids: [{ cx: c[0], cy: c[1], cz: c[2], rx: 2.2, ry: 3.3, rz: 2.2, material: face }] };
+  },
+};
+
+/** A dented iron kettle helm with a broad brim. Pushes the hood back. */
+const ironCap: GearLook = {
+  adjust: (l) => ({ ...l, hoodUp: false }),
+  model: ({ hy, hz }) => {
+    const brimY = hy + 3;
+    const metal = (h: Hit): Tones => {
+      // A raised ridge front to back over the crown, and a row of rivets round its foot.
+      if (Math.abs(h.x) < 0.6 && h.y > brimY + 1.5) return [P.ironLight, P.iron, 0xb4b4c0];
+      if (h.y < brimY + 1.2 && Math.floor((Math.atan2(h.z - hz, h.x) + 4) * 4) % 3 === 0) return [P.ironLight, P.iron, 0xb4b4c0];
+      return IRON;
+    };
+    const solids: Solid[] = [
+      { cx: 0, cy: brimY, cz: hz, rx: 7.8, ry: 0.6, rz: 7.4, material: IRON },
+      { cx: 0, cy: hy + 3.6, cz: hz - 0.2, rx: 5.8, ry: 3.8, rz: 5.6, material: metal },
+    ];
+    return { solids };
+  },
+};
+
+/** Thick undyed wool: the hood worn up in place of the cloak's, with a short cape over the shoulders. */
+const woolHood: GearLook = {
+  adjust: (l) => ({ ...l, hoodUp: true, hood: [0xb0a48e, 0x84786a, 0xcfc4ae] }),
+  model: ({ b }) => {
+    const wool: Tones = [0xb0a48e, 0x84786a, 0xcfc4ae];
+    const solids: Solid[] = [
+      { cx: 0, cy: 25.2 - b, cz: 0.4, rx: 6.4, ry: 2.2, rz: 4.4, material: wool },
+      { cx: 0, cy: 23.6 - b, cz: 0.6, rx: 6.6, ry: 1.4, rz: 4.5, material: wool },
+    ];
+    return { solids };
+  },
+};
+
+/** The linen tunic: its hem showing below the vest to mid-thigh, and patches at the elbows. */
+const tunic: GearLook = {
+  model: ({ pose, arms, b }) => {
+    const solids: Solid[] = [];
+    if (pose.sit) solids.push({ cx: 0, cy: 10.4, cz: 2.2, rx: 4.9, ry: 1.2, rz: 4.4, material: LINEN });
+    else for (let y = 9; y <= 11.5; y += 0.5) solids.push({ cx: 0, cy: y - b * 0.5, cz: pose.stride * 0.2, rx: 5 + (11.5 - y) * 0.16, ry: 0.8, rz: 3.7, material: LINEN });
+    const details: Detail[] = arms.map((a) => ({ x: a.mid[0] + a.side * 1.5, y: a.mid[1], z: a.mid[2] - 0.6, color: P.linenDark }));
+    return { solids, details };
+  },
+};
+
+/** Boiled leather over a padded lining: a stiff, dark jerkin with stitched panels and shoulder caps, to the hip. */
+const jerkin: GearLook = {
+  model: ({ pose, b }) => {
+    const leather: Tones = [0x4e3a2e, 0x30241c, 0x6c5646];
+    const seam: Tones = [0xb08a5c, 0x7e603e, 0xd0aa78];
+    const sit = !!pose.sit;
+    const paint = (h: Hit): Tones => {
+      if (Math.abs(h.y - (15.4 - b)) < 0.6) return [P.leatherDark, 0x2e1a0e, P.leather];
+      // Stitched seams: one down each side of the chest, and one round the ribs.
+      if (h.nz > 0.2 && Math.abs(Math.abs(h.x) - 2.2) < 0.35) return seam;
+      if (Math.abs(h.y - (20.4 - b)) < 0.3) return seam;
+      return leather;
+    };
+    const solids: Solid[] = [];
+    if (sit) solids.push({ cx: 0, cy: 11.4, cz: 1.6, rx: 4.9, ry: 1.4, rz: 4.2, material: paint });
+    else for (let y = 10.5; y <= 14.5; y += 0.5) solids.push({ cx: 0, cy: y - b * 0.5, cz: pose.stride * 0.2, rx: 4.9 + (14.5 - y) * 0.16, ry: 0.8, rz: 3.75, material: paint });
+    solids.push({ cx: 0, cy: 14.4 - b * (sit ? 1 : 0.5), cz: 0, rx: 4.8, ry: 2.7, rz: 3.7, material: paint });
+    solids.push({ cx: 0, cy: 18.2 - b, cz: 0.1, rx: 4.9, ry: 3.5, rz: 3.8, material: paint });
+    solids.push({ cx: 0, cy: 22.2 - b, cz: 0.2, rx: 5.3, ry: 4.4, rz: 3.9, material: paint });
+    for (const side of [-1, 1]) solids.push({ cx: side * 4.8, cy: 24.6 - b, cz: 0.2, rx: 2.6, ry: 1.9, rz: 2.6, material: leather });
+    // Brass rivets on the shoulder caps.
+    const details: Detail[] = [-1, 1].map((side) => ({ x: side * 5.6, y: 25.8 - b, z: 1.6, color: P.gold }));
+    return { solids, details };
+  },
+};
+
+/** The hero's own scuffed leather boots, turned down at the ankle. */
+const boots: GearLook = {
+  model: ({ legs, pose }) => {
+    const solids: Solid[] = [];
+    for (const l of legs) {
+      if (!pose.sit) solids.push({ cx: l.ankle[0], cy: l.ankle[1], cz: l.ankle[2], rx: 1.95, ry: 1.2, rz: 1.95, material: HERO_BOOTS });
+      solids.push({ cx: l.foot[0], cy: l.foot[1], cz: l.foot[2], rx: 1.8, ry: 1.4, rz: 2.7, material: HERO_BOOTS });
+    }
+    return { solids };
+  },
+};
+
+/** Tall boots of dark oiled leather, laced up the front to the knee, with a turned-down top. */
+const ridingBoots: GearLook = {
+  model: ({ legs, pose }) => {
+    const oiled: Tones = [0x40261a, 0x26160e, 0x684430];
+    const cuff: Tones = [0x5a3624, 0x3a2216, 0x7e5640];
+    const solids: Solid[] = [];
+    const details: Detail[] = [];
+    for (const l of legs) {
+      // The shaft runs from the foot up the shin to just under the knee.
+      const bottom: V3 = [l.ankle[0], l.foot[1] + 1.2, l.ankle[2]];
+      const top: V3 = pose.sit
+        ? [l.knee[0], l.knee[1] - 1.2, l.knee[2] + 0.1]
+        : [l.hip[0], 10.4 - pose.bob * 0.2, l.ankle[2] + (l.hip[2] - l.ankle[2]) * 0.75];
+      solids.push(...limb(bottom, top, 2.05, 2.15, oiled, 0.4));
+      solids.push({ cx: top[0], cy: top[1] + 0.2, cz: top[2], rx: 2.4, ry: 0.9, rz: 2.4, material: cuff });
+      solids.push({ cx: l.foot[0], cy: l.foot[1], cz: l.foot[2], rx: 1.85, ry: 1.45, rz: 2.75, material: oiled });
+      for (let t = 0.15; t < 0.9; t += 0.18) {
+        const p = along(bottom, [top[0] - bottom[0], top[1] - bottom[1], top[2] - bottom[2]], t);
+        details.push({ x: p[0], y: p[1], z: p[2] + 2.15, color: P.linen });
+      }
+    }
+    return { solids, details };
+  },
+};
+
 /** What each item looks like worn. Add an entry here to dress the hero in new gear. */
 export const GEAR_LOOKS: Partial<Record<ItemId, GearLook>> = {
   'walking-staff': walkingStaff,
   'straw-hat': strawHat,
+  'iron-cap': ironCap,
+  'wool-hood': woolHood,
+  tunic,
+  jerkin,
+  boots,
+  'riding-boots': ridingBoots,
+  'hunting-knife': huntingKnife,
+  'short-sword': shortSword,
+  buckler,
+  spear,
+  hatchet,
+  sling,
+  cudgel,
 };
+
+/** A solid's centre at a point (the rest filled in by the caller). */
+function pointAt(p: V3): { cx: number; cy: number; cz: number } {
+  return { cx: p[0], cy: p[1], cz: p[2] };
+}
 
 /** Layering order, from the body outwards: what's worn goes on before what's held. */
 const LAYER_ORDER: EquipSlot[] = ['body', 'feet', 'trinket', 'head', 'offHand', 'mainHand'];

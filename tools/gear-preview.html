@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hero gear preview</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #2a2622; color: #e8dcc0; font: 14px sans-serif; }
+      h2 { margin: 18px 0 4px; font-size: 15px; }
+      canvas { image-rendering: pixelated; display: block; }
+    </style>
+  </head>
+  <body>
+    <p>The hero drawn in each piece of gear, in all 8 directions (standing, mid-stride, seated). Run <code>npm run dev</code> and open <code>/tools/gear-preview.html</code>. Add <code>?only=spear,buckler</code> to show just those, worn together.</p>
+    <div id="out"></div>
+    <script type="module" src="./gear-preview.ts"></script>
+  </body>
+</html>
