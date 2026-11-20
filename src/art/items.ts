@@ -12,15 +12,10 @@ import Phaser from 'phaser';
  * To add an icon, add a painter to PAINTERS. Paint on a 128 square, keeping
  * the subject roughly inside 8..120 so its shadow has room.
  */
-export const ICON_SIZE = 128;
+import { ICON_SIZE, itemScale } from './sizes';
 
-/**
- * The scale that shows an icon at the size a 16-pixel icon had at scale `s`.
- * Every caller sizes icons through this, so they all stay in proportion.
- */
-export function itemScale(s: number): number {
-  return (s * 16) / ICON_SIZE;
-}
+// The icon size and scale live in sizes.ts, so scenes can use them without loading the painters.
+export { ICON_SIZE, itemScale };
 
 type Ctx = CanvasRenderingContext2D;
 type Stops = Array<[number, string]>;

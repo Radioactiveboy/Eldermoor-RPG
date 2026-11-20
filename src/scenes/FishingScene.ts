@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { itemScale } from '../art/items';
+import { itemScale } from '../art/sizes';
 import { GameAudio } from '../audio/Audio';
 import { biteDelay, FISH, FishKind, fishAt, markerAt, MAX_SLIPS, onFish, rollFish, WaterId, WATERS } from '../systems/Fishing';
 import { Inventory, itemDef } from '../systems/Inventory';

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { DialogueChoice, DialogueNode, DialogueScript, Speaker, SPEAKERS } from '../dialogue/Dialogue';
-import { PORTRAIT_SIZE } from '../art/portraits';
+import { PORTRAIT_SIZE } from '../art/sizes';
 import { THEME } from '../ui/Widgets';
 
 export interface DialogueSceneData {

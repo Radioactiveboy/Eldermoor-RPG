@@ -28,6 +28,9 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     performance.mark('eldermoor:boot');
+    // The art past the title screen comes in its own files: start them downloading while the
+    // title art is drawn.
+    ArtLoader.fetch();
     this.markTimings();
     this.guardLaterScenes();
 
@@ -43,8 +46,7 @@ export class BootScene extends Phaser.Scene {
     if (this.leaving) return;
     // A tenth of a second's worth of steps a frame, so the bar moves along.
     const until = performance.now() + 100;
-    do ArtLoader.drawNext(this);
-    while (!ArtLoader.titleReady && performance.now() < until);
+    while (!ArtLoader.titleReady && performance.now() < until && ArtLoader.drawNext(this));
     this.showProgress();
     if (!ArtLoader.titleReady) return;
     this.leaving = true;
@@ -54,8 +56,8 @@ export class BootScene extends Phaser.Scene {
     // player starts before it's done, the title screen draws what's left in one go.
     const more = () => {
       if (ArtLoader.finished) return;
-      ArtLoader.drawNext(this);
-      setTimeout(more, 0);
+      if (ArtLoader.drawNext(this)) setTimeout(more, 0);
+      else void ArtLoader.whenReady().then(more);
     };
     setTimeout(more, 0);
     this.scene.start('MainMenu');
@@ -71,13 +73,13 @@ export class BootScene extends Phaser.Scene {
     // The title screen comes once its steps are drawn, so the bar fills over those.
     const p = Math.min(1, ArtLoader.done / ArtLoader.titleSteps);
     if (p > 0) this.bar.fillStyle(THEME.gold, 1).fillRoundedRect(x, y, Math.max(10, w * p), 10, 5);
-    this.label.setText(ArtLoader.next ? `Drawing ${ArtLoader.next}…` : '');
+    this.label.setText(ArtLoader.failed ? 'Waiting for the connection…' : ArtLoader.next ? `Drawing ${ArtLoader.next}…` : '');
   }
 
   /**
    * Before any scene beyond the title screen starts (the game, from New Journey or Continue), draws
-   * whatever art is still left, there and then. The title screen waits for it with a message of its
-   * own, so this is only a safety net.
+   * whatever art is still left (and has downloaded), there and then. The title screen waits for all
+   * of it with a message of its own, so this is only a safety net.
    */
   private guardLaterScenes(): void {
     for (const scene of this.scene.manager.getScenes(false)) {

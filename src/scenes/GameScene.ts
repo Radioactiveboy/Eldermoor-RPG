@@ -9,6 +9,7 @@ import { Npc, NpcWorld } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
 import { Crafting, Recipe } from '../systems/Crafting';
+import { retry } from '../systems/Download';
 import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
 import { Farm } from '../systems/Farm';
 import { Inventory, itemDef, ItemId, ITEMS } from '../systems/Inventory';
@@ -21,6 +22,7 @@ import { ShopId, Shops } from '../systems/Shops';
 import { Tavern } from '../systems/Tavern';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { Display } from '../ui/Display';
+import { bodyStyle, THEME } from '../ui/Widgets';
 import type { Speaker } from '../ui/SpeechBubbles';
 import { Ambience } from '../world/Ambience';
 import { AmbientSounds } from '../world/AmbientSounds';
@@ -33,7 +35,7 @@ import { PlainsEvents } from '../world/PlainsEvents';
 import type { DialogueSceneData } from './DialogueScene';
 import type { InventoryTab } from './InventoryScene';
 import type { StationSceneData } from './StationScene';
-import { AREAS, buildArea, isTestArea } from './game/areas';
+import { areaReady, AREAS, arrivalArea, buildArea, loadArea, prefetchArea } from './game/areas';
 import { CAVE_WOLVES, COMBAT_DUCK, spawnCreatures, startCombat, startRoadEvents, updateCreatures } from './game/combat';
 import { runDialogueAction } from './game/dialogueActions';
 import { siblingHello, updateHens } from './game/hollow';
@@ -169,6 +171,8 @@ export class GameScene extends Phaser.Scene {
   private raid?: RaidDirector;
   /** In the fight the goblins can't lose. */
   raidFight = false;
+  /** Waiting for the area's map to download (see waitForArea): nothing else is set up yet. */
+  waiting = false;
 
   constructor() {
     super('Game');
@@ -184,6 +188,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(data: GameSceneData = {}): void {
+    // Most areas' maps come in files of their own (see game/areas.ts), fetched ahead as the hero
+    // nears a door. If this one hasn't arrived yet, wait for it in the dark and come in again.
+    this.waiting = !areaReady(arrivalArea(data));
+    // The interface over the top (health, minimap, prompts) still shows the last area, so it's hidden meanwhile.
+    this.scene.setVisible(!this.waiting, 'UI');
+    if (this.waiting) {
+      this.waitForArea(arrivalArea(data), data);
+      return;
+    }
     if (data.load) {
       loadSave(this, data.load);
     } else if (data.newGame || !this.stats) {
@@ -212,10 +225,7 @@ export class GameScene extends Phaser.Scene {
       }
       raidTestStart(this.clock);
     }
-    this.area = data.load?.area ?? data.area ?? 'home';
-    // Handy for testing: open the game with ?area=market (or world, or cave...) to start there (see game/areas.ts).
-    const areaParam = new URLSearchParams(window.location.search).get('area');
-    if (data.newGame && isTestArea(areaParam)) this.area = areaParam;
+    this.area = arrivalArea(data);
     // Saves from before the wolves at home counted for anything: if they're all dead, note it.
     if (CAVE_WOLVES.every((id) => this.defeatedFoes.has(id))) QuestLog.setFlag('cleared-cave');
     this.busy = false;
@@ -312,6 +322,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(700, () => Experience.gain(XP_REWARDS.discovery, `Found ${name}`));
     }
     this.visited.add(this.area);
+    this.prefetchNeighbours();
     // A new level brings more maximum health, and the hero gets that much back straight away.
     const offXp = Experience.onChange((e) => {
       if (e.type === 'levelled') this.stats.heal((e.level - e.from) * HEALTH_PER_LEVEL);
@@ -333,6 +344,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, deltaMs: number): void {
+    if (this.waiting) return;
     const dt = Math.min(deltaMs / 1000, 0.1);
     // Sneaking wins over sprinting: you can't creep and run at once.
     const wantsSneak = !this.busy && (this.keys.sneak.isDown || GameScene.sneakToggled);
@@ -541,6 +553,33 @@ export class GameScene extends Phaser.Scene {
     const gy = points.reduce((n, p) => n + p.y, 0) / points.length;
     const p = gridToScreen(gx, gy);
     cam.pan(p.x, p.y - 20, 500, 'Sine.easeInOut');
+  }
+
+  /**
+   * The area's map is still downloading: a dark screen (with a word, if it takes more than a
+   * moment), then the scene starts again with the same data once it's here.
+   */
+  private waitForArea(area: AreaId, data: GameSceneData): void {
+    // Nothing of the last area is left, so the interface over the top shouldn't try to draw it.
+    this.player = undefined as unknown as Player;
+    const { width, height } = this.scale;
+    const text = this.add
+      .text(width / 2, height / 2, 'On the way…', bodyStyle(16 * Display.zoom, THEME.dimText))
+      .setOrigin(0.5)
+      .setAlpha(0);
+    this.tweens.add({ targets: text, alpha: 1, delay: 400, duration: 300 });
+    void retry(
+      () => loadArea(area),
+      () => text.setText('Waiting for the connection…'),
+    ).then(() => {
+      if (this.scene.isActive()) this.scene.restart(data);
+    });
+  }
+
+  /** Fetches the maps behind this area's doors in the background, so walking through one doesn't wait. */
+  private prefetchNeighbours(): void {
+    const next = new Set((this.map.data.doors ?? []).map((d) => d.to));
+    this.time.delayedCall(1500, () => next.forEach((to) => prefetchArea(to)));
   }
 
   private setupCamera(): void {

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { box, circle, Shape } from './Collision';
-import { Door, MapData, placeObject, Prop, Terrain } from './MapData';
+import { box, circle } from './Collision';
+import { MONASTERY_GATE_X, MONASTERY_WALL_Y, monasteryGateDoors, monasteryGateShape } from './landmarks';
+import { MapData, placeObject, Prop, Terrain } from './MapData';
 import { addFence, joinDiagonals, paintPath, smoothLine, spaced } from './MapGenerator';
 import type { CropKind } from '../systems/Farm';
 import { abbeyBuilding } from '../art/abbey';
@@ -9,33 +10,15 @@ export const MONASTERY_W = 64;
 export const MONASTERY_H = 60;
 
 /** The row the monastery's wall stands on, across the whole map. */
-const WALL_Y = 8;
+const WALL_Y = MONASTERY_WALL_Y;
 /** The gatehouse's west corner: it is four tiles wide, with the road coming up to its middle. */
-const GATE_X = 30;
+const GATE_X = MONASTERY_GATE_X;
 /** Where the Lord's Road comes in from the plains, at the west edge. */
 const ROAD_Y = 44;
 /** Where the precinct wall has a square tower standing in it (each two tiles wide, astride the wall). */
 const WALL_TOWERS = [8, 26, 36, 54];
 
-/** The gatehouse's outline: shut, the whole width; open, only the buttresses either side of the arch. */
-export function monasteryGateShape(open: boolean): { shapes: Shape[]; blocks: Array<[number, number]> } {
-  return open
-    ? { shapes: [box(0.1, 0.2, 1, 0.95), box(3, 0.2, 3.9, 0.95)], blocks: [[0, 0], [3, 0]] }
-    : {
-        shapes: [box(0.1, 0.2, 1, 0.95), box(1, 0.25, 2, 0.75), box(2, 0.25, 3, 0.75), box(3, 0.2, 3.9, 0.95)],
-        blocks: [[0, 0], [1, 0], [2, 0], [3, 0]],
-      };
-}
-
-/**
- * The tiles in the gate's arch, which lead inside once it's open: like the toll
- * gate, walking into the arch asks whether to go in (and saying no steps back).
- */
-export function monasteryGateDoors(): Door[] {
-  return [GATE_X + 1, GATE_X + 2].map((tx) => ({
-    tx, ty: WALL_Y, to: 'abbey' as const, entry: 'gate', auto: true, ask: "Do you want to go in through the gate of Saint Elda's?",
-  }));
-}
+// The gatehouse's outline and the doors in its arch are in landmarks.ts (opening it changes them).
 
 /**
  * The grounds outside Saint Elda's monastery, at the east end of the Lord's

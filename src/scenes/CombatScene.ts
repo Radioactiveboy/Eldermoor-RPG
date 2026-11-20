@@ -44,7 +44,7 @@ import { Experience } from '../systems/Experience';
 import { FightTally, lootLine } from '../systems/FightTally';
 import { Inventory, InventoryEvent, itemDef, ItemId, weaponOf } from '../systems/Inventory';
 import { abilityIconKey, ensureAbilityIcons } from '../ui/AbilityIcons';
-import { PORTRAIT_SIZE } from '../art/portraits';
+import { PORTRAIT_SIZE } from '../art/sizes';
 import { bodyStyle, THEME, titleStyle } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
 
