@@ -75,6 +75,47 @@ export type FoeTrait =
   /** Heavy and sure-footed: resists being shoved with advantage. */
   | { kind: 'steady' };
 
+/**
+ * What a weapon does beyond its damage, read by Battle.attack when the hero
+ * swings it (each weapon's numbers are on its item, see systems/Inventory.ts).
+ */
+export type WeaponEffect =
+  /** Set against a charge: `toHit` more against a foe that hasn't attacked yet this fight (it's still coming at you). */
+  | { kind: 'set'; toHit: number }
+  /** On a hit, a `chance` (0-1) that the wound bleeds `damage` a turn for `turns` turns. */
+  | { kind: 'cleave'; chance: number; damage: number; turns: number }
+  /** On a hit, a `chance` (0-1) that the foe is dazed for `turns` turns (its attacks roll with disadvantage). */
+  | { kind: 'daze'; chance: number; turns: number }
+  /** Ranged: one free shot before the first round, while the foes are still closing in. */
+  | { kind: 'opening' };
+
+/** A weapon's rules: its damage die, and what else it does. */
+export interface Weapon {
+  /** Sides of the damage die (a d6 if not given). */
+  die: number;
+  /** How a swing reads in the log, up to the target ("thrust your spear at"). */
+  verb?: string;
+  effect?: WeaponEffect;
+}
+
+/** Fists, and a weapon that doesn't say otherwise. */
+export const FIST_DIE = 4;
+export const WEAPON_DIE = 6;
+
+/** One line on what a weapon's effect does, for its tooltip. */
+export function weaponEffectText(e: WeaponEffect): string {
+  switch (e.kind) {
+    case 'set':
+      return `+${e.toHit} to hit a foe still charging in`;
+    case 'cleave':
+      return `${Math.round(e.chance * 100)}% a hit bleeds (${e.damage} for ${e.turns} turns)`;
+    case 'daze':
+      return `${Math.round(e.chance * 100)}% a hit dazes${e.turns > 1 ? ` for ${e.turns} turns` : ''}`;
+    case 'opening':
+      return 'Ranged: a free shot as they close in';
+  }
+}
+
 export interface CombatantDef {
   id: string;
   name: string;
@@ -95,6 +136,8 @@ export interface CombatantDef {
   /** Never runs, however badly hurt (a boar fights to the end). */
   stubborn?: boolean;
   traits?: readonly FoeTrait[];
+  /** The hero's weapon's own rule (see WeaponEffect). */
+  weapon?: WeaponEffect;
 }
 
 export interface Combatant extends CombatantDef {
@@ -148,6 +191,12 @@ export interface AttackResult {
   rend?: boolean;
   /** A boar's opening charge added to the damage. */
   charged?: boolean;
+  /** A spear set against a foe still charging in: the bonus it gave to hit. */
+  set?: number;
+  /** A hatchet's hit opened a bleeding wound. */
+  cleaved?: boolean;
+  /** A cudgel's hit left the foe dazed. */
+  dazed?: boolean;
 }
 
 export interface FleeResult {
@@ -347,6 +396,11 @@ export class Battle {
     return this.status(target, 'marked')?.by === attacker.id;
   }
 
+  /** A spear's bonus against a foe that hasn't attacked yet (it's still charging in), or 0. */
+  setBonus(attacker: Combatant, target: Combatant): number {
+    return attacker.weapon?.kind === 'set' && target.attacksMade === 0 ? attacker.weapon.toHit : 0;
+  }
+
   /** Everything added to the d20 when this attacker swings at this target. */
   toHitAgainst(attacker: Combatant, target: Combatant, opts: AttackOptions = {}): number {
     return (
@@ -354,6 +408,7 @@ export class Battle {
       this.packBonus(attacker) +
       (this.has(attacker, 'rallied') ? RALLY_TO_HIT : 0) +
       (this.marks(attacker, target) ? MARK_TO_HIT : 0) +
+      this.setBonus(attacker, target) +
       (opts.toHit ?? 0)
     );
   }
@@ -381,6 +436,7 @@ export class Battle {
     const mode = this.rollMode(attacker, target);
     let { roll, rolls } = this.d20(mode);
     const bonus = this.toHitAgainst(attacker, target, opts);
+    const set = this.setBonus(attacker, target);
     const ac = this.armourOf(target);
     const fated = this.fate?.decide(attacker, target);
     if (fated) {
@@ -395,6 +451,7 @@ export class Battle {
     const crit = roll === 20;
     const hit = roll !== 1 && (crit || total >= ac);
     const result: AttackResult = { attacker, target, roll, rolls, mode, total, ac, hit, crit, damage: 0, killed: false };
+    if (set) result.set = set;
     const charge = this.trait(attacker, 'charge');
     if (hit) {
       const times = (crit ? 2 : 1) * (opts.times ?? 1);
@@ -424,6 +481,15 @@ export class Battle {
       if (rend) {
         this.addStatus(target, 'bleeding', rend.turns, { value: rend.damage });
         result.rend = true;
+      }
+      const w = attacker.weapon;
+      if (w?.kind === 'cleave' && this.rng() < w.chance) {
+        this.addStatus(target, 'bleeding', w.turns, { value: w.damage, by: attacker.id });
+        result.cleaved = true;
+      }
+      if (w?.kind === 'daze' && this.rng() < w.chance) {
+        this.addStatus(target, 'dazed', w.turns, { by: attacker.id });
+        result.dazed = true;
       }
     }
     return result;

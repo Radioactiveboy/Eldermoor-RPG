@@ -9,9 +9,9 @@ import { PALETTE as P } from './palette';
 /**
  * Arthus, the hero, modelled in 3D (see figure3d.ts) like the folk in
  * models3d.ts: a hooded wanderer in a forest-green cloak over a leather vest,
- * a linen shirt, dark trousers and leather boots. What he wears and carries is
- * layered on by gear.ts, which can change him first (a hat pushes the hood
- * back, a staff closes his right hand round it).
+ * a linen shirt and dark trousers, barefoot until he puts his boots on. What
+ * he wears and carries is layered on by gear.ts, which can change him first
+ * (a hat pushes the hood back, a staff closes his right hand round it).
  */
 
 /** The parts of the hero that gear can change. */
@@ -20,6 +20,29 @@ export interface HeroLook {
   hoodUp: boolean;
   /** The right hand closed round something carried upright (a staff), rather than swinging. */
   holding: boolean;
+  /** The hood's cloth, if it isn't the cloak's own green (a wool hood worn up instead). */
+  hood?: Tones;
+  /** The left forearm raised a little across the body, carrying a shield, rather than swinging. */
+  shield: boolean;
+}
+
+/** One arm or leg in a pose: where its joints are (body space). */
+export interface HeroLimb {
+  /** Arms: -1 the figure's right (screen-left facing us), 1 the left. Legs likewise. */
+  side: number;
+  /** Arms: shoulder, elbow, wrist, and the centre of the hand. */
+  top: [number, number, number];
+  mid: [number, number, number];
+  end: [number, number, number];
+}
+
+export interface HeroLeg {
+  side: number;
+  /** The top of the thigh, the knee (seated) or ankle, and the centre of the foot. */
+  hip: [number, number, number];
+  knee: [number, number, number];
+  ankle: [number, number, number];
+  foot: [number, number, number];
 }
 
 /** Where the hero is in one pose, for gear to put itself in the right place (body space, as figure3d.ts). */
@@ -31,36 +54,55 @@ export interface HeroFrame {
   hz: number;
   /** Centre of the right hand (the figure's right: screen-left facing us). */
   hand: [number, number, number];
+  /** Centre of the left hand. */
+  offHand: [number, number, number];
+  /** Both arms (shoulder, elbow, wrist), right first. */
+  arms: HeroLimb[];
+  /** Both legs, right first. */
+  legs: HeroLeg[];
+  /** Units the upper body sinks in this pose (pose.bob). */
+  b: number;
 }
+
+/** The hero's own boots, for gear that puts them back on (see gear.ts). */
+export const HERO_BOOTS: Tones = [P.leather, P.leatherDark, P.leatherLight];
 
 const CLOAK: Tones = [P.cloak, P.cloakDark, P.cloakLight];
 const VEST: Tones = [P.leather, P.leatherDark, P.leatherLight];
 const BELT: Tones = [P.leatherDark, darker(P.leatherDark), P.leather];
 const SHIRT: Tones = [P.linen, P.linenDark, 0xf0e4c4];
 const TROUSER: Tones = [P.trouser, P.trouserDark, 0x56485a];
-const BOOTS: Tones = [P.leather, P.leatherDark, P.leatherLight];
 const SKIN: Tones = [P.skin, P.skinShade, 0xffdcb6];
 const HAIR: Tones = [P.hair, darker(P.hair), 0x8a5030];
 
 /** The hero in one pose, wearing (and carrying) `gear`. */
 export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
-  const look = gear.reduce<HeroLook>((l, g) => (g.adjust ? g.adjust(l) : l), { hoodUp: true, holding: false });
+  const look = gear.reduce<HeroLook>((l, g) => (g.adjust ? g.adjust(l) : l), { hoodUp: true, holding: false, shield: false });
   const b = pose.bob;
   const s = pose.stride;
   const sit = !!pose.sit;
   const flutter = pose.flutter ?? 0;
   const solids: Solid[] = [];
 
-  // Legs: dark trousers into turned-down leather boots.
+  // Legs: dark trousers to the ankle, and bare feet (gear.ts puts boots on them).
+  const legs: HeroLeg[] = [];
   if (sit) {
-    solids.push(...seatedLegs(2.2, TROUSER, BOOTS));
+    solids.push(...seatedLegs(2.2, TROUSER, SKIN, 1.9).map((p) => (p.material === SKIN ? { ...p, rx: 1.45, ry: 1, rz: 2.2, cy: 1 } : p)));
+    for (const side of [-1, 1]) {
+      const x = side * 2.2;
+      legs.push({ side, hip: [x, 10, -0.5], knee: [x, 10.2, 5.4], ankle: [x, 3.4, 5.8], foot: [x, 1.3, 6.6] });
+    }
   } else {
     for (const side of [-1, 1]) {
       const swing = s * side;
       const lift = swing < 0 ? 0.9 : 0;
-      solids.push(...limb([side * 2.2, 12.5 - b * 0.5, 0], [side * 2.2, 4.4 + lift, swing * 2.3], 1.9, 1.7, TROUSER));
-      solids.push({ cx: side * 2.2, cy: 3.6 + lift, cz: swing * 2.3, rx: 1.95, ry: 1.2, rz: 1.95, material: BOOTS });
-      solids.push({ cx: side * 2.2, cy: 1.3 + lift, cz: 0.8 + swing * 2.3, rx: 1.8, ry: 1.4, rz: 2.7, material: BOOTS });
+      const x = side * 2.2;
+      const hip: [number, number, number] = [x, 12.5 - b * 0.5, 0];
+      const ankle: [number, number, number] = [x, 3.6 + lift, swing * 2.3];
+      const foot: [number, number, number] = [x, 1.3 + lift, 0.8 + swing * 2.3];
+      solids.push(...limb(hip, [x, 3.4 + lift, swing * 2.3], 1.9, 1.6, TROUSER));
+      solids.push({ cx: x, cy: 1 + lift, cz: 0.9 + swing * 2.3, rx: 1.45, ry: 1, rz: 2.2, material: SKIN });
+      legs.push({ side, hip, knee: [x, 8 + lift * 0.5, swing * 1.2], ankle, foot });
     }
   }
 
@@ -79,16 +121,19 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
 
   // Linen sleeves with a leather bracer at the wrist. The right hand holds whatever's carried.
   let hand: [number, number, number] = [-6.2, 16.6 - b, 1];
+  let offHand: [number, number, number] = [6.2, 16.6 - b, 1];
+  const arms: HeroLimb[] = [];
   for (const side of [-1, 1]) {
     const holding = look.holding && side === -1;
-    const swing = sit || holding ? 0 : -s * side * 2;
+    const shield = look.shield && side === 1;
+    const swing = sit || holding || shield ? 0 : -s * side * 2;
     solids.push({ cx: side * 4.7, cy: 24.4 - b, cz: 0.2, rx: 2.3, ry: 2.2, rz: 2.3, material: SHIRT });
     const elbow: [number, number, number] = sit
       ? [side * 5.6, 19.6 - b, 2]
-      : holding ? [side * 5.9, 20.4 - b, 1] : [side * 6, 20.2 - b, 0.3 + swing * 0.5];
+      : holding ? [side * 5.9, 20.4 - b, 1] : shield ? [side * 6.3, 20.2 - b, 0.6] : [side * 6, 20.2 - b, 0.3 + swing * 0.5];
     const wrist: [number, number, number] = sit
       ? holding ? [side * 5.4, 14.4, 4] : [side * 3.6, 12.4, 4.6]
-      : holding ? [side * 6.6, 18.4 - b, 2.6] : [side * 6.2, 17.2 - b, 0.8 + swing];
+      : holding ? [side * 6.6, 18.4 - b, 2.6] : shield ? [side * 5.2, 17.6 - b, 3.6] : [side * 6.2, 17.2 - b, 0.8 + swing];
     solids.push(...limb([side * 5.2, 24 - b, 0.2], elbow, 1.8, 1.6, SHIRT));
     const forearm = limb(elbow, wrist, 1.6, 1.5, SHIRT);
     // The bracer: the last third of the forearm in leather.
@@ -96,6 +141,8 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
     const h: [number, number, number] = [wrist[0], wrist[1] - 1.1, wrist[2] + 0.3];
     solids.push({ cx: h[0], cy: h[1], cz: h[2], rx: 1.5, ry: 1.5, rz: 1.6, material: SKIN });
     if (side === -1) hand = h;
+    else offHand = h;
+    arms.push({ side, top: [side * 5.2, 24 - b, 0.2], mid: elbow, end: wrist });
   }
 
   // The cloak: over the shoulders and down the back, its hem streaming back as he walks.
@@ -134,16 +181,17 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
 
   if (look.hoodUp) {
     // A deep hood round the face, its point falling at the back of the head.
-    solids.push({ cx: 0, cy: hy + 0.9, cz: hz - 2.2, rx: 6.3, ry: 6.6, rz: 6, material: CLOAK });
-    solids.push({ cx: 0, cy: hy + 5, cz: hz - 4.6, rx: 2.4, ry: 2.4, rz: 2.2, material: CLOAK });
-    solids.push(...limb([0, hy + 4.8, hz - 5.6], [0, hy + 5.4, hz - 7.2], 1.3, 0.6, CLOAK, 0.4));
+    const hood = look.hood ?? CLOAK;
+    solids.push({ cx: 0, cy: hy + 0.9, cz: hz - 2.2, rx: 6.3, ry: 6.6, rz: 6, material: hood });
+    solids.push({ cx: 0, cy: hy + 5, cz: hz - 4.6, rx: 2.4, ry: 2.4, rz: 2.2, material: hood });
+    solids.push(...limb([0, hy + 4.8, hz - 5.6], [0, hy + 5.4, hz - 7.2], 1.3, 0.6, hood, 0.4));
     // Its rim framing the face, kept inside the hood's outline so it stays smooth.
     for (let i = 0; i <= 20; i++) {
       const a = -Math.PI * 0.62 + (i / 20) * Math.PI * 1.24;
-      solids.push({ cx: Math.sin(a) * 4.6, cy: hy + 0.4 + Math.cos(a) * 4.7, cz: hz + 2.4 - (1 - Math.cos(a)) * 1.2, rx: 1.6, ry: 1.6, rz: 1.8, material: CLOAK });
+      solids.push({ cx: Math.sin(a) * 4.6, cy: hy + 0.4 + Math.cos(a) * 4.7, cz: hz + 2.4 - (1 - Math.cos(a)) * 1.2, rx: 1.6, ry: 1.6, rz: 1.8, material: hood });
     }
     // The hood's shadow across the brow.
-    solids.push({ cx: 0, cy: hy + 2.6, cz: hz + 3.9, rx: 3.4, ry: 1.1, rz: 1, material: [P.cloakDark, darker(P.cloakDark), P.cloakDark] });
+    solids.push({ cx: 0, cy: hy + 2.6, cz: hz + 3.9, rx: 3.4, ry: 1.1, rz: 1, material: [hood[1], darker(hood[1]), hood[1]] });
   } else {
     // The hood pushed back, bunched in folds behind the neck.
     solids.push({ cx: 0, cy: 26.8 - b, cz: -2.8, rx: 4.8, ry: 2.4, rz: 2.6, material: CLOAK });
@@ -157,7 +205,7 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   details.push({ x: 0.6, y: 15.4 - b * (sit ? 1 : 0.5), z: 3.5, color: P.gold });
   details.push({ x: 1.4, y: 15.4 - b * (sit ? 1 : 0.5), z: 3.4, color: P.goldLight });
 
-  const frame: HeroFrame = { pose, look, hy, hz, hand };
+  const frame: HeroFrame = { pose, look, hy, hz, hand, offHand, arms, legs, b };
   for (const g of gear) {
     const extra = g.model(frame);
     solids.push(...extra.solids);

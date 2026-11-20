@@ -48,9 +48,11 @@ export const SHOPS = {
     greeting: 'Blades, helms, shields. Honest steel at honest prices. Mind the edges.',
     refuse: "Hm. Not my trade. Try one of the others.",
     thanks: ['Hm. Good.', 'Done.', "Keep it oiled and it'll keep you."],
-    stock: [['hunting-knife', 2], ['short-sword', 1], ['buckler', 2], ['iron-cap', 1]],
+    stock: [['hunting-knife', 2], ['short-sword', 1], ['spear', 1], ['hatchet', 1], ['cudgel', 1], ['buckler', 2], ['iron-cap', 1]],
     buys: ['Weapon', 'Armour', 'Tool'],
     buyRate: 0.5,
+    // Osric forges more as they sell (and this puts them on his rack in a game saved before they were made).
+    keeps: { spear: 1, hatchet: 1, cudgel: 1 },
   },
   tanner: {
     name: "Tamsin's Leathers",
@@ -58,9 +60,11 @@ export const SHOPS = {
     greeting: "Good hides make good leather. Got any? I'll pay fair for pelts.",
     refuse: 'No use to me, that. Bring me hides.',
     thanks: ["Pleasure doing business.", "That'll wear well, you'll see.", 'Lovely bit of work, that.'],
-    stock: [['jerkin', 1], ['wool-hood', 2], ['riding-boots', 1], ['boots', 1]],
+    stock: [['jerkin', 1], ['wool-hood', 2], ['riding-boots', 1], ['boots', 1], ['sling', 1]],
     buys: ['Material', 'Clothing'],
     buyRate: 0.4,
+    // Plaited from her offcuts, so she always has one (and an old save's stall gets it too).
+    keeps: { sling: 1 },
     wants: { 'wolf-pelt': 0.75, 'deer-hide': 0.75 },
   },
   // Godric, at the Crooked Tankard's bar: drink and food to take away.
@@ -82,7 +86,7 @@ export const SHOPS = {
     greeting: "Pots, pans, knives, needles, and a ring I'm fairly sure is silver. Have a rummage.",
     refuse: "Even I can't sell that, friend.",
     thanks: ['Clank clank, a pleasure.', "That'll see you right. Or I'll mend it free next time.", 'Done and dusted!'],
-    stock: [['hunting-knife', 1], ['buckler', 1], ['wool-hood', 1], ['walking-staff', 1], ['silver-ring', 1], ['honey-cake', 3], ['cheese', 2], ['mead', 2]],
+    stock: [['hunting-knife', 1], ['sling', 1], ['cudgel', 1], ['buckler', 1], ['wool-hood', 1], ['walking-staff', 1], ['silver-ring', 1], ['honey-cake', 3], ['cheese', 2], ['mead', 2]],
     buys: ['Food', 'Material', 'Clothing', 'Tool', 'Weapon', 'Armour'],
     buyRate: 0.3,
   },

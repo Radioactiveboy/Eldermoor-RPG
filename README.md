@@ -177,7 +177,8 @@ src/
                           boulders, bones, the dead ewes and the locked door
   art/fishing.ts          Old Tobin's rod, float and creel
   art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker
-  art/gear.ts             How worn gear looks on the hero's sprite (hat, staff): add an entry to dress new items
+  art/gear.ts             How worn gear looks on the hero's sprite (every head, body, feet and hand item): add an entry to dress new items
+  tools/gear-preview.html The hero in every piece of gear, all 8 directions (open /tools/gear-preview.html under `npm run dev`)
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
@@ -291,7 +292,18 @@ src/
   critical hit (double dice) and a natural 1 always misses. Some rolls are made
   with **advantage** (two d20, keep the higher) or **disadvantage** (keep the
   lower). Your armour is 10 + the Defence of what you wear; your to-hit and
-  damage come from your weapon's Attack (fists roll d4, a weapon d6).
+  damage come from your weapon's Attack (fists roll d4; each weapon has its own
+  damage die, a d6 unless it says otherwise).
+
+  Some weapons fight their own way (`WeaponEffect` in `systems/Combat.ts`; each
+  weapon's die and numbers are on its item in `systems/Inventory.ts`):
+
+  | Weapon | Where | Damage | Its way |
+  | --- | --- | --- | --- |
+  | Ash Spear | Osric the smith | d8 + 3 | +1 to hit a foe that hasn't attacked yet (set against its charge) |
+  | Woodman's Hatchet | Osric the smith | d6 + 3 | 35% of hits leave the foe bleeding, 2 a turn for 2 turns |
+  | Blackthorn Cudgel | Osric, Jory the tinker | d6 + 2 | 30% of hits daze the foe (disadvantage on its next attacks) |
+  | Leather Sling | Tamsin the tanner, Jory | d4 + 2 | Ranged: a free shot before initiative, as the foes close in |
 
   Each turn you get one **Action** (green circle) and one **Bonus action**
   (orange triangle), spent in either order from the hotbar, then End turn.
@@ -353,5 +365,5 @@ built (`world/MonasteryMap.ts`); the gatehouse is shut, and Brother Wystan the
 porter (`dialogue/monastery.ts`) is the one to change when the way in is written.
 The village herbalist (the next step of "Medicine for Mother"; Hilde the baker
 mentions Old Maud), more villagers and buildings to go into,
-more beasts and weapons, a reward for the wolf pelt, cooking with the garden's
-crops, showing worn gear on the hero's sprite, save/load.
+more beasts, weapon skills for the new weapons, a reward for the wolf pelt, cooking with the garden's
+crops, save/load.
