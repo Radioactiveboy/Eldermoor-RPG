@@ -176,6 +176,11 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     banner: 'A boar charges!',
     flee: 'squeals and crashes off into the thicket!',
   },
+  wildcat: {
+    start: 'A wild cat springs out of the bracken, ears flat and spitting, every hair on end!',
+    banner: 'A wild cat!',
+    flee: 'streaks away into the thicket!',
+  },
   footpad: {
     start: 'Rook hefts his cudgel and Nab slides a knife out of his sleeve. They spread out, to come at you from both sides!',
     banner: 'Footpads!',

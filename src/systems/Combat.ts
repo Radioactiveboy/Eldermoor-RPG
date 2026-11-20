@@ -677,6 +677,21 @@ export const FOES = {
     stubborn: true,
     traits: [{ kind: 'charge', extra: { count: 1, sides: 6, bonus: 0 } }, { kind: 'steady' }],
   },
+  // The wild cats of the north woods (see world/NorthWoodsMap.ts): small, but quick and savage, and they fight alone.
+  // Their claws open wounds that bleed. Tuned with `npm run sim`: a fresh hero always wins but loses about a fifth of
+  // their health, a little more than to a lone wolf, and the fight takes as long as a wolf's.
+  wildcat: {
+    name: 'Wild Cat',
+    maxHp: 18,
+    ac: 15,
+    toHit: 5,
+    damage: { count: 1, sides: 6, bonus: 3 },
+    quickness: 5,
+    verb: 'rakes its claws across',
+    xp: 40,
+    packs: false,
+    traits: [{ kind: 'rend', damage: 1, turns: 2 }],
+  },
   // The rats in the Crooked Tankard's cellar (see world/TavernMap.ts): weak alone, but they come in swarms.
   rat: {
     name: 'Cellar Rat',

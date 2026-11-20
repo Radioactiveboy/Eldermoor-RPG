@@ -41,6 +41,8 @@ MUSIC = {
     'menu': (f'{KM}lord-of-the-land.ogg', 0),
     'hollow-day': (f'{KM}achaidh-cheide.ogg', 0),
     'hollow-night': (f'{KM}deep-haze.ogg', 0),
+    'woods-day': (f'{KM}magic-forest.ogg', 200),
+    'woods-night': (f'{KM}lightless-dawn.ogg', 200),
     'home-day': (f'{KM}teller-of-the-tales.ogg', 0),
     'home-night': (f'{KM}long-note-two.ogg', 200),
     'market': (f'{KM}minstrel-guild.ogg', 0),

@@ -24,6 +24,7 @@ const ROWS: Row[] = [
   { label: 'Wolf Mother + 1 wolf (her den)', kind: 'wolfmother', escort: { wolf: 1 } },
   { label: 'Wolf Mother alone', kind: 'wolfmother' },
   { label: 'Wild Boar', kind: 'boar' },
+  { label: 'Wild Cat (the north woods)', kind: 'wildcat' },
   { label: 'Red Deer', kind: 'deer' },
   { label: 'Brown Hare', kind: 'hare' },
   { label: 'Rook and Nab (footpad + cutpurse)', kind: 'footpad', escort: { cutpurse: 1 } },

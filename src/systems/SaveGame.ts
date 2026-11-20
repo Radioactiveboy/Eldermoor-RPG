@@ -48,6 +48,7 @@ export const AREA_NAMES: Record<AreaId, string> = {
   cave: "The wolves' cave",
   hut: "Farmer Iran's hut",
   plains: 'Adowvale Plains',
+  northwoods: 'The north woods',
   monastery: "Saint Elda's Monastery",
   abbey: "Within Saint Elda's walls",
   chapel: "Saint Elda's chapel",

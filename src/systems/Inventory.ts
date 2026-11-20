@@ -169,6 +169,14 @@ export const ITEMS = {
     stack: 20,
     value: 4,
   },
+  'wildcat-pelt': {
+    name: 'Wild Cat Pelt',
+    description: 'A thick grey-brown pelt barred like a tabby\'s, with a bushy, black-ringed tail. Wild cats are rare enough that a tanner will want it.',
+    icon: 'item-wildcatpelt',
+    category: 'Material',
+    stack: 10,
+    value: 10,
+  },
   'boar-tusk': {
     name: 'Boar Tusk',
     description: 'A curved yellow tusk as long as your hand. It would make a fine knife handle, or a fine story.',

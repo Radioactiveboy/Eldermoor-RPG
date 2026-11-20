@@ -915,6 +915,195 @@ export function ratSheet(): BeastSheet {
 /** The rats are drawn this much bigger than their body-space units (they're seen close to). */
 const RAT_SIZE = 1.25;
 
+// --- Wild cat ---------------------------------------------------------------
+
+const CAT_DEEP = 0x221c18;
+const CAT_DARK = 0x4a4036;
+const CAT = 0x857766;
+const CAT_LIGHT = 0xa89a84;
+const CAT_BUFF = 0xbca684;
+const CAT_PALE = 0xe2d6bc;
+const CAT_EYE = 0xc8d040;
+const CAT_NOSE = 0xa0645a;
+
+/**
+ * A wild cat of the north woods: a house cat's shape but heavier, a broad
+ * round head with wide-set ears, a short muzzle, stocky legs, and the thick,
+ * blunt-ended tail ringed in black that marks a true wild cat. The coat is a
+ * grizzled grey-brown, barred across the flanks with dark tabby stripes, a
+ * black line down the spine and a pale buff throat and belly. Head poses map
+ * to the shared frames: 'sniff' is nosing the ground, 'snarl' is the arched,
+ * bristling hiss, 'bite' is the spring, claws out.
+ */
+export function wildcatModel(pose: BeastPose, dead = false): Model {
+  const DEEP: Tones = [CAT_DEEP, CAT_DEEP, CAT_DARK];
+  const DARK: Tones = [CAT_DARK, CAT_DEEP, CAT];
+  const FUR: Tones = [CAT, CAT_DARK, CAT_LIGHT];
+  const LIGHT: Tones = [CAT_LIGHT, CAT, CAT_PALE];
+  const BUFF: Tones = [CAT_BUFF, CAT, CAT_PALE];
+  const PALE: Tones = [CAT_PALE, CAT_BUFF, 0xf4ecd8];
+  const b = pose.bob;
+  const lift = pose.lift ?? [0, 0, 0, 0];
+  const arch = pose.hackles ? 1.6 : 0;
+  const rise = pose.rise ?? 0;
+  const solids: Solid[] = [];
+  const details: Detail[] = [];
+
+  // Tabby bars: dark stripes running down the flanks, a black line along the spine, a pale belly.
+  const stripe = (h: Hit) => Math.sin(h.z * 1.35 + h.y * 0.35) > 0.55;
+  const coat = (h: Hit): Tones => {
+    const s = speck(h, 1);
+    if (h.ny > 0.86) return DEEP;
+    if (h.ny < -0.5) return s < 0.3 ? PALE : BUFF;
+    if (h.z > 4 && h.ny < 0.2) return s < 0.3 ? LIGHT : PALE; // chest and throat
+    if (h.ny > -0.25 && stripe(h)) return DARK;
+    return s < 0.18 ? LIGHT : s > 0.93 ? DARK : FUR;
+  };
+  const legCoat = (h: Hit): Tones => (Math.sin(h.y * 1.6) > 0.6 && h.ny > -0.3 ? DARK : h.nz > 0.4 ? BUFF : FUR);
+
+  // The torso, a long low body; arched up in the middle when it bristles.
+  const spine: Spine = [
+    [-6.5, 8.6, 2.6, 2.7],
+    [-4.5, 8.9 + arch * 0.6, 3, 3.1],
+    [-1, 9.1 + arch, 2.8, 2.9],
+    [2, 9.2 + arch * 0.7 + rise * 0.5, 3, 3],
+    [4.5, 9.3 + rise, 3.2, 3],
+    [5.8, 9.9 + rise, 2.4, 2.4],
+  ];
+  solids.push(...torso(spine, b, coat, 2.2));
+
+  // Hind legs: haunch, bent back to the hock, the long foot. Forelegs: straight down to round paws.
+  for (const [i, side] of [[0, 1], [1, -1]] as const) {
+    const off = pose.legs[i];
+    const l = lift[i];
+    const x = side * 2.1;
+    const hip: V3 = [x, 8.6 - b, -5];
+    const stifle: V3 = [x, 5.6 - b * 0.5, -3.2 + off * 0.4];
+    const hock: V3 = [x, 2.8 + l * 0.6, -6 + off * 0.8 - l * 0.4];
+    const paw: V3 = [x, 0.8 + l, -5 + off];
+    solids.push(...chain([hip, stifle], [2.3, 1.4], coat));
+    solids.push(...chain([stifle, hock, paw], [1.25, 0.85, 0.8], legCoat));
+    solids.push({ cx: paw[0], cy: paw[1], cz: paw[2] + 0.4, rx: 0.95, ry: 0.7, rz: 1.15, material: BUFF });
+  }
+  for (const [i, side] of [[2, 1], [3, -1]] as const) {
+    const off = pose.legs[i];
+    const l = lift[i];
+    const x = side * 1.9;
+    const shoulder: V3 = [x, 8.8 - b + rise, 4.2];
+    const elbow: V3 = [x, 5.4 - b * 0.5 + rise * 0.6, 4 + off * 0.35 + rise * 0.4];
+    const paw: V3 = [x, 0.8 + l + rise * 0.8, 4.6 + off + rise * 0.8];
+    solids.push(...chain([shoulder, elbow], [1.9, 1.15], coat));
+    solids.push(...chain([elbow, paw], [1, 0.85], legCoat));
+    solids.push({ cx: paw[0], cy: paw[1], cz: paw[2] + 0.4, rx: 0.95, ry: 0.7, rz: 1.15, material: BUFF });
+  }
+
+  // The tail: thick all the way and blunt at the end, ringed in black with a black tip. Low and
+  // curving when easy, fluffed and lashing out behind when roused.
+  {
+    const droop = ((78 - pose.tail * 60) * Math.PI) / 180;
+    const root: V3 = [0, 9.2 - b, -7];
+    const d: V3 = [0, -Math.sin(droop), -Math.cos(droop)];
+    const mid = add(root, d, 3.6);
+    const tip = add(add(root, d, 7.4), [0.6, pose.tail > 0.5 ? 0.8 : 1.2, -1.2]);
+    const thick = pose.hackles ? 1.6 : 1.25;
+    const tail = (h: Hit): Tones => {
+      const along = Math.hypot(h.y - root[1], h.z - root[2]);
+      if (along > 6.4) return DEEP;
+      if (along > 3 && Math.sin(along * 2.6) > 0.35) return DEEP;
+      return h.ny > 0.3 ? FUR : h.ny < -0.4 ? BUFF : LIGHT;
+    };
+    solids.push(...chain([root, mid, tip], [thick * 0.9, thick, thick], tail));
+  }
+
+  // Head, by pose: where the skull sits, how the face points (degrees down), the jaw open, the ears.
+  const heads = {
+    up: { h: [0, 12.6 - b, 7.2] as V3, pitch: 8, open: 0, earsBack: false },
+    sniff: { h: [0, 6.2 - (pose.nod ?? 0), 8.6] as V3, pitch: 55, open: 0, earsBack: false },
+    snarl: { h: [0, 11.2 - b + arch * 0.3, 7.8] as V3, pitch: 2, open: 0.6, earsBack: true },
+    bite: { h: [0, 12.2 - b + rise * 0.8, 9.4] as V3, pitch: -6, open: 1, earsBack: true },
+    hurt: { h: [0, 11.8 - b, 6.4] as V3, pitch: 26, open: 0.3, earsBack: true },
+  };
+  const hd = dead ? { h: [0, 9.4, 7.8] as V3, pitch: 0, open: 0.2, earsBack: true } : heads[pose.head];
+  const H = hd.h;
+  const p = (hd.pitch * Math.PI) / 180;
+  const dir: V3 = [0, -Math.sin(p), Math.cos(p)];
+
+  // A short thick neck, and a broad round skull with full cheeks.
+  solids.push(...chain([[0, 10.2 - b + rise, 4.6], add(H, dir, -1)], [2.6, 2.2], coat));
+  const skull = (h: Hit): Tones => {
+    if (h.ny > 0.5) return Math.sin(h.x * 2.4) > 0.3 ? DARK : FUR; // the dark lines over the crown
+    if (h.ny < -0.3) return PALE;
+    return speck(h) < 0.25 ? LIGHT : FUR;
+  };
+  solids.push({ cx: H[0], cy: H[1], cz: H[2], rx: 2.7, ry: 2.4, rz: 2.4, material: skull });
+  for (const side of [-1, 1]) solids.push({ cx: H[0] + side * 1.6, cy: H[1] - 0.9, cz: H[2] + 0.6, rx: 1.4, ry: 1.3, rz: 1.3, material: LIGHT });
+
+  // A short muzzle, pale, with a pink nose; with the mouth open, a dark red maw and white fangs.
+  const snout = add(add(H, dir, 2.2), [0, -0.5, 0]);
+  solids.push({ cx: snout[0], cy: snout[1], cz: snout[2], rx: 1.3, ry: 1, rz: 1, material: PALE });
+  const nose = add(snout, dir, 0.9);
+  details.push({ ...vec(add(nose, [0, 0.4, 0])), color: CAT_NOSE });
+  if (hd.open > 0) {
+    const pj = p + hd.open * 0.7;
+    const jd: V3 = [0, -Math.sin(pj), Math.cos(pj)];
+    const jaw = add(H, [0, -1.4, 0.6]);
+    solids.push(...limb(add(jaw, jd, 0.8), add(jaw, jd, 2.6), 0.8, 0.55, T3(MOUTH)));
+    for (const side of [-1, 1]) details.push({ ...vec(add(nose, [side * 0.5, -0.9, -0.2])), color: TOOTH });
+  }
+
+  // Ears: wide-set, short and rounded-pointed; flattened sideways when it hisses or is hurt.
+  for (const side of [-1, 1]) {
+    const root: V3 = add(H, [side * 1.6, 1.6, -0.5]);
+    const tip: V3 = hd.earsBack ? add(H, [side * 3.2, 2.2, -2]) : add(H, [side * 2, 4, -0.6]);
+    solids.push(...limb(root, tip, 1.1, 0.3, DARK, 0.3));
+  }
+
+  // Eyes: yellow-green, narrowed shut when hurt or dead.
+  const shut = dead || pose.head === 'hurt';
+  for (const side of [-1, 1]) {
+    const e = add(add(H, dir, 1.9), [side * 1.15, 0.6, 0]);
+    details.push({ ...vec(e), color: shut ? CAT_DEEP : CAT_EYE });
+  }
+  return { solids, details };
+}
+
+/** A colour shaded both ways, for a small part. */
+const T3 = (c: number): Tones => [c, darker(c), c];
+
+/** The wild cat's frames, in the order of {@link BEAST_FRAME}. */
+export const WILDCAT_POSES: BeastPose[] = [
+  { legs: STILL, bob: 0, head: 'up', tail: 0.1 },
+  { legs: STILL, bob: 0.4, head: 'up', tail: 0.15 },
+  // A slinking walk: diagonal pairs together, low to the ground.
+  { legs: [2, -2, -2, 2], bob: 0.4, head: 'up', tail: 0.25 },
+  { legs: [0, 0, 0, 0], lift: [0, 1.2, 1.2, 0], bob: 0, head: 'up', tail: 0.3 },
+  { legs: [-2, 2, 2, -2], bob: 0.4, head: 'up', tail: 0.25 },
+  { legs: [0, 0, 0, 0], lift: [1.2, 0, 0, 1.2], bob: 0, head: 'up', tail: 0.3 },
+  { legs: [0, 0, 1, 1], bob: 0.4, head: 'sniff', tail: 0.1 },
+  { legs: [0, 0, 1, 1], bob: 0.4, head: 'sniff', tail: 0.15, nod: 0.8 },
+  { legs: [-1, -1, 0.5, 0.5], bob: 0, head: 'snarl', tail: 0.8, hackles: true },
+  { legs: [-2.5, -2.5, 3, 3], lift: [0, 0, 1.4, 1.4], bob: 0, head: 'bite', tail: 0.9, rise: 2.4 },
+  { legs: [-1, 1, -1.5, -1], bob: 0.8, head: 'hurt', tail: 0 },
+  { legs: [-2, -1, 2, 3], bob: 0, head: 'up', tail: 0.4 },
+];
+
+/** The wild cat's models are drawn this much bigger than their body-space units. */
+const WILDCAT_SIZE = 1.2;
+
+export function wildcatSpec(): FrameSpec {
+  return { w: 40, h: 32, feetY: 26, groundShade: 2.4 };
+}
+
+export function wildcatSheet(): BeastSheet {
+  const models = WILDCAT_POSES.map((pose, i) => {
+    const dead = i === BEAST_FRAME.dead;
+    let m = shifted(wildcatModel(pose, dead), 0);
+    if (dead) m = onItsSide(m, 9, 2.8);
+    return scaled(m, WILDCAT_SIZE);
+  });
+  return { spec: wildcatSpec(), models };
+}
+
 // --- Sheets -----------------------------------------------------------------
 
 /** How a beast's frames are cut, and its 12 models (the last one dead). */
