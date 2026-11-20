@@ -48,7 +48,11 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   (until morning, midday, evening or night; or press 1-4). You wake rested, and the game
   is saved. **Continue** on the title screen, or **Load Last Save** in the pause menu,
   brings you back to that moment. Any bed added to a map (`MapData.beds`) is another save point
-- **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, back to main menu)
+- **When the browser won't keep a save** (some private windows block storage, or it's full): waking shows
+  a **Not Saved** warning instead of "Game saved", with a **Download Save** button. **Download Save** is also
+  in the pause menu once you've slept. **Load from File** on the title screen carries on from a downloaded save
+  (it's the same JSON the game keeps in browser storage)
+- **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, download save, back to main menu)
 - **Settings → Resolution**: native, 75% or 50% of the screen's own resolution (lower is faster on slow machines). **Interface size**: Auto (bigger on large monitors, e.g. 150% at 2560×1440) or 75% to 200%
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
