@@ -4,7 +4,7 @@ import { GameAudio } from '../audio/Audio';
 import { MAP_HEIGHT, MAP_SEED, MAP_WIDTH } from '../config';
 import { IsoMap } from '../world/IsoMap';
 import { generateMap } from '../world/MapGenerator';
-import { SaveData, SaveGame } from '../systems/SaveGame';
+import { pickSaveFile, SaveData, SaveGame } from '../systems/SaveGame';
 import type { GameSceneData } from './GameScene';
 import { bodyStyle, makeButton, THEME, titleStyle } from '../ui/Widgets';
 import { openSettings } from './SettingsScene';
@@ -17,6 +17,8 @@ export class MainMenuScene extends Phaser.Scene {
   private veil!: Phaser.GameObjects.Graphics;
   private ui!: Phaser.GameObjects.Container;
   private soundHint!: Phaser.GameObjects.Text;
+  /** A line under the buttons: a save file that wouldn't load, or a browser that won't keep saves. */
+  private notice!: Phaser.GameObjects.Text;
   private fireflies!: Phaser.GameObjects.Particles.ParticleEmitter;
   /** The main camera drifts over the map; this one stays still and draws the menu on top. */
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
@@ -117,13 +119,24 @@ export class MainMenuScene extends Phaser.Scene {
     }
     items.push(makeButton(this, 0, y, save ? 'New Journey' : 'Begin Journey', () => this.startGame()));
     items.push(makeButton(this, 0, y + 70, 'Settings', () => openSettings(this)));
+    items.push(makeButton(this, 0, y + 140, 'Load from File', () => this.loadFromFile()));
+
+    // In a browser that won't keep saves (some private windows), say so before the player puts hours in.
+    const blocked = !SaveGame.storageWorks();
+    this.notice = this.add
+      .text(0, y + 190, blocked ? "This browser is blocking storage, so the game can't keep a save here. After sleeping, download your save from the pause menu." : '', {
+        ...bodyStyle(14, THEME.goldText),
+        align: 'center',
+        wordWrap: { width: 460 },
+      })
+      .setOrigin(0.5, 0);
 
     this.soundHint = this.add
-      .text(0, y + 160, 'Click anywhere to enable sound', bodyStyle(16, THEME.dimText))
+      .text(0, y + 270, 'Click anywhere to enable sound', bodyStyle(16, THEME.dimText))
       .setOrigin(0.5);
     this.tweens.add({ targets: this.soundHint, alpha: 0.35, duration: 1200, yoyo: true, repeat: -1 });
 
-    this.ui = this.add.container(0, 0, [title, subtitle, ...items, this.soundHint]);
+    this.ui = this.add.container(0, 0, [title, subtitle, ...items, this.notice, this.soundHint]);
 
     // Gentle entrance.
     title.setAlpha(0).y -= 20;
@@ -149,7 +162,22 @@ export class MainMenuScene extends Phaser.Scene {
     );
 
     this.ui.setPosition(width / 2, height / 2);
-    this.ui.setScale(Math.min(1, width / 640, height / 620));
+    this.ui.setScale(Math.min(1, width / 640, height / 720));
+  }
+
+  /** Carries on from a save file the player downloaded earlier (see SaveWarningScene and the pause menu). */
+  private loadFromFile(): void {
+    if (this.leaving) return;
+    pickSaveFile().then((save) => {
+      if (save === undefined || this.leaving || !this.scene.isActive()) return;
+      if (!save) {
+        this.notice.setText("That file isn't an Eldermoor save.");
+        return;
+      }
+      // It becomes the save to continue from, as if slept just now; kept in browser storage too where allowed.
+      SaveGame.adopt(save);
+      this.startGame(save);
+    });
   }
 
   /** Begins a new game, or carries on from a save. */
