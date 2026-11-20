@@ -3,7 +3,7 @@
  * speaker saying one or more lines; it then either moves on to `next`, offers
  * the player some replies, or ends the conversation.
  *
- * `action` names are handled by the game (see GameScene.runDialogueAction),
+ * `action` names are handled by the game (see scenes/game/dialogueActions.ts),
  * which keeps quest logic out of the writing.
  */
 export interface DialogueChoice {

@@ -248,7 +248,7 @@ function addTavernFront(data: MapData): void {
  * and runs up to a stone-piered gate in a stake palisade at the north edge of
  * the village, where the Lord's Road sets off across Adowvale Plains. Two of
  * his men keep the gate, with a booth to shelter in and his banner flying. The
- * gate opens once the toll is paid, and stays open (see GameScene.payToll).
+ * gate opens once the toll is paid, and stays open (see payToll in scenes/game/monastery.ts).
  */
 function addTollGate(data: MapData, open: boolean): void {
   const { tx, ty } = TOLL_GATE;

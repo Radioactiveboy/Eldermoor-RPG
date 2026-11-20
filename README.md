@@ -89,7 +89,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
   in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=plains` on Adowvale Plains,
   `?area=monastery` outside Saint Elda's monastery, `?area=tavern` in the Crooked Tankard's taproom, or
-  `?area=cellar` in its cellar)
+  `?area=cellar` in its cellar; every area with `test: true` in `scenes/game/areas.ts` works)
 - **The Crooked Tankard**, Adowvale's inn on the north side of the square: buy a drink across the bar
   from Godric the landlord (drunk there and then), or food and drink to take away. Sit at a table and a
   maid comes over to take your order, fetches it from the bar and brings it back. It's quiet by day and
@@ -244,7 +244,25 @@ src/
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
   scenes/SettingsScene.ts Volume sliders, resolution, interface size and fullscreen, opened from either menu
-  scenes/GameScene.ts     World, camera, input, doors between areas, talking
+  scenes/GameScene.ts     The world scene: builds the area, runs the frame, camera, talking, menus. The rest of what
+                          happens in the world is in scenes/game/, as functions that take the scene:
+  scenes/game/areas.ts    The area registry: each area id, how its map is built, whether ?area= starts there, and
+                          what happens on arriving. A new area is one entry here (plus AreaId and AREA_NAMES)
+  scenes/game/interactions.ts  What the E prompt can do (talk, door, sit, sleep, pick, shake, hunt) and which one shows
+  scenes/game/dialogueActions.ts  Runs a line's `action`: shop:, drink:, order:, road:, rent:, and the named ones,
+                          which live with their part of the story:
+  scenes/game/medicine.ts Mother's medicine: moonpetal, willow bark, the tincture brewed and given
+  scenes/game/hollow.ts   Wil's ewes, Farmer Iran's hens, feed and children, the wolves' cave
+  scenes/game/monastery.ts The toll gate, the Wolf Mother, Saint Elda's gate
+  scenes/game/tavern.ts   The Crooked Tankard: maids, the bar, rooms, dice, Pell's song, chatter, the cellar rats
+  scenes/game/raid.ts     The scene's side of the goblin raid, coming round in the ruins, ?raid=
+  scenes/game/market.ts   Arriving in Adowvale, the militia calling the market's hours
+  scenes/game/combat.ts   Starting fights (and packs), the plains' chance meetings, spoils and what comes after
+  scenes/game/sights.ts   Few-second actions, crops, trees, examining, searching, gathering, giving items
+  scenes/game/sitting.ts  Seats and the thoughts that come while sitting
+  scenes/game/travel.ts   Doors, road exits, locked doors, the trek question, fading to the next area
+  scenes/game/sleep.ts    Beds, sleeping, saving and loading
+  scenes/game/input.ts    Keys, click-to-walk, pathfinding to a spot, the hover tile
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
