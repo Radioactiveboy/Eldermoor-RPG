@@ -7,6 +7,7 @@ import { Inventory, InventoryEvent, itemDef } from '../systems/Inventory';
 import { QuestLog, QuestEvent } from '../systems/Quests';
 import { SaveGame } from '../systems/SaveGame';
 import { Ambient } from '../systems/TimeOfDay';
+import { Weather, weatherLight } from '../systems/Weather';
 import { DayNightOverlay, ScreenLight } from '../ui/DayNightOverlay';
 import { LocationLabel } from '../ui/LocationLabel';
 import { Minimap } from '../ui/Minimap';
@@ -202,16 +203,19 @@ export class UIScene extends Phaser.Scene {
 
     const dt = Math.min(deltaMs / 1000, 0.1);
     const cam = game.cameras.main;
-    const outdoor = game.clock.ambient;
     const indoor = !!game.map.data.indoor;
     const underground = !!game.map.data.underground;
+    // The weather's light: greyer under cloud, paler in mist, and lightning (dimmer through the windows).
+    const flash = underground ? 0 : Weather.flash * (indoor ? 0.4 : 1);
+    const sky = Weather.at(game.clock.elapsedHours);
+    const outdoor = weatherLight(game.clock.ambient, sky, flash);
     const ambient = underground ? UNDERGROUND : indoor ? this.indoorAmbient(outdoor) : outdoor;
     const sprite = game.player.sprite;
     const toScreen = (x: number, y: number) => ({ x: (x - cam.worldView.x) * (cam.zoom / Display.zoom), y: (y - cam.worldView.y) * (cam.zoom / Display.zoom) });
     const lantern = indoor && !underground ? null : toScreen(sprite.x, sprite.y - 20);
-    this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)));
+    this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)), flash);
     this.bars.update(game.stats, dt);
-    this.wheel.update(game.clock);
+    this.wheel.update(game.clock, sky);
     this.minimap!.update(sprite, cam.worldView, outdoor.color);
     this.location.update(game.player.gx, game.player.gy);
     this.tracker.update();

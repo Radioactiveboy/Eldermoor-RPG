@@ -3,7 +3,10 @@ import { GameAudio } from '../audio/Audio';
 import { AmbientMix, SILENCE, Surface } from '../audio/Soundscape';
 import type { Npc } from '../entities/Npc';
 import { marketOpen } from '../systems/MarketHours';
+import { whereabouts } from '../systems/VillageDay';
 import { ambientAt } from '../systems/TimeOfDay';
+import { Sky, Weather } from '../systems/Weather';
+import { Aftermath, crowsAbout } from './Aftermath';
 import { AreaId, MapData, Terrain } from './MapData';
 import { SMITHY } from './MarketMap';
 
@@ -15,6 +18,19 @@ const BELL_HOURS = [6, 9, 12, 15, 18, 21];
 const clamp01 = (v: number) => Phaser.Math.Clamp(v, 0, 1);
 /** 1 when `d` tiles is right there, falling to 0 at `range`. */
 const nearness = (d: number, range: number) => clamp01(1 - d / range) ** 1.5;
+
+/**
+ * How loud the rain is on the roof indoors, where it isn't the usual (0.8):
+ * the taproom's din drowns it, the cellar's under a floor, the caves under rock.
+ */
+const ROOFS: Partial<Record<AreaId, number>> = {
+  home: 1,
+  hut: 1,
+  'tavern-room': 1,
+  tavern: 0.45,
+  chapel: 0.55,
+  cellar: 0.12,
+};
 
 /** How each place sounds, apart from what the hour and the people in it add. */
 interface Place {
@@ -48,6 +64,8 @@ const PLACES: Record<AreaId, Place> = {
   'tavern-hall': { tavern: 0.3, echo: 0.2 },
   'tavern-room': { tavern: 0.15, fire: 0.2, echo: 0.1 },
   cellar: { cave: 0.35, tavern: 0.12, echo: 0.6 },
+  smithy: { fire: 0.85, echo: 0.3 },
+  bakery: { fire: 0.55, echo: 0.15 },
   chapel: { bell: 0.7, echo: 0.9 },
   infirmary: { fire: 0.5, bell: 0.35, echo: 0.3 },
   scriptorium: { fire: 0.3, bell: 0.35, echo: 0.3 },
@@ -75,6 +93,10 @@ export class AmbientSounds {
   private mixTimer = 0;
   private footfalls?: number;
   private lastHour?: number;
+  /** Seconds until the next lightning strike, in a storm. */
+  private strikeIn = 4;
+  private readonly roof: number;
+  private readonly crowSpots: Array<{ gx: number; gy: number }>;
 
   constructor(
     private readonly area: AreaId,
@@ -95,20 +117,48 @@ export class AmbientSounds {
     }
     const hives = data.landmarks?.find((l) => l.name === 'The beehives');
     if (hives) this.hives = { x: hives.gx, y: hives.gy };
+    this.roof = data.underground ? 0 : data.indoor ? ROOFS[area] ?? 0.8 : 0;
+    this.crowSpots = data.crows ?? [];
   }
 
   /**
    * @param walking how loud a step is: 1 walking, less sneaking, more sprinting, 0 standing still
    * @param footfalls the hero's footfall count (Player.footfalls): a step sounds each time it goes up
+   * @param hours the clock in hours since the start of day 1, for the weather
    */
-  update(dt: number, player: { x: number; y: number }, hour: number, npcs: Npc[], walking: number, footfalls: number): void {
+  update(dt: number, player: { x: number; y: number }, hour: number, npcs: Npc[], walking: number, footfalls: number, hours = hour): void {
     this.footsteps(player, walking, footfalls);
     this.bells(hour);
+    const sky = Weather.at(hours);
+    Weather.now = sky;
+    this.lightning(dt, sky);
     this.mixTimer -= dt;
     if (this.mixTimer > 0) return;
     this.mixTimer = MIX_EVERY;
-    GameAudio.setAmbience(this.mix(player, hour, npcs));
+    GameAudio.setAmbience(this.mix(player, hour, npcs, sky, hours));
     GameAudio.setHour(hour);
+  }
+
+  /**
+   * In a storm, lightning every so often, and the thunder after it: right
+   * away and loud when it's close, a while later and rumbling when it's far.
+   * Indoors the flash shows at the windows and the thunder's dulled; under
+   * the ground, only the nearest claps are heard at all.
+   */
+  private lightning(dt: number, sky: Sky): void {
+    Weather.tick(dt);
+    if (sky.storm < 0.3) return;
+    this.strikeIn -= dt;
+    if (this.strikeIn > 0) return;
+    this.strikeIn = (8 + Math.random() * 18) / sky.storm;
+    const delay = 0.3 + Math.random() * 3.2;
+    const near = 1 - delay / 3.6;
+    if (this.data.underground) {
+      if (near > 0.6) GameAudio.thunder(delay, near * 0.5, 1);
+      return;
+    }
+    Weather.strike();
+    GameAudio.thunder(delay, near, this.data.indoor ? 0.6 : 0);
   }
 
   /** Silence the world, e.g. on leaving the area. */
@@ -116,20 +166,32 @@ export class AmbientSounds {
     GameAudio.setAmbience({ ...SILENCE });
   }
 
-  private mix(player: { x: number; y: number }, hour: number, npcs: Npc[]): AmbientMix {
+  private mix(player: { x: number; y: number }, hour: number, npcs: Npc[], sky: Sky, hours: number): AmbientMix {
     const p = this.place;
     const night = ambientAt(hour).darkness;
     const day = 1 - night;
     const mix: AmbientMix = { ...SILENCE, echo: p.echo ?? 0.05, fire: p.fire ?? 0, cave: p.cave ?? 0 };
+    // The weather: birds and crickets fall quiet in the rain, which drowns most else out.
+    const hush = 1 - clamp01(sky.rain * 1.4);
+    const heavy = clamp01((sky.rain - 0.55) / 0.45);
+    if (sky.storm > 0) mix.storm = sky.storm;
 
     if (p.open) {
       const wild = p.wild ?? 1;
       // The dawn chorus: the birds are loudest just after first light.
       const dawn = hour >= 5 && hour < 8.5 ? 1.5 : 1;
-      mix.wind = clamp01((p.wind ?? 0.5) * (1 + night * 0.25));
-      mix.birds = clamp01(day * wild * 0.75 * dawn);
-      mix.crickets = clamp01((night - 0.3) / 0.5) * wild;
-      mix.owls = clamp01((night - 0.75) / 0.25) * wild;
+      mix.wind = clamp01((p.wind ?? 0.5) * (1 + night * 0.25) + sky.wind * 0.45);
+      mix.birds = clamp01(day * wild * 0.75 * dawn) * hush * (1 - sky.mist * 0.4);
+      mix.crickets = clamp01((night - 0.3) / 0.5) * wild * hush;
+      mix.owls = clamp01((night - 0.75) / 0.25) * wild * hush;
+      mix.rain = clamp01(sky.rain * 1.2) * (1 - heavy * 0.35);
+      mix.downpour = heavy;
+      mix.gale = clamp01((sky.wind - 0.45) / 0.45) * (p.wind ?? 0.5) * 1.4;
+      if (this.crowSpots.length > 0) {
+        const since = Aftermath.raidAt === undefined ? 0 : hours - Aftermath.raidAt;
+        const near = Math.min(...this.crowSpots.map((c) => Math.hypot(player.x - c.gx, player.y - c.gy)));
+        mix.crows = nearness(near, 22) * crowsAbout(since) * clamp01(day * 1.6 - 0.4) * hush;
+      }
       mix.wolves = p.wolves ? clamp01((night - 0.85) / 0.15) * 0.8 : 0;
       const shore = this.nearestWater(player);
       mix.water = nearness(shore, 8);
@@ -140,8 +202,10 @@ export class AmbientSounds {
       const open = marketOpen(hour);
       const folk = npcs.filter((n) => n.present && n.distanceTo(player.x, player.y) < 14).length;
       mix.crowd = open ? clamp01(0.35 + folk / 10) : 0;
-      mix.forge = marketOpen(hour, SMITHY.late) ? nearness(Math.hypot(player.x - SMITHY.x, player.y - SMITHY.y), 20) : 0;
+      // Osric's hammer rings out through the smithy door while he's at the anvil.
+      mix.forge = whereabouts('smith', hour) === 'workshop' ? nearness(Math.hypot(player.x - SMITHY.x, player.y - SMITHY.y), 16) : 0;
     }
+    if (this.area === 'smithy') mix.forge = npcs.some((n) => n.id === 'smith' && n.present) ? 1 : 0;
 
     if (p.tavern) {
       // The taproom's din comes from the folk drinking in it, and carries upstairs faintly.
@@ -152,7 +216,13 @@ export class AmbientSounds {
     }
     if (p.clatter) mix.clatter = Math.max(mix.clatter, p.clatter);
 
-    if (this.hives) mix.bees = nearness(Math.hypot(player.x - this.hives.x, player.y - this.hives.y), 9) * clamp01(day * 1.5 - 0.3);
+    // Indoors, the rain is heard on the roof (and a storm's wind round the walls).
+    if (this.roof > 0) {
+      mix.roof = clamp01(sky.rain * 1.15) * this.roof;
+      mix.gale = clamp01((sky.wind - 0.5) / 0.5) * this.roof * 0.35;
+    }
+
+    if (this.hives) mix.bees = nearness(Math.hypot(player.x - this.hives.x, player.y - this.hives.y), 9) * clamp01(day * 1.5 - 0.3) * hush;
     return mix;
   }
 

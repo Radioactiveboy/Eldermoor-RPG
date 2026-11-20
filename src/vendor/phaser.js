@@ -101,6 +101,8 @@ import Particles from 'phaser/src/gameobjects/particles';
 import RenderTexture from 'phaser/src/gameobjects/rendertexture/RenderTexture';
 import Sprite from 'phaser/src/gameobjects/sprite/Sprite';
 import Text from 'phaser/src/gameobjects/text/Text';
+// The weather's sheets of rain (world/Ambience.ts).
+import TileSprite from 'phaser/src/gameobjects/tilesprite/TileSprite';
 import GetTextSize from 'phaser/src/gameobjects/text/GetTextSize';
 import MeasureText from 'phaser/src/gameobjects/text/MeasureText';
 import TextStyle from 'phaser/src/gameobjects/text/TextStyle';
@@ -126,6 +128,7 @@ import 'phaser/src/gameobjects/particles/ParticleEmitterFactory';
 import 'phaser/src/gameobjects/rendertexture/RenderTextureFactory';
 import 'phaser/src/gameobjects/sprite/SpriteFactory';
 import 'phaser/src/gameobjects/text/TextFactory';
+import 'phaser/src/gameobjects/tilesprite/TileSpriteFactory';
 import 'phaser/src/gameobjects/zone/ZoneFactory';
 import 'phaser/src/gameobjects/shape/arc/ArcFactory';
 import 'phaser/src/gameobjects/shape/ellipse/EllipseFactory';
@@ -142,6 +145,7 @@ import 'phaser/src/gameobjects/particles/ParticleEmitterCreator';
 import 'phaser/src/gameobjects/rendertexture/RenderTextureCreator';
 import 'phaser/src/gameobjects/sprite/SpriteCreator';
 import 'phaser/src/gameobjects/text/TextCreator';
+import 'phaser/src/gameobjects/tilesprite/TileSpriteCreator';
 import 'phaser/src/gameobjects/zone/ZoneCreator';
 
 const Geom = Extend(false, {
@@ -204,6 +208,7 @@ const GameObjects = {
   GetTextSize,
   MeasureText,
   TextStyle,
+  TileSprite,
   Zone,
   Shape,
   Arc,

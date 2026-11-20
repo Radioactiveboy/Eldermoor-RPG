@@ -3,7 +3,9 @@
 Cuts the recorded ambience in public/audio/ambience/ from the original
 recordings listed in public/audio/ambience/CREDITS.md.
 
-  python3 tools/build-ambience.py <folder>
+  python3 tools/build-ambience.py <folder> [name,name...]
+
+(the optional list rebuilds only those sounds, e.g. rain,downpour,roof,gale,thunder)
 
 where <folder> holds clones of the repositories the recordings were found in
 (omarchy-ambient, moodist, Blankie, meta = Meta-open-sound, the two Kenney
@@ -38,6 +40,13 @@ BEDS = {
     'fire': ('Blankie/Blankie/Resources/Sounds/fireplace.m4a', 0, 24, 2, 40, 0),
     'bees': ('moodist/public/sounds/animals/beehive.mp3', 1, 42, 3, 60, 0),
     'drips': ('moodist/public/sounds/nature/droplets.mp3', 1, 48, 3, 0, 0),
+    # The weather (see systems/Weather.ts): rain, a downpour, rain on a roof heard from inside, and a gale.
+    'rain': ('moodist/public/sounds/rain/light-rain.mp3', 20, 32, 3, 100, 0),
+    'downpour': ('moodist/public/sounds/rain/heavy-rain.mp3', 0, 18, 3, 60, 0),
+    'roof': ('moodist/public/sounds/rain/rain-on-tent.mp3', 10, 32, 3, 80, 0),
+    'gale': ('moodist/public/sounds/nature/howling-wind.mp3', 5, 32, 3, 60, 0),
+    # Crows squabbling over the ruined farm, after the raid.
+    'crows': ('moodist/public/sounds/animals/crows.mp3', 4, 30, 3, 150, 0),
 }
 
 # name: (source file, [(start s, end s), ...]) -- each cut becomes name-1, name-2, ...
@@ -45,6 +54,8 @@ SHOTS = {
     'owl': ('moodist/public/sounds/animals/owl.mp3', [(2.9, 6.4), (8.9, 12.98)]),
     'wolf': ('moodist/public/sounds/animals/wolf.mp3', 'auto'),
     'anvil': ('meta/corpora/oculus-audio-pack/ogg/METLImpt_HammerAnvilAmbient_OS_01.ogg', 'auto'),
+    # Three claps of thunder, each cut short of its long tail.
+    'thunder': ('moodist/public/sounds/rain/thunder.mp3', [(0.6, 13), (20.9, 33), (40.4, 54)]),
 }
 # Single files used whole: name -> source file
 SINGLES = {
@@ -158,8 +169,12 @@ def trim(a: np.ndarray, fade_in=0.02, fade_out=0.25) -> np.ndarray:
 
 def main() -> None:
     src = Path(sys.argv[1])
+    only = set(sys.argv[2].split(',')) if len(sys.argv) > 2 else None
+    want = lambda name: only is None or name in only
     made = {}
     for name, (f, start, length, fade, hp, lp) in BEDS.items():
+        if not want(name):
+            continue
         a = decode(src / f, hp, lp, EXTRA.get(name, ''))
         s = int(start * RATE)
         a = a[s:s + int((length + fade) * RATE)]
@@ -167,6 +182,8 @@ def main() -> None:
         encode(a, name, mono=True, kbps=64)
         made[name] = round(len(a) / RATE, 2)
     for name, (f, spans) in SHOTS.items():
+        if not want(name):
+            continue
         a = decode(src / f, 80)
         if spans == 'auto':
             spans = cuts_by_energy(a)
@@ -176,16 +193,23 @@ def main() -> None:
             encode(cut, f'{name}-{i}', mono=True, kbps=64)
             made[f'{name}-{i}'] = round(len(cut) / RATE, 2)
     for name, f in SINGLES.items():
+        if not want(name):
+            continue
         a = level(trim(decode(src / f, 120), 0.002, 0.05), -24)
         encode(a, name, mono=True, kbps=64)
         made[name] = round(len(a) / RATE, 2)
     for kind, files in STEPS.items():
+        if not want('steps'):
+            continue
         for i, f in enumerate(files, 1):
             a = trim(decode(src / f, 60), 0.002, 0.04)
             # Footsteps are levelled by their peak: they're all attack.
             a = a * (0.5 / max(1e-6, np.max(np.abs(a))))
             encode(a, f'step-{kind}-{i}', mono=True, kbps=64)
             made[f'step-{kind}-{i}'] = round(len(a) / RATE, 2)
+    if not want('bell'):
+        print(json.dumps(made, indent=1))
+        return
     f, s, e = BELL
     # High- and low-passed to take out the traffic rumble and the birds near the microphone.
     a = decode(src / f, 300, 4500)[int(s * RATE):int(e * RATE)]

@@ -60,6 +60,8 @@ export const AREA_NAMES: Record<AreaId, string> = {
   'tavern-hall': 'Upstairs at the Crooked Tankard',
   'tavern-room': 'A room at the Crooked Tankard',
   cellar: "The Crooked Tankard's cellar",
+  smithy: "Osric's smithy",
+  bakery: "Hilde's bakery",
 };
 
 /**

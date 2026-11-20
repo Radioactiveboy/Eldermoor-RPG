@@ -67,6 +67,8 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'Mother', load: () => import('./mother3d').then((m) => m.generateMother) },
   { label: 'goblins', draw: generateGoblins },
   { label: 'wild herbs', load: () => import('./herbs').then((m) => m.generateHerbs) },
+  // After the townsfolk: it redraws the smith's and the baker's working frames.
+  { label: 'the smithy and bakery', load: () => import('./workshops').then((m) => m.generateWorkshops) },
   // Last: it makes burnt copies of art drawn above.
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },
 ];
