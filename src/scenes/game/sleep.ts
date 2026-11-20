@@ -124,5 +124,6 @@ export function loadSave(g: GameScene, save: SaveData): void {
   g.stats.stamina = save.stamina;
   g.clock = new TimeOfDay(save.hours);
   QuestLog.dayProvider = () => g.clock.day;
+  QuestLog.hourProvider = () => g.clock.hour;
   SaveGame.restore(save);
 }

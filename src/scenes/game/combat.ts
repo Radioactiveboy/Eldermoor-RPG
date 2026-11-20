@@ -18,6 +18,7 @@ import { RAID_DOOM } from '../../world/GoblinRaid';
 import { PlainsEvents } from '../../world/PlainsEvents';
 import type { CombatResult, CombatSceneData } from '../CombatScene';
 import type { GameScene, GameSceneData } from '../GameScene';
+import { countForBounties } from './bounties';
 import { slewWolfMother } from './monastery';
 import { raidDefeat } from './raid';
 import { cancelChannel, give } from './sights';
@@ -196,6 +197,11 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     return;
   }
   if (result.outcome === 'defeat') {
+    const by = foes[0]?.kind === 'wolfmother' ? 'The Wolf Mother' : `A ${foes[0]?.name.toLowerCase() ?? 'beast'}`;
+    QuestLog.writeDiary(
+      `${by} got the better of me${foes.length > 1 ? ', and the rest of them with it' : ''}. I do not remember the end of it. ` +
+        'I came to on the cottage floor with my head ringing and every bone aching. Next time I will be readier.',
+    );
     knockedOut(g);
     return;
   }
@@ -225,7 +231,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
       Reputation.gain('militia', 2, 'Killed wolves on the plains');
     }
     // Beasts with a price on their heads.
-    for (const said of Bounties.slain(slain.map((c) => c.kind))) g.onHint?.(said);
+    for (const said of countForBounties(slain.map((c) => c.kind))) g.onHint?.(said);
     if (g.area === 'cave' && g.creatures.every((c) => !c.active || foes.includes(c))) {
       g.time.delayedCall(2600, () => g.onHint?.('The den is quiet now. Only the dripping water, and something pale at the back of the cave.'));
     }

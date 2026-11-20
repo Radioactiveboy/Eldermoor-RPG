@@ -10,7 +10,7 @@ const { buildHomeMap } = await import('../../src/world/HomeMap');
 const { buildHutMap } = await import('../../src/world/HutMap');
 
 const maps = await allMaps();
-// After the raid, the quest that follows it happens in the ruined cottage and in Iran's hut, where he hides.
+// After the raid, the quests that follow it happen in the ruined cottage and in Iran's hut, where he hides.
 const ruined = { home: buildHomeMap(true), hut: buildHutMap(true) };
 /** Steps with nowhere to mark yet: the story hasn't got there. */
 const NO_TARGET = ['the-raid/mother'];
@@ -32,7 +32,7 @@ describe('quest targets', () => {
 
   it('put every spot inside its map, with anyone named standing in that area', () => {
     for (const q of Object.values(QUESTS)) {
-      const raid = q.id === 'the-raid';
+      const raid = q.id === 'the-raid' || q.id === 'speckle-and-moppet';
       for (const o of q.objectives) {
         const t = o.target ?? QUEST_TARGETS[q.id]?.[o.id];
         if (!t) continue;

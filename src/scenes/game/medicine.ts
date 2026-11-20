@@ -21,6 +21,16 @@ export function madeAtStation(g: GameScene, recipe: Recipe): void {
   g.time.delayedCall(400, () => g.onHint?.('It glows, just like the flowers. Now home to Mother, quickly!'));
 }
 
+/** Out of the cottage on Mother's errand, the first time: that step is done. */
+export function leftHome(): void {
+  if (!QuestLog.has('mother-medicine') || QuestLog.isDone('mother-medicine', 'leave')) return;
+  QuestLog.complete('mother-medicine', 'leave');
+  QuestLog.writeDiary(
+    'Pulled the door to behind me, softly, so as not to wake her. The whole of Eldermoor out there, and somewhere in it, ' +
+      "moonpetal. Hilde's stall at the market will know, or the inn. Somebody always knows.",
+  );
+}
+
 /** Mother takes her tincture: the end of her errand. */
 export function gaveMotherTincture(g: GameScene): void {
   if (!Inventory.remove('fever-tincture', 1)) return;

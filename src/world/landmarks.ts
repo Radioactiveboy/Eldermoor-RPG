@@ -6,7 +6,7 @@
  * (see scenes/game/areas.ts). Anything the rest of the game reads from a map belongs here too.
  */
 import { box, Shape } from './Collision';
-import type { Door } from './MapData';
+import type { Door, HenPen, Sight } from './MapData';
 
 /** Where Osric stands to the anvil's face, and Hilde's kneading trough (WorkshopMaps), for the sparks and the flour. */
 export const ANVIL = { x: 3.5, y: 3.3 };
@@ -64,3 +64,16 @@ export function monasteryGateDoors(): Door[] {
     tx, ty: MONASTERY_WALL_Y, to: 'abbey' as const, entry: 'gate', auto: true, ask: "Do you want to go in through the gate of Saint Elda's?",
   }));
 }
+
+/** Where Speckle pecks about in Iran's hut once she's home (scenes/game/speckle.ts): the floor between the door and the table. */
+export const HUT_HEN_PEN: HenPen = { x0: 1, y0: 3, x1: 4.6, y1: 5.6 };
+export const HUT_SPECKLE = { x: 2.4, y: 4.4 };
+
+/** Where Hetty's rag doll Moppet lies after the raid, under the beam that fell in the burnt cottage (see HomeMap.ts). */
+export const MOPPET_SIGHT: Sight = { id: 'ruin-moppet', gx: 4.6, gy: 5.5, label: 'Look under the fallen beam', z: 12 };
+
+/**
+ * Where Speckle hides after the raid: the open ground inside the garden fence
+ * beside the cottage, its crops trampled flat (see MapGenerator.ts addGarden).
+ */
+export const GARDEN_PEN: HenPen = { x0: 24, y0: 35, x1: 29, y1: 40 };

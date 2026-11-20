@@ -30,6 +30,8 @@ export class Hen {
   private timer: number;
   private target?: Vec2;
   private speed = WALK_SPEED;
+  /** A hen with no coop to go to (Speckle, lost after the raid, or kept indoors after): she never goes to roost out of sight. */
+  homeless = false;
 
   constructor(scene: Phaser.Scene, map: IsoMap, pen: HenPen, kind: HenKind, gx: number, gy: number) {
     this.map = map;
@@ -47,8 +49,20 @@ export class Hen {
 
   /** Roosting in the coop: hidden, and nothing to do. */
   set roosting(on: boolean) {
+    if (this.homeless) on = false;
     this.sprite.setVisible(!on);
     this.shadow.setVisible(!on);
+  }
+
+  /** Where she is now, in grid space. */
+  get position(): Vec2 {
+    return { x: this.gx, y: this.gy };
+  }
+
+  /** Picked up and carried off. */
+  destroy(): void {
+    this.sprite.destroy();
+    this.shadow.destroy();
   }
 
   update(dt: number, player: Vec2): void {

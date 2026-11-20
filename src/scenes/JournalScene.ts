@@ -1,7 +1,7 @@
 import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { DiaryEntry, QuestLog, QuestState } from '../systems/Quests';
+import { DiaryEntry, diaryStamp, QuestLog, QuestState } from '../systems/Quests';
 import { THEME } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
 
@@ -273,7 +273,7 @@ export class JournalScene extends Phaser.Scene {
           if (i === 0) w.heading('Diary');
           if (group.length === 0) w.para('The pages are blank.', { italic: true });
           for (const entry of group) {
-            w.subheading(`Day ${entry.day}`, RUBRIC);
+            w.subheading(diaryStamp(entry), RUBRIC);
             w.para(entry.text, { italic: true });
             w.space(6);
           }

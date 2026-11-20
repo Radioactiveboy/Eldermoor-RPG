@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { QuestEvent, QuestLog, QUESTS } from '../../src/systems/Quests';
+import { diaryStamp, QuestEvent, QuestLog, QUESTS } from '../../src/systems/Quests';
 
 let events: QuestEvent[] = [];
 let off: () => void;
@@ -84,10 +84,18 @@ describe('flags and diary', () => {
     expect(QuestLog.hasFlag('saw-bess')).toBe(false);
   });
 
-  it('dates diary entries with the day', () => {
+  it('dates diary entries with the day and the hour', () => {
     QuestLog.dayProvider = () => 4;
+    QuestLog.hourProvider = () => 14.5;
     QuestLog.writeDiary('Found a wolf.');
-    expect(QuestLog.diary).toEqual([{ day: 1, text: 'It begins.' }, { day: 4, text: 'Found a wolf.' }]);
+    expect(QuestLog.diary).toEqual([{ day: 1, hour: 8, text: 'It begins.' }, { day: 4, hour: 14.5, text: 'Found a wolf.' }]);
+  });
+
+  it('stamps entries for the journal, and copes with old ones that have no hour', () => {
+    expect(diaryStamp({ day: 4, hour: 14.5, text: '' })).toBe('Day 4, 14:30');
+    expect(diaryStamp({ day: 2, hour: 6.05, text: '' })).toBe('Day 2, 06:03');
+    expect(diaryStamp({ day: 9, hour: 23.999, text: '' })).toBe('Day 9, 23:59');
+    expect(diaryStamp({ day: 3, text: '' })).toBe('Day 3');
   });
 });
 
