@@ -8,6 +8,7 @@ import type { Npc } from '../entities/Npc';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import type { FoeKind } from '../systems/Combat';
 import { QuestLog } from '../systems/Quests';
+import { CutScene } from '../ui/CutScene';
 import type { Speaker } from '../ui/SpeechBubbles';
 import type { IsoMap } from './IsoMap';
 import { MapData, MapObject, placeObject, Prop } from './MapData';
@@ -342,23 +343,25 @@ export class RaidDirector {
     const brute = this.raiders.find((r) => r.id === RAID_LEADER)!;
     const cry = this.cries.find((c) => c.creature === brute)!;
     const me = this.h.player();
-    this.h.hint('Goblins! Dozens of them, all over the farm. And the roof... the roof is on fire!');
-    cam.stopFollow();
+    // Framed as a cut-scene: bars, the HUD away, the raid's music held, the lines written in the bottom bar.
+    const cut = CutScene.begin(this.h.scene, { music: 'raid', ambience: 0.6, follow: this.h.follow });
+    cut.caption('Goblins! Dozens of them, all over the farm. And the roof... the roof is on fire!', undefined, 1900);
     const at = gridToScreen(brute.gx, brute.gy);
-    cam.pan(at.x, at.y - 30, 1800, 'Sine.easeInOut');
+    void cut.pan(at.x, at.y - 30, 1800);
     this.h.scene.time.delayedCall(1900, () => {
       GameAudio.warHorn();
       cam.shake(500, 0.004);
       brute.faceTowards(me.x, me.y);
       cry.say(`THERE! The whelp from the house! KILL IT!`, 3.4);
+      cut.caption('THERE! The whelp from the house! KILL IT!', 'The Brute', 2300);
       for (const r of this.raiders) r.faceTowards(me.x, me.y);
     });
     this.h.scene.time.delayedCall(4200, () => {
       const p = gridToScreen(me.x, me.y);
-      cam.pan(p.x, p.y, 900, 'Sine.easeInOut');
+      void cut.pan(p.x, p.y, 900);
     });
     this.h.scene.time.delayedCall(5300, () => {
-      this.h.follow();
+      cut.end();
       this.h.ask(
         'The goblins are coming for me!',
         `Mother is still inside, asleep. What do I do?`,

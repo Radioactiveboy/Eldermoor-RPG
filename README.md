@@ -40,7 +40,8 @@ switch puts the game on `window.game`, as the dev server always does), presses E
 new game, waits until the hero stands in that area, walks a step, and fails on any uncaught error. It needs
 Playwright's Chromium (`npx playwright install chromium` once, if you don't already have it). To check just a few
 areas against the existing build: `SMOKE_AREAS=market,cave node tests/smoke/smoke.mjs`. It lists failed requests
-and console errors as warnings without failing on them.
+and console errors as warnings without failing on them. After the areas it opens `?debug` and checks the debug panel
+works (switches, a teleport, a flag, coins); `SMOKE_DEBUG=0` skips that.
 
 Every pull request and push runs the type-check, `npm test` and `npm run test:smoke` on GitHub Actions
 (`.github/workflows/ci.yml`). Publishing to GitHub Pages is a separate workflow (`deploy.yml`) that runs on `main`.
@@ -91,6 +92,14 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   weary, stamina only refills to 60%
 - **Settings → Resolution**: native, 75% or 50% of the screen's own resolution (lower is faster on slow machines). **Interface size**: Auto (bigger on large monitors, e.g. 150% at 2560×1440) or 75% to 200%
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
+- Add `?debug` to the URL for the **debug panel** (bottom left; **`** (backquote) or its title folds it away). It
+  gathers every URL switch below (area, hour, raid, event, give, wolves, weather): pick them and **Start a new game
+  with these** writes them into the address and starts one (on the title screen, begin a new journey to use them).
+  Under **Now**: teleport to any area, set the hour, hold the weather, set or clear a story flag (the flags that
+  are set show as chips; click one to clear it), add coins or XP, heal, and **Kill all in fight** (in the raid's
+  fight, that goes straight on to the blackout and the ruins). A line along the top shows where you are, the day
+  and hour, the weather, health, level and coins. Keys typed in the panel don't reach the game (see
+  `scenes/DebugScene.ts`)
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
   in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=northwoods` in the north woods, `?area=plains` on Adowvale Plains,
@@ -170,6 +179,10 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   lands, every one of yours misses, and you can't flee. You come round at 13:00 in the burnt-out cottage, with
   blood on the floor and Mother gone. The farm is ruined, the road travellers have fled, and Farmer Iran is
   huddled in his hut with Pip and Hetty. A new quest, **Ashes**, starts (see `world/GoblinRaid.ts`)
+- **Cut-scenes**: the raid's opening (the camera taking in the yard and the Brute) and coming round in the ruins
+  are framed as cut-scenes: black bars slide in, the HUD steps aside, the music is held, the camera moves in slow
+  pans, and what's said or thought is written in the bottom bar. Later story scenes can use the same helper,
+  `CutScene.begin(scene, { music })` in `ui/CutScene.ts`
 - Add `?raid=night` to start at 20:00 with the tincture in the satchel (talk to Mother to give it to her),
   `?raid=morning` to wake on the morning of the raid, or `?raid=after` to start in the ruins (add `&area=world`
   or `&area=hut` to start outside or in Iran's hut)
@@ -262,6 +275,11 @@ src/
   entities/Hen.ts         Farmer Iran's hens: peck, strut about the run, scurry from the hero, roost at night
   entities/Child.ts       Children who chatter to each other in speech bubbles and say hello as you come near
   scenes/InterludeScene.ts A few half-remembered lines in the dark between scenes (beaten in the raid)
+  ui/CutScene.ts          Cut-scene framing for story moments: letterbox bars, the HUD away, held music, slow camera pans
+                          and captions (ui/CutSceneLayout.ts has the bar and caption sums)
+  scenes/LetterboxScene.ts The cut-scene's bars and the caption in the bottom one, over the HUD
+  scenes/DebugScene.ts    The ?debug panel: an HTML overlay with every URL switch and testing buttons
+  systems/DebugSwitches.ts Every URL switch the game reads, and reading/writing them in the address
   entities/Creature.ts    Wild animals: wander and sniff near their den, start a fight when you come close
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
@@ -338,6 +356,7 @@ src/
   scenes/game/monastery.ts The toll gate, the Wolf Mother, Saint Elda's gate
   scenes/game/tavern.ts   The Crooked Tankard: maids, the bar, rooms, dice, Pell's song, chatter, the cellar rats
   scenes/game/raid.ts     The scene's side of the goblin raid, coming round in the ruins, ?raid=
+  scenes/game/debug.ts    What the ?debug panel does to the game: teleport, hour, weather, flags, coins, XP, kill all
   scenes/game/market.ts   Arriving in Adowvale, the militia calling the market's hours
   scenes/game/workshops.ts The smithy and the bakery: barred at night, first visits, sparks off the anvil, flour
   scenes/game/combat.ts   Starting fights (and packs), the plains' chance meetings, spoils and what comes after
