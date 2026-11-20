@@ -44,10 +44,10 @@ export interface Link {
 }
 
 export const REGIONS: Region[] = [
-  { id: 'world', tiles: { w: 52, h: 60 }, box: { x: 0, y: 0, w: 26, h: 30 }, look: 'fields', label: { x: 40, y: 46 } },
-  { id: 'northwoods', tiles: { w: 60, h: 76 }, box: { x: 4.5, y: -34, w: 24, h: 30 }, look: 'woods', label: { x: 30, y: 52 } },
+  { id: 'world', tiles: { w: 52, h: 60 }, box: { x: 15, y: 0, w: 26, h: 30 }, look: 'fields', label: { x: 40, y: 46 } },
+  { id: 'northwoods', tiles: { w: 60, h: 76 }, box: { x: 19.5, y: -34, w: 24, h: 30 }, look: 'woods', label: { x: 30, y: 64 } },
   { id: 'market', tiles: { w: 34, h: 30 }, box: { x: -60, y: 18.5, w: 17, h: 15 }, look: 'village' },
-  { id: 'plains', tiles: { w: 120, h: 150 }, box: { x: -67.6, y: -34.2, w: 40, h: 50 }, look: 'plains', label: { x: 52, y: 92 } },
+  { id: 'plains', tiles: { w: 120, h: 150 }, box: { x: -67.6, y: -34.2, w: 40, h: 50 }, look: 'plains', label: { x: 40, y: 108 } },
   { id: 'monastery', tiles: { w: 64, h: 60 }, box: { x: -24.9, y: -22.2, w: 22, h: 20 }, look: 'grounds', label: { x: 36, y: 42 } },
   { id: 'abbey', tiles: { w: 46, h: 40 }, box: { x: -20.6, y: -34.2, w: 14, h: 12 }, look: 'cloister' },
 ];
