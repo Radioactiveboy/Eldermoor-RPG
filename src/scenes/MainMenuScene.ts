@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
 import { Display } from '../ui/Display';
 import { GameAudio } from '../audio/Audio';
-import { MAP_HEIGHT, MAP_SEED, MAP_WIDTH } from '../config';
+import { HERO_NAME, MAP_HEIGHT, MAP_SEED, MAP_WIDTH } from '../config';
 import { IsoMap } from '../world/IsoMap';
 import { generateMap } from '../world/MapGenerator';
 import { pickSaveFile, SaveData, SaveGame } from '../systems/SaveGame';
 import type { GameSceneData } from './GameScene';
 import { bodyStyle, makeButton, THEME, titleStyle } from '../ui/Widgets';
 import { openSettings } from './SettingsScene';
+import type { ConfirmSceneData } from './ConfirmScene';
+import { Settings } from '../settings/Settings';
 import { ArtLoader } from '../art';
 import { retry } from '../systems/Download';
 import { areaReady, arrivalArea, loadArea, prefetchArea } from './game/areas';
@@ -26,6 +28,8 @@ export class MainMenuScene extends Phaser.Scene {
   /** The main camera drifts over the map; this one stays still and draws the menu on top. */
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private leaving = false;
+  /** The new-game question about hunger and rest is up. */
+  private choosing = false;
   /** Says what art is still being drawn, after New Journey or Continue, until it's ready. */
   private waitingFor?: Phaser.GameObjects.Text;
 
@@ -35,6 +39,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     this.leaving = false;
+    this.choosing = false;
     this.waitingFor = undefined;
     // The drifting map is drawn at the screen's resolution; the menu on top in interface pixels (see ui/Display).
     Display.worldCameras.add(this.cameras.main);
@@ -188,9 +193,33 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
-  /** Begins a new game, or carries on from a save. */
-  private startGame(save?: SaveData): void {
-    if (this.leaving || !this.input.enabled) return;
+  /**
+   * Before a new game: should the hero need to eat and sleep? The answer
+   * becomes the "Hunger & rest" setting, which can be changed later in Settings.
+   */
+  private askAboutNeeds(): void {
+    this.choosing = true;
+    const data: ConfirmSceneData = {
+      question: `Should ${HERO_NAME} need to eat and rest?`,
+      note: 'If so, he slowly grows hungry and tired. Meals and sleep put it right; let it slide and he tires quicker and heals slower. You can change this any time in Settings.',
+      yes: 'Yes, he needs food and sleep',
+      no: 'No, leave it out',
+      onAnswer: (yes) => {
+        Settings.set('needs', yes);
+        this.choosing = false;
+        this.startGame(undefined, true);
+      },
+    };
+    this.scene.launch('Confirm', data);
+  }
+
+  /** Begins a new game (asking about hunger and rest first), or carries on from a save. */
+  private startGame(save?: SaveData, asked = false): void {
+    if (this.leaving || this.choosing || !this.input.enabled) return;
+    if (!save && !asked) {
+      this.askAboutNeeds();
+      return;
+    }
     this.leaving = true;
     const data: GameSceneData = save ? { load: save } : { newGame: true, area: 'home' };
     const area = arrivalArea(data);

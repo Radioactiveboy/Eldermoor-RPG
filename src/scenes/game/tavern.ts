@@ -11,6 +11,7 @@ import { NpcWorld } from '../../entities/Npc';
 import { Vec2 } from '../../iso/IsoMath';
 import { Inventory, itemDef, ItemId } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
+import { Needs } from '../../systems/Needs';
 import { CHECKOUT_HOUR, MENU, RENT_OPTIONS, Tavern } from '../../systems/Tavern';
 import { Seat } from '../../world/MapData';
 import { BAR_PICKUP, CELLAR_RATS } from '../../world/landmarks';
@@ -172,6 +173,7 @@ export function consume(g: GameScene, item: ItemId, thought: string): void {
   const def = itemDef(item);
   if (def.eat?.health) g.stats.heal(def.eat.health);
   if (def.eat?.stamina) g.stats.restoreStamina(def.eat.stamina);
+  Needs.ate(def);
   if (def.drink) GameAudio.gulp();
   else GameAudio.crunch();
   g.onHint?.(thought);

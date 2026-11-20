@@ -921,6 +921,25 @@ export class CombatScene extends Phaser.Scene {
     return r;
   }
 
+  /**
+   * For testing (the ?debug panel): every foe still standing drops where it
+   * is, and whatever the hero was choosing is put aside, so the fight ends
+   * as a victory on the next step of its loop. The raid's fight still ends
+   * as the story has it.
+   */
+  async killAll(): Promise<void> {
+    if (!this.battle || this.battle.outcome() !== 'ongoing') return;
+    const standing = this.foes.filter((f) => this.battle.isUp(f.c));
+    for (const f of standing) f.c.hp = 0;
+    if (this.menuResolve) {
+      const resolve = this.menuResolve;
+      const away = this.menuOptions.some((o) => o.id === 'back') ? 'back' : 'end';
+      this.clearMenu();
+      resolve(away);
+    }
+    for (const f of standing) await this.fall(f);
+  }
+
   /** Someone has dropped: a beast dies (and the hero earns its experience), or the hero blacks out. */
   private async fall(actor: Actor): Promise<void> {
     if (actor.creature) {

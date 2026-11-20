@@ -1,5 +1,6 @@
 /** Beds: choosing how long to sleep, sleeping, and saving (and loading) the game. */
 import Phaser from 'phaser';
+import { Needs } from '../../systems/Needs';
 import { PlayerStats } from '../../systems/PlayerStats';
 import { QuestLog } from '../../systems/Quests';
 import { SAVE_VERSION, SaveData, SaveGame } from '../../systems/SaveGame';
@@ -91,6 +92,7 @@ export function sleep(g: GameScene, bed: Bed, hours: number): void {
       QuestLog.clearFlag('raid-pending');
       QuestLog.setFlag('raid-morning');
     }
+    Needs.slept(hours, g.clock.elapsedHours);
     g.stats.heal(g.stats.maxHealth);
     g.stats.restoreStamina(g.stats.maxStamina);
     const save = makeSave(g, bed);

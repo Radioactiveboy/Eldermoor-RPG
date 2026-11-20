@@ -15,6 +15,7 @@ import { Farm } from '../systems/Farm';
 import { Inventory, itemDef, ItemId, ITEMS } from '../systems/Inventory';
 import { marketOpen } from '../systems/MarketHours';
 import { GridPoint } from '../systems/Pathfinding';
+import { Needs } from '../systems/Needs';
 import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
 import { AREA_NAMES, SaveData, SaveGame } from '../systems/SaveGame';
@@ -223,6 +224,7 @@ export class GameScene extends Phaser.Scene {
       Tavern.reset();
       Crafting.reset();
       Weather.reset();
+      Needs.reset();
       this.defeatedFoes.clear();
       this.visited.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
@@ -389,6 +391,7 @@ export class GameScene extends Phaser.Scene {
       this.stats.update(dt, wantsSprint && moved);
       this.clock.timeScale = !this.busy && this.keys.fastForward.isDown ? FAST_FORWARD : 1;
       this.clock.update(dt);
+      Needs.tick(this.clock.elapsedHours);
     }
     updateCreatures(this, dt);
     this.roadEvents?.update(dt);
@@ -447,6 +450,7 @@ export class GameScene extends Phaser.Scene {
     Inventory.takeOne(index);
     if (eat.health) this.stats.heal(eat.health);
     if (eat.stamina) this.stats.restoreStamina(eat.stamina);
+    Needs.ate(def);
     if (def.drink) GameAudio.gulp();
     else GameAudio.crunch();
     return true;

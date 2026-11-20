@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { Bounties, BountyDef, BountyId, NoticeState } from '../systems/Bounties';
 import { Inventory } from '../systems/Inventory';
-import { FACTIONS, LEVEL_NAMES, Reputation } from '../systems/Reputation';
+import { LEVEL_NAMES, levelRank, Reputation } from '../systems/Reputation';
+import { itemScale } from '../art/sizes';
 import { THEME, titleStyle } from '../ui/Widgets';
 
 export interface BountyBoardSceneData {
@@ -40,7 +41,8 @@ function splitNotice(def: BountyDef): { heading: string; body: string } {
  * systems/Bounties.ts): a plank board under a little hood, with today's
  * notices pinned to it on scraps of parchment. Click or tap one (or use the
  * arrow keys or 1-4) to pick it out; the strip along the bottom reads it in
- * full, with the button to take it down or to be paid for it. Taken notices
+ * full, with the button to take it down or to be paid for it (Enter; Esc
+ * steps away). Along the foot: the militia's opinion of the hero, and the purse. Taken notices
  * show how far along the hunt is; one paid for today wears the reeve's stamp.
  */
 export class BountyBoardScene extends Phaser.Scene {
@@ -297,14 +299,40 @@ export class BountyBoardScene extends Phaser.Scene {
     return button;
   }
 
-  /** The militia's opinion of the hero and the purse, under the strip, and how to leave. */
+  /**
+   * Two small carved plaques along the foot of the board: how the militia
+   * regard the hero (their standing, see systems/Reputation.ts, with a row of
+   * pips from Distrusted to Honoured), and the hero's purse.
+   */
   private buildFooter(): void {
-    const y = BOARD_H / 2 - 42;
+    const y = BOARD_H / 2 - 50;
     const level = Reputation.level('militia');
-    const style = { fontFamily: SERIF, fontSize: '14px', color: THEME.text, stroke: '#1a1008', strokeThickness: 3 };
-    const left = this.add.text(-BOARD_W / 2 + 40, y, `${FACTIONS.militia.name}: ${LEVEL_NAMES[level]}    ·    Purse: ${Inventory.coins} coins`, style).setOrigin(0, 0.5);
-    const right = this.add.text(BOARD_W / 2 - 40, y, '←  →  choose    Enter  take or claim    Esc  step away', { ...style, color: THEME.dimText }).setOrigin(1, 0.5);
-    this.content.add([left, right]);
+    const plaque = (x: number, w: number) => {
+      const g = this.add.graphics();
+      g.fillStyle(0x000000, 0.35).fillRoundedRect(x + 3, y - 22 + 4, w, 44, 6);
+      g.fillStyle(0x3a2616).fillRoundedRect(x, y - 22, w, 44, 6);
+      g.lineStyle(2, THEME.gold, 0.7).strokeRoundedRect(x, y - 22, w, 44, 6);
+      this.content.add(g);
+    };
+    // Standing: "The militia think you" / the level, and pips filled up to it.
+    const left = -BOARD_W / 2 + 40;
+    plaque(left, 420);
+    const label = this.add.text(left + 16, y - 11, 'Your standing with the militia', { fontFamily: SERIF, fontSize: '12px', fontStyle: 'italic', color: THEME.dimText }).setOrigin(0, 0.5);
+    const name = this.add.text(left + 16, y + 9, LEVEL_NAMES[level], { fontFamily: THEME.font, fontSize: '17px', fontStyle: 'bold', color: THEME.goldText }).setOrigin(0, 0.5);
+    const pips = this.add.graphics();
+    const rank = levelRank(level);
+    for (let i = 0; i < 5; i++) {
+      const px = left + 420 - 22 - (4 - i) * 22;
+      pips.fillStyle(i <= rank ? THEME.gold : 0x1a1008).fillCircle(px, y, 7);
+      pips.lineStyle(1.5, THEME.gold, 0.8).strokeCircle(px, y, 7);
+    }
+    this.content.add([label, name, pips]);
+    // The purse.
+    const right = BOARD_W / 2 - 40 - 170;
+    plaque(right, 170);
+    const coin = this.add.image(right + 28, y, 'item-coin').setScale(itemScale(1.8));
+    const purse = this.add.text(right + 52, y, `${Inventory.coins} coins`, { fontFamily: THEME.font, fontSize: '17px', fontStyle: 'bold', color: THEME.goldText }).setOrigin(0, 0.5);
+    this.content.add([coin, purse]);
   }
 
   // ------------------------------------------------------------ choosing

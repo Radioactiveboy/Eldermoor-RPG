@@ -60,6 +60,10 @@ async function checkArea(browser, base, area) {
     await page.waitForFunction(() => window.game?.scene.isActive('MainMenu'), null, { timeout: LOAD_TIMEOUT });
     await page.waitForFunction(() => window.game.scene.getScene('MainMenu').input.enabled, null, { timeout: LOAD_TIMEOUT });
     await page.keyboard.press('Enter');
+    // A new game first asks whether the hero needs to eat and rest: answer "no" (2).
+    await page.waitForFunction(() => window.game.scene.isActive('Confirm'), null, { timeout: LOAD_TIMEOUT });
+    await page.waitForTimeout(250);
+    await page.keyboard.press('2');
     await page.waitForFunction(
       (want) => {
         const game = window.game.scene.getScene('Game');
@@ -82,6 +86,54 @@ async function checkArea(browser, base, area) {
   return { area, errors, warnings, seconds: ((Date.now() - started) / 1000).toFixed(1) };
 }
 
+/**
+ * The ?debug panel: it opens, the new-game switches take, and its buttons work on the game going on
+ * (a teleport, a flag, coins). Skipped with SMOKE_DEBUG=0.
+ */
+async function checkDebugPanel(browser, base) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  const warnings = [];
+  page.on('pageerror', (e) => errors.push(e.stack || String(e)));
+  page.on('console', (m) => m.type() === 'error' && warnings.push(m.text()));
+  const started = Date.now();
+  try {
+    await page.goto(`${base}/?smoke&debug`);
+    await page.waitForSelector('#eldermoor-debug', { timeout: LOAD_TIMEOUT });
+    await page.waitForFunction(() => window.game?.scene.isActive('MainMenu') && window.game.scene.getScene('MainMenu').input.enabled, null, { timeout: LOAD_TIMEOUT });
+    // Pick the switches on the title screen, then begin: the game starts where they say.
+    await page.selectOption('#dbg-area', 'world');
+    await page.fill('#dbg-hour', '21');
+    await page.click('#eldermoor-debug button:text("Start a new game with these")');
+    if (!(await page.evaluate(() => location.search.includes('area=world') && location.search.includes('hour=21')))) throw new Error('switches not written to the address');
+    await page.keyboard.press('Enter');
+    // A new game first asks whether the hero needs to eat and rest: answer "no" (2).
+    await page.waitForFunction(() => window.game.scene.isActive('Confirm'), null, { timeout: LOAD_TIMEOUT });
+    await page.waitForTimeout(250);
+    await page.keyboard.press('2');
+    await page.waitForFunction(() => window.game.scene.getScene('Game')?.area === 'world' && !!window.game.scene.getScene('Game').player, null, { timeout: LOAD_TIMEOUT });
+    const hour = await page.evaluate(() => window.game.scene.getScene('Game').clock.hour);
+    if (Math.floor(hour) !== 21) throw new Error(`started at hour ${hour}, not 21`);
+    // Teleport, a flag, coins.
+    await page.selectOption('#eldermoor-debug .row:has(label:text("Teleport")) select', 'market');
+    await page.click('#eldermoor-debug .row:has(label:text("Teleport")) button');
+    await page.waitForFunction(() => window.game.scene.getScene('Game').area === 'market' && !!window.game.scene.getScene('Game').player, null, { timeout: LOAD_TIMEOUT });
+    await page.fill('#eldermoor-debug .row:has(label:text("Flag")) input', 'smoke-flag');
+    await page.click('#eldermoor-debug .row:has(label:text("Flag")) button:text("Set")');
+    await page.waitForFunction(() => document.querySelector('#eldermoor-debug .flags')?.textContent.includes('smoke-flag'), null, { timeout: 5000 });
+    const coins = () => page.evaluate(() => Number(/(\d+)c\b/.exec(document.querySelector('#eldermoor-debug .status').textContent)?.[1]));
+    const before = await coins();
+    await page.click('#eldermoor-debug button:text("+100")');
+    await page.waitForFunction((was) => document.querySelector('#eldermoor-debug .status').textContent.includes(`${was + 100}c`), before, { timeout: 5000 });
+    await page.waitForTimeout(SETTLE_MS);
+  } catch (e) {
+    errors.push(`debug panel: ${e.message.split('\n')[0]}`);
+  }
+  await context.close();
+  return { area: 'debug panel', errors, warnings, seconds: ((Date.now() - started) / 1000).toFixed(1) };
+}
+
 const server = await serve();
 const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -98,9 +150,16 @@ await Promise.all(
     }
   }),
 );
+if (process.env.SMOKE_DEBUG !== '0') {
+  const r = await checkDebugPanel(browser, base);
+  results.push(r);
+  console.log(`${r.errors.length ? 'FAIL' : 'ok  '} ${r.area.padEnd(12)} ${r.seconds}s`);
+  for (const e of r.errors) console.log(`       error: ${e}`);
+  for (const w of r.warnings) console.log(`       warning: ${w}`);
+}
 await browser.close();
 server.close();
 
 const failed = results.filter((r) => r.errors.length);
-console.log(`\n${results.length - failed.length} of ${results.length} areas loaded without errors.`);
+console.log(`\n${results.length - failed.length} of ${results.length} checks passed without errors.`);
 process.exit(failed.length ? 1 : 0);

@@ -30,7 +30,7 @@ import type { IsoMap } from './IsoMap';
  * that one happen a few seconds after arriving on the plains.
  */
 export type RoadEventKind = 'footpads' | 'tinker' | 'goat' | 'courier' | 'wolves';
-const KINDS: RoadEventKind[] = ['footpads', 'tinker', 'goat', 'courier', 'wolves'];
+export const KINDS: RoadEventKind[] = ['footpads', 'tinker', 'goat', 'courier', 'wolves'];
 
 /** What the game lends the plains' events: people, beasts, conversations and fights. */
 export interface RoadHost {
