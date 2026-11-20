@@ -328,11 +328,12 @@ export class BountyBoardScene extends Phaser.Scene {
     }
     this.content.add([label, name, pips]);
     // The purse.
-    const right = BOARD_W / 2 - 40 - 170;
-    plaque(right, 170);
-    const coin = this.add.image(right + 28, y, 'item-coin').setScale(itemScale(1.8));
-    const purse = this.add.text(right + 52, y, `${Inventory.coins} coins`, { fontFamily: THEME.font, fontSize: '17px', fontStyle: 'bold', color: THEME.goldText }).setOrigin(0, 0.5);
-    this.content.add([coin, purse]);
+    const right = BOARD_W / 2 - 40 - 200;
+    plaque(right, 200);
+    const purseLabel = this.add.text(right + 16, y - 11, 'Coins in your purse', { fontFamily: SERIF, fontSize: '12px', fontStyle: 'italic', color: THEME.dimText }).setOrigin(0, 0.5);
+    const coin = this.add.image(right + 26, y + 9, 'item-coin').setScale(itemScale(1.5));
+    const purse = this.add.text(right + 44, y + 9, `${Inventory.coins}`, { fontFamily: THEME.font, fontSize: '17px', fontStyle: 'bold', color: THEME.goldText }).setOrigin(0, 0.5);
+    this.content.add([purseLabel, coin, purse]);
   }
 
   // ------------------------------------------------------------ choosing
