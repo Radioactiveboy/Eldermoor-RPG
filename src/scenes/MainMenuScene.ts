@@ -8,6 +8,7 @@ import { SaveData, SaveGame } from '../systems/SaveGame';
 import type { GameSceneData } from './GameScene';
 import { bodyStyle, makeButton, THEME, titleStyle } from '../ui/Widgets';
 import { openSettings } from './SettingsScene';
+import { ArtLoader } from '../art';
 
 /**
  * Title screen. The real world map drifts slowly behind a darkened veil, with
@@ -21,6 +22,8 @@ export class MainMenuScene extends Phaser.Scene {
   /** The main camera drifts over the map; this one stays still and draws the menu on top. */
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private leaving = false;
+  /** Says what art is still being drawn, after New Journey or Continue, until it's ready. */
+  private waitingFor?: Phaser.GameObjects.Text;
 
   constructor() {
     super('MainMenu');
@@ -28,6 +31,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     this.leaving = false;
+    this.waitingFor = undefined;
     // The drifting map is drawn at the screen's resolution; the menu on top in interface pixels (see ui/Display).
     Display.worldCameras.add(this.cameras.main);
     Display.fitCameras(this, [this.cameras.main]);
@@ -52,7 +56,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   update(): void {
-    this.soundHint.setVisible(!GameAudio.unlocked);
+    this.soundHint.setVisible(!GameAudio.unlocked && !this.waitingFor);
   }
 
   private buildBackdrop(): void {
@@ -156,6 +160,27 @@ export class MainMenuScene extends Phaser.Scene {
   private startGame(save?: SaveData): void {
     if (this.leaving || !this.input.enabled) return;
     this.leaving = true;
+    if (!ArtLoader.finished) {
+      // The rest of the art is still being drawn (see BootScene). Say so, and once that's on screen
+      // (a frame later), draw the rest in one go.
+      this.waitingFor = this.add.text(0, this.soundHint.y, 'Drawing the rest of the world…', bodyStyle(16, THEME.dimText)).setOrigin(0.5);
+      this.ui.add(this.waitingFor);
+      this.cameras.main.ignore(this.waitingFor);
+      Display.sharpenText([this.waitingFor]);
+      let frames = 0;
+      const wait = () => {
+        if (++frames < 2) return;
+        this.events.off(Phaser.Scenes.Events.UPDATE, wait);
+        ArtLoader.finish(this);
+        this.leave(save);
+      };
+      this.events.on(Phaser.Scenes.Events.UPDATE, wait);
+      return;
+    }
+    this.leave(save);
+  }
+
+  private leave(save?: SaveData): void {
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.uiCam.fadeOut(700, 0, 0, 0);
     this.uiCam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {

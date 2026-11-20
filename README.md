@@ -190,7 +190,8 @@ src/
   settings/Settings.ts    Volume and display settings, saved in the browser
   ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
-  scenes/BootScene.ts     Generates the art, repaints the hero when gear changes, then opens the main menu
+  scenes/BootScene.ts     Draws the art behind a loading bar (the title screen's first, the rest while it's up),
+                          repaints the hero when gear changes, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
   scenes/SettingsScene.ts Volume sliders, resolution, interface size and fullscreen, opened from either menu
@@ -227,6 +228,18 @@ src/
   the ground is sprinkled with flowers, grass tufts and pebbles. To use
   hand-drawn art instead, load it in `BootScene` under the same texture keys
   (`tile-grass`, `prop-tree`, `player`, ...).
+- **Boot draws the art in steps** (`ART_STEPS` in `art/index.ts`). The steps marked `title` (the land,
+  trees, the hero, the cottage, the farm, Adowvale, the cave, the hen farm, the river: what the title
+  screen's drifting map shows) are drawn first behind a loading bar; the title screen then shows, and
+  the rest is drawn a step at a time while it's up. Pressing Begin/Continue before that's done shows
+  "Drawing the rest of the world…" and finishes it first, and any other scene that starts also finishes
+  it first, so nothing past the title screen ever sees missing art. A new step goes near the end (each
+  step may use art from the steps above it); mark it `title` only if the title screen's map shows it.
+- **Measuring boot:** the game sets performance marks you can read in the browser console with
+  `performance.getEntriesByName('eldermoor:menu')` (also `eldermoor:boot`, `eldermoor:title-art`,
+  `eldermoor:art` when all the art is drawn, and `eldermoor:area` when the first area is up).
+  Headless Chromium logs "GPU stall due to ReadPixels" for any WebGL page (it reads each frame back
+  for its software compositor), so that warning in automated runs isn't from the game.
 - **Music is code, not files.** `audio/Audio.ts` defines each track as a tempo,
   a chord progression and an arpeggio pattern, played by simple synth voices
   (harp pluck, pad, drone, flute, and optionally a frame drum and tambourine).
