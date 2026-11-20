@@ -391,6 +391,17 @@ export const ITEMS = {
     stack: 5,
     value: 10,
   },
+  // Hetty's doll, found in the ruins of the cottage after the raid (see scenes/game/speckle.ts).
+  'rag-doll': {
+    name: 'Moppet',
+    description:
+      "Hetty's rag doll, in a calico dress with a patch on it, smelling of smoke. One eye is old black stitches; the other is a new " +
+      'button, sewn on tight. Mother finished it.',
+    icon: 'item-rag-doll',
+    category: 'Material',
+    quest: true,
+    stack: 1,
+  },
   // Growing your own, on the plot Farmer Iran lends (see systems/Farm.ts): seeds from Hilde, and Iran's old tools.
   'carrot-seed': {
     name: 'Carrot Seed',

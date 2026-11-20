@@ -44,6 +44,12 @@ export function enteredTavern(g: GameScene): void {
 
 /** Down the trapdoor into the cellar: Godric's job moves on. */
 export function enteredCellar(g: GameScene): void {
+  if (QuestLog.has('cellar-rats') && !QuestLog.isDone('cellar-rats', 'cellar')) {
+    QuestLog.writeDiary(
+      "Went down through the trapdoor into the Tankard's cellar, with a candle and a stout heart. Kegs, sacks, cobwebs, and the " +
+        'scratch and squeak of something big in the dark between the barrels.',
+    );
+  }
   QuestLog.complete('cellar-rats', 'cellar');
   checkCellarClear(g);
   if (g.visited.has('cellar')) return;

@@ -167,6 +167,10 @@ export function enteredAfterRaid(g: GameScene): void {
     QuestLog.complete('the-raid', 'outside');
     if (!QuestLog.hasFlag('saw-ruined-yard')) {
       QuestLog.setFlag('saw-ruined-yard');
+      QuestLog.writeDiary(
+        "Went out into the yard. The garden is trampled flat, the fences are down, Iran's coop is burnt to sticks and there are feathers " +
+          'everywhere. Smoke is still rising from our thatch. No sign of Mother anywhere. But the hut up the hill is still standing.',
+      );
       g.time.delayedCall(900, () => g.onHint?.('The farm... all of it. The garden trampled flat, the fences down, and smoke still rising from the thatch.'));
       g.time.delayedCall(6000, () => g.onHint?.("No sign of her. No travellers on the road, either. Iran's hut is still standing. Maybe he saw something."));
     }
