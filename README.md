@@ -60,7 +60,9 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   pick a reply with the mouse, the number keys, or up/down then Enter
 - **J** or the **book** button: open the journal (arrow keys or click to turn pages)
 - **I** or the **satchel** button: the satchel (inventory). **C**: equipment.
-  Tab switches between them; select an item to eat, wear or take it off
+  Tab switches between them; select an item to eat, wear or take it off. Tabs over the satchel (All, Food,
+  Gear, Materials, Quest) pick out one kind of thing and fade the rest; **Sort by** Type, Value or Name tidies it.
+  The footer shows how many of the 20 slots are used
 - **Trading at a stall**: talk to the stallholder and ask to see their goods. Drag
   things from the stall to your satchel to buy them, or from your satchel to the stall
   to sell them; when there's more than one, a box asks how many (slider, - / +, or the
@@ -83,6 +85,10 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   in the pause menu once you've slept. **Load from File** on the title screen carries on from a downloaded save
   (it's the same JSON the game keeps in browser storage)
 - **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, download save, back to main menu)
+- **Hunger and rest** (off unless you choose them: asked when a new game starts, and **Settings → Hunger & rest**
+  any time): two thin bars under health and stamina. Hunger and tiredness grow with the hours (treks and fast-forward
+  count); meals fill you up and sleep restores rest. Hungry, health stops mending and stamina refills at half speed;
+  weary, stamina only refills to 60%
 - **Settings → Resolution**: native, 75% or 50% of the screen's own resolution (lower is faster on slow machines). **Interface size**: Auto (bigger on large monitors, e.g. 150% at 2560×1440) or 75% to 200%
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
@@ -228,6 +234,7 @@ src/
   art/weather.ts          Rain sheets, splashes, puddles, mist, crows, lamp reflections, firelight on walls
   systems/Pathfinding.ts  8-direction A* on the tile grid
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
+  systems/Needs.ts        Optional hunger and rest: how fast they fall, what meals and sleep restore, the penalties
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
   systems/Shops.ts        The market traders (and Godric at the Tankard): stock, what they buy, prices
   systems/Tavern.ts       The Crooked Tankard's menu and prices, and the room the hero has let (until when)
@@ -308,7 +315,7 @@ src/
                           times the lightning and thunder
   world/landmarks.ts      Spots in the maps the rest of the game reads (the bar, the cellar rats, the moonpetal, the
                           monastery gate), kept out of the map files so those can download on their own
-  settings/Settings.ts    Volume and display settings, saved in the browser
+  settings/Settings.ts    Volume, display and hunger-and-rest settings, saved in the browser
   ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
   vendor/phaser.js        A slimmer Phaser (what `import Phaser from 'phaser'` gets), built from Phaser's source
@@ -317,7 +324,7 @@ src/
                           repaints the hero when gear changes, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
-  scenes/SettingsScene.ts Volume sliders, resolution, interface size and fullscreen, opened from either menu
+  scenes/SettingsScene.ts Volume sliders, resolution, interface size, fullscreen and hunger & rest, opened from either menu
   scenes/GameScene.ts     The world scene: builds the area, runs the frame, camera, talking, menus. The rest of what
                           happens in the world is in scenes/game/, as functions that take the scene:
   scenes/game/areas.ts    The area registry: each area id, how its map is built (most with `lazy(...)`, fetched on
@@ -342,7 +349,7 @@ src/
   scenes/game/input.ts    Keys, click-to-walk, pathfinding to a spot, the hover tile
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
   scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
-  scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
+  scenes/InventoryScene.ts Satchel and equipment tabs: item grid with filter tabs and sorting, worn gear, details, eat/wear
   scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
   scenes/StationScene.ts  Brewing bench and hearth window: drag ingredients in, recipe book, progress bar, result popup
   scenes/FishingScene.ts  The fishing window: the float on the water, striking a bite, the reel bar

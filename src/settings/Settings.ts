@@ -11,6 +11,8 @@ export interface SettingsData {
   renderScale: number;
   /** How big the menus, HUD and text are drawn; 0 picks a size to suit the screen. */
   uiScale: number;
+  /** Hunger and rest: the hero needs to eat and sleep (see systems/Needs.ts). Off unless chosen. */
+  needs: boolean;
 }
 
 const STORAGE_KEY = 'eldermoor.settings';
@@ -23,6 +25,7 @@ const DEFAULTS: SettingsData = {
   showMinimap: true,
   renderScale: 0,
   uiScale: 0,
+  needs: false,
 };
 
 type Listener = (s: SettingsData) => void;

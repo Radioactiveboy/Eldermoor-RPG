@@ -4,6 +4,7 @@ import { itemScale } from '../art/sizes';
 import { GameAudio } from '../audio/Audio';
 import { Experience, ExperienceEvent } from '../systems/Experience';
 import { Inventory, InventoryEvent, itemDef } from '../systems/Inventory';
+import { Needs } from '../systems/Needs';
 import { QuestLog, QuestEvent } from '../systems/Quests';
 import { SaveGame } from '../systems/SaveGame';
 import { Ambient } from '../systems/TimeOfDay';
@@ -31,6 +32,11 @@ const MARGIN = 14;
 /** Below this screen width the HUD switches to a compact layout. */
 const NARROW = 760;
 const PAUSE_SIZE = 44;
+/** What the hero thinks when hunger or rest first runs low. */
+const NEED_THOUGHTS = {
+  hunger: "My stomach is growling. I'll tire quicker and heal slower until I've had something to eat.",
+  rest: "I can barely keep my eyes open. I won't have my full strength back until I've slept.",
+};
 
 /**
  * HUD drawn on top of the game in its own scene so it ignores camera zoom/scroll.
@@ -103,6 +109,10 @@ export class UIScene extends Phaser.Scene {
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
     const offXp = Experience.onChange((e) => this.onExperienceEvent(e));
+    // Hunger or rest running low: the hero says so (only while they're switched on).
+    const offNeeds = Needs.onChange((e) => {
+      if (e.type === 'low' && !this.world.inCombat) this.toasts.thought(NEED_THOUGHTS[e.need]);
+    });
     const offSave = SaveGame.onSave((save, stored) => {
       if (stored) this.toasts.quest('Game saved', SaveGame.describe(save));
       // Storage refused it: say so plainly once the hero has woken, and offer the save as a file.
@@ -118,6 +128,7 @@ export class UIScene extends Phaser.Scene {
       off();
       offItems();
       offXp();
+      offNeeds();
       offSave();
       this.world.onHint = undefined;
       this.world.onSign = undefined;
@@ -214,6 +225,7 @@ export class UIScene extends Phaser.Scene {
     const toScreen = (x: number, y: number) => ({ x: (x - cam.worldView.x) * (cam.zoom / Display.zoom), y: (y - cam.worldView.y) * (cam.zoom / Display.zoom) });
     const lantern = indoor && !underground ? null : toScreen(sprite.x, sprite.y - 20);
     this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)), flash);
+    if (this.bars.syncNeeds()) this.layout();
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock, sky);
     this.minimap!.update(sprite, cam.worldView, outdoor.color);

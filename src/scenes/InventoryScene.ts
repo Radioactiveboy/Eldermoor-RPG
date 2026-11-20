@@ -4,7 +4,7 @@ import { itemScale } from '../art/sizes';
 import { GameAudio } from '../audio/Audio';
 import { HERO_NAME } from '../config';
 import { Experience } from '../systems/Experience';
-import { BAG_SIZE, EQUIP_SLOTS, EquipSlot, Inventory, ItemDef, itemDef, itemEffects, ItemId } from '../systems/Inventory';
+import { BAG_SIZE, EQUIP_SLOTS, EquipSlot, Inventory, ItemDef, itemDef, itemEffects, ItemId, SatchelGroup, satchelGroup, SortKey } from '../systems/Inventory';
 import { bodyStyle, makeButton, makePanel, THEME, titleStyle } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
 
@@ -16,6 +16,10 @@ const COLS = 5;
 const GRID_W = COLS * SLOT + (COLS - 1) * GAP;
 const GRID_H = (BAG_SIZE / COLS) * SLOT + (BAG_SIZE / COLS - 1) * GAP;
 const PAD = 28;
+/** The row of filter tabs over the satchel's grid, and the row of sort buttons under its footer. */
+const FILTER_ROW = 38;
+const SORT_ROW = 38;
+const CHIP_H = 28;
 const DETAILS_W = 250;
 /** Below this screen width the details go under the grid instead of beside it. */
 const NARROW = 660;
@@ -35,11 +39,30 @@ interface Drag {
 /** How far (in screen pixels) a press has to move before it's a drag rather than a tap. */
 const DRAG_START = 8;
 
+type Filter = SatchelGroup | 'all';
+const FILTERS: Array<{ id: Filter; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'food', label: 'Food' },
+  { id: 'gear', label: 'Gear' },
+  { id: 'materials', label: 'Materials' },
+  { id: 'quest', label: 'Quest' },
+];
+const SORTS: Array<{ id: SortKey; label: string }> = [
+  { id: 'type', label: 'Type' },
+  { id: 'value', label: 'Value' },
+  { id: 'name', label: 'Name' },
+];
+/** The filter and sort last chosen, kept while the game is open. */
+let shownFilter: Filter = 'all';
+let lastSort: SortKey = 'type';
+
 /**
  * The satchel (everything carried, in a grid of slots) and the equipment
  * screen (what's worn, around a portrait of the hero), as two tabs of one
  * window. Select an item to read about it and eat, equip or take it off;
- * drag items around the satchel to rearrange them, or Sort to tidy up.
+ * drag items around the satchel to rearrange them, or sort them by type,
+ * value or name. Tabs over the satchel pick out food, gear, materials or
+ * quest things (the rest fade back, staying where they are).
  * Opens with I / C or the HUD's satchel button.
  */
 export class InventoryScene extends Phaser.Scene {
@@ -137,7 +160,7 @@ export class InventoryScene extends Phaser.Scene {
     this.bagIcons = [];
     this.dropMarker = undefined;
     this.panelW = this.narrow ? GRID_W + PAD * 2 : GRID_W + DETAILS_W + PAD * 3;
-    this.panelH = this.narrow ? 690 : 420;
+    this.panelH = (this.narrow ? 690 : 420) + FILTER_ROW + SORT_ROW;
     const top = -this.panelH / 2;
     const left = -this.panelW / 2;
 
@@ -158,9 +181,10 @@ export class InventoryScene extends Phaser.Scene {
     const areaX = left + PAD;
     const areaY = top + 84;
     if (this.tab === 'satchel') this.buildSatchel(areaX, areaY);
-    else this.buildEquipment(areaX, areaY);
+    // The equipment sits in the middle of the room the satchel's tabs and sort buttons take.
+    else this.buildEquipment(areaX, areaY + (FILTER_ROW + SORT_ROW) / 2);
     const detailsX = this.narrow ? areaX : areaX + GRID_W + PAD;
-    const detailsY = this.narrow ? areaY + GRID_H + 40 : areaY;
+    const detailsY = this.narrow ? areaY + FILTER_ROW + GRID_H + SORT_ROW + 40 : areaY;
     const detailsW = this.narrow ? GRID_W : DETAILS_W;
     this.buildDetails(detailsX, detailsY, detailsW, this.panelH / 2 - PAD - detailsY);
 
@@ -215,6 +239,7 @@ export class InventoryScene extends Phaser.Scene {
     selected: boolean,
     onClick: () => void,
     onPress?: (p: Phaser.Input.Pointer) => void,
+    faded = false,
   ): Phaser.GameObjects.Image | undefined {
     const g = this.add.graphics();
     const draw = (hover: boolean) => {
@@ -228,12 +253,13 @@ export class InventoryScene extends Phaser.Scene {
     this.content.add(g);
     let icon: Phaser.GameObjects.Image | undefined;
     if (id) {
-      icon = this.add.image(x + SLOT / 2, y + SLOT / 2, itemDef(id).icon).setScale(itemScale(2.8));
+      icon = this.add.image(x + SLOT / 2, y + SLOT / 2, itemDef(id).icon).setScale(itemScale(2.8)).setAlpha(faded ? 0.22 : 1);
       this.content.add(icon);
       if (count > 1) {
         const n = this.add
           .text(x + SLOT - 5, y + SLOT - 3, `${count}`, { fontFamily: BODY_FONT, fontSize: '14px', color: '#fff6e0', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 })
-          .setOrigin(1, 1);
+          .setOrigin(1, 1)
+          .setAlpha(faded ? 0.3 : 1);
         this.content.add(n);
       }
     }
@@ -251,53 +277,87 @@ export class InventoryScene extends Phaser.Scene {
     return icon;
   }
 
-  private buildSatchel(x0: number, y0: number): void {
+  private buildSatchel(x0: number, top: number): void {
+    this.buildFilters(x0, top);
+    const y0 = top + FILTER_ROW;
     Inventory.bag.forEach((stack, i) => {
       const x = x0 + (i % COLS) * (SLOT + GAP);
       const y = y0 + Math.floor(i / COLS) * (SLOT + GAP);
       const selected = this.selection?.kind === 'bag' && this.selection.index === i;
       const press = stack ? (p: Phaser.Input.Pointer) => (this.drag = { index: i, startX: Display.point(p).x, startY: Display.point(p).y }) : undefined;
       this.bagSlots[i] = { x, y };
-      this.bagIcons[i] = this.makeSlot(x, y, stack?.id, stack?.count ?? 0, selected, () => this.select(stack ? { kind: 'bag', index: i } : undefined), press);
+      // Outside the chosen tab, things fade back but stay put (and can still be moved).
+      const faded = !!stack && shownFilter !== 'all' && satchelGroup(itemDef(stack.id)) !== shownFilter;
+      this.bagIcons[i] = this.makeSlot(x, y, stack?.id, stack?.count ?? 0, selected, () => this.select(stack ? { kind: 'bag', index: i } : undefined), press, faded);
     });
     this.dropMarker = this.add.graphics();
     this.content.add(this.dropMarker);
+    // How full the satchel is, and the purse, under the grid.
     const used = Inventory.bag.filter((s) => s !== null).length;
-    const footer = this.add.text(x0, y0 + GRID_H + 10, `${used} / ${BAG_SIZE} slots`, bodyStyle(14, THEME.dimText));
-    // A small button to tidy the satchel, between the count and the purse.
-    const sortW = 64;
-    const sortH = 26;
-    const sortX = x0 + GRID_W / 2 + 4;
-    const sortY = footer.y + footer.height / 2;
-    const sortBg = this.add.graphics();
-    const drawSort = (hover: boolean) => {
-      sortBg.clear();
-      sortBg.fillStyle(hover ? THEME.panelLight : THEME.panel, 0.92);
-      sortBg.fillRoundedRect(sortX - sortW / 2, sortY - sortH / 2, sortW, sortH, 7);
-      sortBg.lineStyle(1, THEME.gold, hover ? 1 : 0.5);
-      sortBg.strokeRoundedRect(sortX - sortW / 2, sortY - sortH / 2, sortW, sortH, 7);
-    };
-    drawSort(false);
-    const sortLabel = this.add.text(sortX, sortY, 'Sort', bodyStyle(14, THEME.text)).setOrigin(0.5);
-    const sortHit = this.add.zone(sortX, sortY, sortW, sortH).setInteractive({ useHandCursor: true });
-    sortHit.on('pointerover', () => {
-      drawSort(true);
-      sortLabel.setColor(THEME.goldText);
-    });
-    sortHit.on('pointerout', () => {
-      drawSort(false);
-      sortLabel.setColor(THEME.text);
-    });
-    sortHit.on('pointerup', () => {
-      GameAudio.rustle();
-      this.selection = undefined;
-      Inventory.sort();
-    });
-    this.content.add([sortBg, sortLabel, sortHit]);
-    // The purse, on the right.
+    const footer = this.add.text(x0, y0 + GRID_H + 10, `${used} / ${BAG_SIZE} slots${used >= BAG_SIZE ? ' (full)' : ''}`, bodyStyle(14, used >= BAG_SIZE ? '#e0806a' : THEME.dimText));
     const coins = this.add.text(x0 + GRID_W, y0 + GRID_H + 10, `${Inventory.coins} coins`, bodyStyle(14, THEME.goldText)).setOrigin(1, 0);
     const coin = this.add.image(coins.x - coins.width - 12, coins.y + coins.height / 2, 'item-coin').setScale(itemScale(1.4));
     this.content.add([footer, coins, coin]);
+    // Sort: by type, value or name.
+    const sy = y0 + GRID_H + SORT_ROW + 4;
+    const label = this.add.text(x0, sy, 'Sort by', bodyStyle(14, THEME.dimText)).setOrigin(0, 0.5);
+    this.content.add(label);
+    const chipsX = x0 + label.width + 12;
+    this.chipRow(chipsX, sy, x0 + GRID_W - chipsX, SORTS, lastSort, (id) => {
+      GameAudio.rustle();
+      lastSort = id;
+      this.selection = undefined;
+      Inventory.sort(id);
+    });
+  }
+
+  /** The filter tabs over the satchel: All, Food, Gear, Materials, Quest. */
+  private buildFilters(x0: number, y0: number): void {
+    this.chipRow(x0, y0 + CHIP_H / 2, GRID_W, FILTERS, shownFilter, (id) => {
+      if (id === shownFilter) return;
+      GameAudio.pageTurn();
+      shownFilter = id;
+      this.build();
+    });
+  }
+
+  /** A row of small buttons across `width`, with the `active` one lit. */
+  private chipRow<T extends string>(x0: number, cy: number, width: number, chips: Array<{ id: T; label: string }>, active: T, onPick: (id: T) => void): void {
+    const gap = 6;
+    const labels = chips.map((c) => this.add.text(0, cy, c.label, bodyStyle(14, c.id === active ? THEME.goldText : THEME.text)).setOrigin(0.5));
+    const textW = labels.reduce((n, t) => n + t.width, 0);
+    const pad = Math.max(8, (width - textW - gap * (chips.length - 1)) / chips.length);
+    let x = x0;
+    chips.forEach((c, i) => {
+      const w = labels[i].width + pad;
+      const lit = c.id === active;
+      const g = this.add.graphics();
+      const draw = (hover: boolean) => {
+        g.clear();
+        g.fillStyle(lit ? THEME.panelLight : hover ? THEME.panelLight : THEME.panel, lit ? 1 : 0.92);
+        g.fillRoundedRect(x, cy - CHIP_H / 2, w, CHIP_H, 7);
+        g.lineStyle(lit ? 2 : 1, THEME.gold, lit ? 1 : hover ? 0.9 : 0.45);
+        g.strokeRoundedRect(x, cy - CHIP_H / 2, w, CHIP_H, 7);
+      };
+      const left = x;
+      draw(false);
+      labels[i].setX(left + w / 2);
+      const hit = this.add.zone(left + w / 2, cy, w, CHIP_H).setInteractive({ useHandCursor: true });
+      hit.on('pointerover', () => {
+        draw(true);
+        if (!lit) labels[i].setColor(THEME.goldText);
+      });
+      hit.on('pointerout', () => {
+        draw(false);
+        if (!lit) labels[i].setColor(THEME.text);
+      });
+      hit.on('pointerup', () => {
+        if (this.drag?.ghost) return;
+        onPick(c.id);
+      });
+      this.content.add([g, labels[i], hit]);
+      x += w + gap;
+    });
   }
 
   /** The hero in the middle, worn items in slots down either side, totals underneath. */
@@ -359,7 +419,7 @@ export class InventoryScene extends Phaser.Scene {
     const pad = 16;
     const icon = this.add.image(x + pad + 28, y + pad + 28, def.icon).setScale(itemScale(3.5));
     const name = this.add.text(x + pad + 66, y + pad + 6, def.name, { ...titleStyle(19), shadow: undefined, wordWrap: { width: w - pad * 2 - 66 } });
-    const kind = this.add.text(x + pad + 66, name.y + name.height + 2, def.category, bodyStyle(13, THEME.dimText));
+    const kind = this.add.text(x + pad + 66, name.y + name.height + 2, def.quest ? `${def.category}  ·  Quest` : def.category, bodyStyle(13, THEME.dimText));
     this.content.add([icon, name, kind]);
     let ty = y + pad + 66;
     const desc = this.add.text(x + pad, ty, def.description, {
