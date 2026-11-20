@@ -6,7 +6,11 @@ import type { DialogueScript } from './Dialogue';
  * traders open their stalls with the `shop:<id>` action (see scenes/game/dialogueActions.ts); the
  * militia stand about, keep an eye on things and grumble. Out of market hours
  * the traders start on 'closing' (packing up, walking home) or 'opening'
- * (walking back in the morning), and the militia on 'closed'.
+ * (walking back in the morning), and the militia on 'closed'. The traders
+ * also keep a daily round (systems/VillageDay.ts): met crossing the square
+ * they start on 'to-workshop' or 'to-tavern', at work in the bakery or the
+ * smithy on 'workshop' (once they've been met), and drinking in the Crooked
+ * Tankard on 'tavern', where they don't trade.
  */
 
 export const BAKER: DialogueScript = {
@@ -58,8 +62,31 @@ export const BAKER: DialogueScript = {
     closing: {
       speaker: 'baker',
       lines: [
-        "Oh, I'm all packed up, love. There's dough to set for the morning, and I'm up before the cock crows.",
+        "Oh, I'm off to my bed, love. Bakers' hours: I'm up before the cock crows.",
         "Come and find me at my stall tomorrow. I'll keep you a warm one.",
+      ],
+    },
+    'to-workshop': {
+      speaker: 'baker',
+      lines: [
+        "Can't stop, love, the ovens want me! There's always dough to set.",
+        "Come by the bakery if you're wanting something. The corner house, with the loaf on the sign.",
+      ],
+    },
+    'to-tavern': {
+      speaker: 'baker',
+      lines: ["Done for the day, and I've earned a cup of Godric's cider. Come and sit with us, if you like."],
+    },
+    workshop: {
+      speaker: 'baker',
+      lines: [`Come in, ${HERO_NAME}, come in, and mind the flour! I'm up to my elbows, but I can still sell you a loaf.`],
+      next: 'ask',
+    },
+    tavern: {
+      speaker: 'baker',
+      lines: [
+        "Off duty, love! Not a crumb to sell till the morning.",
+        "But sit down, sit down. Osric's been telling us about a horse that kicked him. Twice. Same horse.",
       ],
     },
     opening: {
@@ -118,6 +145,23 @@ export const SMITH: DialogueScript = {
       speaker: 'smith',
       lines: ["Hm. Closed. The forge is cold till morning, and so am I."],
     },
+    'to-workshop': {
+      speaker: 'smith',
+      lines: ["Hm. The anvil's waiting. You'll find me in the smithy, if you want me."],
+    },
+    'to-tavern': {
+      speaker: 'smith',
+      lines: ['Hm. Thirsty work, iron. Tankard.'],
+    },
+    workshop: {
+      speaker: 'smith',
+      lines: ['Hm. Mind the sparks.'],
+      next: 'ask',
+    },
+    tavern: {
+      speaker: 'smith',
+      lines: ["Hm. I'm drinking. Shop's shut.", "...Sit, if you're sitting. Don't talk about swords."],
+    },
     opening: {
       speaker: 'smith',
       lines: ['Hm. Not open yet. Let me get to my stall first.'],
@@ -173,10 +217,15 @@ export const TANNER: DialogueScript = {
     },
     closing: {
       speaker: 'tanner',
-      lines: [
-        "Done for the day. My hands stink of lye and I want my supper.",
-        'Find me at my stall in the morning, and bring pelts.',
-      ],
+      lines: ['Home to bed. Find me at my stall in the morning, and bring pelts.'],
+    },
+    'to-tavern': {
+      speaker: 'tanner',
+      lines: ["Done for the day. My hands stink of lye and I want my supper. Godric does a fair stew."],
+    },
+    tavern: {
+      speaker: 'tanner',
+      lines: ["No trading in here, I'm off duty. Godric would have my hide.", "...My hide. That's a tanner's joke, that is."],
     },
     opening: {
       speaker: 'tanner',

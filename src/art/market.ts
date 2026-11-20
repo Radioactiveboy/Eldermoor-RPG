@@ -1035,8 +1035,8 @@ export interface TownhouseStyle {
   ivy?: { face: 'front' | 'side'; at: number; hops?: boolean };
   /** A hanging sign over the door (an inn, a shop). */
   sign?: number;
-  /** Something painted on the sign: the Crooked Tankard's tilted tankard. */
-  emblem?: 'tankard';
+  /** Something painted on the sign: the Crooked Tankard's tilted tankard, the bakery's loaf, the smithy's anvil. */
+  emblem?: 'tankard' | 'loaf' | 'anvil';
   /** The Crooked Tankard: bow window, porch, leaning chimney and a big sign. */
   inn?: boolean;
 }
@@ -1048,6 +1048,23 @@ function signPaint(style: TownhouseStyle, u: number, v: number): number {
     if (tu > 0.28 && tu < 0.62 && v > 0.34 && v < 0.82) return tu < 0.36 ? 0x9a5a2a : 0x7a4420;
     if (tu > 0.26 && tu < 0.66 && v > 0.22 && v <= 0.34) return 0xfaf2e0;
     if (tu >= 0.62 && tu < 0.76 && v > 0.42 && v < 0.7 && !(tu < 0.7 && v > 0.48 && v < 0.64)) return 0x7a4420;
+  }
+  if (style.emblem === 'loaf') {
+    // A round cob loaf with three slashes across its crust.
+    const du = (u - 0.5) / 0.34;
+    const dv = (v - 0.58) / 0.26;
+    if (du * du + dv * dv < 1 && v < 0.84) {
+      if (Math.abs(((u - v * 0.5) * 9) % 1) < 0.18 && v < 0.66) return 0xf2d8a0;
+      return v < 0.5 ? 0xd89a4a : 0xb8702e;
+    }
+  }
+  if (style.emblem === 'anvil') {
+    // An anvil in silhouette: the face and horn, the waist, the foot.
+    const dark = 0x2a2a30;
+    if (v > 0.3 && v < 0.44 && u > 0.2 && u < 0.78) return v < 0.34 ? 0x6a6a74 : dark;
+    if (v > 0.3 && v < 0.38 && u >= 0.78 && u < 0.86 + (0.38 - v)) return dark;
+    if (v >= 0.44 && v < 0.62 && u > 0.38 && u < 0.62) return dark;
+    if (v >= 0.62 && v < 0.74 && u > 0.28 && u < 0.72) return dark;
   }
   return style.sign!;
 }
@@ -1312,9 +1329,11 @@ function townhouse(style: TownhouseStyle): IsoModel {
     // A bracket and a painted board hanging over the door.
     const sx = front ? 1.5 : S;
     const sy = front ? S : 1.5;
+    // A shop's sign, with something painted on it, is bigger, so it can be made out from across the square.
+    const big = style.emblem ? 1.5 : 1;
     if (front) {
-      m.box(sx + 0.2, sy, H - 30, 0.05, 0.5, 2, { top: P.iron, left: P.iron, right: P.iron });
-      m.quad({ x: sx + 0.2, y: sy + 0.15, z: H - 32 }, { x: 0, y: 0.35, z: 0 }, { x: 0, y: 0, z: -14 }, (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? P.barkDark : signPaint(style, u, v)));
+      m.box(sx + 0.2, sy, H - 30, 0.05, 0.15 + 0.35 * big, 2, { top: P.iron, left: P.iron, right: P.iron });
+      m.quad({ x: sx + 0.2, y: sy + 0.15, z: H - 32 }, { x: 0, y: 0.35 * big, z: 0 }, { x: 0, y: 0, z: -14 * big }, (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? P.barkDark : signPaint(style, u, v)));
     } else {
       m.box(sx, sy + 0.2, H - 30, 0.5, 0.05, 2, { top: P.iron, left: P.iron, right: P.iron });
       m.quad({ x: sx + 0.15, y: sy + 0.2, z: H - 32 }, { x: 0.35, y: 0, z: 0 }, { x: 0, y: 0, z: -14 }, (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? P.barkDark : signPaint(style, u, v)));
@@ -1342,8 +1361,9 @@ const FLOWERS_GOLD = [0xe6b54a, 0xf2d27a, 0xc8434a];
  * above; and shutters, window boxes or ivy here and there.
  */
 export const TOWNHOUSES: Record<string, TownhouseStyle> = {
-  'bld-house-cooper': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'front', ground: 'ashlar', flowers: FLOWERS_RED },
-  'bld-house-weaver': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'front', roofKind: 'slate', ground: 'rubble', upper: 'rubble', shutters: 0x3a5a8a, ivy: { face: 'side', at: 0.5 } },
+  // Hilde's bakery, on the corner, with a loaf on its sign; Osric's smithy, all stone against the forge's heat, with an anvil on his.
+  'bld-bakery': { roof: 0xa4583a, plaster: 0xe8dcc0, door: 'front', ground: 'ashlar', flowers: FLOWERS_RED, sign: 0xe8c88a, emblem: 'loaf' },
+  'bld-smithy': { roof: 0x5a5a6e, plaster: 0xdcd4c4, door: 'front', roofKind: 'slate', ground: 'rubble', upper: 'rubble', shutters: 0x3a5a8a, ivy: { face: 'side', at: 0.5 }, sign: 0xb8bcc8, emblem: 'anvil' },
   'bld-house-chandler': { roof: 0x7a6250, plaster: 0xf0ece0, door: 'front', roofKind: 'shingle', ground: 'brick', upper: 'studded', timber: BLACK_OAK, flowers: FLOWERS_BLUE },
   'bld-house-reeve': { roof: 0x8a5a34, plaster: 0xe6cf98, door: 'front', ground: 'rubble', upper: 'chevron', shutters: 0x8a3a30, ivy: { face: 'front', at: 0.92 } },
   'bld-house-miller': { roof: 0x5e6272, plaster: 0xd4dccc, door: 'front', roofKind: 'slate', ground: 'ashlar', timber: 0x5a3a24, flowers: FLOWERS_GOLD, shutters: 0x4e6a3a },

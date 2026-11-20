@@ -162,14 +162,20 @@ export function bakerModel(pose: Pose3D): Model {
   solids.push({ cx: 0, cy: 16.5 - b, cz: 0, rx: 4.3, ry: 3, rz: 3.5, material: bodice });
   solids.push({ cx: 0, cy: 21.5 - b, cz: 0.2, rx: 4.8, ry: 4.8, rz: 3.7, material: bodice });
 
-  // Sleeves pushed up to the elbow, floury forearms.
+  // Sleeves pushed up to the elbow, floury forearms; kneading, both hands forward, pushing into the dough.
+  const knead = pose.work;
   for (const side of [-1, 1]) {
     const swing = -s * side * 2;
     solids.push({ cx: side * 4.5, cy: 24.5 - b, cz: 0, rx: 2.2, ry: 2.1, rz: 2.2, material: dress });
-    const elbow: [number, number, number] = [side * 5.8, 20.3 - b, swing * 0.5];
+    const elbow: [number, number, number] = knead === undefined
+      ? [side * 5.8, 20.3 - b, swing * 0.5]
+      : [side * 5.6, 20.6 - b - knead * 0.6, 3 + knead * 0.8];
+    const hand: [number, number, number] = knead === undefined
+      ? [side * 6, 16.8 - b, 0.8 + swing]
+      : [side * 3.2, 17.6 - b - knead * 1.4, 7 + knead * 1.6];
     solids.push(...limb([side * 5, 24 - b, 0], elbow, 1.8, 1.6, dress));
-    solids.push(...limb(elbow, [side * 6, 16.8 - b, 0.8 + swing], 1.4, 1.3, (h) => (dusted(h) ? flour : skin)));
-    solids.push({ cx: side * 6, cy: 15.9 - b, cz: 1 + swing, rx: 1.6, ry: 1.7, rz: 1.6, material: skin });
+    solids.push(...limb(elbow, hand, 1.4, 1.3, (h) => (dusted(h) ? flour : skin)));
+    solids.push({ cx: hand[0], cy: hand[1] - 0.9, cz: hand[2] + 0.2, rx: 1.6, ry: 1.7, rz: 1.6, material: skin });
   }
 
   // Head: fair hair swept back from the face into a bun.
@@ -239,10 +245,40 @@ export function smithModel(pose: Pose3D): Model {
   for (const side of [-1, 1]) {
     const swing = -s * side * 2;
     solids.push({ cx: side * 6.2, cy: 25 - b, cz: 0, rx: 3, ry: 2.6, rz: 2.9, material: shirt });
-    const elbow: [number, number, number] = [side * 7.6, 20.2 - b, swing * 0.5];
+    let elbow: [number, number, number] = [side * 7.6, 20.2 - b, swing * 0.5];
+    let hand: [number, number, number] = [side * 7.8, 16.4 - b, 0.8 + swing];
+    if (pose.work !== undefined) {
+      const t = pose.work;
+      const mix = (a: number, c: number) => a + (c - a) * t;
+      if (side < 0) {
+        // The hammer arm: raised high behind the head, then brought down onto the anvil in front.
+        elbow = [-7.8, mix(27, 21.4) - b, mix(-0.5, 3.4)];
+        hand = [mix(-7, -5), mix(31, 17.4) - b, mix(2.5, 7.6)];
+      } else {
+        // The other hand holds the work steady on the anvil with the tongs.
+        elbow = [7.4, 20.6 - b, 2.6];
+        hand = [5.2, 17.8 - b, 6.8];
+      }
+    }
     solids.push(...limb([side * 6.8, 24.4 - b, 0], elbow, 2.4, 2.1, shirt));
-    solids.push(...limb(elbow, [side * 7.8, 16.4 - b, 0.8 + swing], 2, 1.8, skin));
-    solids.push({ cx: side * 7.8, cy: 15.2 - b, cz: 1 + swing, rx: 2, ry: 2.1, rz: 2, material: skin });
+    solids.push(...limb(elbow, hand, 2, 1.8, skin));
+    solids.push({ cx: hand[0], cy: hand[1] - 1.2, cz: hand[2] + 0.2, rx: 2, ry: 2.1, rz: 2, material: skin });
+  }
+  if (pose.work !== undefined) {
+    const t = pose.work;
+    const iron: Tones = [0x5a5a64, 0x34343c, 0x8a8a96];
+    const haft: Tones = [P.bark, P.barkDark, P.barkLight];
+    // The hammer: its haft from the fist, pointing up and back when raised and forward and down at the blow.
+    const hx = -7 + 2 * t;
+    const hy = 31 - 13.6 * t - b - 1.2;
+    const hz = 2.7 + 5.1 * t;
+    const dir: [number, number, number] = [0.4 * t, 3.6 - 6.4 * t, 1.2 + 2.4 * t];
+    const head: [number, number, number] = [hx + dir[0], hy + dir[1], hz + dir[2]];
+    solids.push(...limb([hx, hy, hz], head, 0.55, 0.55, haft));
+    solids.push({ cx: head[0], cy: head[1], cz: head[2], rx: 1.4, ry: 1.2, rz: 1.9, material: iron });
+    // The tongs, and the glowing bar they grip.
+    solids.push(...limb([5.2, 17 - b, 7.2], [2.6, 16.2 - b, 10.6], 0.45, 0.4, iron));
+    solids.push(...limb([2.6, 16.2 - b, 10.6], [-1.6, 16 - b, 11.4], 0.6, 0.6, [0xff8a3a, 0xd8452a, 0xffd25a]));
   }
 
   // Bald head over a thick neck, and a full black beard.

@@ -88,8 +88,9 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
   in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=plains` on Adowvale Plains,
-  `?area=monastery` outside Saint Elda's monastery, `?area=tavern` in the Crooked Tankard's taproom, or
-  `?area=cellar` in its cellar; every area with `test: true` in `scenes/game/areas.ts` works)
+  `?area=monastery` outside Saint Elda's monastery, `?area=tavern` in the Crooked Tankard's taproom,
+  `?area=cellar` in its cellar, or `?area=smithy` / `?area=bakery` inside Osric's smithy and Hilde's bakery;
+  every area with `test: true` in `scenes/game/areas.ts` works)
 - **The Crooked Tankard**, Adowvale's inn on the north side of the square: buy a drink across the bar
   from Godric the landlord (drunk there and then), or food and drink to take away. Sit at a table and a
   maid comes over to take your order, fetches it from the bar and brings it back. It's quiet by day and
@@ -122,6 +123,15 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   from 21:00 till 07:00 and naps 13:30 to 15:00 (talk to her there and she's drowsy), sits at the table for
   breakfast (07:00), dinner (12:00) and supper (18:00), and the rest of the time potters between the hearth,
   the cupboard, the barrels, the window and the chest (see `world/MotherRoutine.ts`)
+- **Adowvale's traders' days**: Hilde the baker, Osric the smith and Tamsin the tanner keep a round by the clock
+  (`systems/VillageDay.ts`). Their stalls keep market hours, each with its own start; Hilde bakes in her bakery from
+  03:30 and goes back for the noon loaves (11:30 to 13:00), Osric lights his forge at 05:30 and goes back to the anvil
+  from 11:00 to 14:00, and both work on for a while after the market shuts. All three spend the evening at the
+  Crooked Tankard (at their own table by the barrels), then go home to bed. In the square you see them cover their
+  stalls and walk to the right door (and say where they're off to); talk to them on the way and they say so too.
+  **The smithy and the bakery** are the stone house past the inn (anvil on the sign) and the corner house (a loaf):
+  go in to trade with Osric at his anvil or Hilde at her kneading trough while they're there. Their doors are barred
+  while their keeper is in bed. Try `?area=smithy&hour=12`, `?area=bakery&hour=5` or `?area=tavern&hour=20`
 - **The goblin raid**: give Mother her tincture and you're told to get some sleep, with only the one answer;
   you sleep till dawn. You wake to shouting: outside, goblins (cutters, a spearman and torch-bearing
   firebrands, led by an armoured Goblin Brute with a shield) are trampling the garden and setting the roof
@@ -148,8 +158,8 @@ src/
                           ruin of it after the goblin raid)
   world/MotherRoutine.ts  Mother's day round the cottage: bed, the table at mealtimes, pottering about
   world/GoblinRaid.ts     The goblins' raid: the farm under attack and after, and the scripted morning itself
-  world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses,
-                          militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
+  world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses, the
+                          smithy and bakery doors, militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
   world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map (120x120), open grass, copses, a mere
                           and a pond, the Lord's Road to a crossroads and on east to the monastery, deer, hares
                           and boar, and two travellers
@@ -158,6 +168,8 @@ src/
                           shrines, vegetable beds, beehives, fish ponds with benches, and four of the brothers
   world/BakedLayer.ts     Bakes the ground into textures of at most 2048px, so big maps fit on phones
   world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
+  world/WorkshopMaps.ts   Inside Osric's smithy (forge, bellows, anvil, quench tub, tool and iron racks, his slate)
+                          and Hilde's bakery (bread oven, loaf racks, kneading trough, the counter)
   world/TavernMap.ts      The Crooked Tankard: the taproom (bar, hearth, tables, stairs, cellar trapdoor), the
                           passage upstairs with four rooms to let, a room, and the cellar with its rats
   world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
@@ -173,6 +185,7 @@ src/
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
   systems/Shops.ts        The market traders (and Godric at the Tankard): stock, what they buy, prices
   systems/Tavern.ts       The Crooked Tankard's menu and prices, and the room the hero has let (until when)
+  systems/VillageDay.ts   Where the market's traders are at each hour: stall, workshop, the Tankard or home
   systems/Crafting.ts     Brewing and cooking: the recipes, the stations, and which recipes have been found
   systems/Loot.ts         Random finds: what searching a pile of bones can turn up, and how likely each is
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
@@ -218,6 +231,8 @@ src/
                           children, Tobin, the road travellers), registered as 'folk-<id>' by folk.ts
   art/wayfarers3d.ts      The folk met by chance on the plains (and the footpads' fighting frames)
   art/mother3d.ts         Mother's 3D model
+  art/workshops.ts        The smithy's and bakery's furnishings (the forge's coals and the oven's fire flicker), and
+                          Osric's hammer stroke and Hilde's kneading as their 'work' frames
   art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker
   art/gear.ts             How worn gear looks on the hero's sprite (every head, body, feet and hand item): add an entry to dress new items
   tools/gear-preview.html The hero in every piece of gear, all 8 directions (open /tools/gear-preview.html under `npm run dev`)
@@ -262,6 +277,7 @@ src/
   scenes/game/tavern.ts   The Crooked Tankard: maids, the bar, rooms, dice, Pell's song, chatter, the cellar rats
   scenes/game/raid.ts     The scene's side of the goblin raid, coming round in the ruins, ?raid=
   scenes/game/market.ts   Arriving in Adowvale, the militia calling the market's hours
+  scenes/game/workshops.ts The smithy and the bakery: barred at night, first visits, sparks off the anvil, flour
   scenes/game/combat.ts   Starting fights (and packs), the plains' chance meetings, spoils and what comes after
   scenes/game/sights.ts   Few-second actions, crops, trees, examining, searching, gathering, giving items
   scenes/game/sitting.ts  Seats and the thoughts that come while sitting
