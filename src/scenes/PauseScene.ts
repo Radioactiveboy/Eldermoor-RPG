@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { bodyStyle, makeButton, makePanel, THEME, titleStyle } from '../ui/Widgets';
-import { SaveGame } from '../systems/SaveGame';
+import { downloadSave, SaveGame } from '../systems/SaveGame';
 import { openSettings } from './SettingsScene';
 import type { GameSceneData } from './GameScene';
 
 const PANEL_W = 380;
-const PANEL_H = 480;
+const PANEL_H = 550;
 
 const KEY_CONTROLS: Array<[string, string]> = [
   ['WASD / arrows', 'Walk'],
@@ -48,20 +48,26 @@ export class PauseScene extends Phaser.Scene {
     this.dim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.45).setOrigin(0).setInteractive();
 
     const panel = makePanel(this, PANEL_W, PANEL_H);
-    const title = this.add.text(0, -185, 'Paused', titleStyle(40)).setOrigin(0.5);
-    const resume = makeButton(this, 0, -100, 'Resume', () => this.resumeGame());
-    const controls = makeButton(this, 0, -30, 'Controls', () => this.showControls(true));
-    const settings = makeButton(this, 0, 40, 'Settings', () => {
+    const title = this.add.text(0, -220, 'Paused', titleStyle(40)).setOrigin(0.5);
+    const resume = makeButton(this, 0, -135, 'Resume', () => this.resumeGame());
+    const controls = makeButton(this, 0, -65, 'Controls', () => this.showControls(true));
+    const settings = makeButton(this, 0, 5, 'Settings', () => {
       this.ui.setVisible(false);
       openSettings(this, () => this.ui.setVisible(true));
     });
-    const load = makeButton(this, 0, 110, 'Load Last Save', () => this.showConfirmLoad(true));
-    const quit = makeButton(this, 0, 180, 'Main Menu', () => this.quitToMenu());
+    const load = makeButton(this, 0, 75, 'Load Last Save', () => this.showConfirmLoad(true));
+    // The last save as a file, to keep it safe or carry it to another browser (Load from File on the title screen).
+    const download = makeButton(this, 0, 145, 'Download Save', () => {
+      const save = SaveGame.read();
+      if (save) downloadSave(save);
+    });
+    const quit = makeButton(this, 0, 215, 'Main Menu', () => this.quitToMenu());
     if (!SaveGame.read()) {
-      // Nothing to load until the player has slept in a bed.
+      // Nothing to load or download until the player has slept in a bed.
       load.setAlpha(0.4).disableInteractive();
+      download.setAlpha(0.4).disableInteractive();
     }
-    this.ui = this.add.container(0, 0, [panel, title, resume, controls, settings, load, quit]);
+    this.ui = this.add.container(0, 0, [panel, title, resume, controls, settings, load, download, quit]);
     this.controls = this.buildControls().setVisible(false);
     this.confirmLoad = this.buildConfirmLoad().setVisible(false);
 

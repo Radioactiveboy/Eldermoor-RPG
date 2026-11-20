@@ -20,6 +20,7 @@ import { gridToScreen } from '../iso/IsoMath';
 import { Settings } from '../settings/Settings';
 import type { IsoMap } from '../world/IsoMap';
 import type { GameScene } from './GameScene';
+import type { SaveWarningSceneData } from './SaveWarningScene';
 
 /** Indoors the room is lit mostly by the fire: the daylight is dimmed and warmed. */
 const INDOOR_TINT = 0x8a6a66;
@@ -101,7 +102,11 @@ export class UIScene extends Phaser.Scene {
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
     const offXp = Experience.onChange((e) => this.onExperienceEvent(e));
-    const offSave = SaveGame.onSave((save) => this.toasts.quest('Game saved', SaveGame.describe(save)));
+    const offSave = SaveGame.onSave((save, stored) => {
+      if (stored) this.toasts.quest('Game saved', SaveGame.describe(save));
+      // Storage refused it: say so plainly once the hero has woken, and offer the save as a file.
+      else this.time.delayedCall(1400, () => this.scene.launch('SaveWarning', { save, problem: SaveGame.problem } satisfies SaveWarningSceneData));
+    });
 
     this.input.keyboard!.on('keydown-M', () => this.toggleMinimap());
 

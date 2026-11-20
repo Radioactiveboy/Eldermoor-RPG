@@ -72,6 +72,8 @@ export class DialogueScene extends Phaser.Scene {
   private node!: DialogueNode;
   private lineIndex = 0;
   private speaker!: Speaker;
+  /** Who last gave a voice bark in this conversation, so a speaker barks once per turn at talking. */
+  private barked?: Speaker;
 
   private root!: Phaser.GameObjects.Container;
   private shade!: Phaser.GameObjects.Graphics;
@@ -104,6 +106,7 @@ export class DialogueScene extends Phaser.Scene {
   create(data: DialogueSceneData): void {
     this.data_ = data;
     this.closing = false;
+    this.barked = undefined;
     // Ignore the key press or click that opened the conversation.
     this.readyAt = this.time.now + 150;
 
@@ -230,7 +233,11 @@ export class DialogueScene extends Phaser.Scene {
     if (!node) throw new Error(`Missing dialogue node: ${id}`);
     this.node = node;
     this.lineIndex = 0;
-    this.setSpeaker(SPEAKERS[node.speaker]);
+    const speaker = SPEAKERS[node.speaker];
+    // A short bark as someone starts speaking, under the typing blips.
+    if (speaker !== this.barked) GameAudio.bark(speaker.name, speaker.voice.pitch, speaker.voice.wave, node.lines[0] ?? '');
+    this.barked = speaker;
+    this.setSpeaker(speaker);
     this.showLine();
   }
 
