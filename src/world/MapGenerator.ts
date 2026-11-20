@@ -81,6 +81,7 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   addCottage(data, home.x, home.y);
   addGarden(data, home.x + 5, home.y - 2);
   addCave(data, { x: home.x + 4, y: home.y - 1 }, home.x + 7, 4);
+  addPathNorth(data, home.x + 7, 4);
   addHenFarm(data, home.x - 4, home.y - 23);
   addFisherman(data, Math.round(lake.x));
   joinDiagonals(terrain, Terrain.Dirt, Terrain.Grass);
@@ -280,6 +281,39 @@ function addCave(data: MapData, from: Vec, hx: number, hy: number): void {
   data.terrain[door.y][door.x] = Terrain.Dirt;
   (data.doors ??= []).push({ tx: door.x, ty: door.y, to: 'cave', entry: 'mouth', label: 'Enter the cave', facing: 'front', ask: 'Do you want to venture into the cave?' });
   (data.entries ??= {}).cave = { x: door.x + 0.5, y: door.y + 1.6 };
+}
+
+/**
+ * A narrow path off the sheep track by the cave mouth, climbing away north-east
+ * behind the hill and off the top of the map into the north woods (see
+ * NorthWoodsMap.ts): walking off the end of it goes there. (hx, hy) is the
+ * cave hill's back corner, as for addCave. It has its own dice, so the rest of
+ * the Hollow is laid out just as before.
+ */
+function addPathNorth(data: MapData, hx: number, hy: number): void {
+  const rnd = new Phaser.Math.RandomDataGenerator(['north-path']);
+  const from = { x: hx + 2.5, y: hy + 4.5 };
+  const top = { x: hx + 8.5, y: -3 };
+  const line = smoothLine([
+    from,
+    { x: hx + 4.5 + rnd.realInRange(-0.3, 0.3), y: hy + 3.4 },
+    { x: hx + 6.2, y: hy + 1 },
+    { x: hx + 7.6 + rnd.realInRange(-0.4, 0.4), y: hy - 1.6 },
+    { x: top.x, y: 0.5 },
+    top,
+  ]);
+  for (const p of line) {
+    for (let y = Math.floor(p.y - 1.5); y <= p.y + 1.5; y++) {
+      for (let x = Math.floor(p.x - 1.5); x <= p.x + 1.5; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
+    }
+  }
+  paintPath(data.terrain, line, (t) => 0.5 + 0.12 * Math.sin(t * 21.7 + 1));
+  for (let x = 0; x < data.width; x++) {
+    if (data.terrain[0][x] !== Terrain.Dirt) continue;
+    (data.doors ??= []).push({ tx: x, ty: 0, to: 'northwoods', entry: 'world', auto: true, ask: 'Do you want to follow the path north into the woods?' });
+  }
+  (data.entries ??= {}).northwoods = { x: top.x - 0.2, y: 2.4 };
+  (data.landmarks ??= []).push({ gx: top.x, gy: 1, name: 'The path to the north woods', range: 4 });
 }
 
 /**

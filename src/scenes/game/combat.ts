@@ -38,6 +38,7 @@ export const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   deer: [['venison', 2], ['deer-hide', 1]],
   hare: [['hare-pelt', 1], ['raw-hare', 1]],
   boar: [['boar-tusk', 2], ['boar-meat', 2]],
+  wildcat: [['wildcat-pelt', 1]],
   rat: [['rat-tail', 1]],
   // The footpads' purses are counted out separately (see FOOTPAD_PURSE).
   footpad: [],
@@ -62,6 +63,7 @@ export const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> =
   deer: { slain: 'Venison for the pot, and a fine hide. Tamsin will want that.', fled: 'Gone, white rump bobbing away over the grass. I need to be quicker.' },
   hare: { slain: 'A hare. The pelt is soft, and it would roast nicely over a hearth.', fled: 'Gone in a flash. Hares are quicker than they look.' },
   boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and there is a feast of meat on it.', fled: 'It crashed off into the thicket. Good riddance.' },
+  wildcat: { slain: 'Small, for all that fury. The pelt is thick and striped like a tabby, with a ringed tail. Tamsin might pay for it.', fled: 'Gone into the bracken without a sound. I will be watching the thickets now.' },
   rat: { slain: 'Rats. Big ones, too. I will take a tail or two to show Godric.', fled: 'It shot off into a hole in the wall. It will be back.' },
   footpad: { slain: "That's the end of the Plains tithe. There's a purse on him, heavier than mine was.", fled: 'He ran for the trees and never looked back. I doubt he will try this road again.' },
   cutpurse: { slain: "Nab won't be getting nervous on lonely roads any more. His knife is a good one.", fled: 'Gone, squealing, across the grass. So much for nerves.' },

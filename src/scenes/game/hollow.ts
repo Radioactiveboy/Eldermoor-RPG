@@ -3,6 +3,7 @@ import { GameAudio } from '../../audio/Audio';
 import { EGG_REWARD, FEED_MONEY, SIBLING_GREETINGS, SIBLING_THANKS } from '../../dialogue/iran';
 import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
+import { raidStage } from '../../world/GoblinRaid';
 import type { GameScene } from '../GameScene';
 import type { DialogueAction } from './dialogueActions';
 import { give } from './sights';
@@ -23,6 +24,27 @@ export function enteredCave(g: GameScene): void {
   QuestLog.complete('lost-sheep', 'cave');
   if (g.visited.has('cave')) return;
   g.time.delayedCall(1000, () => g.onHint?.('Cold, wet rock, and the stink of wolf. Something has been dragged in here.'));
+}
+
+/**
+ * Into the north woods, the first time: what the hero makes of them, and a
+ * line in the diary. After the raid, it's the goblins' trail they notice
+ * first; following it is for later, so nothing else changes.
+ */
+export function enteredNorthWoods(g: GameScene): void {
+  if (g.visited.has('northwoods')) return;
+  const after = raidStage() === 'over';
+  const thought = after
+    ? 'Their trail is as plain as a road: bracken trodden flat, all of it heading north.'
+    : 'So dark under the trees, and so quiet. Even the birds sound further off.';
+  g.time.delayedCall(1000, () => g.onHint?.(thought));
+  QuestLog.writeDiary(
+    after
+      ? 'Followed the path north past the cave into the woods. The goblins came this way: the bracken is trodden flat where they ' +
+          'went, dozens of them, and their trail runs on north into the deep woods. I am not ready to follow it. Not yet.'
+      : 'Took the path north past the cave into the woods. Old trees, a brook with a ford, and a ruined watchtower on a rise. ' +
+          'Something watched me from the brambles the whole way. Wild cats, I think.',
+  );
 }
 
 /** The hens peck about by day and roost in the coop at night; now and then one clucks. */

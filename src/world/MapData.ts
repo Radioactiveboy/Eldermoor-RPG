@@ -32,6 +32,8 @@ export enum Prop {
  */
 export type AreaId =
   | 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains' | 'monastery'
+  // The forest north of the Hollow, beyond the wolves' cave.
+  | 'northwoods'
   // Inside Saint Elda's walls: the grounds, and the rooms off them.
   | 'abbey' | 'chapel' | 'infirmary' | 'scriptorium' | 'refectory'
   // The Wolf Mother's den on the plains, and the passage beyond its crevice.
@@ -279,6 +281,8 @@ export interface MapData {
   chimneys?: Array<{ gx: number; gy: number; z: number }>;
   landmarks?: Landmark[];
   musings?: Musing[];
+  /** Multiplies the colour of the ground (the gloom under thick woods); white or not given leaves it as it is. */
+  groundShade?: number;
   /** How much of the grass has flowers, tufts and pebbles on it (0..1; 0.22 if not given). */
   decor?: number;
   /** Tile rectangles (x0, y0 inclusive; x1, y1 exclusive) where the trees are apple trees. */

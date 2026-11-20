@@ -16,6 +16,7 @@ import { generateItemIcons } from './items';
 import { generateStationArt } from './stations';
 import { generateMarket } from './market';
 import { generateMonastery } from './monastery';
+import { generateNorthWoods } from './northwoods';
 import { generatePortraits } from './portraits';
 import { generateWayfarers } from './wayfarers3d';
 import { generateProps } from './props';
@@ -62,6 +63,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'the willow', draw: generateWillow },
   { label: 'Mother', draw: generateMother },
   { label: 'goblins', draw: generateGoblins },
+  { label: 'the north woods', draw: generateNorthWoods },
   // Last: it makes burnt copies of art drawn above.
   { label: 'the burnt farm', draw: generateRuin },
 ];

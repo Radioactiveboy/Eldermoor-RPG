@@ -190,7 +190,7 @@ const WOOD: Stops = [
  */
 function hide(
   c: Ctx,
-  o: { light: string; mid: string; dark: string; spine: string; fur: string[]; seed: number; spots?: string; glow?: string },
+  o: { light: string; mid: string; dark: string; spine: string; fur: string[]; seed: number; spots?: string; glow?: string; stripes?: string },
 ): void {
   const right: Pt[] = [
     [64, 10],
@@ -232,6 +232,22 @@ function hide(
       [1, 'rgba(0,0,0,0)'],
     ]);
     c.fillRect(44, 0, 40, 128);
+    // Tabby bars curving down the flanks from the spine.
+    if (o.stripes) {
+      const r = rng(o.seed + 3);
+      c.lineCap = 'round';
+      for (let y = 22; y < 112; y += 11) {
+        for (const side of [-1, 1]) {
+          const wob = r() * 4 - 2;
+          c.beginPath();
+          c.moveTo(64 + side * 5, y + wob);
+          c.quadraticCurveTo(64 + side * 24, y + 3 + wob, 64 + side * (40 + r() * 8), y + 12 + wob);
+          c.strokeStyle = o.stripes;
+          c.lineWidth = 3 + r() * 2;
+          c.stroke();
+        }
+      }
+    }
     if (o.spots) {
       const r = rng(o.seed + 7);
       for (let i = 0; i < 14; i++) {
@@ -1793,6 +1809,17 @@ const PAINTERS: Record<string, (c: Ctx) => void> = {
       glow: 'rgba(170,215,255,0.95)',
     }),
 
+  'wildcat-pelt': (c) =>
+    hide(c, {
+      light: '#c8b89a',
+      mid: '#968670',
+      dark: '#4a4034',
+      spine: 'rgba(30,24,20,0.8)',
+      fur: ['rgba(235,225,205,0.45)', 'rgba(40,32,26,0.4)', 'rgba(170,150,120,0.55)'],
+      seed: 57,
+      stripes: 'rgba(42,34,28,0.7)',
+    }),
+
   'deer-hide': (c) =>
     hide(c, {
       light: '#e0a070',
@@ -3011,6 +3038,7 @@ const ICONS: Array<[string, string]> = [
   ['item-venison', 'venison'],
   ['item-deerhide', 'deer-hide'],
   ['item-harepelt', 'hare-pelt'],
+  ['item-wildcatpelt', 'wildcat-pelt'],
   ['item-tusk', 'boar-tusk'],
   ['item-whitehide', 'white-hide'],
   ['item-moonpetal', 'moonpetal'],

@@ -13,7 +13,7 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 // Every area GameScene lets ?area= start in ('home' is where a new game starts anyway).
 // 'tavern-room' has no ?area= switch (it needs a room taken first), so it isn't here.
 const ALL_AREAS = [
-  'home', 'world', 'market', 'cave', 'hut', 'plains', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
+  'home', 'world', 'market', 'cave', 'hut', 'plains', 'northwoods', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
   'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar',
 ];
 const AREAS = process.env.SMOKE_AREAS ? process.env.SMOKE_AREAS.split(',') : ALL_AREAS;

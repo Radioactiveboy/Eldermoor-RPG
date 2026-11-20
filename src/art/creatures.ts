@@ -12,6 +12,8 @@ import {
   ratSheet,
   ratSpec,
   WHITE_WOLF,
+  wildcatSheet,
+  wildcatSpec,
   wolfSheet,
   wolfSpec,
 } from './beasts3d';
@@ -35,7 +37,7 @@ const WOLF_MOTHER_SIZE = 1.45;
  * systems/Combat.ts FOES).
  */
 export const CREATURE_ART: Record<
-  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute',
+  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'wildcat' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute',
   {
     w: number;
     h: number;
@@ -53,6 +55,8 @@ export const CREATURE_ART: Record<
   deer: { ...deerSpec(), eight: true, tall: 42 },
   hare: { ...hareSpec(), eight: true, tall: 16 },
   boar: { ...boarSpec(), eight: true, tall: 24 },
+  // The wild cats of the north woods.
+  wildcat: { ...wildcatSpec(), eight: true, tall: 16 },
   // The rats in the Crooked Tankard's cellar.
   rat: { ...ratSpec(), eight: true, tall: 13 },
   // The footpads on the Lord's Road (their sheets are drawn in wayfarers3d.ts).
@@ -72,4 +76,5 @@ export function generateCreatures(scene: Phaser.Scene): void {
   generateBeast(scene, 'hare', hareSheet(), 10);
   generateBeast(scene, 'boar', boarSheet(), 9);
   generateBeast(scene, 'rat', ratSheet(), 12);
+  generateBeast(scene, 'wildcat', wildcatSheet(), 11);
 }

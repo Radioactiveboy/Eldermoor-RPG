@@ -246,6 +246,14 @@ export class IsoMap {
     }
   }
 
+  /** A ground tile's tint, darkened by the map's `groundShade` (the gloom under thick woods), if it has one. */
+  private underTrees(tint: number): number {
+    const shade = this.data.groundShade;
+    if (shade === undefined) return tint;
+    const mul = (s: number) => Math.round((((tint >> s) & 0xff) * ((shade >> s) & 0xff)) / 255) << s;
+    return mul(16) | mul(8) | mul(0);
+  }
+
   /** Which tree or rock art stands on a tile (stable per tile), and its collision outline. */
   private propArt(prop: Prop, tx: number, ty: number): { art: (typeof TREE_ART)[number]; shape: string } {
     const isTree = prop === Prop.Tree;
@@ -271,7 +279,7 @@ export class IsoMap {
         const t = terrain[ty][tx];
         // Subtle per-tile brightness variation so large areas don't look flat.
         const shade = 0xec + Math.floor(tileHash(tx, ty, 1) * 0x14);
-        ground.draw(this.groundKey(tx, ty), center.x, center.y, { tint: Phaser.Display.Color.GetColor(shade, shade, shade) });
+        ground.draw(this.groundKey(tx, ty), center.x, center.y, { tint: this.underTrees(Phaser.Display.Color.GetColor(shade, shade, shade)) });
 
         const prop = props[ty][tx];
         if (prop === Prop.Tree || prop === Prop.Rock) {
@@ -414,7 +422,7 @@ export class IsoMap {
 
         if (center.y < canvas.bottom + 16) {
           const shade = 0xec + Math.floor(tileHash(tx, ty, 1) * 0x14);
-          ground.draw(this.groundKey(tx, ty), center.x, center.y, { tint: tint(f, shade) });
+          ground.draw(this.groundKey(tx, ty), center.x, center.y, { tint: this.underTrees(tint(f, shade)) });
         }
 
         // Thick forest, thickening further out, but never on the road or in the water.
