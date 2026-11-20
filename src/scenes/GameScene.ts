@@ -422,7 +422,19 @@ export class GameScene extends Phaser.Scene {
   openJournal(): void {
     if (!this.takeControls()) return;
     this.scene.launch('Journal');
-    this.scene.get('Journal').events.once('journal-closed', () => this.release());
+    // The journal's Map tab closes the book and opens the world map in its place.
+    this.scene.get('Journal').events.once('journal-closed', (then?: 'map') => (then === 'map' ? this.showWorldMap() : this.release()));
+  }
+
+  /** The world map (M, or the journal's Map tab): where the hero has been, where they are, and where to go next. */
+  openWorldMap(): void {
+    if (!this.takeControls()) return;
+    this.showWorldMap();
+  }
+
+  private showWorldMap(): void {
+    this.scene.launch('Map');
+    this.scene.get('Map').events.once('map-closed', () => this.release());
   }
 
   /** The satchel (inventory) or equipment screen: I and C, or the HUD's satchel button. */

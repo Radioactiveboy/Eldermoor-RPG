@@ -1,3 +1,4 @@
+import type { AreaId } from '../world/MapData';
 import { SaveGame } from './SaveGame';
 
 /**
@@ -11,6 +12,16 @@ import { SaveGame } from './SaveGame';
 export interface ObjectiveDef {
   id: string;
   text: string;
+  /** Where to go for it, for the quest markers and the world map (the older quests' are in QuestTargets.ts). */
+  target?: QuestTarget;
+}
+
+/** A spot in an area (in its tiles), and optionally someone to find there, who is marked wherever they stand. */
+export interface QuestTarget {
+  area: AreaId;
+  x: number;
+  y: number;
+  npc?: string;
 }
 
 export interface QuestDef {

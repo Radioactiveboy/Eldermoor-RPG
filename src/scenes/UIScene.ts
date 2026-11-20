@@ -11,6 +11,7 @@ import { Weather, weatherLight } from '../systems/Weather';
 import { DayNightOverlay, ScreenLight } from '../ui/DayNightOverlay';
 import { LocationLabel } from '../ui/LocationLabel';
 import { Minimap } from '../ui/Minimap';
+import { aimMarker, QuestMarkers } from '../ui/QuestMarkers';
 import { QuestTracker } from '../ui/QuestTracker';
 import { SpeechBubbles } from '../ui/SpeechBubbles';
 import { StatusBars } from '../ui/StatusBars';
@@ -52,6 +53,8 @@ export class UIScene extends Phaser.Scene {
   private sneakGlow!: Phaser.GameObjects.Graphics;
   private sneakLit = false;
   private tracker!: QuestTracker;
+  /** The way to the current quest step: a pointer over it, or an arrow at the screen's edge. */
+  private markers!: QuestMarkers;
   private toasts!: Toasts;
   private bubbles!: SpeechBubbles;
   /** The "E  Talk" style prompt over whatever the player can use; rebuilt when its label changes. */
@@ -87,6 +90,7 @@ export class UIScene extends Phaser.Scene {
     this.sneakButton.addAt(this.sneakGlow, 0);
     this.sneakLit = false;
     this.tracker = new QuestTracker(this, () => this.world.openJournal());
+    this.markers = new QuestMarkers(this);
     this.toasts = new Toasts(this);
     this.bubbles = new SpeechBubbles(this);
     this.progress = this.add.graphics().setVisible(false);
@@ -109,7 +113,8 @@ export class UIScene extends Phaser.Scene {
       else this.time.delayedCall(1400, () => this.scene.launch('SaveWarning', { save, problem: SaveGame.problem } satisfies SaveWarningSceneData));
     });
 
-    this.input.keyboard!.on('keydown-M', () => this.toggleMinimap());
+    // Switching the minimap or the quest markers off in Settings takes effect at once.
+    const offSettings = Settings.onChange(() => this.showMinimap());
 
     this.layout();
     this.scale.on('resize', this.layout, this);
@@ -119,6 +124,8 @@ export class UIScene extends Phaser.Scene {
       offItems();
       offXp();
       offSave();
+      offSettings();
+      this.markers.destroy();
       this.world.onHint = undefined;
       this.world.onSign = undefined;
       this.bubbles.destroy();
@@ -216,9 +223,17 @@ export class UIScene extends Phaser.Scene {
     this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)), flash);
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock, sky);
-    this.minimap!.update(sprite, cam.worldView, outdoor.color);
+    const aim = Settings.get().showQuestMarkers && !game.inCombat ? aimMarker(game) : undefined;
+    this.minimap!.update(sprite, cam.worldView, outdoor.color, aim && gridToScreen(aim.grid.x, aim.grid.y));
+    if (aim && !game.busy) {
+      const at = toScreen(aim.world.x, aim.world.y);
+      const tiles = Math.hypot(aim.grid.x - game.player.gx, aim.grid.y - game.player.gy);
+      this.markers.update(at, this.scale.width, this.scale.height, tiles, this.time.now / 1000);
+    } else {
+      this.markers.hide();
+    }
     this.location.update(game.player.gx, game.player.gy);
-    this.tracker.update();
+    this.tracker.update(Settings.get().showQuestMarkers ? game.area : undefined);
     this.bubbles.update([...game.npcs, ...game.speakers], toScreen, !game.inCombat);
     this.updatePrompt(toScreen);
     this.updateProgress(toScreen);
@@ -233,14 +248,6 @@ export class UIScene extends Phaser.Scene {
     this.tracker.setVisible(show);
     this.showMinimap();
     for (const button of [this.pauseButton, this.journalButton, this.satchelButton, this.sneakButton]) button.setVisible(show);
-  }
-
-  /** M shows or hides the minimap (or, indoors, just the place name), and it stays that way next time the game is opened. */
-  private toggleMinimap(): void {
-    if (!this.minimap || this.combatMode) return;
-    Settings.set('showMinimap', !Settings.get().showMinimap);
-    GameAudio.click();
-    this.showMinimap();
   }
 
   /** Never in a fight, and only if the player hasn't hidden it. Indoors there's no map, only the place name. */
@@ -379,7 +386,7 @@ export class UIScene extends Phaser.Scene {
     this.bars.setPosition(MARGIN, MARGIN);
     this.tracker.setMaxWidth(narrow ? width - this.wheel.width - MARGIN * 3 : 300);
     this.tracker.setPosition(MARGIN, MARGIN + this.bars.height + 8);
-    this.tracker.update();
+    this.tracker.update(Settings.get().showQuestMarkers ? this.world.area : undefined);
     if (narrow) {
       // Beside the column of buttons down the right-hand side.
       const room = width - MARGIN * 3 - PAUSE_SIZE;

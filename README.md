@@ -59,6 +59,12 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **During a conversation**: click / Space / Enter / E to skip the typing or carry on;
   pick a reply with the mouse, the number keys, or up/down then Enter
 - **J** or the **book** button: open the journal (arrow keys or click to turn pages)
+- **M**, or the journal's **Map** tab: the world map, drawn from the places you've been, with the roads
+  between them, your own mark and the next quest step's. M, Esc or a click closes it
+- **Quest markers**: a gold pointer bobs over the person or place the current quest step needs, or, when
+  that's out of sight, an arrow at the screen's edge points the way (with how many tiles off it is). The
+  minimap shows it too. In another area, it points at the door or road that leads there, and the quest
+  tracker says which place it's in. Switch them off (and the minimap) in **Settings**
 - **I** or the **satchel** button: the satchel (inventory). **C**: equipment.
   Tab switches between them; select an item to eat, wear or take it off
 - **Trading at a stall**: talk to the stallholder and ask to see their goods. Drag
@@ -258,6 +264,7 @@ src/
   entities/Creature.ts    Wild animals: wander and sniff near their den, start a fight when you come close
   dialogue/               Conversations as data (lines, replies, story actions) and speakers
   systems/Quests.ts       Quest log: quest definitions, progress, diary entries
+  systems/QuestTargets.ts Where each quest step is done (an area, a spot and maybe a person), for the markers and map
   art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
   art/tavern.ts           The Crooked Tankard inside: bar counter pieces, kegs, bottle shelf, stairs, trapdoor,
                           notice board, laid tables, washstand, sacks and the passage's runner
@@ -306,6 +313,8 @@ src/
   tools/balance.ts        The balance table from the fight simulator (`npm run sim`)
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour, the weather and who's about;
                           times the lightning and thunder
+  world/atlas.ts          How the areas join up (each door and road, at which tile) and where each lies on the world
+                          map; the way from any area to any other, for the quest markers
   world/landmarks.ts      Spots in the maps the rest of the game reads (the bar, the cellar rats, the moonpetal, the
                           monastery gate), kept out of the map files so those can download on their own
   settings/Settings.ts    Volume and display settings, saved in the browser
@@ -317,7 +326,7 @@ src/
                           repaints the hero when gear changes, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
   scenes/PauseScene.ts    Esc menu during play
-  scenes/SettingsScene.ts Volume sliders, resolution, interface size and fullscreen, opened from either menu
+  scenes/SettingsScene.ts Volume sliders, resolution, interface size, minimap and quest markers on or off, and fullscreen, opened from either menu
   scenes/GameScene.ts     The world scene: builds the area, runs the frame, camera, talking, menus. The rest of what
                           happens in the world is in scenes/game/, as functions that take the scene:
   scenes/game/areas.ts    The area registry: each area id, how its map is built (most with `lazy(...)`, fetched on
@@ -341,7 +350,8 @@ src/
   scenes/game/sleep.ts    Beds, sleeping, saving and loading
   scenes/game/input.ts    Keys, click-to-walk, pathfinding to a spot, the hover tile
   scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
-  scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning
+  scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning, and a Map tab
+  scenes/MapScene.ts      The world map (M): the places seen so far, the roads, the hero and the quest step's mark
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
   scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
   scenes/StationScene.ts  Brewing bench and hearth window: drag ingredients in, recipe book, progress bar, result popup
@@ -351,10 +361,11 @@ src/
   scenes/UIScene.ts       HUD overlay, separate from the world camera
   ui/StatusBars.ts        Slim health and stamina bars, the hero's level and an XP bar
   ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day, with the weather's cloud, rain and mist
-  ui/Minimap.ts           Isometric minimap with player and camera view
+  ui/Minimap.ts           Isometric minimap with player, camera view and the quest marker
   ui/LocationLabel.ts     Current area name (and nearby landmark) under the minimap
   ui/DayNightOverlay.ts   Tints the world by time of day (and weather); lantern, hearth and candle light; lightning
-  ui/QuestTracker.ts      HUD reminder of the current quest step
+  ui/QuestTracker.ts      HUD reminder of the current quest step, and which place it's in
+  ui/QuestMarkers.ts      The quest marker: a pointer over the step's spot, or an arrow at the screen's edge
   ui/Toasts.ts            "New quest" banners and the hero's passing thoughts
 tests/
   unit/*.test.ts          Vitest tests for src/systems (Combat, Experience, Inventory, Crafting, Quests, SaveGame)
@@ -483,7 +494,11 @@ tests/
   `src/dialogue/`; replies point at the next node, and `action` names (like
   `start-medicine-quest`) are carried out in `GameScene.runDialogueAction`.
   Quests are listed in `QUESTS` in `systems/Quests.ts`; their steps appear one
-  at a time in the HUD tracker and the journal.
+  at a time in the HUD tracker and the journal. A step can name a `target` (an area,
+  a tile and optionally the id of someone there) for the quest markers; the older
+  quests' targets are in `systems/QuestTargets.ts`. A new area needs its doors and
+  roads in `LINKS` in `world/atlas.ts` (and, out of doors, a `REGIONS` box to draw on
+  the world map); `tests/unit/atlas.test.ts` checks them against the maps.
 
 - **Combat is turn-based, like a tabletop game.** When a beast notices you
   (`entities/Creature.ts`), it and any of its pack nearby attack, and

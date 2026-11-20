@@ -90,8 +90,9 @@ export class Minimap {
    * @param playerWorld the player's position in world pixels
    * @param view the world camera's visible area (camera.worldView)
    * @param tint ambient light colour, so the minimap dims at night too
+   * @param target where the quest marker points, in world pixels (the step's spot, or the door that leads to it)
    */
-  update(playerWorld: Phaser.Types.Math.Vector2Like, view: Phaser.Geom.Rectangle, tint: number): void {
+  update(playerWorld: Phaser.Types.Math.Vector2Like, view: Phaser.Geom.Rectangle, tint: number, target?: Phaser.Types.Math.Vector2Like): void {
     // Only dim halfway, so the minimap stays readable at night.
     const c = Phaser.Display.Color.IntegerToColor(tint);
     const half = Phaser.Display.Color.GetColor((c.red + 255) / 2, (c.green + 255) / 2, (c.blue + 255) / 2);
@@ -113,10 +114,30 @@ export class Minimap {
 
     const px = (playerWorld.x! - this.origin.x) * this.px;
     const py = (playerWorld.y! - this.origin.y) * this.px;
+    if (target) this.drawTarget(g, px, py, (target.x! - this.origin.x) * this.px, (target.y! - this.origin.y) * this.px);
     g.fillStyle(0x000000, 1);
     g.fillCircle(px, py, 4);
     g.fillStyle(0xffd34d, 1);
     g.fillCircle(px, py, 2.5);
+  }
+
+  /** The quest marker: a gold diamond where it is, and a little arrow off the hero's dot pointing at it. */
+  private drawTarget(g: Phaser.GameObjects.Graphics, px: number, py: number, tx: number, ty: number): void {
+    const x = Phaser.Math.Clamp(tx, 0, this.mapW);
+    const y = Phaser.Math.Clamp(ty, 0, this.mapH);
+    g.fillStyle(0x000000, 1);
+    g.fillPoints([new Phaser.Geom.Point(x, y - 5), new Phaser.Geom.Point(x + 5, y), new Phaser.Geom.Point(x, y + 5), new Phaser.Geom.Point(x - 5, y)], true);
+    g.fillStyle(0xffc43d, 1);
+    g.fillPoints([new Phaser.Geom.Point(x, y - 3.5), new Phaser.Geom.Point(x + 3.5, y), new Phaser.Geom.Point(x, y + 3.5), new Phaser.Geom.Point(x - 3.5, y)], true);
+    const dist = Math.hypot(x - px, y - py);
+    if (dist < 12) return;
+    const a = Math.atan2(y - py, x - px);
+    const tip = { x: px + Math.cos(a) * 10, y: py + Math.sin(a) * 10 };
+    const side = (s: number) => new Phaser.Geom.Point(px + Math.cos(a + s) * 5.5, py + Math.sin(a + s) * 5.5);
+    g.fillStyle(0x000000, 0.9);
+    g.fillTriangle(tip.x + Math.cos(a), tip.y + Math.sin(a), side(0.75).x, side(0.75).y, side(-0.75).x, side(-0.75).y);
+    g.fillStyle(0xffc43d, 1);
+    g.fillTriangle(tip.x, tip.y, side(0.6).x, side(0.6).y, side(-0.6).x, side(-0.6).y);
   }
 
   private bake(scene: Phaser.Scene, map: IsoMap): void {

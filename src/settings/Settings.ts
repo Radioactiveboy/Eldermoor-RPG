@@ -5,8 +5,10 @@ export interface SettingsData {
   effectsVolume: number; // 0..1
   /** The world's background sounds: wind, birds, crowds, water. */
   ambienceVolume: number; // 0..1
-  /** Whether the minimap is shown (M toggles it). */
+  /** Whether the minimap is shown. */
   showMinimap: boolean;
+  /** Whether the way to the current quest step is marked: arrows on screen and the minimap, and a mark on the world map. */
+  showQuestMarkers: boolean;
   /** How many canvas pixels to draw per screen pixel, for sharpness; 0 matches the screen. */
   renderScale: number;
   /** How big the menus, HUD and text are drawn; 0 picks a size to suit the screen. */
@@ -21,6 +23,7 @@ const DEFAULTS: SettingsData = {
   effectsVolume: 0.8,
   ambienceVolume: 0.8,
   showMinimap: true,
+  showQuestMarkers: true,
   renderScale: 0,
   uiScale: 0,
 };
