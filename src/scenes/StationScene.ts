@@ -1,6 +1,6 @@
 import { Display } from '../ui/Display';
 import Phaser from 'phaser';
-import { itemScale } from '../art/items';
+import { itemScale } from '../art/sizes';
 import { STATION_H, STATION_POINTS, STATION_RES } from '../art/stations';
 import { GameAudio } from '../audio/Audio';
 import { Crafting, Recipe, STATION_SLOTS, StationDef, STATIONS } from '../systems/Crafting';
