@@ -20,6 +20,8 @@ const WAYS: Record<FoeKind, { shy: boolean; notice: number; leash: number; speed
   boar: { shy: false, notice: 2.6, leash: 4, speed: 1.2 },
   deer: { shy: true, notice: 0, leash: 7, speed: 1.3 },
   hare: { shy: true, notice: 0, leash: 5, speed: 1.8 },
+  // Wild cats lie up in the north woods' thickets and let you come close before they spring.
+  wildcat: { shy: false, notice: 2.2, leash: 3, speed: 1.7 },
   // Scurrying about their nests in the cellar, and quick to come at anyone with a lamp.
   rat: { shy: false, notice: 2.6, leash: 2, speed: 1.9 },
   // Footpads only come to blows when talked into it (see world/PlainsEvents.ts): they never pick a fight by themselves.
@@ -90,7 +92,7 @@ export class Creature implements Body {
     const art = CREATURE_ART[kind];
     this.eight = !!art.eight;
     const scale = art.scale ?? 1;
-    const small = kind === 'hare' || kind === 'rat';
+    const small = kind === 'hare' || kind === 'rat' || kind === 'wildcat';
     const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin');
     const big = kind === 'goblinbrute';
     this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : big ? 1.5 : upright ? 1 : 1.4) * scale, (small ? 0.6 : big ? 1.3 : 1) * scale);

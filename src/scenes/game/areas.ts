@@ -18,7 +18,7 @@ import { AreaId, MapData } from '../../world/MapData';
 import { generateMap } from '../../world/MapGenerator';
 import { buildMarketMap } from '../../world/MarketMap';
 import type { GameScene, GameSceneData } from '../GameScene';
-import { enteredCave } from './hollow';
+import { enteredCave, enteredNorthWoods } from './hollow';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
@@ -110,6 +110,8 @@ export const AREAS: Record<AreaId, AreaDef> = {
         'grass, the road running off to a crossroads, and not a wall in sight.',
     ),
   }),
+  // The woods north of the Hollow; after the raid, the goblins' trail through them shows (as scenery, for now).
+  northwoods: lazy(() => import('../../world/NorthWoodsMap'), (m) => m.buildNorthWoodsMap(raidStage() === 'over'), { test: true, enter: enteredNorthWoods }),
   den: lazy(() => import('../../world/DenMap'), (m) => m.buildDenMap(), { test: true, enter: enteredDen }),
   deepden: lazy(() => import('../../world/DenMap'), (m) => m.buildDeepDenMap(), {
     test: true,

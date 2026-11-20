@@ -55,6 +55,8 @@ interface Place {
 const PLACES: Record<AreaId, Place> = {
   world: { open: true, wind: 0.55, wild: 1, wolves: true },
   plains: { open: true, wind: 0.95, wild: 1, wolves: true },
+  // Sheltered under the trees: the wind only in the tops, but the woods full of birds, owls and, somewhere, wolves.
+  northwoods: { open: true, wind: 0.3, wild: 1, wolves: true },
   market: { open: true, wind: 0.35, wild: 0.4 },
   monastery: { open: true, wind: 0.5, wild: 0.9, bell: 0.45 },
   abbey: { open: true, wind: 0.35, wild: 0.6, bell: 0.85, echo: 0.2 },

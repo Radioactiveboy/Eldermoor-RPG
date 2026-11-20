@@ -87,7 +87,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
-  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=plains` on Adowvale Plains,
+  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=northwoods` in the north woods, `?area=plains` on Adowvale Plains,
   `?area=monastery` outside Saint Elda's monastery, `?area=tavern` in the Crooked Tankard's taproom,
   `?area=cellar` in its cellar, or `?area=smithy` / `?area=bakery` inside Osric's smithy and Hilde's bakery;
   every area with `test: true` in `scenes/game/areas.ts` works)
@@ -109,6 +109,13 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   satchel (handy for testing the stations)
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
   game sends it running, and in a fight it may bolt rather than stand
+- **The north woods**: from the sheep track by the wolves' cave, a narrow path climbs north behind the hill and
+  off the top of the Hollow into the woods (walk off the end of it; the path at the woods' south edge leads back).
+  Thick old forest, a brook with a ford, a ruined watchtower on a rise, fallen trees, bramble thickets and a glade
+  where deer graze. Wild cats lie up in the brambles and spring at you if you come close: quick and savage, and
+  their claws make you bleed, but a level-1 hero beats one (and takes its striped pelt). After the goblin raid the
+  goblins' trail shows: bracken trodden flat all the way north, a burnt-out torch, and a scrap of Mother's quilt on
+  the thorns. It's scenery for now, and doesn't move the **Ashes** quest on (try `?area=northwoods&raid=after`)
 - **Chance meetings on Adowvale Plains**: now and then, out on the plains, something happens along the Lord's Road.
   Footpads (Rook and Nab) step out of the grass and ask for half your purse: pay, talk your way out (if you've killed
   the Wolf Mother), or fight them. Jory the tinker has stopped to rest and will trade odds and ends. Mags the goatherd
@@ -177,6 +184,9 @@ src/
   world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map (120x120), open grass, copses, a mere
                           and a pond, the Lord's Road to a crossroads and on east to the monastery, deer, hares
                           and boar, and two travellers
+  world/NorthWoodsMap.ts  The north woods beyond the wolves' cave (60x76): forest, a brook and its ford, the ruined
+                          watchtower, fallen trees, bramble thickets, a glade, wild cats and game, and after the
+                          raid the goblins' trail north (scenery only)
   world/MonasteryMap.ts   The grounds outside Saint Elda's monastery, east of the plains: the wall and its barred
                           gatehouse with the chapel and bell tower showing over it, the Saint's statue, wayside
                           shrines, vegetable beds, beehives, fish ponds with benches, and four of the brothers
@@ -250,6 +260,8 @@ src/
   art/models3d.ts         The villagers' 3D models (traders, militia, toll guards, brothers, tavern folk, Iran and his
                           children, Tobin, the road travellers), registered as 'folk-<id>' by folk.ts
   art/wayfarers3d.ts      The folk met by chance on the plains (and the footpads' fighting frames)
+  art/northwoods.ts       The north woods' watchtower, fallen trees, brambles, bracken, leaf litter, ford stones,
+                          and the goblins' trodden trail, dropped torch and the scrap of quilt
   art/mother3d.ts         Mother's 3D model
   art/workshops.ts        The smithy's and bakery's furnishings (the forge's coals and the oven's fire flicker), and
                           Osric's hammer stroke and Hilde's kneading as their 'work' frames
@@ -259,7 +271,8 @@ src/
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
-                          the grey wolf (creatures.ts) and birds, ripples and smoke (critters.ts)
+                          the beasts (beasts3d.ts, registered by creatures.ts: wolves, deer, hares, boar,
+                          rats and the north woods' wild cat) and birds, ripples and smoke (critters.ts)
   audio/Audio.ts          All the game's sound: picks the music by area and hour, plays fight sounds and voice
                           barks, and composes UI blips (and stand-in tunes and sounds if a recording won't load)
   audio/Recordings.ts     Streams and crossfades the recorded music; fetches and plays the fight sounds and barks
@@ -510,11 +523,11 @@ tests/
   the numbers for its tooltip), a painter in `ui/AbilityIcons.ts`, and what it
   does in `CombatScene.useAbility`. New beasts go in `FOES` (`systems/Combat.ts`)
   with art in `art/` and a spawn in the map's `creatures` list. How each behaves
-  in the wild is in `WAYS` (`entities/Creature.ts`): wolves and boar attack when
+  in the wild is in `WAYS` (`entities/Creature.ts`): wolves, boar and wild cats attack when
   you come close; deer and hares are shy game you hunt yourself, which may bolt
   (`skittish`). What each leaves behind is `SPOILS` in `GameScene` (venison and a
   hide from a deer, a hare's pelt, a boar's tusks). Spawns marked `respawns` (the
-  plains' game) are back every visit.
+  plains' and the north woods' game) are back every visit.
 
 - **Experience and levels.** The hero earns XP for slaying beasts (each beast
   in `FOES` has an `xp` value; a grey wolf is 40), for each step of a quest (20),

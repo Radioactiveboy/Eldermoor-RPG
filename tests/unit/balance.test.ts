@@ -66,6 +66,14 @@ describe('balance targets', () => {
     expect(simulate(1, 'boar', 1, { fights: 1000, seed: 11 }).hurt).toBeGreaterThan(simulate(1, 'wolf', 1, { fights: 1000, seed: 11 }).hurt);
   });
 
+  it('a wild cat in the north woods costs a fresh hero a little more than a lone wolf, but never the fight', () => {
+    const cat = simulate(1, 'wildcat', 1, { fights: 1000, seed: 11 });
+    const wolf = simulate(1, 'wolf', 1, { fights: 1000, seed: 11 });
+    expect(cat.winRate).toBeGreaterThan(0.97);
+    expect(cat.hurt).toBeGreaterThan(wolf.hurt);
+    expect(cat.hurt).toBeLessThan(simulate(1, 'boar', 1, { fights: 1000, seed: 11 }).hurt);
+  });
+
   it('Rook and Nab on the road are beatable at level 1, and easy by level 3', () => {
     expect(win(1, 'footpad', 1, { cutpurse: 1 })).toBeGreaterThan(0.75);
     expect(win(3, 'footpad', 1, { cutpurse: 1 })).toBeGreaterThan(0.97);

@@ -13,6 +13,7 @@ const BASE = import.meta.env.BASE_URL;
 export const MUSIC_FILES = {
   menu: 'menu',
   world: { day: 'hollow-day', night: 'hollow-night' },
+  woods: { day: 'woods-day', night: 'woods-night' },
   home: { day: 'home-day', night: 'home-night' },
   market: 'market',
   tavern: { day: 'tavern-day', night: 'tavern-night', from: 18, until: 4 },

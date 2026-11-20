@@ -19,7 +19,7 @@ import {
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'home' | 'battle' | 'market' | 'cave' | 'monastery' | 'tavern' | 'raid' | 'ruin';
+export type TrackName = 'menu' | 'world' | 'woods' | 'home' | 'battle' | 'market' | 'cave' | 'monastery' | 'tavern' | 'raid' | 'ruin';
 
 interface TrackDef {
   bpm: number;
@@ -72,6 +72,23 @@ const TRACKS: Record<TrackName, TrackDef> = {
     scale: [62, 64, 65, 67, 69, 71, 72],
     melodyChance: 0.2,
     padCutoff: 700,
+  },
+  // The north woods: slow and hushed under the trees, wandering between E minor and its neighbours.
+  woods: {
+    bpm: 62,
+    chords: [
+      [40, 47, 52], // Em
+      [36, 43, 48], // C
+      [38, 45, 50], // D
+      [40, 47, 52], // Em
+      [43, 47, 50], // G
+      [38, 42, 45], // D
+    ],
+    barsPerChord: 2,
+    arp: [0, -1, -1, 2, -1, 1, -1, -1],
+    scale: [64, 66, 67, 69, 71, 72, 74, 76],
+    melodyChance: 0.18,
+    padCutoff: 560,
   },
   // Slow and low by the fire: a little sadder, for Mother's sickbed.
   home: {
