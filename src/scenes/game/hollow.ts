@@ -1,11 +1,12 @@
 /** The Hollow round the cottage: Wil's lost ewes, Farmer Iran's hens and his children, and the wolves' cave. */
 import { GameAudio } from '../../audio/Audio';
-import { EGG_REWARD, FEED_MONEY, SIBLING_GREETINGS, SIBLING_THANKS } from '../../dialogue/iran';
+import { EGG_REWARD, FEED_MONEY, PLOT_SEED_GIFT, SIBLING_GREETINGS, SIBLING_THANKS } from '../../dialogue/iran';
 import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
 import { raidStage } from '../../world/GoblinRaid';
 import type { GameScene } from '../GameScene';
 import type { DialogueAction } from './dialogueActions';
+import { PLOT_FLAG } from './plot';
 import { give } from './sights';
 
 /** Coins Wil pays for news of his ewes. */
@@ -96,6 +97,17 @@ export const HOLLOW_ACTIONS: Record<string, DialogueAction> = {
     QuestLog.writeDiary(
       'Met Farmer Iran up the hill, who keeps the hens. He remembered me as a boy. His hens have gone without feed for ' +
         `two days, so he gave me ${FEED_MONEY} coins to fetch a sack from Hilde at the market.`,
+    );
+  },
+  'lend-plot': (g) => {
+    if (QuestLog.hasFlag(PLOT_FLAG)) return;
+    QuestLog.setFlag(PLOT_FLAG);
+    give(g, 'spade', 1);
+    give(g, 'watering-can', 1);
+    give(g, 'carrot-seed', PLOT_SEED_GIFT);
+    QuestLog.writeDiary(
+      "Iran has lent me the old herb bed by his hut, and his spade and watering can with it. It's all docks and long grass now, " +
+        'but he says the soil is good. Hilde sells seed at her stall.',
     );
   },
   'finish-feed-quest': (g) => {

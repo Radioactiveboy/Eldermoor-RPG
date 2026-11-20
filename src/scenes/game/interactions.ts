@@ -14,6 +14,7 @@ import { Bed, CropPatch, Door, Prop, Seat, Sight } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import { startCombat } from './combat';
 import { fishInteraction } from './fishing';
+import { plotInteractions } from './plot';
 import { examine, pickCrop, shakeTree } from './sights';
 import { sitOn, standUp } from './sitting';
 import { goToBed } from './sleep';
@@ -90,6 +91,7 @@ export function interactionsNear(g: GameScene, gx: number, gy: number): Interact
       if (i) list.push(i);
     }
   }
+  list.push(...plotInteractions(g, gx, gy));
   const fish = fishInteraction(g, gx, gy);
   if (fish) list.push(fish);
   const tx = Math.floor(gx);

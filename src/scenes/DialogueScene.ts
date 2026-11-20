@@ -122,7 +122,7 @@ export class DialogueScene extends Phaser.Scene {
     kb.on('keydown-W', () => this.moveSelection(-1));
     kb.on('keydown-DOWN', () => this.moveSelection(1));
     kb.on('keydown-S', () => this.moveSelection(1));
-    ['ONE', 'TWO', 'THREE', 'FOUR'].forEach((key, i) => kb.on(`keydown-${key}`, () => this.choose(i)));
+    ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'].forEach((key, i) => kb.on(`keydown-${key}`, () => this.choose(i)));
 
     this.layout();
     this.scale.on('resize', this.layout, this);
