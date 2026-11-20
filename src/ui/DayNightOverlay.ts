@@ -26,6 +26,8 @@ const LANTERN_RADIUS = 210;
 export class DayNightOverlay {
   private readonly layer: Phaser.GameObjects.RenderTexture;
   private readonly glow: Phaser.GameObjects.Image;
+  /** Lightning: a cold white light added over everything for a moment. */
+  private readonly flash: Phaser.GameObjects.Rectangle;
 
   constructor(scene: Phaser.Scene) {
     DayNightOverlay.makeGlowTexture(scene);
@@ -34,14 +36,21 @@ export class DayNightOverlay {
       .setOrigin(0, 0)
       .setBlendMode(Phaser.BlendModes.MULTIPLY);
     this.glow = scene.make.image({ key: GLOW_KEY }, false).setBlendMode(Phaser.BlendModes.ADD);
+    this.flash = scene.add
+      .rectangle(0, 0, scene.scale.width, scene.scale.height, 0xc8d4ff)
+      .setOrigin(0, 0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setVisible(false);
   }
 
   resize(width: number, height: number): void {
     this.layer.resize(width, height);
+    this.flash.setSize(width, height);
   }
 
   setDepth(depth: number): void {
     this.layer.setDepth(depth);
+    this.flash.setDepth(depth);
   }
 
   /**
@@ -49,14 +58,17 @@ export class DayNightOverlay {
    * @param lanternScreen the player's position on screen, in pixels (or null for no lantern)
    * @param zoom the world camera's zoom, so the light scales with the world
    * @param lights other light sources, already in screen pixels
+   * @param flash lightning, 0..1 (see systems/Weather.ts)
    */
   update(
     ambient: Ambient,
     lanternScreen: Phaser.Types.Math.Vector2Like | null,
     zoom: number,
     lights: ScreenLight[] = [],
+    flash = 0,
   ): void {
     const layer = this.layer;
+    this.flash.setVisible(flash > 0.01).setAlpha(flash * 0.22);
     // Full daylight: skip the work, the layer would be pure white anyway.
     if (ambient.color === 0xffffff && ambient.darkness === 0) {
       layer.setVisible(false);

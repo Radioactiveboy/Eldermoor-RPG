@@ -133,6 +133,20 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - Add `?raid=night` to start at 20:00 with the tincture in the satchel (talk to Mother to give it to her),
   `?raid=morning` to wake on the morning of the raid, or `?raid=after` to start in the ruins (add `&area=world`
   or `&area=hut` to start outside or in Iran's hut)
+- **After the raid**: the ruins of the cottage and the coop smoulder, thick and dark at first and dying down
+  over two days; crows come down on the trampled garden and the yard (fewer as the days go by) and take off
+  when you come near; and the folk on the plains road talk of the goblins (Jory, Hal and the footpads have
+  something to say, and they shout about it as you pass) (see `world/Aftermath.ts`)
+- **Weather**: clear skies, cloud, drizzle, rain and the odd thunderstorm, each lasting a few in-game hours and
+  following on from the last (rain tends to come after cloud; a storm blows itself out into rain), and on some
+  mornings after a dry night, mist lying in the hollows until mid-morning. Rain falls in sheets and splashes,
+  rings the lake and the puddles that fill the paths (they dry over a few hours after), cloud greys and darkens
+  the light (lanterns come on sooner), and storms bring wind in the trees, lightning and thunder. Indoors you
+  hear the rain on the roof and the thunder dulled. The time wheel shows the cloud, rain and mist. The weather
+  comes from a seed saved with the game, so the same game always has the same weather (see `systems/Weather.ts`)
+- Add `?weather=rain` to the URL to hold the weather (or `clear`, `overcast`, `drizzle`, `storm`, `mist`)
+- **Water and fire**: waves run round the lake's shore (rougher in a wind), lamps by the water and the hero's
+  lantern shine on it after dark, and a hearth's light dances on the walls of the room
 
 ## Project layout
 
@@ -167,7 +181,11 @@ src/
   world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
   world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
   world/Ambience.ts       Living world: water glints and foam, birds, bats, sparrows, butterflies,
-                          fireflies, cloud shadows, chimney smoke, falling leaves
+                          fireflies, cloud shadows, chimney smoke, falling leaves; rain, puddles and mist;
+                          lamps reflected on the water; the ruins smouldering and crows after the raid
+  world/Aftermath.ts      When the raid was (saved), how hard the ruins smoulder and how many crows come after it
+  world/FireGlow.ts       A hearth's light dancing on the walls of a room
+  art/weather.ts          Rain sheets, splashes, puddles, mist, crows, lamp reflections, firelight on walls
   systems/Pathfinding.ts  8-direction A* on the tile grid
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
@@ -178,6 +196,8 @@ src/
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
+  systems/Weather.ts      The weather: seeded spells of clear, cloud, rain and storm, morning mist, wet ground,
+                          the light under cloud and lightning; ?weather=
   systems/Experience.ts   XP and levels: what each level needs, what it gives, XP for quests
   systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, advantage,
                           conditions (prone, dazed...), fleeing, how beasts choose their moves, and the
@@ -235,7 +255,8 @@ src/
   tools/build-ambience.py Cuts, loops and levels the ambient recordings from the originals
   tools/build-sound.py    Does the same for the music, fight sounds and voice barks
   tools/balance.ts        The balance table from the fight simulator (`npm run sim`)
-  world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
+  world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour, the weather and who's about;
+                          times the lightning and thunder
   settings/Settings.ts    Volume and display settings, saved in the browser
   ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
@@ -272,10 +293,10 @@ src/
   scenes/CombatScene.ts   Turn-based fights over the world: turn order, skill hotbar and tooltips, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera
   ui/StatusBars.ts        Slim health and stamina bars, the hero's level and an XP bar
-  ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day
+  ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day, with the weather's cloud, rain and mist
   ui/Minimap.ts           Isometric minimap with player and camera view
   ui/LocationLabel.ts     Current area name (and nearby landmark) under the minimap
-  ui/DayNightOverlay.ts   Tints the world by time of day; lantern, hearth and candle light
+  ui/DayNightOverlay.ts   Tints the world by time of day (and weather); lantern, hearth and candle light; lightning
   ui/QuestTracker.ts      HUD reminder of the current quest step
   ui/Toasts.ts            "New quest" banners and the hero's passing thoughts
 tests/
@@ -351,6 +372,14 @@ tests/
   needs them. The footsteps and the monastery bell are recordings too. They go through their own Ambience volume slider, duck
   under a fight and fall silent behind the pause menu. Footsteps follow what's
   underfoot (grass, dirt, sand, soil, cave gravel, flagstones, floorboards).
+- **The weather is worked out, not stored.** `systems/Weather.ts` makes a run of spells (clear, overcast,
+  drizzle, rain, storm, each a few hours long, the next picked by what tends to follow the last) from a seed,
+  and `Weather.at(hours)` gives the sky at any moment as numbers (cloud, rain, wind, storm, mist), easing from one
+  spell into the next. Only the seed is saved, so sleeping through a storm just means waking after it. Each part of
+  the game reads the numbers: `Ambience` draws the rain, puddles (by `Weather.wetness`) and mist, the HUD's overlay
+  greys the light (`weatherLight`), and `AmbientSounds` mixes rain, a downpour, a gale and rain on the roof
+  (indoors, louder in a thatched cottage than a busy taproom; see `ROOFS`), and times the lightning and thunder.
+  The weather's recordings (about 250 KB a loop) are only fetched once it rains.
 - **Maps** are anything that produces a `MapData`. The generator is a stand-in;
   hand-made maps (e.g. from the Tiled editor) can plug in later. A map can have
   furniture and buildings (`objects`), back walls for rooms, `doors` that lead

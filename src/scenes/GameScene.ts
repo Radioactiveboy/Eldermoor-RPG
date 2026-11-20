@@ -20,11 +20,13 @@ import { AREA_NAMES, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops } from '../systems/Shops';
 import { Tavern } from '../systems/Tavern';
 import { TimeOfDay } from '../systems/TimeOfDay';
+import { Weather } from '../systems/Weather';
 import { Display } from '../ui/Display';
 import type { Speaker } from '../ui/SpeechBubbles';
 import { Ambience } from '../world/Ambience';
 import { AmbientSounds } from '../world/AmbientSounds';
 import { Drips } from '../world/Drips';
+import { FireGlow } from '../world/FireGlow';
 import { RaidDirector, raidStage } from '../world/GoblinRaid';
 import { IsoMap } from '../world/IsoMap';
 import { AreaId, Musing, Seat } from '../world/MapData';
@@ -104,6 +106,8 @@ export class GameScene extends Phaser.Scene {
   ambience?: Ambience;
   /** Water dripping from stalactites, in the cave. */
   private drips?: Drips;
+  /** A fire's light dancing on the walls, indoors. */
+  private fireGlow?: FireGlow;
   private sounds!: AmbientSounds;
   /** What the player would do by pressing E right now, if anything. */
   focus?: Interaction;
@@ -200,6 +204,7 @@ export class GameScene extends Phaser.Scene {
       Shops.reset();
       Tavern.reset();
       Crafting.reset();
+      Weather.reset();
       this.defeatedFoes.clear();
       this.visited.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
@@ -229,6 +234,10 @@ export class GameScene extends Phaser.Scene {
     this.afterTalk = undefined;
     this.musing = undefined;
 
+    // Handy for testing: ?weather=rain (or clear, overcast, drizzle, storm, mist) holds the weather (see systems/Weather.ts).
+    Weather.readSwitch(window.location.search);
+    // The raid's morning stays dry and clear, as it was written.
+    Weather.calm = raidStage() === 'morning' ? 'clear' : undefined;
     this.map = new IsoMap(this, buildArea(this.area));
     const start = data.load?.position ?? ((data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn);
     this.player = new Player(this, this.map, start.x, start.y);
@@ -258,6 +267,7 @@ export class GameScene extends Phaser.Scene {
     syncGathered(this);
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
     this.drips = this.map.data.drips ? new Drips(this, this.map.data) : undefined;
+    this.fireGlow = this.map.data.indoor ? new FireGlow(this, this.map.data) : undefined;
     this.sounds = new AmbientSounds(this.area, this.map.data);
     GameAudio.duckAmbience(1);
     // The world falls quiet behind the pause menu.
@@ -354,8 +364,9 @@ export class GameScene extends Phaser.Scene {
     updateMarketHours(this);
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
+    this.fireGlow?.update(dt);
     const stepLoudness = !moved ? 0 : this.sprinting ? 1.4 : wantsSneak ? 0.35 : 1;
-    this.sounds.update(dt, { x: this.player.gx, y: this.player.gy }, this.clock.hour, this.npcs, stepLoudness, this.player.footfalls);
+    this.sounds.update(dt, { x: this.player.gx, y: this.player.gy }, this.clock.hour, this.npcs, stepLoudness, this.player.footfalls, this.clock.elapsedHours);
     // Time stands still while fighting, turn by turn.
     if (!this.inCombat) {
       this.stats.update(dt, wantsSprint && moved);

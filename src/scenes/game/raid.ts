@@ -9,6 +9,7 @@ import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
 import { SAVE_VERSION, SaveData, SaveGame } from '../../systems/SaveGame';
 import { TimeOfDay } from '../../systems/TimeOfDay';
+import { Aftermath } from '../../world/Aftermath';
 import { RAID_BLACKOUT, RaidDirector } from '../../world/GoblinRaid';
 import type { ConfirmSceneData } from '../ConfirmScene';
 import type { GameScene, GameSceneData } from '../GameScene';
@@ -23,6 +24,8 @@ import { pathTo } from './input';
  * morning of the raid; ?raid=after comes round in the ruins.
  */
 export function raidTestStart(clock: TimeOfDay): void {
+  // (Called for every new game: the raid hasn't happened yet.)
+  Aftermath.raidAt = undefined;
   const params = new URLSearchParams(window.location.search);
   const which = params.get('raid');
   if (!which) return;
@@ -42,6 +45,8 @@ export function raidTestStart(clock: TimeOfDay): void {
     QuestLog.setFlag('raid-over');
     QuestLog.start('the-raid');
     setHour(13);
+    // The raid was at dawn today.
+    Aftermath.raidAt = Math.min(clock.elapsedHours, Math.floor(clock.elapsedHours / 24) * 24 + 6.2);
   }
 }
 
@@ -102,6 +107,7 @@ export function raidDefeat(g: GameScene): void {
         QuestLog.clearFlag('raid-pending');
         QuestLog.setFlag('raid-over');
         QuestLog.start('the-raid');
+        Aftermath.raidAt = g.clock.elapsedHours;
         g.clock.advance(g.clock.hoursUntil(13));
         g.stats.health = Math.max(1, Math.round(g.stats.maxHealth * 0.3));
         g.stats.restoreStamina(g.stats.maxStamina * 0.4);

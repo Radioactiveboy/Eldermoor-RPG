@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { TimeOfDay } from '../systems/TimeOfDay';
+import type { Sky } from '../systems/Weather';
 import { UI_COLORS, UI_FONT } from './theme';
 
 const R = 64;
@@ -14,12 +15,20 @@ const R = 64;
  *   12:00  sun at the top, the window is all daytime sky
  *   18:00  sun setting on the right, night sky coming in from the left
  *   00:00  moon at the top, the window is all night sky
+ *
+ * The weather shows in the window too: cloud drawn over the sky (darker for
+ * a storm), rain falling from it, and mist lying along the hills.
  */
 export class TimeWheel {
   private readonly disc: Phaser.GameObjects.Container;
   private readonly maskShape: Phaser.GameObjects.Graphics;
   private readonly frame: Phaser.GameObjects.Graphics;
   private readonly label: Phaser.GameObjects.Text;
+  /** Cloud, rain and mist over the sky in the window. */
+  private readonly weather: Phaser.GameObjects.Graphics;
+  private centre = { x: 0, y: 0 };
+  /** What the weather was last drawn as, so it's only redrawn when it changes. */
+  private drawn = '';
 
   readonly width = R * 2 + 12;
   readonly height = R + 40;
@@ -28,6 +37,8 @@ export class TimeWheel {
     this.disc = scene.add.container(0, 0, [this.drawDisc(scene)]);
     this.maskShape = scene.make.graphics({}, false);
     this.disc.setMask(this.maskShape.createGeometryMask());
+    this.weather = scene.add.graphics();
+    this.weather.setMask(this.maskShape.createGeometryMask());
     this.frame = scene.add.graphics();
     this.label = scene.add
       .text(0, 0, '', { fontFamily: UI_FONT, fontSize: '14px', color: UI_COLORS.text })
@@ -35,7 +46,7 @@ export class TimeWheel {
   }
 
   setVisible(visible: boolean): void {
-    [this.disc, this.frame, this.label].forEach((o) => o.setVisible(visible));
+    [this.disc, this.weather, this.frame, this.label].forEach((o) => o.setVisible(visible));
   }
 
   /** Place the dial with its top-left corner at (x, y). */
@@ -43,6 +54,8 @@ export class TimeWheel {
     const cx = x + this.width / 2;
     const cy = y + R + 6;
     this.disc.setPosition(cx, cy);
+    this.centre = { x: cx, y: cy };
+    this.drawn = '';
 
     // The window: only the top half of the disc is visible.
     this.maskShape.clear();
@@ -87,10 +100,50 @@ export class TimeWheel {
     this.label.setPosition(cx, cy + 13);
   }
 
-  update(clock: TimeOfDay): void {
+  update(clock: TimeOfDay, sky?: Sky): void {
     // Noon puts the sun at the top; each hour turns the disc 15 degrees clockwise.
     this.disc.setRotation(((clock.hour - 12) / 24) * Math.PI * 2);
     this.label.setText(`Day ${clock.day}  ·  ${clock.clockText}`);
+    if (sky) this.drawWeather(sky);
+  }
+
+  /** Cloud over the window, rain from it and mist along the hills, as much as there is of each. */
+  private drawWeather(sky: Sky): void {
+    const step = (v: number) => Math.round(v * 10) / 10;
+    const key = `${step(sky.cloud)}|${step(sky.rain)}|${step(sky.storm)}|${step(sky.mist)}`;
+    if (key === this.drawn) return;
+    this.drawn = key;
+    const g = this.weather.clear();
+    const { x: cx, y: cy } = this.centre;
+    // Rain first, so it falls from under the clouds.
+    if (sky.rain > 0.05) {
+      g.lineStyle(1.5, 0xc8daee, 0.4 + sky.rain * 0.5);
+      const drops = Math.round(4 + sky.rain * 14);
+      for (let i = 0; i < drops; i++) {
+        const x = cx - R * 0.8 + ((i * 37) % 100) / 100 * R * 1.6;
+        const y = cy - R * 0.55 + ((i * 53) % 100) / 100 * R * 0.4;
+        g.lineBetween(x, y, x - 3, y + 8);
+      }
+    }
+    if (sky.cloud > 0.05) {
+      const grey = sky.storm > 0.3 ? 0x4e5566 : 0x8c95a5;
+      const puffs: Array<[number, number, number]> = [
+        [-0.62, -0.42, 0.2], [-0.32, -0.62, 0.25], [0.02, -0.7, 0.26], [0.36, -0.6, 0.24], [0.64, -0.4, 0.2],
+        [-0.15, -0.5, 0.22], [0.2, -0.45, 0.2],
+      ];
+      // Thin cloud is a few puffs; heavy cloud covers the sky.
+      const count = Math.max(2, Math.round(sky.cloud * puffs.length));
+      g.fillStyle(grey, 0.55 + sky.cloud * 0.4);
+      for (const [px, py, pr] of puffs.slice(0, count)) g.fillCircle(cx + px * R, cy + py * R, pr * R);
+      g.fillStyle(0xffffff, 0.12);
+      for (const [px, py, pr] of puffs.slice(0, count)) g.fillCircle(cx + px * R - 2, cy + py * R - 3, pr * R * 0.6);
+    }
+    if (sky.mist > 0.05) {
+      g.fillStyle(0xe4e9ef, sky.mist * 0.7);
+      g.fillRect(cx - R, cy - R * 0.2, R * 2, R * 0.12);
+      g.fillStyle(0xe4e9ef, sky.mist * 0.45);
+      g.fillRect(cx - R, cy - R * 0.32, R * 2, R * 0.1);
+    }
   }
 
   /** Disc drawn around (0, 0): day sky and sun on top, night sky and moon underneath. */
