@@ -44,6 +44,8 @@ export interface ItemDef {
    * and nothing to eat (an oil) can only be used in a fight.
    */
   boon?: FightBoon;
+  /** Needed for a quest (Mother's medicine, Iran's hens): shown under the satchel's Quest tab. */
+  quest?: boolean;
   /** What it costs at a stall, in coins. Traders pay less to buy it (see systems/Shops.ts); no value means nobody will buy it. */
   value?: number;
 }
@@ -133,6 +135,7 @@ export const ITEMS = {
     description: "Pale, star-shaped flowers from Saint Elda's cloister garden. They smell of rain, and glow faintly in the dark. Half of Mother's tincture.",
     icon: 'item-moonpetal',
     category: 'Material',
+    quest: true,
     stack: 10,
   },
   'willow-bark': {
@@ -142,6 +145,7 @@ export const ITEMS = {
       "The other half of Mother's tincture.",
     icon: 'item-willowbark',
     category: 'Material',
+    quest: true,
     stack: 10,
   },
   venison: {
@@ -383,6 +387,7 @@ export const ITEMS = {
     description: "Cracked corn and barley, a good heavy sackful. Farmer Iran's hens are waiting for it.",
     icon: 'item-feed',
     category: 'Material',
+    quest: true,
     stack: 5,
     value: 10,
   },
@@ -471,6 +476,7 @@ export const ITEMS = {
       'The old cure for a fever and a bad chest. Mother needs this.',
     icon: 'item-fever-tincture',
     category: 'Potion',
+    quest: true,
     stack: 5,
     eat: { health: 30 },
     drink: true,
@@ -841,8 +847,29 @@ export type InventoryEvent =
 type Listener = (e: InventoryEvent) => void;
 
 export const BAG_SIZE = 20;
-/** How Sort lays out the satchel, by kind of thing. */
+/** How Sort lays out the satchel, by kind of thing (with quest things last of all). */
 const SORT_ORDER: ItemCategory[] = ['Weapon', 'Armour', 'Clothing', 'Tool', 'Potion', 'Food', 'Material'];
+
+/** The satchel's filter tabs: what's for eating and drinking, what's worn or used, what's for making things, and what a quest needs. */
+export type SatchelGroup = 'food' | 'gear' | 'materials' | 'quest';
+
+export function satchelGroup(def: ItemDef): SatchelGroup {
+  if (def.quest) return 'quest';
+  if (def.category === 'Food' || def.category === 'Potion') return 'food';
+  if (def.category === 'Material') return 'materials';
+  return 'gear';
+}
+
+/** Ways to tidy the satchel: by kind of thing, dearest first, or A to Z. */
+export type SortKey = 'type' | 'value' | 'name';
+
+/** Which of two items comes first when the satchel is sorted by `by`. Ties go by name. */
+export function compareItems(a: ItemDef, b: ItemDef, by: SortKey): number {
+  const name = a.name.localeCompare(b.name);
+  if (by === 'name') return name;
+  if (by === 'value') return (b.value ?? -1) - (a.value ?? -1) || name;
+  return Number(!!a.quest) - Number(!!b.quest) || SORT_ORDER.indexOf(a.category) - SORT_ORDER.indexOf(b.category) || name;
+}
 /** Coins the hero has saved up at the start. */
 const START_COINS = 15;
 
@@ -974,15 +1001,15 @@ class InventoryStore {
     this.emit({ type: 'changed' });
   }
 
-  /** Tidies the satchel: like with like in as few stacks as will hold them, gear first and odds and ends last. */
-  sort(): void {
+  /**
+   * Tidies the satchel: like with like in as few stacks as will hold them, laid
+   * out by kind (gear first, odds and ends and then quest things last), by value
+   * (dearest first) or by name.
+   */
+  sort(by: SortKey = 'type'): void {
     const totals = new Map<ItemId, number>();
     for (const s of this.bag) if (s) totals.set(s.id, (totals.get(s.id) ?? 0) + s.count);
-    const ids = [...totals.keys()].sort((a, b) => {
-      const da = itemDef(a);
-      const db = itemDef(b);
-      return SORT_ORDER.indexOf(da.category) - SORT_ORDER.indexOf(db.category) || da.name.localeCompare(db.name);
-    });
+    const ids = [...totals.keys()].sort((a, b) => compareItems(itemDef(a), itemDef(b), by));
     const bag: Array<Stack | null> = [];
     for (const id of ids) {
       const max = itemDef(id).stack;

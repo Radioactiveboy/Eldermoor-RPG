@@ -36,7 +36,7 @@ function next(choices: number[], current: number): number {
   return choices[(i + 1) % choices.length];
 }
 
-/** Volume sliders and display options. Changes save and apply immediately. */
+/** Volume sliders, display options and hunger and rest. Changes save and apply immediately. */
 export class SettingsScene extends Phaser.Scene {
   private dim!: Phaser.GameObjects.Rectangle;
   private ui!: Phaser.GameObjects.Container;
@@ -86,10 +86,17 @@ export class SettingsScene extends Phaser.Scene {
       return button;
     });
 
-    const fullscreen = makeButton(this, 0, 190, this.fullscreenLabel(), () => {
+    const fullscreen = makeButton(this, -113, 190, this.fullscreenLabel(), () => {
       this.scale.toggleFullscreen();
-    }, 300);
-    const fsText = fullscreen.list[1] as Phaser.GameObjects.Text;
+    }, 214);
+    const fsText = (fullscreen.list[1] as Phaser.GameObjects.Text).setFontSize(18);
+    // Hunger and rest (systems/Needs.ts): off unless the player wants them.
+    const needs = makeButton(this, 113, 190, '', () => {
+      Settings.set('needs', !Settings.get().needs);
+      needsText.setText(needsLabel());
+    }, 214);
+    const needsLabel = () => `Hunger & rest: ${Settings.get().needs ? 'On' : 'Off'}`;
+    const needsText = (needs.list[1] as Phaser.GameObjects.Text).setFontSize(18).setText(needsLabel());
     const refreshFs = () => {
       fsText.setText(this.fullscreenLabel());
       this.refreshDisplay();
@@ -100,7 +107,7 @@ export class SettingsScene extends Phaser.Scene {
     const back = makeButton(this, 0, 252, 'Back', () => this.close(), 200);
     const hint = this.add.text(0, 292, 'Esc to close', bodyStyle(14, THEME.dimText)).setOrigin(0.5);
 
-    this.ui = this.add.container(0, 0, [panel, title, ...sliders, resolution, uiSize, ...toggles, fullscreen, back, hint]);
+    this.ui = this.add.container(0, 0, [panel, title, ...sliders, resolution, uiSize, ...toggles, fullscreen, needs, back, hint]);
 
     this.input.keyboard!.on('keydown-ESC', () => this.close());
     this.layout();

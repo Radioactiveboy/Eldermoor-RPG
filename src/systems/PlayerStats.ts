@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { HEALTH, STAMINA } from '../config';
 import { Experience } from './Experience';
+import { Needs } from './Needs';
 
 /**
  * Health and stamina. Maximum health rises with each level. Sprinting spends stamina; it refills after a short rest.
@@ -16,6 +17,11 @@ export class PlayerStats {
   /** Grows with the hero's level. */
   get maxHealth(): number {
     return HEALTH.max + Experience.healthBonus;
+  }
+
+  /** As far as stamina refills: the whole bar, or less when weary (see systems/Needs.ts). */
+  get staminaCap(): number {
+    return this.maxStamina * Needs.staminaCap;
   }
 
   /** True after stamina ran dry, until it recovers enough to sprint again. */
@@ -37,11 +43,12 @@ export class PlayerStats {
     } else {
       this.restTimer += dt;
       if (this.restTimer >= STAMINA.regenDelay) {
-        this.stamina = Math.min(this.maxStamina, this.stamina + STAMINA.regenPerSecond * dt);
+        const cap = this.staminaCap;
+        if (this.stamina < cap) this.stamina = Math.min(cap, this.stamina + STAMINA.regenPerSecond * Needs.staminaRegen * dt);
       }
       if (this.stamina >= STAMINA.sprintMinimum) this.exhausted = false;
     }
-    this.health = Math.min(this.maxHealth, this.health + HEALTH.regenPerSecond * dt);
+    if (Needs.healthRegen) this.health = Math.min(this.maxHealth, this.health + HEALTH.regenPerSecond * dt);
   }
 
   damage(amount: number): void {
@@ -49,7 +56,9 @@ export class PlayerStats {
   }
 
   restoreStamina(amount: number): void {
-    this.stamina = Phaser.Math.Clamp(this.stamina + amount, 0, this.maxStamina);
+    // Food and rest don't fill a weary hero past what they could recover to, but nothing takes away what's already there.
+    const cap = Math.max(this.staminaCap, Math.min(this.stamina, this.maxStamina));
+    this.stamina = Phaser.Math.Clamp(this.stamina + amount, 0, amount > 0 ? cap : this.maxStamina);
     if (this.stamina >= STAMINA.sprintMinimum) this.exhausted = false;
   }
 
