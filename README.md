@@ -130,6 +130,13 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   and up by the Wolf Mother's knoll), and sage and comfrey in the cloister beds at Saint Elda's (once Brother Anselm
   has given leave), and wolfsbane, nettles, comfrey and yarrow in the north woods (by the watchtower, the fallen oak,
   the ford and the glade). Walk up and press E to pick them; each patch grows back after a day and a half
+- **Growing your own**: ask Farmer Iran about the weedy patch by his hut and he lends it to you (eight tiles of his
+  late mother's herb bed), with his old spade, a watering can and two twists of carrot seed. Hilde sells carrot, turnip
+  and cabbage seed at her stall. Walk up to a tile and press E to **Dig** it, then **Sow** it (a box asks which seed
+  when you carry more than one kind), then **Water** it. Seed only grows while the soil is damp: a watering keeps it
+  damp for about a day, and so does a shower of rain (drizzle or heavier), even while you're away. Carrots and turnips
+  want two days of damp soil, cabbages three. Press E on a growing tile to see how it's coming on, and pick it when
+  it's ripe (3 carrots or turnips, 2 cabbages); the ground stays dug, ready to sow again
 - **Fishing**: buy Old Tobin's spare rod (6 coppers) on the far shore of the lake. With it in the satchel, stand at
   the edge of the lake, the mere, the reed pond or the willow pool on the plains, or the brothers' fish ponds outside
   Saint Elda's, and press E to **Fish**. Wait for the float to go right under (a twitch is only a nibble), then
@@ -280,7 +287,8 @@ src/
   systems/VillageDay.ts   Where the market's traders are at each hour: stall, workshop, the Tankard or home
   systems/Crafting.ts     Brewing and cooking: the recipes, the stations, and which recipes have been found
   systems/Loot.ts         Random finds: what searching a pile of bones can turn up, and how likely each is
-  systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
+  systems/Farm.ts         Crops (picked ones regrow), which trees were shaken today, and the plot in Iran's yard:
+                          dug, sown, watered (or rained on) and how far each tile has grown
   systems/Herbs.ts        Wild herbs: the kinds, what each gives, and when each patch was picked (they regrow)
   systems/Fishing.ts      Fishing: each water's fish by time of day, bite timing, how hard each fish fights, the reel
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
@@ -374,7 +382,7 @@ src/
   scenes/game/areas.ts    The area registry: each area id, how its map is built (most with `lazy(...)`, fetched on
                           first need), whether ?area= starts there, and what happens on arriving. A new area is one
                           entry here (plus AreaId and AREA_NAMES)
-  scenes/game/interactions.ts  What the E prompt can do (talk, door, sit, sleep, pick, shake, hunt, fish) and which one shows
+  scenes/game/interactions.ts  What the E prompt can do (talk, door, sit, sleep, pick, shake, hunt, fish, work the plot) and which one shows
   scenes/game/dialogueActions.ts  Runs a line's `action`: shop:, drink:, order:, road:, rent:, and the named ones,
                           which live with their part of the story:
   scenes/game/medicine.ts Mother's medicine: moonpetal, willow bark, the tincture brewed and given
@@ -387,6 +395,7 @@ src/
   scenes/game/workshops.ts The smithy and the bakery: barred at night, first visits, sparks off the anvil, flour
   scenes/game/combat.ts   Starting fights (and packs), the plains' chance meetings, spoils and what comes after
   scenes/game/sights.ts   Few-second actions, crops, trees, examining, searching, gathering, giving items
+  scenes/game/plot.ts     The plot Iran lends: how each tile looks, and digging, sowing, watering and picking
   scenes/game/sitting.ts  Seats and the thoughts that come while sitting
   scenes/game/fishing.ts  The Fish prompt at the water's edge, first-catch diary lines, Tobin's rod and his boot
   scenes/game/travel.ts   Doors, road exits, locked doors, the trek question, fading to the next area

@@ -3582,6 +3582,183 @@ const FISHING_PAINTERS: Record<string, (c: Ctx) => void> = {
 
 Object.assign(PAINTERS, FISHING_PAINTERS);
 
+// ------------------------------------------------------------ the plot in Iran's yard
+
+/** A twist of brown paper with a little picture of what it grows on the front, and a few seeds spilled at its foot. */
+function seedPacket(c: Ctx, crop: string, seed: string): void {
+  // The seeds spilled in front.
+  const r = rng(crop.length * 31 + 7);
+  for (let i = 0; i < 7; i++) {
+    ellipse(c, 30 + r() * 70, 110 + r() * 10, 3.2, 2.2, r() * 3);
+    fillInk(c, seed, 1.2);
+  }
+  // The packet, its top folded over.
+  c.beginPath();
+  c.moveTo(30, 30);
+  c.lineTo(98, 30);
+  c.lineTo(102, 106);
+  c.quadraticCurveTo(64, 112, 26, 106);
+  c.closePath();
+  drop(c, () => {
+    c.fillStyle = '#c8a878';
+    c.fill();
+  });
+  clipped(c, () => {
+    c.fillStyle = lin(c, 26, 0, 102, 0, [
+      [0, '#e8d0a0'],
+      [0.6, '#d4b484'],
+      [1, '#9a7a4e'],
+    ]);
+    c.fillRect(0, 0, 128, 128);
+  });
+  ink(c);
+  c.beginPath();
+  c.moveTo(28, 30);
+  c.lineTo(100, 30);
+  c.lineTo(96, 46);
+  c.lineTo(32, 46);
+  c.closePath();
+  fillInk(c, lin(c, 0, 30, 0, 46, [
+    [0, '#b89464'],
+    [1, '#8a6a40'],
+  ]), 3);
+  // The picture: the crop itself, small.
+  ellipse(c, 64, 78, 26, 24);
+  fillInk(c, '#f4ead4', 2.5);
+  at(c, 64, 78, 0, () => {
+    c.translate(-64, -64);
+    PAINTERS[crop](c);
+  }, 0.38);
+  shine(c, 44, 60, 6, 18, 0.1, 0.35);
+}
+
+const PLOT_PAINTERS: Record<string, (c: Ctx) => void> = {
+  'carrot-seed': (c) => seedPacket(c, 'carrot', '#a08050'),
+  'turnip-seed': (c) => seedPacket(c, 'turnip', '#5a3a28'),
+  'cabbage-seed': (c) => seedPacket(c, 'cabbage', '#4a3428'),
+  spade: (c) =>
+    at(c, 64, 64, Math.PI / 5, () => {
+      // The shaft, with a D-shaped grip at the top.
+      roundRect(c, -5, -54, 10, 72, 4);
+      fillInk(c, lin(c, -5, 0, 5, 0, [
+        [0, '#c89a5e'],
+        [1, '#7a5430'],
+      ]), 3);
+      c.beginPath();
+      c.moveTo(-14, -52);
+      c.lineTo(14, -52);
+      c.lineTo(14, -60);
+      c.quadraticCurveTo(0, -72, -14, -60);
+      c.closePath();
+      c.moveTo(-7, -56);
+      c.quadraticCurveTo(0, -63, 7, -56);
+      c.closePath();
+      fillInk(c, '#a07a44', 3);
+      // The iron blade, earth still on its edge.
+      c.beginPath();
+      c.moveTo(-18, 16);
+      c.lineTo(18, 16);
+      c.lineTo(17, 46);
+      c.quadraticCurveTo(0, 58, -17, 46);
+      c.closePath();
+      drop(c, () => {
+        c.fillStyle = '#6a6a70';
+        c.fill();
+      });
+      clipped(c, () => {
+        c.fillStyle = lin(c, -18, 0, 18, 0, [
+          [0, '#d8dce0'],
+          [0.5, '#9aa0a8'],
+          [1, '#555a62'],
+        ]);
+        c.fillRect(-20, 10, 40, 50);
+        c.fillStyle = 'rgba(90,58,30,0.85)';
+        c.beginPath();
+        c.moveTo(-20, 44);
+        c.quadraticCurveTo(-6, 38, 2, 46);
+        c.quadraticCurveTo(10, 40, 20, 42);
+        c.lineTo(20, 60);
+        c.lineTo(-20, 60);
+        c.fill();
+      });
+      ink(c);
+      roundRect(c, -8, 10, 16, 10, 3);
+      fillInk(c, '#7a7e86', 2.5);
+      shine(c, -8, 26, 4, 10, 0, 0.45);
+    }),
+  'watering-can': (c) => {
+    // The spout, out to the rose.
+    c.beginPath();
+    c.moveTo(80, 82);
+    c.lineTo(114, 38);
+    c.lineTo(120, 44);
+    c.lineTo(88, 94);
+    c.closePath();
+    fillInk(c, lin(c, 80, 0, 120, 0, [
+      [0, '#9aa4ac'],
+      [1, '#5e666e'],
+    ]), 3);
+    ellipse(c, 117, 40, 7, 10, 0.65);
+    fillInk(c, '#b8c0c6', 2.5);
+    for (const [x, y] of [[115, 37], [118, 41], [116, 44], [119, 37]]) {
+      ellipse(c, x, y, 1, 1);
+      c.fillStyle = INK;
+      c.fill();
+    }
+    // The handle over the top.
+    c.beginPath();
+    c.moveTo(26, 52);
+    c.quadraticCurveTo(52, 6, 82, 50);
+    c.strokeStyle = INK;
+    c.lineWidth = 11;
+    c.lineCap = 'round';
+    c.stroke();
+    c.strokeStyle = '#8c949c';
+    c.lineWidth = 6;
+    c.stroke();
+    // The body, a little dented.
+    c.beginPath();
+    c.moveTo(18, 50);
+    c.lineTo(90, 50);
+    c.lineTo(92, 108);
+    c.quadraticCurveTo(56, 116, 16, 108);
+    c.closePath();
+    drop(c, () => {
+      c.fillStyle = '#7a848c';
+      c.fill();
+    });
+    clipped(c, () => {
+      c.fillStyle = lin(c, 16, 0, 92, 0, [
+        [0, '#c8d0d6'],
+        [0.4, '#a4aeb6'],
+        [1, '#58606a'],
+      ]);
+      c.fillRect(0, 40, 128, 80);
+      c.strokeStyle = 'rgba(40,46,52,0.5)';
+      c.lineWidth = 2;
+      for (const y of [62, 96]) {
+        c.beginPath();
+        c.moveTo(14, y);
+        c.lineTo(94, y);
+        c.stroke();
+      }
+      // The dent.
+      ellipse(c, 66, 80, 8, 6, 0.3);
+      c.fillStyle = 'rgba(40,46,52,0.35)';
+      c.fill();
+    });
+    ink(c);
+    ellipse(c, 54, 50, 36, 6);
+    fillInk(c, '#3a4048', 3);
+    shine(c, 32, 78, 5, 18, 0, 0.5);
+    // A drop of water off the rose.
+    ellipse(c, 112, 62, 3.5, 5);
+    fillInk(c, 'rgba(160,200,230,0.95)', 1.5);
+  },
+};
+
+Object.assign(PAINTERS, PLOT_PAINTERS);
+
 /** Which painter makes each texture. */
 const ICONS: Array<[string, string]> = [
   ['item-carrot', 'carrot'],
@@ -3665,6 +3842,11 @@ const ICONS: Array<[string, string]> = [
   ['item-grilled-tench', 'grilled-tench'],
   ['item-roast-carp', 'roast-carp'],
   ['item-grilled-trout', 'grilled-trout'],
+  ['item-carrot-seed', 'carrot-seed'],
+  ['item-turnip-seed', 'turnip-seed'],
+  ['item-cabbage-seed', 'cabbage-seed'],
+  ['item-spade', 'spade'],
+  ['item-watering-can', 'watering-can'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {

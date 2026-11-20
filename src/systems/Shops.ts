@@ -49,12 +49,12 @@ export const SHOPS = {
     greeting: 'Fresh this morning, all of it. Well, most of it.',
     refuse: "Bless you, but I only deal in food, love.",
     thanks: ['Lovely. Mind, that pie is hot.', 'There you are, love.', "A pleasure. Come back tomorrow, there'll be buns."],
-    stock: [['bread', 8], ['meat-pie', 4], ['honey-cake', 5], ['cheese', 4], ['apple', 10], ['chicken-feed', 3]],
+    stock: [['bread', 8], ['meat-pie', 4], ['honey-cake', 5], ['cheese', 4], ['apple', 10], ['chicken-feed', 3], ['carrot-seed', 6], ['turnip-seed', 6], ['cabbage-seed', 4]],
     buys: ['Food'],
     faction: 'adowvale',
     buyRate: 0.5,
-    // Farmer Iran sends the hero here for feed (the 'chicken-feed' quest).
-    keeps: { 'chicken-feed': 1 },
+    // Farmer Iran sends the hero here for feed (the 'chicken-feed' quest), and for seed for the plot he lends.
+    keeps: { 'chicken-feed': 1, 'carrot-seed': 2, 'turnip-seed': 2, 'cabbage-seed': 1 },
   },
   smith: {
     name: "Osric's Forge",
