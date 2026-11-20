@@ -63,6 +63,12 @@ export interface Pose3D {
   sit?: boolean;
   /** 0..2: how far a cloak's hem streams back as the figure walks. */
   flutter?: number;
+  /**
+   * 0..1 through a working stroke, for the few who are drawn at their trade
+   * (the smith's hammer coming down, the baker's hands pushing the dough):
+   * 0 at the top of the stroke, 1 at the bottom.
+   */
+  work?: number;
 }
 
 /** Drawn directions, in sheet-row order: angle in degrees, 0 facing the viewer, 90 facing screen-right. */
@@ -327,4 +333,33 @@ export function redrawFigure3D(scene: Phaser.Scene, key: string, build: (pose: P
   const tex = scene.textures.get(key) as Phaser.Textures.CanvasTexture;
   tex.context.putImageData(drawFigureSheet(build).toImageData(), 0, 0);
   tex.refresh();
+}
+
+/**
+ * Draws a figure at their trade, for the few who have a working stroke (see
+ * Pose3D.work), and makes it their '<key>-work-<dir>' animation in place of the
+ * crouched one from {@link generateFigure3D}: `strokes` frames from the top of
+ * the stroke to the bottom, played there and back.
+ */
+export function generateWorkFrames(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model, strokes: number[], frameRate: number): void {
+  const sheetKey = `${key}@work`;
+  const sheet = new PixelCanvas(FRAME_W * strokes.length, FRAME_H * DIRECTIONS_8.length);
+  DIRECTIONS_8.forEach((d, row) => {
+    strokes.forEach((work, col) => {
+      const frame = renderFrame(build({ stride: 0, bob: work * 0.6, work }), d.angle);
+      frame.outline();
+      sheet.blit(frame, col * FRAME_W, row * FRAME_H);
+    });
+  });
+  const tex = sheet.toTexture(scene, sheetKey);
+  let i = 0;
+  for (let row = 0; row < DIRECTIONS_8.length; row++) {
+    for (let col = 0; col < strokes.length; col++) tex.add(i++, 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
+  }
+  DIRECTIONS_8.forEach((d, row) => {
+    const anim = `${key}-work-${d.name}`;
+    if (scene.anims.exists(anim)) scene.anims.remove(anim);
+    const frames = strokes.map((_, col) => ({ key: sheetKey, frame: row * strokes.length + col }));
+    scene.anims.create({ key: anim, frames, frameRate, repeat: -1 });
+  });
 }

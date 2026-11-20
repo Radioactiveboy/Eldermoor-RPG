@@ -3,6 +3,7 @@ import type { HenKind } from '../art/henfarm';
 import type { FoeKind } from '../systems/Combat';
 import type { CropKind } from '../systems/Farm';
 import type { ItemId } from '../systems/Inventory';
+import type { Villager, Whereabouts } from '../systems/VillageDay';
 import type { Shape } from './Collision';
 
 export enum Terrain {
@@ -37,7 +38,9 @@ export type AreaId =
   // The Wolf Mother's den on the plains, and the passage beyond its crevice.
   | 'den' | 'deepden'
   // The Crooked Tankard in Adowvale: the taproom, the passage upstairs, a rented room, and the cellar.
-  | 'tavern' | 'tavern-hall' | 'tavern-room' | 'cellar';
+  | 'tavern' | 'tavern-hall' | 'tavern-room' | 'cellar'
+  // Workshops off Adowvale's square: Osric's smithy and Hilde's bakery.
+  | 'smithy' | 'bakery';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -178,7 +181,7 @@ export interface NpcSpawn {
   id: string;
   gx: number;
   gy: number;
-  /** A trader who keeps market hours: packs up and walks home in the evening, back in the morning. */
+  /** A trader who keeps market hours and a daily round (see systems/VillageDay.ts): stall, workshop, tavern, home. */
   commute?: Commute;
   /** For someone who stays put: the grid direction they face when nobody is talking to them. */
   looking?: { x: number; y: number };
@@ -187,18 +190,29 @@ export interface NpcSpawn {
    * evening): [from, to), where `to` may run past 24 into the small hours.
    */
   hours?: [number, number];
+  /**
+   * A villager with a daily round (systems/VillageDay.ts), only here while
+   * their round has them at this place: the smith in his smithy, the baker in
+   * her bakery, the traders at the Crooked Tankard of an evening.
+   */
+  keeps?: Whereabouts;
+  /** Sits where they're put (at a tavern table), though they don't always sit. */
+  seated?: boolean;
 }
 
-/** How a stallholder gets between their stall and their front door (see systems/MarketHours.ts). */
+/**
+ * How a stallholder gets about the square on their daily round (see
+ * systems/VillageDay.ts): between their stall and the doors they go in at.
+ */
 export interface Commute {
+  /** Who they are, for their round. */
+  villager: Villager;
   /** Their stall, which is covered over while they're away. */
   stall: MapObject;
   /** Where they step out from behind the counter. */
   exit: { x: number; y: number };
-  /** Their front door, where they go in for the night. */
-  home: { x: number; y: number };
-  /** Hours after the others they open and close (negative for earlier). */
-  late: number;
+  /** The doors they go in at: home, their workshop (if they have one) and the tavern. */
+  doors: Partial<Record<Whereabouts, { x: number; y: number }>>;
 }
 
 /** A wild animal that roams near where it starts (see entities/Creature.ts). */

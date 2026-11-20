@@ -14,7 +14,7 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 // 'tavern-room' has no ?area= switch (it needs a room taken first), so it isn't here.
 const ALL_AREAS = [
   'home', 'world', 'market', 'cave', 'hut', 'plains', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
-  'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar',
+  'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery',
 ];
 const AREAS = process.env.SMOKE_AREAS ? process.env.SMOKE_AREAS.split(',') : ALL_AREAS;
 /** How many areas load at once. */

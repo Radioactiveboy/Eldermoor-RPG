@@ -23,6 +23,7 @@ import { generateTavern } from './tavern';
 import { generateTiles } from './tiles';
 import { generateTollGate } from './tollgate';
 import { generateWillow } from './willow';
+import { generateWorkshops } from './workshops';
 
 /** One step of drawing the art, with a name for the loading screen. */
 export interface ArtStep {
@@ -62,6 +63,8 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'the willow', draw: generateWillow },
   { label: 'Mother', draw: generateMother },
   { label: 'goblins', draw: generateGoblins },
+  // After the townsfolk: it redraws the smith's and the baker's working frames.
+  { label: 'the smithy and bakery', draw: generateWorkshops },
   // Last: it makes burnt copies of art drawn above.
   { label: 'the burnt farm', draw: generateRuin },
 ];

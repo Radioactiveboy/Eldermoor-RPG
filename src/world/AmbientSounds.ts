@@ -3,6 +3,7 @@ import { GameAudio } from '../audio/Audio';
 import { AmbientMix, SILENCE, Surface } from '../audio/Soundscape';
 import type { Npc } from '../entities/Npc';
 import { marketOpen } from '../systems/MarketHours';
+import { whereabouts } from '../systems/VillageDay';
 import { ambientAt } from '../systems/TimeOfDay';
 import { AreaId, MapData, Terrain } from './MapData';
 import { SMITHY } from './MarketMap';
@@ -48,6 +49,8 @@ const PLACES: Record<AreaId, Place> = {
   'tavern-hall': { tavern: 0.3, echo: 0.2 },
   'tavern-room': { tavern: 0.15, fire: 0.2, echo: 0.1 },
   cellar: { cave: 0.35, tavern: 0.12, echo: 0.6 },
+  smithy: { fire: 0.85, echo: 0.3 },
+  bakery: { fire: 0.55, echo: 0.15 },
   chapel: { bell: 0.7, echo: 0.9 },
   infirmary: { fire: 0.5, bell: 0.35, echo: 0.3 },
   scriptorium: { fire: 0.3, bell: 0.35, echo: 0.3 },
@@ -140,8 +143,10 @@ export class AmbientSounds {
       const open = marketOpen(hour);
       const folk = npcs.filter((n) => n.present && n.distanceTo(player.x, player.y) < 14).length;
       mix.crowd = open ? clamp01(0.35 + folk / 10) : 0;
-      mix.forge = marketOpen(hour, SMITHY.late) ? nearness(Math.hypot(player.x - SMITHY.x, player.y - SMITHY.y), 20) : 0;
+      // Osric's hammer rings out through the smithy door while he's at the anvil.
+      mix.forge = whereabouts('smith', hour) === 'workshop' ? nearness(Math.hypot(player.x - SMITHY.x, player.y - SMITHY.y), 16) : 0;
     }
+    if (this.area === 'smithy') mix.forge = npcs.some((n) => n.id === 'smith' && n.present) ? 1 : 0;
 
     if (p.tavern) {
       // The taproom's din comes from the folk drinking in it, and carries upstairs faintly.

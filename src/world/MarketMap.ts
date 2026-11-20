@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { INN_CHIMNEY, TOWNHOUSE_CHIMNEY } from '../art/market';
 import { TREK_HOURS } from '../config';
 import { box, circle, Shape } from './Collision';
-import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
+import type { Villager } from '../systems/VillageDay';
+import { Commute, MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 
 export const MARKET_W = 34;
@@ -33,25 +34,41 @@ function roadMiddle(x: number): number {
   return ROAD_ROWS[1] - 1.2 * Math.sin(Math.PI * t);
 }
 
+/** Where the Crooked Tankard's front door lets people in from the square. */
+const TAVERN_DOOR = { x: 10.5, y: 4.3 };
+
+/**
+ * The workshops on the north side of the square, each with its keeper living
+ * over it: Hilde's bakery (the house on the corner) and Osric's smithy (the
+ * stone house past the inn). Their doors lead inside (see WorkshopMaps.ts).
+ */
+export const WORKSHOPS = {
+  bakery: { house: { tx: 5, ty: 1 }, door: { tx: 6, ty: 4 }, front: { x: 6.5, y: 4.3 } },
+  smithy: { house: { tx: 14, ty: 1 }, door: { tx: 15, ty: 4 }, front: { x: 15.5, y: 4.3 } },
+} as const;
+
 /**
  * Where each stall stands (its back corner), which way it faces, and who keeps it; where the
- * keeper steps out from behind it and the front door of the house they go home to at night, and
- * how much later than the others they keep their hours (Hilde the baker is up before everyone).
+ * keeper steps out from behind it, and the doors they go in at on their round (see
+ * systems/VillageDay.ts): home (over the shop, for Hilde and Osric), the workshop, and the inn.
  */
 const STALLS: Array<{
-  kind: 'baker' | 'smith' | 'tanner'; tx: number; ty: number; facing: 'y' | 'x';
-  exit: { x: number; y: number }; home: { x: number; y: number }; late: number;
+  kind: Villager; tx: number; ty: number; facing: 'y' | 'x';
+  exit: { x: number; y: number }; doors: Commute['doors'];
 }> = [
-  { kind: 'baker', tx: 10, ty: 8, facing: 'y', exit: { x: 9.5, y: 8.5 }, home: { x: 6.5, y: 4.3 }, late: -0.5 },
-  { kind: 'smith', tx: 16, ty: 8, facing: 'y', exit: { x: 15.5, y: 8.5 }, home: { x: 15.5, y: 4.3 }, late: 0 },
-  { kind: 'tanner', tx: 7, ty: 13, facing: 'x', exit: { x: 7.5, y: 15.5 }, home: { x: 4.3, y: 17.5 }, late: 0.25 },
+  {
+    kind: 'baker', tx: 10, ty: 8, facing: 'y', exit: { x: 9.5, y: 8.5 },
+    doors: { home: WORKSHOPS.bakery.front, workshop: WORKSHOPS.bakery.front, tavern: TAVERN_DOOR },
+  },
+  {
+    kind: 'smith', tx: 16, ty: 8, facing: 'y', exit: { x: 15.5, y: 8.5 },
+    doors: { home: WORKSHOPS.smithy.front, workshop: WORKSHOPS.smithy.front, tavern: TAVERN_DOOR },
+  },
+  { kind: 'tanner', tx: 7, ty: 13, facing: 'x', exit: { x: 7.5, y: 15.5 }, doors: { home: { x: 4.3, y: 17.5 }, tavern: TAVERN_DOOR } },
 ];
 
-/** Where the smith works, for the sound of the hammer (see world/AmbientSounds.ts). */
-export const SMITHY = (() => {
-  const s = STALLS.find((st) => st.kind === 'smith')!;
-  return { x: s.exit.x, y: s.exit.y, late: s.late };
-})();
+/** Where the smith works, for the sound of the hammer through the smithy door (see world/AmbientSounds.ts). */
+export const SMITHY = WORKSHOPS.smithy.front;
 
 /**
  * Adowvale, the village at the far end of the road from the cottage, built
@@ -137,10 +154,11 @@ export function buildMarketMap(gateOpen = false): MapData {
     // Mirroring the art swaps x and y on the grid.
     data.chimneys!.push({ gx: tx + (flipX ? c.gy : c.gx), gy: ty + (flipX ? c.gx : c.gy), z: c.z });
   };
-  house('bld-house-cooper', 5, 1);
+  house('bld-bakery', WORKSHOPS.bakery.house.tx, WORKSHOPS.bakery.house.ty);
   house('bld-inn', 9, 1);
   addTavernFront(data);
-  house('bld-house-weaver', 14, 1);
+  house('bld-smithy', WORKSHOPS.smithy.house.tx, WORKSHOPS.smithy.house.ty);
+  addWorkshopFronts(data);
   house('bld-house-chandler', 19, 2);
   house('bld-house-reeve', 1, 6, true);
   house('bld-house-miller', 1, 16, true);
@@ -172,7 +190,7 @@ export function buildMarketMap(gateOpen = false): MapData {
     const keeper = flip ? { x: 0.55, y: 1 } : { x: 1, y: 0.55 };
     data.npcs!.push({
       id: s.kind, gx: s.tx + keeper.x, gy: s.ty + keeper.y,
-      commute: { stall, exit: s.exit, home: s.home, late: s.late },
+      commute: { villager: s.kind, stall, exit: s.exit, doors: s.doors },
     });
   }
 
@@ -241,6 +259,21 @@ function addTavernFront(data: MapData): void {
   placeObject(data, { key: 'furn-barrels', tx: 8, ty: 4, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
   placeObject(data, { key: 'mkt-bench', tx: 12, ty: 4, w: 1, h: 1, shapes: [box(0.08, 0.35, 0.92, 0.7)] });
   data.seats!.push({ name: 'tavern-bench', gx: 12.5, gy: 4.55, faceX: 0, faceY: 1, standX: 12.5, standY: 5.5 });
+}
+
+/**
+ * The doors into Hilde's bakery and Osric's smithy, with a lantern over each,
+ * and their names under the area's name as the hero walks by.
+ */
+function addWorkshopFronts(data: MapData): void {
+  const fronts: Array<[keyof typeof WORKSHOPS, string]> = [['bakery', "Hilde's bakery"], ['smithy', "Osric's smithy"]];
+  for (const [id, name] of fronts) {
+    const w = WORKSHOPS[id];
+    data.doors!.push({ tx: w.door.tx, ty: w.door.ty, to: id, entry: 'door', label: 'Go inside', facing: 'back' });
+    data.entries![id] = { x: w.front.x, y: w.front.y + 0.4 };
+    data.landmarks!.push({ gx: w.front.x, gy: w.front.y, name, range: 2.5 });
+    data.lights!.push({ gx: w.front.x, gy: w.front.y - 0.2, z: 52, radius: 100, flicker: 0.5 });
+  }
 }
 
 /**

@@ -19,11 +19,13 @@ import { buildMarketMap } from '../../world/MarketMap';
 import { buildMonasteryMap } from '../../world/MonasteryMap';
 import { buildPlainsMap } from '../../world/PlainsMap';
 import { buildCellarMap, buildTavernHallMap, buildTavernMap, buildTavernRoomMap } from '../../world/TavernMap';
+import { buildBakeryMap, buildSmithyMap } from '../../world/WorkshopMaps';
 import type { GameScene } from '../GameScene';
 import { enteredCave } from './hollow';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
+import { enteredWorkshop } from './workshops';
 
 export interface AreaDef {
   /** Builds the area's map as things stand (gates open or shut, the farm whole or burnt). */
@@ -72,6 +74,8 @@ export const AREAS: Record<AreaId, AreaDef> = {
   // No ?area= for a rented room: it needs a room taken first.
   'tavern-room': { build: () => buildTavernRoomMap(Tavern.room ?? 1) },
   cellar: { build: () => buildCellarMap(), test: true, enter: enteredCellar },
+  smithy: { build: buildSmithyMap, test: true, enter: enteredWorkshop },
+  bakery: { build: buildBakeryMap, test: true, enter: enteredWorkshop },
   plains: {
     build: () => buildPlainsMap(),
     test: true,
