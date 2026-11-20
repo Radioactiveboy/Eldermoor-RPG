@@ -22,6 +22,8 @@ import {
   AttackResult,
   Battle,
   chooseFoeAction,
+  applyBoon,
+  boonText,
   Combatant,
   CombatantDef,
   diceText,
@@ -753,10 +755,13 @@ export class CombatScene extends Phaser.Scene {
     Inventory.bag.forEach((stack, index) => {
       if (!stack || seen.has(stack.id)) return;
       const def = itemDef(stack.id);
-      if (!def.eat) return;
+      if (!def.eat && !def.boon) return;
       seen.add(stack.id);
-      const gains = [def.eat.health && `${def.eat.health} health`, def.eat.stamina && `${def.eat.stamina} stamina`].filter(Boolean);
-      options.push({ id: `${index}`, label: `${def.name} x${Inventory.count(stack.id)}`, hint: `Eat it: restores ${gains.join(' and ')}.` });
+      const gains = [def.eat?.health && `${def.eat.health} health`, def.eat?.stamina && `${def.eat.stamina} stamina`].filter(Boolean);
+      const hint = [gains.length ? `${def.drink ? 'Drink' : 'Eat'} it: restores ${gains.join(' and ')}.` : def.boon ? 'Wipe it on your blade.' : '', def.boon ? `${boonText(def.boon)}.` : '']
+        .filter(Boolean)
+        .join(' ');
+      options.push({ id: `${index}`, label: `${def.name} x${Inventory.count(stack.id)}`, hint });
     });
     return options;
   }
@@ -791,7 +796,13 @@ export class CombatScene extends Phaser.Scene {
     this.hero.c.hp = Math.round(this.world.stats.health);
     const healed = Math.round(this.world.stats.health - before);
     this.float(this.hero, healed > 0 ? `+${healed}` : 'Refreshed', '#8fe08a');
-    this.log(`You ${def.drink ? 'gulp' : 'wolf'} down the ${def.name.toLowerCase()}${healed > 0 ? ` and recover ${healed} health` : ''}.`);
+    if (def.boon) {
+      // A brew from Maud's bench: its effect lasts the rest of the fight.
+      applyBoon(this.battle, this.hero.c, def.boon);
+      this.drawOrder();
+    }
+    if (def.boon && !def.eat) this.log(`You wipe the ${def.name.toLowerCase()} along your weapon. ${boonText(def.boon)}.`);
+    else this.log(`You ${def.drink ? 'gulp' : 'wolf'} down the ${def.name.toLowerCase()}${healed > 0 ? ` and recover ${healed} health` : ''}.${def.boon ? ` ${boonText(def.boon)}.` : ''}`);
     await this.wait(500);
   }
 

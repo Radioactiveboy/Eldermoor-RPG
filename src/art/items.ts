@@ -2975,6 +2975,591 @@ const PAINTERS: Record<string, (c: Ctx) => void> = {
   'hunters-pottage': (c) => bowl(c, ['#8a8a40', '#5a5a20', '#2e2e10'], ['#6a2a1a', '#8ac050', '#d8b070', '#6a2a1a', '#8ac050']),
 };
 
+// ------------------------------------------------------------ brewing and fishing (see systems/Herbs.ts, Fishing.ts)
+
+/** A sprig: curving stems from the bottom, with `leaf` drawn along each and `top` at each tip. */
+function sprig(
+  c: Ctx,
+  stems: Array<[Pt, Pt, Pt]>,
+  stemColor: string,
+  leaf: (x: number, y: number, angle: number, i: number) => void,
+  top: (x: number, y: number, i: number) => void,
+  leavesPer = 3,
+): void {
+  const path = () => {
+    c.beginPath();
+    for (const [a, b, e] of stems) {
+      c.moveTo(a[0], a[1]);
+      c.quadraticCurveTo(b[0], b[1], e[0], e[1]);
+    }
+  };
+  path();
+  c.strokeStyle = INK;
+  c.lineWidth = 7;
+  c.lineCap = 'round';
+  c.stroke();
+  path();
+  c.strokeStyle = stemColor;
+  c.lineWidth = 3.5;
+  c.stroke();
+  stems.forEach(([a, b, e], s) => {
+    for (let i = 1; i <= leavesPer; i++) {
+      const t = i / (leavesPer + 1);
+      const x = (1 - t) ** 2 * a[0] + 2 * (1 - t) * t * b[0] + t * t * e[0];
+      const y = (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * b[1] + t * t * e[1];
+      const dx = 2 * (1 - t) * (b[0] - a[0]) + 2 * t * (e[0] - b[0]);
+      const dy = 2 * (1 - t) * (b[1] - a[1]) + 2 * t * (e[1] - b[1]);
+      const angle = Math.atan2(dy, dx);
+      leaf(x, y, angle + (i % 2 ? 1 : -1) * 0.9, s * 10 + i);
+    }
+    top(e[0], e[1], s);
+  });
+}
+
+/** A pointed leaf at (x, y), pointing along `angle`. */
+function leafShape(c: Ctx, x: number, y: number, angle: number, length: number, width: number, fill: Stops, jagged = false): void {
+  at(c, x, y, angle, () => {
+    c.beginPath();
+    c.moveTo(0, 0);
+    if (jagged) {
+      // A saw-toothed edge, like a nettle's.
+      const teeth = 5;
+      for (let i = 1; i <= teeth; i++) c.lineTo((length * i) / (teeth + 1), -width * Math.sin((Math.PI * i) / (teeth + 1)) - (i % 2 ? 2 : -1));
+      c.lineTo(length, 0);
+      for (let i = teeth; i >= 1; i--) c.lineTo((length * i) / (teeth + 1), width * Math.sin((Math.PI * i) / (teeth + 1)) + (i % 2 ? 2 : -1));
+    } else {
+      c.quadraticCurveTo(length * 0.45, -width, length, 0);
+      c.quadraticCurveTo(length * 0.45, width, 0, 0);
+    }
+    c.closePath();
+    fillInk(c, lin(c, 0, -width, 0, width, fill), 2.5);
+    c.beginPath();
+    c.moveTo(2, 0);
+    c.lineTo(length * 0.8, 0);
+    c.strokeStyle = 'rgba(20,40,10,0.45)';
+    c.lineWidth = 1.5;
+    c.stroke();
+  });
+}
+
+const HERB_GREEN: Stops = [
+  [0, '#9ac870'],
+  [0.5, '#5e9a44'],
+  [1, '#2e5a26'],
+];
+
+/** A round-bellied corked flask of something, like Mother's tincture: the liquid's colours, motes in it, and a sprig at the neck. */
+function flask(c: Ctx, liquid: Stops, meniscus: string, sprigColor: string, seed: number): void {
+  const shape = (): void => {
+    c.beginPath();
+    c.moveTo(54, 22);
+    c.lineTo(74, 22);
+    c.lineTo(74, 44);
+    c.bezierCurveTo(104, 52, 112, 82, 100, 100);
+    c.bezierCurveTo(90, 116, 38, 116, 28, 100);
+    c.bezierCurveTo(16, 82, 24, 52, 54, 44);
+    c.closePath();
+  };
+  shape();
+  drop(c, () => {
+    c.fillStyle = 'rgba(190,220,235,0.35)';
+    c.fill();
+  });
+  shape();
+  clipped(c, () => {
+    c.fillStyle = rad(c, 64, 84, 50, liquid);
+    c.fillRect(0, 60, 128, 68);
+    ellipse(c, 64, 60, 40, 5);
+    c.fillStyle = meniscus;
+    c.fill();
+    const r = rng(seed);
+    for (let i = 0; i < 7; i++) {
+      c.beginPath();
+      c.arc(36 + r() * 56, 68 + r() * 36, 1.2 + r() * 2.2, 0, Math.PI * 2);
+      c.fillStyle = 'rgba(255,255,230,0.55)';
+      c.fill();
+    }
+  });
+  shape();
+  ink(c);
+  roundRect(c, 50, 10, 28, 16, 4);
+  fillInk(c, lin(c, 50, 0, 78, 0, [
+    [0, '#8a6038'],
+    [0.5, '#c89860'],
+    [1, '#7a5030'],
+  ]), 3);
+  c.beginPath();
+  c.moveTo(52, 34);
+  c.lineTo(76, 34);
+  c.strokeStyle = '#d8c090';
+  c.lineWidth = 3;
+  c.stroke();
+  for (const [x, y, rot] of [
+    [84, 38, 0.6],
+    [88, 30, -0.1],
+  ]) {
+    ellipse(c, x, y, 10, 4, rot);
+    fillInk(c, sprigColor, 2);
+  }
+  shine(c, 44, 72, 7, 16, 0.3, 0.7);
+}
+
+interface FishLook {
+  /** Back to belly: dark, mid, light. */
+  body: [string, string, string];
+  fin: string;
+  /** Dark bars down the sides (perch). */
+  bars?: string;
+  /** Spots along the flank (trout, pike). */
+  spots?: string;
+  /** How long and slim it is (1 = a roach; 1.3 = a pike). */
+  long?: number;
+  /** How deep it is (carp and tench are deep). */
+  deep?: number;
+  eye?: string;
+  seed: number;
+}
+
+const FISH_LOOKS: Record<string, FishLook> = {
+  perch: { body: ['#3e5a2a', '#8a9a3a', '#e8d890'], fin: '#d0482a', bars: 'rgba(30,40,20,0.55)', seed: 3 },
+  roach: { body: ['#4a5a6a', '#b8c4cc', '#f4f4ec'], fin: '#d04a3a', eye: '#c8302a', seed: 5 },
+  pike: { body: ['#2e4a2a', '#6a8a48', '#e0e0b0'], fin: '#8a7a3a', spots: 'rgba(240,240,180,0.75)', long: 1.35, deep: 0.8, seed: 7 },
+  tench: { body: ['#2a3a1a', '#5a6a2a', '#a8a868'], fin: '#3a4a22', eye: '#c8402a', deep: 1.15, seed: 9 },
+  carp: { body: ['#7a5418', '#d09a30', '#f8e0a0'], fin: '#b07028', deep: 1.2, seed: 11 },
+  trout: { body: ['#4a3a24', '#a88a50', '#f0e4c0'], fin: '#a07a48', spots: 'rgba(170,40,30,0.85)', seed: 13 },
+};
+
+/** A fish lying across the icon, head to the left. Cooked, it's browned and crisp, with grill marks, on a wooden board. */
+function fishIcon(c: Ctx, look: FishLook, cooked: boolean): void {
+  const long = look.long ?? 1;
+  const deep = look.deep ?? 1;
+  const [dark, mid, light] = cooked ? ['#5a2e10', '#b0702c', '#e8c080'] : look.body;
+  if (cooked) {
+    // A wooden board under it.
+    ellipse(c, 64, 82, 58, 24);
+    drop(c, () => fillInk(c, lin(c, 0, 58, 0, 106, WOOD)));
+    steam(c, 64, 42, 16);
+  }
+  at(c, 64, cooked ? 74 : 68, -0.18, () => {
+    const L = 46 * long;
+    const D = 20 * deep;
+    // The tail.
+    c.beginPath();
+    c.moveTo(L - 8, 0);
+    c.lineTo(L + 20, -D * 0.9);
+    c.quadraticCurveTo(L + 12, 0, L + 20, D * 0.9);
+    c.closePath();
+    fillInk(c, cooked ? '#7a4018' : look.fin, 3);
+    // Fins on the back and the belly.
+    c.beginPath();
+    c.moveTo(-6, -D * 0.85);
+    c.quadraticCurveTo(8, -D * 1.7, 22, -D * 0.8);
+    c.closePath();
+    fillInk(c, cooked ? '#8a4a1c' : look.fin, 2.5);
+    c.beginPath();
+    c.moveTo(4, D * 0.85);
+    c.quadraticCurveTo(12, D * 1.45, 20, D * 0.8);
+    c.closePath();
+    fillInk(c, cooked ? '#8a4a1c' : look.fin, 2.5);
+    // The body.
+    c.beginPath();
+    c.moveTo(-L, 2);
+    c.bezierCurveTo(-L + 8, -D * 1.1, L * 0.5, -D * 1.1, L, -2);
+    c.lineTo(L, 2);
+    c.bezierCurveTo(L * 0.5, D * 1.05, -L + 8, D * 1.0, -L, 2);
+    c.closePath();
+    drop(c, () => fillInk(c, lin(c, 0, -D, 0, D, [
+      [0, dark],
+      [0.45, mid],
+      [1, light],
+    ])));
+    c.beginPath();
+    c.moveTo(-L, 2);
+    c.bezierCurveTo(-L + 8, -D * 1.1, L * 0.5, -D * 1.1, L, -2);
+    c.lineTo(L, 2);
+    c.bezierCurveTo(L * 0.5, D * 1.05, -L + 8, D * 1.0, -L, 2);
+    c.closePath();
+    clipped(c, () => {
+      const r = rng(look.seed);
+      if (look.bars && !cooked) {
+        for (let i = 0; i < 6; i++) {
+          c.beginPath();
+          c.ellipse(-L * 0.45 + i * L * 0.24, -D * 0.3, 4, D * 0.75, 0.15, 0, Math.PI * 2);
+          c.fillStyle = look.bars;
+          c.fill();
+        }
+      }
+      if (look.spots && !cooked) {
+        for (let i = 0; i < 16; i++) {
+          c.beginPath();
+          c.arc(-L * 0.6 + r() * L * 1.4, -D * 0.6 + r() * D * 0.9, 1.5 + r() * 2, 0, Math.PI * 2);
+          c.fillStyle = look.spots;
+          c.fill();
+        }
+      }
+      // Scales: little arcs.
+      c.strokeStyle = cooked ? 'rgba(60,20,0,0.35)' : 'rgba(255,255,255,0.22)';
+      c.lineWidth = 1.2;
+      for (let y = -D; y < D; y += 7) {
+        for (let x = -L * 0.5 + ((y / 7) % 2) * 3; x < L * 0.8; x += 7) {
+          c.beginPath();
+          c.arc(x, y, 3.5, -Math.PI / 2, Math.PI / 2);
+          c.stroke();
+        }
+      }
+      if (cooked) {
+        // Grill marks, charred across the flank.
+        c.strokeStyle = 'rgba(40,14,2,0.75)';
+        c.lineWidth = 4;
+        for (let i = 0; i < 4; i++) {
+          c.beginPath();
+          c.moveTo(-L * 0.45 + i * L * 0.32, -D);
+          c.lineTo(-L * 0.65 + i * L * 0.32, D);
+          c.stroke();
+        }
+      }
+      shine(c, -L * 0.2, -D * 0.45, L * 0.45, D * 0.22, 0, cooked ? 0.35 : 0.5);
+    });
+    // The gill and the eye.
+    c.beginPath();
+    c.moveTo(-L * 0.55, -D * 0.6);
+    c.quadraticCurveTo(-L * 0.45, 0, -L * 0.55, D * 0.6);
+    c.strokeStyle = 'rgba(26,15,8,0.7)';
+    c.lineWidth = 2;
+    c.stroke();
+    c.beginPath();
+    c.arc(-L * 0.76, -D * 0.2, 4.5, 0, Math.PI * 2);
+    fillInk(c, cooked ? '#f0e8d0' : look.eye ?? '#e8d070', 2);
+    c.beginPath();
+    c.arc(-L * 0.77, -D * 0.2, 2, 0, Math.PI * 2);
+    c.fillStyle = INK;
+    c.fill();
+  });
+  if (cooked) {
+    // A sprig of herbs on the side.
+    leafShape(c, 26, 96, -0.4, 22, 6, HERB_GREEN);
+    leafShape(c, 30, 98, 0.3, 20, 5, HERB_GREEN);
+  }
+}
+
+/** An eel, coiled in an S. Smoked, it's golden and glistening. */
+function eelIcon(c: Ctx, cooked: boolean): void {
+  if (cooked) {
+    ellipse(c, 64, 82, 58, 24);
+    drop(c, () => fillInk(c, lin(c, 0, 58, 0, 106, WOOD)));
+  }
+  const path = () => {
+    c.beginPath();
+    c.moveTo(18, 40);
+    c.bezierCurveTo(60, 10, 104, 40, 70, 64);
+    c.bezierCurveTo(36, 88, 70, 118, 112, 94);
+  };
+  path();
+  c.strokeStyle = INK;
+  c.lineWidth = 22;
+  c.lineCap = 'round';
+  drop(c, () => c.stroke());
+  path();
+  c.strokeStyle = cooked ? '#a86820' : '#3a3a22';
+  c.lineWidth = 15;
+  c.stroke();
+  path();
+  c.strokeStyle = cooked ? '#e8b050' : '#6a6a3a';
+  c.lineWidth = 6;
+  c.stroke();
+  path();
+  c.strokeStyle = cooked ? 'rgba(255,240,190,0.6)' : 'rgba(220,220,170,0.35)';
+  c.lineWidth = 2;
+  c.stroke();
+  // The head and its eye.
+  c.beginPath();
+  c.arc(20, 39, 3.5, 0, Math.PI * 2);
+  fillInk(c, cooked ? '#f0e0c0' : '#e8d070', 2);
+}
+
+const FISHING_PAINTERS: Record<string, (c: Ctx) => void> = {
+  yarrow: (c) =>
+    sprig(
+      c,
+      [
+        [[64, 120], [62, 80], [52, 34]],
+        [[64, 120], [70, 82], [86, 40]],
+      ],
+      '#5a8a40',
+      (x, y, a, i) => leafShape(c, x, y, a, 22, 5, HERB_GREEN, i % 2 === 0),
+      (x, y, i) => {
+        // A flat head of tiny white flowers.
+        const r = rng(40 + i);
+        for (let k = 0; k < 16; k++) {
+          const fx = x + (r() - 0.5) * 30;
+          const fy = y + (r() - 0.5) * 12;
+          c.beginPath();
+          c.arc(fx, fy, 4, 0, Math.PI * 2);
+          fillInk(c, k % 3 ? '#f8f4e8' : '#e8e0c8', 1.5);
+          c.beginPath();
+          c.arc(fx, fy, 1.2, 0, Math.PI * 2);
+          c.fillStyle = '#d8c070';
+          c.fill();
+        }
+      },
+      3,
+    ),
+  comfrey: (c) => {
+    // Two big hairy leaves, and a drooping head of purple bells.
+    leafShape(c, 62, 118, -1.9, 70, 20, HERB_GREEN);
+    leafShape(c, 66, 118, -1.15, 66, 18, [
+      [0, '#8aba62'],
+      [0.5, '#4e8a3a'],
+      [1, '#2a5222'],
+    ]);
+    c.beginPath();
+    c.moveTo(64, 116);
+    c.quadraticCurveTo(70, 60, 92, 40);
+    c.strokeStyle = INK;
+    c.lineWidth = 6;
+    c.stroke();
+    c.strokeStyle = '#5a8a40';
+    c.lineWidth = 3;
+    c.stroke();
+    for (const [x, y] of [
+      [92, 44],
+      [100, 52],
+      [86, 54],
+      [96, 62],
+      [104, 66],
+    ]) {
+      c.beginPath();
+      c.moveTo(x - 6, y - 6);
+      c.quadraticCurveTo(x - 8, y + 6, x, y + 9);
+      c.quadraticCurveTo(x + 8, y + 6, x + 6, y - 6);
+      c.closePath();
+      fillInk(c, lin(c, x, y - 6, x, y + 9, [
+        [0, '#c890e0'],
+        [1, '#6a2a8a'],
+      ]), 2);
+    }
+  },
+  nettle: (c) =>
+    sprig(
+      c,
+      [
+        [[58, 122], [56, 80], [50, 22]],
+        [[66, 122], [76, 80], [84, 30]],
+      ],
+      '#3a6a2e',
+      (x, y, a) => leafShape(c, x, y, a, 30, 9, [
+        [0, '#6aa04a'],
+        [0.5, '#3a7030'],
+        [1, '#1e4018'],
+      ], true),
+      (x, y, i) => leafShape(c, x, y, -Math.PI / 2 + (i ? 0.3 : -0.3), 20, 7, HERB_GREEN, true),
+      3,
+    ),
+  wolfsbane: (c) => {
+    // A tall spike of hooded violet flowers above deeply cut leaves.
+    for (const [x, a] of [
+      [48, -2.4],
+      [80, -0.7],
+      [56, -2.0],
+      [74, -1.1],
+    ]) leafShape(c, x, 112, a, 34, 9, HERB_GREEN, true);
+    c.beginPath();
+    c.moveTo(64, 120);
+    c.quadraticCurveTo(62, 70, 66, 14);
+    c.strokeStyle = INK;
+    c.lineWidth = 7;
+    c.stroke();
+    c.strokeStyle = '#3a6a3a';
+    c.lineWidth = 3.5;
+    c.stroke();
+    for (let i = 0; i < 6; i++) {
+      const y = 22 + i * 13;
+      const s = 0.6 + i * 0.09;
+      for (const side of [-1, 1]) {
+        at(c, 64 + side * 9 * s, y, side * 0.25, () => {
+          // A hood: a helmet-shaped petal.
+          c.beginPath();
+          c.moveTo(-8, 6);
+          c.quadraticCurveTo(-10, -10, 2, -10);
+          c.quadraticCurveTo(10, -8, 8, 6);
+          c.quadraticCurveTo(0, 2, -8, 6);
+          c.closePath();
+          fillInk(c, lin(c, 0, -10, 0, 6, [
+            [0, '#9a8ae8'],
+            [0.6, '#5a42b0'],
+            [1, '#2e2070'],
+          ]), 2);
+        }, s);
+      }
+    }
+  },
+  sage: (c) =>
+    sprig(
+      c,
+      [
+        [[60, 122], [56, 84], [44, 40]],
+        [[66, 122], [74, 84], [88, 44]],
+      ],
+      '#7a8a6a',
+      (x, y, a) => leafShape(c, x, y, a, 30, 11, [
+        [0, '#c8d4bc'],
+        [0.5, '#94a688'],
+        [1, '#5e6e58'],
+      ]),
+      (x, y) => leafShape(c, x, y, -Math.PI / 2, 24, 9, [
+        [0, '#c8d4bc'],
+        [1, '#7a8a6e'],
+      ]),
+      2,
+    ),
+  'healing-draught': (c) =>
+    flask(c, [
+      [0, '#f4fcd0'],
+      [0.35, '#b8d860'],
+      [0.8, '#5a8a2a'],
+      [1, '#2e4a14'],
+    ], 'rgba(240,250,200,0.7)', '#6a9a48', 31),
+  'stamina-tonic': (c) =>
+    flask(c, [
+      [0, '#e8ffe0'],
+      [0.35, '#7ae060'],
+      [0.8, '#2a9a3a'],
+      [1, '#0e4a1a'],
+    ], 'rgba(220,255,210,0.75)', '#c84a3a', 37),
+  'stout-draught': (c) =>
+    flask(c, [
+      [0, '#e8c890'],
+      [0.35, '#9a6a3a'],
+      [0.8, '#4a2a14'],
+      [1, '#20100a'],
+    ], 'rgba(220,190,140,0.6)', '#94a688', 41),
+  'wolfsbane-oil': (c) => {
+    // A stoppered cow's horn of dark oil, with a sprig of violet hoods tied on.
+    c.beginPath();
+    c.moveTo(22, 50);
+    c.bezierCurveTo(40, 30, 80, 34, 96, 52);
+    c.bezierCurveTo(108, 66, 112, 92, 104, 116);
+    c.bezierCurveTo(98, 96, 86, 78, 60, 74);
+    c.bezierCurveTo(44, 72, 30, 70, 22, 66);
+    c.closePath();
+    drop(c, () => fillInk(c, lin(c, 20, 40, 110, 110, [
+      [0, '#f0e0c0'],
+      [0.5, '#c8a878'],
+      [1, '#5a4028'],
+    ])));
+    // Bands round the horn.
+    for (const x of [44, 70]) {
+      c.beginPath();
+      c.moveTo(x, 37 + (x - 44) * 0.05);
+      c.quadraticCurveTo(x + 6, 56, x - 2, 74);
+      c.strokeStyle = '#4a3020';
+      c.lineWidth = 4;
+      c.stroke();
+    }
+    // The stopper, and a drip of the dark oil.
+    ellipse(c, 22, 58, 7, 11);
+    fillInk(c, '#5a3a24', 3);
+    ellipse(c, 16, 74, 4, 6);
+    fillInk(c, '#3a2a5a', 2);
+    for (let i = 0; i < 3; i++) {
+      at(c, 76 + i * 8, 26 + i * 4, 0.4, () => {
+        c.beginPath();
+        c.moveTo(-6, 5);
+        c.quadraticCurveTo(-8, -8, 2, -8);
+        c.quadraticCurveTo(8, -6, 6, 5);
+        c.closePath();
+        fillInk(c, '#6a52c0', 2);
+      });
+    }
+  },
+  'fishing-rod': (c) => {
+    // A hazel rod across the icon, its line curling down to a red and white float.
+    c.beginPath();
+    c.moveTo(18, 116);
+    c.quadraticCurveTo(60, 60, 112, 14);
+    c.strokeStyle = INK;
+    c.lineWidth = 10;
+    c.lineCap = 'round';
+    drop(c, () => c.stroke());
+    c.beginPath();
+    c.moveTo(18, 116);
+    c.quadraticCurveTo(60, 60, 112, 14);
+    c.strokeStyle = '#a07a44';
+    c.lineWidth = 6;
+    c.stroke();
+    // The grip, bound with cord.
+    c.beginPath();
+    c.moveTo(18, 116);
+    c.lineTo(36, 94);
+    c.strokeStyle = '#5a3a20';
+    c.lineWidth = 9;
+    c.stroke();
+    c.beginPath();
+    c.moveTo(112, 14);
+    c.bezierCurveTo(120, 50, 96, 60, 92, 86);
+    c.strokeStyle = 'rgba(240,236,220,0.9)';
+    c.lineWidth = 1.5;
+    c.stroke();
+    ellipse(c, 92, 96, 6, 9);
+    fillInk(c, '#eee8dc', 2.5);
+    ellipse(c, 92, 88, 5, 6);
+    fillInk(c, '#c8434a', 2);
+  },
+  'old-boot': (c) => {
+    boot(c, 54, 104, 1.3, true, [
+      [0, '#4a4a30'],
+      [1, '#2a2a1a'],
+    ], '#3a3a26');
+    // Weed trailing off it, and a drop of water.
+    for (const [x, y, a] of [
+      [50, 30, 0.4],
+      [62, 30, -0.3],
+    ]) leafShape(c, x, y, a - Math.PI / 2, 26, 4, HERB_GREEN);
+    ellipse(c, 96, 112, 4, 6);
+    fillInk(c, 'rgba(160,200,230,0.9)', 1.5);
+  },
+  perch: (c) => fishIcon(c, FISH_LOOKS.perch, false),
+  roach: (c) => fishIcon(c, FISH_LOOKS.roach, false),
+  pike: (c) => fishIcon(c, FISH_LOOKS.pike, false),
+  tench: (c) => fishIcon(c, FISH_LOOKS.tench, false),
+  carp: (c) => fishIcon(c, FISH_LOOKS.carp, false),
+  trout: (c) => fishIcon(c, FISH_LOOKS.trout, false),
+  eel: (c) => eelIcon(c, false),
+  'grilled-perch': (c) => fishIcon(c, FISH_LOOKS.perch, true),
+  'fried-roach': (c) => {
+    // Three little ones, crisp, on a board.
+    ellipse(c, 64, 82, 58, 24);
+    drop(c, () => fillInk(c, lin(c, 0, 58, 0, 106, WOOD)));
+    steam(c, 64, 40, 14);
+    for (const [x, y, a] of [
+      [44, 70, -0.3],
+      [80, 66, 0.2],
+      [62, 90, -0.05],
+    ]) {
+      at(c, x, y, a, () => {
+        c.scale(0.5, 0.5);
+        c.translate(-64, -68);
+        fishIcon(c, { ...FISH_LOOKS.roach, seed: x }, false);
+      });
+    }
+    // Browned all over.
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = 'rgba(150,80,20,0.45)';
+    c.fillRect(0, 40, 128, 70);
+    c.globalCompositeOperation = 'source-over';
+  },
+  'baked-pike': (c) => fishIcon(c, FISH_LOOKS.pike, true),
+  'grilled-tench': (c) => fishIcon(c, FISH_LOOKS.tench, true),
+  'roast-carp': (c) => fishIcon(c, FISH_LOOKS.carp, true),
+  'grilled-trout': (c) => fishIcon(c, FISH_LOOKS.trout, true),
+  'smoked-eel': (c) => {
+    steam(c, 64, 40, 14);
+    eelIcon(c, true);
+  },
+};
+
+Object.assign(PAINTERS, FISHING_PAINTERS);
+
 /** Which painter makes each texture. */
 const ICONS: Array<[string, string]> = [
   ['item-carrot', 'carrot'],
@@ -3032,6 +3617,31 @@ const ICONS: Array<[string, string]> = [
   ['item-boiled-egg', 'boiled-egg'],
   ['item-hare-stew', 'hare-stew'],
   ['item-hunters-pottage', 'hunters-pottage'],
+  ['item-yarrow', 'yarrow'],
+  ['item-comfrey', 'comfrey'],
+  ['item-nettle', 'nettle'],
+  ['item-wolfsbane', 'wolfsbane'],
+  ['item-sage', 'sage'],
+  ['item-healing-draught', 'healing-draught'],
+  ['item-stamina-tonic', 'stamina-tonic'],
+  ['item-wolfsbane-oil', 'wolfsbane-oil'],
+  ['item-stout-draught', 'stout-draught'],
+  ['item-fishing-rod', 'fishing-rod'],
+  ['item-perch', 'perch'],
+  ['item-roach', 'roach'],
+  ['item-pike', 'pike'],
+  ['item-eel', 'eel'],
+  ['item-tench', 'tench'],
+  ['item-carp', 'carp'],
+  ['item-trout', 'trout'],
+  ['item-old-boot', 'old-boot'],
+  ['item-grilled-perch', 'grilled-perch'],
+  ['item-fried-roach', 'fried-roach'],
+  ['item-baked-pike', 'baked-pike'],
+  ['item-smoked-eel', 'smoked-eel'],
+  ['item-grilled-tench', 'grilled-tench'],
+  ['item-roast-carp', 'roast-carp'],
+  ['item-grilled-trout', 'grilled-trout'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {

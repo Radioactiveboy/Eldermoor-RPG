@@ -150,6 +150,7 @@ export function buildMonasteryMap(open = false): MapData {
       { gx: court.x, gy: court.y, name: "Saint Elda's statue", range: court.r },
       ...ponds.map((p) => ({ gx: p.x, gy: p.y, name: p.name, range: p.r + 3 })),
     ],
+    waters: ponds.map((p) => ({ id: 'monastery-ponds' as const, gx: p.x, gy: p.y, r: p.r })),
     musings: open
       ? []
       : [

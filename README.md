@@ -103,7 +103,23 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   book to fill them), choose how many, and press Cook / Brew. Stir the pot to hurry a brew along; take food
   off the fire while the bar is in the golden band and it's done to a turn (a little bonus XP). Unknown
   combinations show a "?" and are written into the recipe book once made. Wolves, hares and boar now leave
-  meat to cook. Mother's tincture (moonpetal + white willow bark) is brewed at the bench and taken home to her
+  meat to cook. Mother's tincture (moonpetal + white willow bark) is brewed at the bench and taken home to her.
+  The recipe book turns its pages (‹ ›) once a station has more recipes than fit on one
+- **More brews at Old Maud's bench**: the **Healing Draught** (comfrey + yarrow, +40 health), **Nettle Tonic**
+  (2 nettles + an apple, +70 stamina), **Wolfsbane Oil** (wolfsbane + a pinecone for its resin: +1d6 damage against
+  wolves and the Wolf Mother for the rest of a fight) and the **Stout Draught** (sage + nettle: +2 armour for the rest
+  of a fight). In a fight, use them with **Eat** like food; an oil can only be used in a fight. The healing draught
+  is in the book from the start, the rest are found by trying (the book gives a clue)
+- **Wild herbs**: yarrow, comfrey, nettles and wolfsbane grow on Adowvale Plains (by the roads, the water, the copses
+  and up by the Wolf Mother's knoll), and sage and comfrey in the cloister beds at Saint Elda's (once Brother Anselm
+  has given leave). Walk up and press E to pick them; each patch grows back after a day and a half
+- **Fishing**: buy Old Tobin's spare rod (6 coppers) on the far shore of the lake. With it in the satchel, stand at
+  the edge of the lake, the mere, the reed pond or the willow pool on the plains, or the brothers' fish ponds outside
+  Saint Elda's, and press E to **Fish**. Wait for the float to go right under (a twitch is only a nibble), then
+  press Space, E or tap to strike; hooked, press as the sweeping marker crosses the fish (green) to reel it in, a few
+  times for a big one; three slips and it's gone. What bites depends on the water and the hour: perch and roach by
+  day, pike at dawn and dusk, eels at night, tench in the mere, trout in the cold willow pool, carp in the brothers'
+  ponds, and now and then Tobin's old boot. Every fish cooks at a hearth. Tobin will tell you where they're biting
 - Add `?give=moonpetal,willow-bark,raw-hare:3` to the URL on a new game to start with those things in the
   satchel (handy for testing the stations)
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
@@ -150,6 +166,7 @@ src/
   world/GoblinRaid.ts     The goblins' raid: the farm under attack and after, and the scripted morning itself
   world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses,
                           militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
+  world/HerbPatches.ts    Planting wild herb patches on a map (the clump, and its regrowing gather sight)
   world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map (120x120), open grass, copses, a mere
                           and a pond, the Lord's Road to a crossroads and on east to the monastery, deer, hares
                           and boar, and two travellers
@@ -176,6 +193,8 @@ src/
   systems/Crafting.ts     Brewing and cooking: the recipes, the stations, and which recipes have been found
   systems/Loot.ts         Random finds: what searching a pile of bones can turn up, and how likely each is
   systems/Farm.ts         Crops (picked ones regrow) and which trees were shaken today
+  systems/Herbs.ts        Wild herbs: the kinds, what each gives, and when each patch was picked (they regrow)
+  systems/Fishing.ts      Fishing: each water's fish by time of day, bite timing, how hard each fish fights, the reel
   systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
   systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
   systems/Experience.ts   XP and levels: what each level needs, what it gives, XP for quests
@@ -212,6 +231,7 @@ src/
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
                           boulders, bones, the dead ewes and the locked door
   art/fishing.ts          Old Tobin's rod, float and creel
+  art/herbs.ts            Wild herb patches (yarrow, comfrey, nettle, wolfsbane, sage), grown and picked
   art/figure3d.ts         The 3D figure renderer every person is drawn with: rounded solids, turned to 8 directions and
                           lit as pixel art, with idle, walk, sit and work frames
   art/models3d.ts         The villagers' 3D models (traders, militia, toll guards, brothers, tavern folk, Iran and his
@@ -248,7 +268,7 @@ src/
                           happens in the world is in scenes/game/, as functions that take the scene:
   scenes/game/areas.ts    The area registry: each area id, how its map is built, whether ?area= starts there, and
                           what happens on arriving. A new area is one entry here (plus AreaId and AREA_NAMES)
-  scenes/game/interactions.ts  What the E prompt can do (talk, door, sit, sleep, pick, shake, hunt) and which one shows
+  scenes/game/interactions.ts  What the E prompt can do (talk, door, sit, sleep, pick, shake, hunt, fish) and which one shows
   scenes/game/dialogueActions.ts  Runs a line's `action`: shop:, drink:, order:, road:, rent:, and the named ones,
                           which live with their part of the story:
   scenes/game/medicine.ts Mother's medicine: moonpetal, willow bark, the tincture brewed and given
@@ -260,6 +280,7 @@ src/
   scenes/game/combat.ts   Starting fights (and packs), the plains' chance meetings, spoils and what comes after
   scenes/game/sights.ts   Few-second actions, crops, trees, examining, searching, gathering, giving items
   scenes/game/sitting.ts  Seats and the thoughts that come while sitting
+  scenes/game/fishing.ts  The Fish prompt at the water's edge, first-catch diary lines, Tobin's rod and his boot
   scenes/game/travel.ts   Doors, road exits, locked doors, the trek question, fading to the next area
   scenes/game/sleep.ts    Beds, sleeping, saving and loading
   scenes/game/input.ts    Keys, click-to-walk, pathfinding to a spot, the hover tile
@@ -268,6 +289,7 @@ src/
   scenes/InventoryScene.ts Satchel and equipment tabs: item grid, worn gear, details, eat/wear
   scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
   scenes/StationScene.ts  Brewing bench and hearth window: drag ingredients in, recipe book, progress bar, result popup
+  scenes/FishingScene.ts  The fishing window: the float on the water, striking a bite, the reel bar
   scenes/SleepScene.ts    "How long to sleep?" box, opened from a bed
   scenes/CombatScene.ts   Turn-based fights over the world: turn order, skill hotbar and tooltips, dice, combat log
   scenes/UIScene.ts       HUD overlay, separate from the world camera

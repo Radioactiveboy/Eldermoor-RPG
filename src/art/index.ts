@@ -10,6 +10,7 @@ import { generateMother } from './mother3d';
 import { generateRuin } from './ruin';
 import { generateFolk } from './folk';
 import { generateHenFarm } from './henfarm';
+import { generateHerbs } from './herbs';
 import { generateHero } from './hero3d';
 import { generateInterior } from './interior';
 import { generateItemIcons } from './items';
@@ -62,6 +63,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'the willow', draw: generateWillow },
   { label: 'Mother', draw: generateMother },
   { label: 'goblins', draw: generateGoblins },
+  { label: 'wild herbs', draw: generateHerbs },
   // Last: it makes burnt copies of art drawn above.
   { label: 'the burnt farm', draw: generateRuin },
 ];

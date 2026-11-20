@@ -1025,6 +1025,22 @@ class AudioEngine {
     o.stop(t + 0.1);
   }
 
+  /** Something going into the water: a cast float plopping in (small), or a fish thrashing at the surface (big). */
+  splash(big = false): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    this.noise(t, big ? 0.35 : 0.14, 'bandpass', big ? 900 : 1400, big ? 500 : 900, 0.9, big ? 0.22 : 0.12);
+    this.drip(big ? 0.9 : 0.6);
+    if (big) for (let i = 1; i < 4; i++) this.noise(t + i * 0.09 + Math.random() * 0.04, 0.08, 'bandpass', 1600, 1100, 1, 0.08);
+  }
+
+  /** The reel's ratchet clicking as the line comes in. */
+  reel(): void {
+    if (!this.unlocked) return;
+    const t = this.ctx!.currentTime;
+    for (let i = 0; i < 4; i++) this.noise(t + i * 0.035, 0.012, 'highpass', 4200, 4200, 1, 0.1);
+  }
+
   /** Little wings beating as birds take off. */
   flutter(): void {
     if (!this.unlocked) return;

@@ -7,6 +7,7 @@ import { cropKey } from '../../art/farm';
 import { GameAudio } from '../../audio/Audio';
 import { Vec2 } from '../../iso/IsoMath';
 import { CROPS, Farm, PICK_SECONDS } from '../../systems/Farm';
+import { Herbs } from '../../systems/Herbs';
 import { Inventory, ItemId } from '../../systems/Inventory';
 import { rollLoot } from '../../systems/Loot';
 import { QuestLog } from '../../systems/Quests';
@@ -202,6 +203,10 @@ export function tryLockedDoor(g: GameScene): void {
  * moves Mother's errand on.
  */
 export function gather(g: GameScene, sight: Sight): void {
+  if (sight.gather!.regrow) {
+    gatherHerb(g, sight);
+    return;
+  }
   const { item } = sight.gather!;
   const bark = item === 'willow-bark';
   if (!bark && !QuestLog.hasFlag('may-pick-moonpetal')) {
@@ -234,9 +239,60 @@ export function gather(g: GameScene, sight: Sight): void {
 }
 
 
-/** Shows anything already gathered (the moonpetal, the willow's bark) as picked. */
+/**
+ * Pick a patch of wild herbs (yarrow, nettles, wolfsbane, sage, comfrey) for
+ * the brews at Old Maud's bench. It grows back in a day and a half.
+ */
+function gatherHerb(g: GameScene, sight: Sight): void {
+  const { item, regrow, needs } = sight.gather!;
+  if (needs && !QuestLog.hasFlag(needs.flag)) {
+    g.onHint?.(needs.thought);
+    return;
+  }
+  if (!Herbs.isReady(sight.id, g.clock.elapsedHours)) return;
+  if (!Inventory.canAdd(item)) {
+    g.onHint?.('My satchel is full.');
+    return;
+  }
+  GameAudio.rustle();
+  startChannel(g,
+    {
+      label: 'Gathering',
+      seconds: PICK_SECONDS,
+      onDone: () => {
+        Herbs.pick(sight.id, g.clock.elapsedHours);
+        give(g, item, Math.min(regrow!.count, Inventory.room(item)));
+        syncGathered(g);
+        if (!QuestLog.hasFlag('gathered-wild-herb')) {
+          QuestLog.setFlag('gathered-wild-herb');
+          g.time.delayedCall(700, () => g.onHint?.('That will grow back in a day or two. Old Maud\'s bench in the Tankard\'s cellar could make something of it.'));
+        }
+      },
+    },
+    { x: sight.gx, y: sight.gy },
+  );
+}
+
+/** The object a sight stands on or over (the moonpetal on its tile, the willow whose trunk is mid-footprint). */
+function objectAt(g: GameScene, sight: Sight) {
+  const tx = Math.floor(sight.gx);
+  const ty = Math.floor(sight.gy);
+  const objects = g.map.data.objects ?? [];
+  return (
+    objects.find((o) => o.tx === tx && o.ty === ty) ??
+    objects.find((o) => !o.flat && tx >= o.tx && tx < o.tx + o.w && ty >= o.ty && ty < o.ty + o.h)
+  );
+}
+
+/** Shows anything already gathered (the moonpetal, the willow's bark) as picked, and wild herbs as picked or grown back. */
 export function syncGathered(g: GameScene): void {
   for (const sight of g.map.data.sights ?? []) {
+    const regrow = sight.gather?.regrow;
+    if (regrow) {
+      const obj = objectAt(g, sight);
+      if (obj) g.map.setObjectArt(obj, Herbs.isReady(sight.id, g.clock.elapsedHours) ? regrow.grown : sight.gather!.picked);
+      continue;
+    }
     if (!sight.gather || !QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
     const tx = Math.floor(sight.gx);
     const ty = Math.floor(sight.gy);

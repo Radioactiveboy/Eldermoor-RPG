@@ -27,7 +27,7 @@ export function diceText(d: Dice): string {
  * owner's next turn starts. `by` is who put it there, for effects that only
  * help the one who caused them (a marked foe is only marked for its hunter).
  */
-export type StatusId = 'guarded' | 'prone' | 'dazed' | 'marked' | 'bleeding' | 'rallied';
+export type StatusId = 'guarded' | 'prone' | 'dazed' | 'marked' | 'bleeding' | 'rallied' | 'anointed' | 'stout';
 
 export interface Status {
   id: StatusId;
@@ -35,6 +35,8 @@ export interface Status {
   /** Bleeding: damage at the start of each of the owner's turns. */
   value?: number;
   by?: string;
+  /** Wolfsbane: which kind of foe it bites. */
+  family?: string;
 }
 
 export interface StatusDef {
@@ -56,7 +58,37 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   marked: { name: 'Marked', tag: 'MRK', color: 0xd0473a, good: false, describe: 'Marked as prey: the hunter gets +2 to hit and +1d4 damage against them.' },
   bleeding: { name: 'Bleeding', tag: 'BLD', color: 0xa8201a, good: false, describe: 'Loses health at the start of each turn.' },
   rallied: { name: 'Rallied', tag: 'RAL', color: 0x8fbf6a, good: true, describe: '+2 to hit, roused by the pack leader.' },
+  // From brews at Old Maud's bench (see FightBoon), lasting the rest of the fight.
+  anointed: { name: 'Wolfsbane', tag: 'BNE', color: 0x9a6ad0, good: true, describe: 'The blade is oiled with wolfsbane: extra damage against wolves.' },
+  stout: { name: 'Stout', tag: 'STT', color: 0xb89a5a, good: true, describe: 'Braced by a draught of sage and nettle: more armour.' },
 };
+
+/**
+ * What a brew does in a fight, beyond the health or stamina it gives (read
+ * from the item, see systems/Inventory.ts). Using it is the Eat action; the
+ * effect lasts the rest of the fight.
+ */
+export type FightBoon =
+  /** Oil on the blade: `sides` more damage (one die) on every hit against foes of this `family`. */
+  | { kind: 'bane'; family: 'wolf'; sides: number }
+  /** `armour` more armour. */
+  | { kind: 'ward'; armour: number };
+
+/** One line on what a boon does, for tooltips and the fight's Eat menu. */
+export function boonText(b: FightBoon): string {
+  switch (b.kind) {
+    case 'bane':
+      return `+1d${b.sides} damage against wolves for the fight`;
+    case 'ward':
+      return `+${b.armour} armour for the fight`;
+  }
+}
+
+/** Puts a brew's effect on someone for the rest of the fight. */
+export function applyBoon(battle: Battle, c: Combatant, b: FightBoon): void {
+  if (b.kind === 'bane') battle.addStatus(c, 'anointed', Infinity, { value: b.sides, family: b.family });
+  else battle.addStatus(c, 'stout', Infinity, { value: b.armour });
+}
 
 /**
  * What makes a beast more than a bag of hit points. Traits are read by
@@ -138,6 +170,8 @@ export interface CombatantDef {
   traits?: readonly FoeTrait[];
   /** The hero's weapon's own rule (see WeaponEffect). */
   weapon?: WeaponEffect;
+  /** What sort of beast it is, for things that only work on some ('wolf' for wolfsbane). */
+  family?: string;
 }
 
 export interface Combatant extends CombatantDef {
@@ -191,6 +225,8 @@ export interface AttackResult {
   rend?: boolean;
   /** A boar's opening charge added to the damage. */
   charged?: boolean;
+  /** Wolfsbane on the blade: the extra damage it did. */
+  bane?: number;
   /** A spear set against a foe still charging in: the bonus it gave to hit. */
   set?: number;
   /** A hatchet's hit opened a bleeding wound. */
@@ -383,7 +419,7 @@ export class Battle {
   // ------------------------------------------------------------ attacking
 
   armourOf(c: Combatant): number {
-    return c.ac + (this.has(c, 'guarded') ? DEFEND_AC_BONUS : 0);
+    return c.ac + (this.has(c, 'guarded') ? DEFEND_AC_BONUS : 0) + (this.status(c, 'stout')?.value ?? 0);
   }
 
   /** Bonus for fighting alongside others of your side, like wolves in a pack. */
@@ -457,6 +493,12 @@ export class Battle {
       const times = (crit ? 2 : 1) * (opts.times ?? 1);
       let damage = this.rollDice(attacker.damage, times);
       if (this.marks(attacker, target)) damage += this.rollDice(MARK_DAMAGE, crit ? 2 : 1);
+      const bane = this.status(attacker, 'anointed');
+      if (bane && target.family && bane.family === target.family) {
+        const extra = this.rollDice({ count: 1, sides: bane.value ?? 6, bonus: 0 }, crit ? 2 : 1);
+        damage += extra;
+        result.bane = extra;
+      }
       if (charge && attacker.attacksMade === 0) {
         damage += this.rollDice(charge.extra, crit ? 2 : 1);
         result.charged = true;
@@ -579,6 +621,7 @@ export const FOES = {
     verb: 'lunges at',
     xp: 40,
     packs: true,
+    family: 'wolf',
     traits: [{ kind: 'trip', dc: 9 }],
   },
   // The great white she-wolf who leads the wolves on the Lord's Road, from her den on the plains (see world/DenMap.ts).
@@ -592,6 +635,7 @@ export const FOES = {
     verb: 'savages',
     xp: 180,
     packs: true,
+    family: 'wolf',
     stubborn: true,
     traits: [{ kind: 'trip', dc: 12 }, { kind: 'howl', cooldown: 3 }, { kind: 'steady' }],
   },
