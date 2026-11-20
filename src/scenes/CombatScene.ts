@@ -1029,7 +1029,8 @@ export class CombatScene extends Phaser.Scene {
     bg.fillStyle(THEME.panel, 0.95).fillRoundedRect(0, 0, w, h, 10);
     bg.lineStyle(2, THEME.gold, 0.8).strokeRoundedRect(0, 0, w, h, 10);
     card.add([bg, ...items]);
-    card.setPosition(Math.round(width / 2 - w / 2), Math.round(Math.max(MARGIN, height * 0.3 - h / 2))).setAlpha(0);
+    // Below the middle, clear of the HUD along the top and the hero's passing thoughts.
+    card.setPosition(Math.round(width / 2 - w / 2), Math.round(Math.min(height - h - MARGIN, Math.max(height * 0.34, height * 0.58 - h / 2)))).setAlpha(0);
     card.setSize(w, h).setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
     this.tweens.add({ targets: card, alpha: 1, y: card.y + 6, duration: 220, ease: 'Cubic.easeOut' });
 
@@ -1839,8 +1840,9 @@ export class CombatScene extends Phaser.Scene {
         fontFamily: FONT, fontSize: crit ? '34px' : '26px', color: crit ? '#ffd76a' : '#ff6b5a', stroke: '#1a0806', strokeThickness: crit ? 6 : 5, fontStyle: 'bold',
       })
       .setOrigin(0.5, 1)
-      .setScale(0.3);
-    this.tweens.add({ targets: t, scale: crit ? 1.25 : 1, duration: 150, ease: 'Back.easeOut' });
+      // A critical starts full size, so it reads while the fight is frozen for it.
+      .setScale(crit ? 1.25 : 0.3);
+    if (!crit) this.tweens.add({ targets: t, scale: 1, duration: 150, ease: 'Back.easeOut' });
     this.tweens.add({ targets: t, x: p.x + drift, y: p.y - (crit ? 54 : 42), duration: 1000, ease: 'Cubic.easeOut' });
     this.tweens.add({ targets: t, alpha: 0, delay: crit ? 900 : 700, duration: 350, onComplete: () => t.destroy() });
     if (crit) {
