@@ -27,6 +27,12 @@ and re-encoded as mono MP3 by `tools/build-ambience.py`.
 | `step-boot-1.mp3` … `step-boot-10.mp3` | Footsteps in the garden's soft soil | [RPG Audio](https://kenney.nl/assets/rpg-audio) footsteps | [Kenney](https://kenney.nl) | CC0 | kenney-rpg-audio-for-godot |
 | `bell.mp3` | The monastery bell (one stroke, rung once per stroke) | [Altenthann – Isolated Bavarian Church Bell at Distance](https://freesound.org/s/846302/) | [TSP-Talk](https://freesound.org/people/TSP-Talk/) | CC0 | [joeuk89/pixel-art](https://github.com/joeuk89/pixel-art) |
 | `clink-7.mp3`, `clink-8.mp3` | A metal pot set down | [RPG Audio](https://kenney.nl/assets/rpg-audio) | [Kenney](https://kenney.nl) | CC0 | [kenney-rpg-audio-for-godot](https://github.com/Boyquotes/kenney-rpg-audio-for-godot) |
+| `rain.mp3` | Rain falling, out of doors | "Light rain" | from the Moodist library | CC0 or Pixabay Content Licence | Moodist |
+| `downpour.mp3` | A downpour, in heavy rain and storms | "Heavy rain" | from the Moodist library | CC0 or Pixabay Content Licence | Moodist |
+| `roof.mp3` | Rain on the roof, heard indoors (dulled further in the game) | "Rain on tent" | from the Moodist library | CC0 or Pixabay Content Licence | Moodist |
+| `gale.mp3` | A gale howling, in a storm | "Howling wind" | from the Moodist library | CC0 or Pixabay Content Licence | Moodist |
+| `thunder-1.mp3` … `thunder-3.mp3` | Claps of thunder, near and far | "Thunder" | from the Moodist library | CC0 or Pixabay Content Licence | Moodist |
+| `crows.mp3` | Crows over the ruined farm | "Crows" | from the Moodist library | CC0 or Pixabay Content Licence | Moodist |
 
 Moodist says its sounds are either CC0 or under the
 [Pixabay Content Licence](https://pixabay.com/service/license-summary/), without

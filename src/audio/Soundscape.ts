@@ -47,11 +47,24 @@ export interface AmbientMix {
   cave: number;
   /** How much the surroundings echo: 0 out in the open, 1 in a cave. */
   echo: number;
+  /** Rain falling all round, out of doors. */
+  rain: number;
+  /** A downpour: heavy rain, on top of the rain. */
+  downpour: number;
+  /** Rain drumming on the roof, heard from indoors. */
+  roof: number;
+  /** A gale howling, in a storm. */
+  gale: number;
+  /** Thunder about: how close and often it rolls (the claps are played by {@link Soundscape.thunder}). */
+  storm: number;
+  /** Crows cawing and squabbling (over the ruined farm). */
+  crows: number;
 }
 
 export const SILENCE: AmbientMix = {
   wind: 0, water: 0, birds: 0, crickets: 0, frogs: 0, owls: 0, wolves: 0,
   crowd: 0, taproom: 0, clatter: 0, forge: 0, fire: 0, bees: 0, cave: 0, echo: 0,
+  rain: 0, downpour: 0, roof: 0, gale: 0, storm: 0, crows: 0,
 };
 
 /** What a footstep lands on. */
@@ -96,6 +109,13 @@ const LOOPS: Record<string, LoopDef> = {
   drips: { file: 'drips', peak: 0.25, echo: 0.6 },
   // The wind heard down a passage: muffled and hollow.
   hollow: { file: 'wind', peak: 0.22, filter: { type: 'lowpass', freq: 380, q: 1.5 }, echo: 0.5 },
+  // The weather (see systems/Weather.ts).
+  rain: { file: 'rain', peak: 0.16 },
+  downpour: { file: 'downpour', peak: 0.17 },
+  // Rain on the thatch overhead: dulled by the roof, and a little boomy in the room.
+  roof: { file: 'roof', peak: 0.2, filter: { type: 'lowpass', freq: 1500, q: 0.6 }, echo: 0.2 },
+  gale: { file: 'gale', peak: 0.12, filter: { type: 'lowpass', freq: 3200, q: 0.5 } },
+  crows: { file: 'crows', peak: 0.1 },
 };
 
 /** The one-off sounds, each a few recordings to pick between. */
@@ -104,6 +124,7 @@ const SHOTS = {
   wolf: numbered('wolf', 4),
   anvil: [...numbered('anvil', 2), 'anvil-strike'],
   clink: numbered('clink', 9),
+  thunder: numbered('thunder', 3),
 } as const;
 
 /** How each surface sounds underfoot: which takes, and how they're coloured. */
@@ -186,11 +207,17 @@ export class Soundscape {
     this.bed('bees', mix.bees);
     this.bed('drips', mix.cave);
     this.bed('hollow', mix.cave * 0.8);
+    this.bed('rain', mix.rain);
+    this.bed('downpour', mix.downpour);
+    this.bed('roof', mix.roof);
+    this.bed('gale', mix.gale);
+    this.bed('crows', mix.crows);
     // Fetch the one-off sounds a little before they're wanted.
     if (mix.owls > 0) SHOTS.owl.forEach((f) => void this.clip(f));
     if (mix.wolves > 0) SHOTS.wolf.forEach((f) => void this.clip(f));
     if (mix.forge > 0) SHOTS.anvil.forEach((f) => void this.clip(f));
     if (mix.clatter > 0) SHOTS.clink.forEach((f) => void this.clip(f));
+    if (mix.storm > 0) SHOTS.thunder.forEach((f) => void this.clip(f));
   }
 
   /** Turns the whole world down (0..1), e.g. to 0.35 during a fight or 0 when paused. */
@@ -212,6 +239,21 @@ export class Soundscape {
       // Each stroke a touch different, as a real bell swings.
       this.shot(['bell'], t0 + i * 2.6, 0.27 * near * rand(0.9, 1.05), { rate: [0.99, 1.01], echo: 0.8 });
     }
+  }
+
+  /**
+   * A clap of thunder `delay` seconds from now (the time it takes to arrive
+   * after the flash). Far off, it's a low rumble; indoors, dulled by the walls.
+   * @param near 0 (far off) to 1 (right overhead)
+   * @param muffled 0 out of doors, up to 1 shut well away inside
+   */
+  thunder(delay: number, near: number, muffled = 0): void {
+    const lowpass = Math.round(600 + near * 5000) * (1 - muffled * 0.75);
+    this.shot(SHOTS.thunder, this.ctx.currentTime + delay, (0.25 + near * 0.35) * (1 - muffled * 0.5), {
+      rate: [0.85 + near * 0.1, 1.02],
+      lowpass,
+      echo: 0.5 + (1 - near) * 0.5,
+    });
   }
 
   stop(): void {

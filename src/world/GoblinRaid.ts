@@ -139,14 +139,17 @@ export function ruinWorld(data: MapData): void {
     decal(data, 'decal-blood-drops', tx + 4, ty + 4);
     decal(data, 'decal-debris-1', tx + 4, ty + 2);
     for (const [dx, dy, k] of [[5, 6, 0], [7, 5, 1], [3, 7, 2]] as const) decal(data, `decal-trampled-${k}`, tx + dx, ty + dy);
-    // The ruins still smoking.
-    (data.chimneys ??= []).push({ gx: tx + 1.2, gy: ty + 1.4, z: 40 }, { gx: tx + 2.4, gy: ty + 0.6, z: 30 });
+    // The ruins still smoking (for a couple of days: see world/Aftermath.ts).
+    (data.chimneys ??= []).push({ gx: tx + 1.2, gy: ty + 1.4, z: 40, ruin: true }, { gx: tx + 2.4, gy: ty + 0.6, z: 30, ruin: true });
+    // Crows come down to pick over the trampled garden and the yard.
+    (data.crows ??= []).push({ gx: tx + 5.5, gy: ty + 6 }, { gx: tx + 6.5, gy: ty + 3.5 }, { gx: tx + 3.5, gy: ty + 7.5 });
   }
   if (coop) {
     for (const [dx, dy, k] of [[0, 2, 0], [2, 1, 1], [3, 3, 2], [1, 3, 0]] as const) decal(data, `decal-feathers-${k}`, coop.tx + dx, coop.ty + dy);
     decal(data, 'decal-scorch-1', coop.tx, coop.ty - 1, 2, 2);
     decal(data, 'decal-blood-drops', coop.tx + 2, coop.ty + 3);
-    (data.chimneys ??= []).push({ gx: coop.tx + 1, gy: coop.ty + 0.6, z: 18 });
+    (data.chimneys ??= []).push({ gx: coop.tx + 1, gy: coop.ty + 0.6, z: 18, ruin: true });
+    (data.crows ??= []).push({ gx: coop.tx + 2.5, gy: coop.ty + 2.5 });
   }
   if (hut) decal(data, 'decal-scorch-2', hut.tx + 2, hut.ty + 2, 2, 2);
 }

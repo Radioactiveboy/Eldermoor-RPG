@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { Wayfarers } from '../dialogue/wayfarers';
+import { RAID_CALLS, Wayfarers, WET_CALLS } from '../dialogue/wayfarers';
 import type { Creature } from '../entities/Creature';
 import { Goat } from '../entities/Goat';
 import { foodToShare, Npc } from '../entities/Npc';
@@ -11,6 +11,7 @@ import { Experience } from '../systems/Experience';
 import { Inventory } from '../systems/Inventory';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
+import { Weather } from '../systems/Weather';
 import type { IsoMap } from './IsoMap';
 
 /**
@@ -434,7 +435,10 @@ export class PlainsEvents {
     if (!who) return;
     if (who.id === 'goatherd' && Wayfarers.goat === 'home') return;
     if (who.id === 'courier' && Wayfarers.courierFed) return;
-    const lines = CALLS[who.id]!;
+    // Once the raid's talked of, and when it's pouring, they've other things to shout about.
+    const wet = Weather.now.rain > 0.4 ? WET_CALLS[who.id] : undefined;
+    const raid = QuestLog.hasFlag('raid-over') && Math.random() < 0.5 ? RAID_CALLS[who.id] : undefined;
+    const lines = (Math.random() < 0.6 && wet) || raid || CALLS[who.id]!;
     who.say(lines[Math.floor(Math.random() * lines.length)], 3.5);
   }
 

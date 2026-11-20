@@ -289,8 +289,13 @@ export interface MapData {
   sights?: Sight[];
   /** Where water drips from overhead (stalactite tips): grid position and height in pixels. */
   drips?: Array<{ gx: number; gy: number; z: number }>;
-  /** Chimney tops that smoke: grid position and height in pixels. */
-  chimneys?: Array<{ gx: number; gy: number; z: number }>;
+  /**
+   * Chimney tops that smoke: grid position and height in pixels. `ruin` marks
+   * a burnt building smouldering, which dies down over a couple of days (see world/Aftermath.ts).
+   */
+  chimneys?: Array<{ gx: number; gy: number; z: number; ruin?: boolean }>;
+  /** Where crows come down to pick about, in tiles (the ruined farm, after the raid). */
+  crows?: Array<{ gx: number; gy: number }>;
   landmarks?: Landmark[];
   musings?: Musing[];
   /** How much of the grass has flowers, tufts and pebbles on it (0..1; 0.22 if not given). */
