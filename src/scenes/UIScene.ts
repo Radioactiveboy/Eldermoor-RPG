@@ -17,6 +17,7 @@ import { SpeechBubbles } from '../ui/SpeechBubbles';
 import { StatusBars } from '../ui/StatusBars';
 import { TimeWheel } from '../ui/TimeWheel';
 import { Toasts } from '../ui/Toasts';
+import { FACTIONS, LEVEL_NAMES, Reputation, ReputationEvent } from '../systems/Reputation';
 import { drawPanel, UI_COLORS, UI_FONT } from '../ui/theme';
 import { gridToScreen } from '../iso/IsoMath';
 import { Settings } from '../settings/Settings';
@@ -109,6 +110,7 @@ export class UIScene extends Phaser.Scene {
     const off = QuestLog.onChange((e) => this.onQuestEvent(e));
     const offItems = Inventory.onChange((e) => this.onInventoryEvent(e));
     const offXp = Experience.onChange((e) => this.onExperienceEvent(e));
+    const offRep = Reputation.onChange((e) => this.onReputationEvent(e));
     // Hunger or rest running low: the hero says so (only while they're switched on).
     const offNeeds = Needs.onChange((e) => {
       if (e.type === 'low' && !this.world.inCombat) this.toasts.thought(NEED_THOUGHTS[e.need]);
@@ -128,6 +130,7 @@ export class UIScene extends Phaser.Scene {
       off();
       offItems();
       offXp();
+      offRep();
       offNeeds();
       offSave();
       this.world.onHint = undefined;
@@ -152,6 +155,28 @@ export class UIScene extends Phaser.Scene {
       this.toasts.thought('Something worth writing down. My journal is updated.');
       this.nudge(this.journalButton);
     }
+  }
+
+  /** "+5 Adowvale" rising from the hero as their standing moves, and a banner when it reaches a new level. */
+  private onReputationEvent(e: ReputationEvent): void {
+    if (e.type === 'level') {
+      const name = FACTIONS[e.faction].name;
+      this.toasts.quest(e.rose ? 'Standing rose' : 'Standing fell', `${name}: ${LEVEL_NAMES[e.level]}`);
+      return;
+    }
+    if (this.world.inCombat || !this.world.player) return;
+    const cam = this.world.cameras.main;
+    const sprite = this.world.player.sprite;
+    const x = (sprite.x - cam.worldView.x) * (cam.zoom / Display.zoom);
+    // Above where "+40 XP" rises, so the two don't sit on top of each other.
+    const y = (sprite.y - cam.worldView.y) * (cam.zoom / Display.zoom) - 48 * (cam.zoom / Display.zoom) - 44;
+    const label = `${e.delta > 0 ? '+' : ''}${e.delta} ${FACTIONS[e.faction].name}`;
+    const text = this.add
+      .text(Math.round(x), Math.round(y), label, { fontFamily: UI_FONT, fontSize: '14px', color: e.delta > 0 ? '#b8e0ff' : '#ff9a8a', stroke: '#000000', strokeThickness: 4 })
+      .setOrigin(0.5)
+      .setDepth(5);
+    this.tweens.add({ targets: text, y: y - 30, duration: 1600, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: text, alpha: 0, delay: 1100, duration: 500, onComplete: () => text.destroy() });
   }
 
   /** "+2 Carrot" floating up from the hero when something goes in the satchel. */

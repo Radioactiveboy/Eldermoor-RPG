@@ -22,6 +22,8 @@ export interface QuestDef {
   objectives: ObjectiveDef[];
   /** Experience for finishing it (each step on the way earns a little too; see Experience.ts). */
   xp: number;
+  /** Can be taken on again once finished (the militia's bounties, see systems/Bounties.ts). */
+  repeatable?: boolean;
 }
 
 export const QUESTS: Record<string, QuestDef> = {
@@ -205,7 +207,10 @@ class QuestLogStore {
 
   /** Begins a quest, optionally with some steps already done (e.g. "speak with her" when she gave it). */
   start(id: string, alreadyDone: string[] = []): void {
-    if (this.has(id)) return;
+    const before = this.get(id);
+    if (before && !(before.completed && before.def.repeatable)) return;
+    // A repeatable quest done before starts over: the old one makes way for the new.
+    if (before) this.quests.splice(this.quests.indexOf(before), 1);
     const def = QUESTS[id];
     if (!def) throw new Error(`Unknown quest: ${id}`);
     const quest: QuestState = { def, done: new Set(alreadyDone), completed: false, day: this.dayProvider() };

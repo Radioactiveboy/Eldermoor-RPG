@@ -9,9 +9,11 @@ import { GameAudio } from '../../audio/Audio';
 import { SNEAK, SPRINT_NOTICE } from '../../config';
 import { Creature } from '../../entities/Creature';
 import { Npc } from '../../entities/Npc';
+import { Bounties } from '../../systems/Bounties';
 import { FoeKind, FOES, isOutlaw } from '../../systems/Combat';
 import { Inventory, ItemId } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
+import { Reputation } from '../../systems/Reputation';
 import { RAID_DOOM } from '../../world/GoblinRaid';
 import { PlainsEvents } from '../../world/PlainsEvents';
 import type { CombatResult, CombatSceneData } from '../CombatScene';
@@ -116,6 +118,8 @@ export function startRoadEvents(g: GameScene): PlainsEvents {
 }
 
 export function spawnCreatures(g: GameScene): Creature[] {
+  // Rats back in the cellar for the militia's bounty, and the like (counted as game that comes back, so they're never kept in the save).
+  (g.map.data.creatures ??= []).push(...Bounties.spawns(g.area).map((s) => ({ ...s, respawns: true })));
   const spawns = (g.map.data.creatures ?? []).filter((s) => !g.defeatedFoes.has(s.id));
   // Handy for testing fights against a pack: open the game with ?wolves=3.
   const pack = Number(new URLSearchParams(window.location.search).get('wolves') ?? 1);
@@ -185,7 +189,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
   const respawns = new Set((g.map.data.creatures ?? []).filter((s) => s.respawns).map((s) => s.id));
   for (const id of [...result.slain, ...result.fled]) if (!respawns.has(id)) g.defeatedFoes.add(id);
   g.fitCamera();
-  g.roadEvents?.fightOver();
+  g.roadEvents?.fightOver(result.outcome);
   if (g.raidFight) {
     // However it went, it ends the same way.
     raidDefeat(g);
@@ -215,6 +219,13 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     }
     const after = AFTER_THE_FIGHT[foes[0].kind];
     g.onHint?.(slain.length > 0 ? after.slain : after.fled);
+    // The plains' night wolves: word gets about.
+    if (slain.some((c) => c.id.startsWith('road-wolf-'))) {
+      Reputation.record('wolves', 'slain');
+      Reputation.gain('militia', 2, 'Killed wolves on the plains');
+    }
+    // Beasts with a price on their heads.
+    for (const said of Bounties.slain(slain.map((c) => c.kind))) g.onHint?.(said);
     if (g.area === 'cave' && g.creatures.every((c) => !c.active || foes.includes(c))) {
       g.time.delayedCall(2600, () => g.onHint?.('The den is quiet now. Only the dripping water, and something pale at the back of the cave.'));
     }

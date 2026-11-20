@@ -108,6 +108,10 @@ async function checkDebugPanel(browser, base) {
     await page.click('#eldermoor-debug button:text("Start a new game with these")');
     if (!(await page.evaluate(() => location.search.includes('area=world') && location.search.includes('hour=21')))) throw new Error('switches not written to the address');
     await page.keyboard.press('Enter');
+    // A new game first asks whether the hero needs to eat and rest: answer "no" (2).
+    await page.waitForFunction(() => window.game.scene.isActive('Confirm'), null, { timeout: LOAD_TIMEOUT });
+    await page.waitForTimeout(250);
+    await page.keyboard.press('2');
     await page.waitForFunction(() => window.game.scene.getScene('Game')?.area === 'world' && !!window.game.scene.getScene('Game').player, null, { timeout: LOAD_TIMEOUT });
     const hour = await page.evaluate(() => window.game.scene.getScene('Game').clock.hour);
     if (Math.floor(hour) !== 21) throw new Error(`started at hour ${hour}, not 21`);

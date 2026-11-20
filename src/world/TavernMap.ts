@@ -1,7 +1,7 @@
 import { ABBEY_WALL_HEIGHT } from '../art/abbey';
 import { ROOM_COUNT } from '../systems/Tavern';
 import { box, circle } from './Collision';
-import { CELLAR_RATS } from './landmarks';
+import { CELLAR_RAT_SPOTS, CELLAR_RATS } from './landmarks';
 import { CreatureSpawn, MapData, MapObject, placeObject, Prop, Seat, Terrain } from './MapData';
 
 /**
@@ -309,10 +309,7 @@ export function buildCellarMap(): MapData {
   add('tav-brewbench', 10, 0, { w: 2 });
   data.lights!.push({ gx: 10.5, gy: 0.8, z: 30, radius: 90, flicker: 0.6 });
 
-  const rats: CreatureSpawn[] = [
-    [11.5, 2.6], [10.4, 3.4], [12.2, 3.6],
-    [2.6, 6.5], [3.6, 7.4], [4.4, 6.2],
-  ].map(([gx, gy], i) => ({ id: CELLAR_RATS[i], kind: 'rat', gx, gy }));
+  const rats: CreatureSpawn[] = CELLAR_RAT_SPOTS.map(([gx, gy], i) => ({ id: CELLAR_RATS[i], kind: 'rat', gx, gy }));
   data.creatures = rats;
   data.sights!.push(
     { id: 'cellar-keg', gx: 6.3, gy: 1.2, label: 'Look', z: 30, thought: "A keg gnawed clean through at the bottom. The floor round it is sticky with Godric's best ale. No wonder he's cross." },

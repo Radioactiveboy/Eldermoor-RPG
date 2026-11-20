@@ -646,6 +646,48 @@ function signpost(): IsoModel {
   return m;
 }
 
+/**
+ * The militia's notice board (see systems/Bounties.ts), two tiles wide along
+ * x: a plank board between two posts under a little shingled hood, its face
+ * (+y, towards the square) pinned with parchment notices, a red wax seal on
+ * the reeve's.
+ */
+function noticeBoard(): IsoModel {
+  const m = new IsoModel();
+  const post = (x: number) =>
+    m.cylinder(x, 0.5, 0, 0.06, 56, (u) => (u < 0.3 ? P.barkLight : u > 0.7 ? P.barkDark : P.bark), P.barkLight);
+  post(0.14);
+  post(1.86);
+  // Where the notices are pinned, across the face (u along x, v down from the top).
+  const notices: Array<[number, number, number, number, number]> = [
+    [0.08, 0.14, 0.24, 0.62, 0xeadfbe],
+    [0.36, 0.1, 0.22, 0.5, 0xe2d4ae],
+    [0.62, 0.18, 0.26, 0.58, 0xeee4c8],
+    [0.38, 0.66, 0.18, 0.26, 0xd8c8a0],
+  ];
+  const face: Shader = (u, v) => {
+    for (const [x, y, w, h, paper] of notices) {
+      if (u < x || u > x + w || v < y || v > y + h) continue;
+      const nu = (u - x) / w;
+      const nv = (v - y) / h;
+      if (nu > 0.42 && nu < 0.58 && nv < 0.08) return P.iron;
+      if (paper === 0xeadfbe && Math.hypot(nu - 0.75, nv - 0.86) < 0.1) return 0xa8201a;
+      const line = nv > 0.16 && nv < 0.84 && (nv * 9) % 1 < 0.38 && nu > 0.12 && nu < 0.88 && hash(Math.floor(nu * 7), Math.floor(nv * 9)) > 0.15;
+      return line ? 0x5a4a40 : paper;
+    }
+    if (u < 0.03 || u > 0.97 || v < 0.05 || v > 0.95) return P.plankDark;
+    return (v * 4) % 1 < 0.06 ? P.plankDark : hash(Math.floor(u * 12), Math.floor(v * 4)) < 0.3 ? P.plank : P.plankLight;
+  };
+  m.box(0.1, 0.44, 18, 1.8, 0.08, 34, { top: P.plankLight, left: face, right: P.plankDark });
+  // The hood over it, to keep the rain off the notices.
+  m.box(0.02, 0.32, 52, 1.96, 0.34, 4, {
+    top: (u, v) => ((u * 14) % 1 < 0.1 || (v * 3) % 1 < 0.12 ? 0x4a3a30 : hash(Math.floor(u * 14), Math.floor(v * 3)) < 0.4 ? 0x6e5a48 : 0x7e6a54),
+    left: 0x4a3a30,
+    right: 0x3a2c24,
+  });
+  return m;
+}
+
 /** A wheel standing upright in the plane y = const: iron tyre, felloes, spokes and a hub. */
 function wheel(m: IsoModel, cx: number, y: number, r: number, dim = 1): void {
   const rz = r * 36;
@@ -1394,6 +1436,7 @@ export function generateMarket(scene: Phaser.Scene): void {
   put('mkt-bench', bench());
   put('mkt-crates', crates());
   put('mkt-signpost', signpost());
+  put('mkt-noticeboard', noticeBoard());
   put('mkt-haycart', hayCart());
   put('mkt-trough', trough());
   put('mkt-washing', washingLine());

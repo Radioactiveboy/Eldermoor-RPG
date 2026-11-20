@@ -1,5 +1,6 @@
 import { HERO_NAME } from '../config';
 import { QuestLog } from '../systems/Quests';
+import type { RoadOutcome } from '../systems/Reputation';
 import type { DialogueChoice, DialogueScript } from './Dialogue';
 
 /**
@@ -54,14 +55,28 @@ export const SHAREABLE_FOOD = [
  * @param slewMother whether the hero has killed the Wolf Mother (and can say so)
  * @param again whether they've stopped the hero before
  */
-export function footpadScript(toll: number, slewMother: boolean, again: boolean): DialogueScript {
+/** What Rook says on meeting the hero again, by how their last meeting ended (see systems/Reputation.ts). */
+const FOOTPADS_AGAIN: Partial<Record<RoadOutcome, string[]>> = {
+  fought: ["You! Nab, it's the one who laid us out in the grass.", "We've had a long think about that, Nab and me. Mostly about our heads. Same toll as ever, friend. No hard feelings. Some hard feelings."],
+  paid: ['Well, well! Our best customer. Nab, you remember our friend? Paid up like a gentleman, last time.', "Same as before, friend. It's a toll road, out here."],
+  scared: ["Oh. Oh, it's you. The wolf-killer.", "...We've had a think, Nab and me, and we reckon you were having us on. So. Same as before."],
+  empty: ['Our friend with the empty purse! Filled it up since? Let\'s have a look.'],
+  fled: ["Well, well, if it isn't the runner. Not so quick on your feet today?", "It's a toll road, out here. You'll remember."],
+  outran: ["Well, well, if it isn't the runner. Not so quick on your feet today?", "It's a toll road, out here. You'll remember."],
+  beaten: ['Back for more? Nab, look who it is. Still got all your teeth, friend?', "It's a toll road, out here. You'll remember."],
+};
+
+/**
+ * @param last how the hero's last run-in with them ended, if there's been one
+ */
+export function footpadScript(toll: number, slewMother: boolean, again: boolean, last?: RoadOutcome): DialogueScript {
   const choices: DialogueChoice[] = [
     toll > 0 ? { text: `Fine. Take your ${toll} coins.`, next: 'paid' } : { text: "Take it. There's nothing in it.", next: 'empty' },
     ...(slewMother ? [{ text: 'I killed the Wolf Mother in her own den. Want to be next?', next: 'mother' }] : []),
     { text: 'Come and take it, then.', next: 'fight' },
   ];
   return {
-    start: again ? 'again' : 'greet',
+    start: again || last ? 'again' : 'greet',
     nodes: {
       greet: {
         speaker: 'footpad',
@@ -78,7 +93,7 @@ export function footpadScript(toll: number, slewMother: boolean, again: boolean)
       },
       again: {
         speaker: 'footpad',
-        lines: ["Well, well. Our friend from the road. Nab, you remember our friend?", "Same as last time, friend. It's a toll road, out here."],
+        lines: (last && FOOTPADS_AGAIN[last]) || ["Well, well. Our friend from the road. Nab, you remember our friend?", "Same as last time, friend. It's a toll road, out here."],
         next: 'nab',
       },
       nab: {
