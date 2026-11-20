@@ -34,6 +34,8 @@ function startGame(): void {
     scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, CombatScene, JournalScene, InventoryScene, ShopScene, StationScene, SleepScene, ConfirmScene, InterludeScene, PauseScene, SettingsScene],
   });
   Display.install(game);
-  // Handy for poking at the game from the browser console while developing.
-  if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+  // Handy for poking at the game from the browser console while developing (and for the smoke test, which adds ?smoke).
+  if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('smoke')) {
+    (window as unknown as { game: Phaser.Game }).game = game;
+  }
 }

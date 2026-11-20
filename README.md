@@ -15,6 +15,28 @@ npm run dev      # dev server with hot reload at http://localhost:5173
 npm run build    # type-check + production build into dist/
 ```
 
+## Tests
+
+```bash
+npm test             # unit tests (Vitest) for the game rules: combat, XP, satchel, crafting, quests, saving
+npm run test:watch   # the same, re-running as you edit
+npm run test:smoke   # builds, then opens every ?area= in headless Chromium and fails on any page error
+```
+
+The unit tests live in `tests/unit/` and run in Node, without Phaser, so they cover the pure systems in
+`src/systems/`. Dice are scripted rather than random (`scripted(...)` and `face(...)` in `tests/unit/helpers.ts`),
+so a test can say "the wolf rolls a 15, then a 1 and a 1 for damage" and check exactly what happens.
+
+The smoke test (`tests/smoke/smoke.mjs`) serves `dist/`, opens each area with `?smoke&area=...` (the `smoke`
+switch puts the game on `window.game`, as the dev server always does), presses Enter on the title screen for a
+new game, waits until the hero stands in that area, walks a step, and fails on any uncaught error. It needs
+Playwright's Chromium (`npx playwright install chromium` once, if you don't already have it). To check just a few
+areas against the existing build: `SMOKE_AREAS=market,cave node tests/smoke/smoke.mjs`. It lists failed requests
+and console errors as warnings without failing on them.
+
+Every pull request and push runs the type-check, `npm test` and `npm run test:smoke` on GitHub Actions
+(`.github/workflows/ci.yml`). Publishing to GitHub Pages is a separate workflow (`deploy.yml`) that runs on `main`.
+
 ## Controls
 
 The HUD doesn't list controls; they're under **Controls** in the pause menu.
@@ -210,6 +232,13 @@ src/
   ui/DayNightOverlay.ts   Tints the world by time of day; lantern, hearth and candle light
   ui/QuestTracker.ts      HUD reminder of the current quest step
   ui/Toasts.ts            "New quest" banners and the hero's passing thoughts
+tests/
+  unit/*.test.ts          Vitest tests for src/systems (Combat, Experience, Inventory, Crafting, Quests, SaveGame)
+  unit/helpers.ts         Scripted dice and a fake localStorage for the tests
+  smoke/smoke.mjs         Playwright smoke test: every ?area= loads without errors
+.github/workflows/
+  ci.yml                  Type-check, unit tests and smoke test on every PR and push
+  deploy.yml              Build and publish to GitHub Pages from main
 ```
 
 ## Key ideas
