@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:smoke": "npm run build && node tests/smoke/smoke.mjs"
+    "test:smoke": "npm run build && node tests/smoke/smoke.mjs",
+    "sim": "vite-node tools/balance.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

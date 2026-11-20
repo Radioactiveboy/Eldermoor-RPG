@@ -561,6 +561,12 @@ export function shouldHowl(battle: Battle, foe: Combatant): boolean {
 /**
  * The beasts that can be met in the wild, the experience each is worth when
  * slain, and whether others of its kind nearby join in (`packs`).
+ *
+ * The numbers are tuned with the fight simulator (`npm run sim`, see
+ * systems/CombatSim.ts): a level-1 hero beats a lone wolf nearly always but
+ * loses about a fifth of their health, two wolves about 3 times in 4, and the
+ * Wolf Mother in her den about 60% of the time at levels 3-4. Re-run it
+ * after changing anything here.
  */
 export const FOES = {
   wolf: {
@@ -568,7 +574,7 @@ export const FOES = {
     maxHp: 22,
     ac: 12,
     toHit: 4,
-    damage: { count: 2, sides: 4, bonus: 2 },
+    damage: { count: 2, sides: 6, bonus: 2 },
     quickness: 2,
     verb: 'lunges at',
     xp: 40,
@@ -578,10 +584,10 @@ export const FOES = {
   // The great white she-wolf who leads the wolves on the Lord's Road, from her den on the plains (see world/DenMap.ts).
   wolfmother: {
     name: 'Wolf Mother',
-    maxHp: 64,
+    maxHp: 80,
     ac: 13,
-    toHit: 5,
-    damage: { count: 2, sides: 6, bonus: 2 },
+    toHit: 6,
+    damage: { count: 2, sides: 8, bonus: 4 },
     quickness: 3,
     verb: 'savages',
     xp: 180,
@@ -616,10 +622,10 @@ export const FOES = {
   },
   boar: {
     name: 'Wild Boar',
-    maxHp: 30,
+    maxHp: 34,
     ac: 13,
-    toHit: 4,
-    damage: { count: 1, sides: 8, bonus: 2 },
+    toHit: 5,
+    damage: { count: 2, sides: 6, bonus: 3 },
     quickness: 1,
     verb: 'gores',
     xp: 60,
@@ -643,10 +649,10 @@ export const FOES = {
   // Footpads who waylay travellers on the Lord's Road (see world/PlainsEvents.ts). They fight together, and run once it goes badly.
   footpad: {
     name: 'Footpad',
-    maxHp: 26,
+    maxHp: 30,
     ac: 12,
-    toHit: 4,
-    damage: { count: 1, sides: 6, bonus: 2 },
+    toHit: 5,
+    damage: { count: 1, sides: 8, bonus: 4 },
     quickness: 2,
     verb: 'swings his cudgel at',
     xp: 70,
@@ -657,8 +663,8 @@ export const FOES = {
     name: 'Cutpurse',
     maxHp: 18,
     ac: 13,
-    toHit: 4,
-    damage: { count: 1, sides: 4, bonus: 2 },
+    toHit: 5,
+    damage: { count: 1, sides: 6, bonus: 4 },
     quickness: 4,
     verb: 'slashes his knife at',
     xp: 50,
