@@ -93,7 +93,7 @@ export interface Door {
    * front door, the doors along the passage upstairs).
    */
   facing?: 'wall' | 'front' | 'back';
-  /** Names a door GameScene may keep shut (the tavern's cellar and its rooms, see GameScene.doorAllowed). */
+  /** Names a door GameScene may keep shut (the tavern's cellar and its rooms, see doorAllowed in scenes/game/travel.ts). */
   id?: string;
   /**
    * Asked before going, e.g. "Do you want to make the trek to Adowvale?".
@@ -106,7 +106,7 @@ export interface Door {
 
 /**
  * Something to look at closely: the lost ewes in the cave, a signpost, a pile
- * of bones. GameScene decides what examining it does.
+ * of bones. scenes/game/sights.ts decides what examining it does.
  */
 export interface Sight {
   id: string;

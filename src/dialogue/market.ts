@@ -3,7 +3,7 @@ import type { DialogueScript } from './Dialogue';
 
 /**
  * Adowvale's market square: three stallholders and the village militia. The
- * traders open their stalls with the `shop:<id>` action (see GameScene); the
+ * traders open their stalls with the `shop:<id>` action (see scenes/game/dialogueActions.ts); the
  * militia stand about, keep an eye on things and grumble. Out of market hours
  * the traders start on 'closing' (packing up, walking home) or 'opening'
  * (walking back in the morning), and the militia on 'closed'.

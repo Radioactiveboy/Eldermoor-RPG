@@ -1,63 +1,54 @@
 import Phaser from 'phaser';
-import { Display } from '../ui/Display';
 import { GameAudio } from '../audio/Audio';
-import { CAMERA_ZOOM, FAST_FORWARD, MAP_HEIGHT, MAP_SEED, MAP_WIDTH, PLAYER_RADIUS, SNEAK, SPRINT_MULTIPLIER, SPRINT_NOTICE } from '../config';
+import { CAMERA_ZOOM, FAST_FORWARD, SNEAK, SPRINT_MULTIPLIER } from '../config';
+import { SIBLING_BANTER, SIBLING_SCARED, SIBLING_SCARED_HELLO } from '../dialogue/iran';
 import { Child, Siblings } from '../entities/Child';
 import { Creature } from '../entities/Creature';
 import { Hen } from '../entities/Hen';
 import { Npc, NpcWorld } from '../entities/Npc';
-import { SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
-import { EGG_REWARD, FEED_MONEY, SIBLING_BANTER, SIBLING_GREETINGS, SIBLING_SCARED, SIBLING_SCARED_HELLO, SIBLING_THANKS } from '../dialogue/iran';
 import { Player } from '../entities/Player';
-import { gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
+import { gridToScreen, Vec2 } from '../iso/IsoMath';
+import { Crafting, Recipe } from '../systems/Crafting';
 import { Experience, HEALTH_PER_LEVEL, XP_REWARDS } from '../systems/Experience';
-import { CROPS, Farm, PICK_SECONDS } from '../systems/Farm';
-import { Inventory, ItemId, itemDef, ITEMS } from '../systems/Inventory';
+import { Farm } from '../systems/Farm';
+import { Inventory, itemDef, ItemId, ITEMS } from '../systems/Inventory';
 import { marketOpen } from '../systems/MarketHours';
-import { findPath, GridPoint } from '../systems/Pathfinding';
-import { rollLoot } from '../systems/Loot';
+import { GridPoint } from '../systems/Pathfinding';
 import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
-import { AREA_NAMES, SAVE_VERSION, SaveData, SaveGame } from '../systems/SaveGame';
-import { ShopId, Shops, SHOPS } from '../systems/Shops';
-import { clockText, TimeOfDay } from '../systems/TimeOfDay';
-import { buildCaveMap } from '../world/CaveMap';
+import { AREA_NAMES, SaveData, SaveGame } from '../systems/SaveGame';
+import { ShopId, Shops } from '../systems/Shops';
+import { Tavern } from '../systems/Tavern';
+import { TimeOfDay } from '../systems/TimeOfDay';
+import { Display } from '../ui/Display';
+import type { Speaker } from '../ui/SpeechBubbles';
+import { Ambience } from '../world/Ambience';
 import { AmbientSounds } from '../world/AmbientSounds';
 import { Drips } from '../world/Drips';
-import { buildHomeMap } from '../world/HomeMap';
-import { buildHutMap } from '../world/HutMap';
-import { buildMarketMap, TOLL, tollGateShape } from '../world/MarketMap';
-import { buildMonasteryMap, monasteryGateDoors, monasteryGateShape } from '../world/MonasteryMap';
-import { buildAbbeyMap, MOONPETAL } from '../world/AbbeyMap';
-import { buildChapelMap, buildInfirmaryMap, buildRefectoryMap, buildScriptoriumMap } from '../world/AbbeyRooms';
-import { buildDeepDenMap, buildDenMap } from '../world/DenMap';
-import { buildPlainsMap } from '../world/PlainsMap';
-import { PlainsEvents } from '../world/PlainsEvents';
-import { BAR_PICKUP, buildCellarMap, buildTavernHallMap, buildTavernMap, buildTavernRoomMap, CELLAR_RATS } from '../world/TavernMap';
-import { CHECKOUT_HOUR, MENU, RENT_OPTIONS, Tavern } from '../systems/Tavern';
-import { DICE_STAKE, HARLAN_DRINK, PELL_SONG, RAT_REWARD, SONG_PRICE, TAVERN_CHATTER, TAVERN_MUTTERS, TAVERN_TOASTS } from '../dialogue/tavern';
-import { Ambience } from '../world/Ambience';
+import { RaidDirector, raidStage } from '../world/GoblinRaid';
 import { IsoMap } from '../world/IsoMap';
-import { AreaId, Bed, CropPatch, Door, MapData, Musing, Prop, Seat, Sight } from '../world/MapData';
-import { FoeKind, FOES, isOutlaw } from '../systems/Combat';
-import { cropKey } from '../art/farm';
-import type { InventoryTab } from './InventoryScene';
-import { generateMap } from '../world/MapGenerator';
-import type { Speaker } from '../ui/SpeechBubbles';
-import type { DialogueSceneData } from './DialogueScene';
-import type { CombatResult, CombatSceneData } from './CombatScene';
-import type { SleepSceneData } from './SleepScene';
-import type { ConfirmSceneData } from './ConfirmScene';
-import type { StationSceneData } from './StationScene';
-import { Crafting, Recipe } from '../systems/Crafting';
-import type { InterludeSceneData } from './InterludeScene';
+import { AreaId, Musing, Seat } from '../world/MapData';
 import { MotherRoutine } from '../world/MotherRoutine';
-import { RAID_BLACKOUT, RAID_DOOM, RaidDirector, raidStage, raidWorld, ruinWorld } from '../world/GoblinRaid';
+import { PlainsEvents } from '../world/PlainsEvents';
+import type { DialogueSceneData } from './DialogueScene';
+import type { InventoryTab } from './InventoryScene';
+import type { StationSceneData } from './StationScene';
+import { AREAS, buildArea, isTestArea } from './game/areas';
+import { CAVE_WOLVES, COMBAT_DUCK, spawnCreatures, startCombat, startRoadEvents, updateCreatures } from './game/combat';
+import { runDialogueAction } from './game/dialogueActions';
+import { siblingHello, updateHens } from './game/hollow';
+import { readKeyboard, setupInput, updateHover, type MoveKeys } from './game/input';
+import { updateFocus, type Channel, type Interaction } from './game/interactions';
+import { updateMarketHours } from './game/market';
+import { madeAtStation } from './game/medicine';
+import { cameAround, enteredAfterRaid, raidTestStart, startRaid } from './game/raid';
+import { cancelChannel, syncCrops, syncGathered, updateChannel } from './game/sights';
+import { standUp, updateSitting } from './game/sitting';
+import { loadSave, wakingThought } from './game/sleep';
+import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
+import { checkMusings, checkRoadExits } from './game/travel';
 
-type MoveKeys = Record<
-  'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'sprint' | 'sneak' | 'fastForward',
-  Phaser.Input.Keyboard.Key
->;
+export type { Channel, Interaction } from './game/interactions';
 
 export interface GameSceneData {
   /** Start a fresh game: reset health, the clock and the quest log. */
@@ -82,236 +73,15 @@ export type HintListener = (text: string) => void;
 /** A signpost the player has read, for the HUD to show. */
 export type SignListener = (heading: string, lines: string[]) => void;
 
-/**
- * Something the player can do where they stand: talk to someone, use a door,
- * sit down, pick crops, shake a tree. The nearest one in range gets an
- * "E  <label>" prompt over it; E, Enter, or tapping the prompt does it.
- */
-export interface Interaction {
-  /** Identifies it across frames, e.g. "crop:24,22". */
-  key: string;
-  /** What to do, e.g. "Talk-to" or "Go inside". */
-  label: string;
-  /** Who or what it's done to, shown after the label in yellow, e.g. "Mother". */
-  target?: string;
-  /** Where it is, in grid space, for the range check. */
-  gx: number;
-  gy: number;
-  range: number;
-  /** World pixel the prompt floats above. */
-  promptX: number;
-  promptY: number;
-  /** The tile that clicking on selects it. */
-  tile: GridPoint;
-  /** Walk onto its tile (doors) rather than next to it. */
-  walkOnto?: boolean;
-  run: () => void;
-}
-
-/** Something that takes a few seconds (picking, shaking a tree). Moving cancels it. */
-export interface Channel {
-  label: string;
-  seconds: number;
-  elapsed: number;
-  onDone: () => void;
-  onCancel?: () => void;
-}
-
-/** The wolves of the den at home: once they're all gone, Brother Wystan hears of it. */
-const CAVE_WOLVES = ['cave-wolf-1', 'cave-wolf-2', 'cave-wolf-3'];
-
-/** Coins Wil pays for news of his ewes. */
-const SHEEP_REWARD = 30;
-/** Other beasts this close (in tiles) to the one that starts a fight join in. */
-const PACK_RANGE = 7;
 /** Seconds after arriving in an area before beasts can notice the player, so there's time to see them first. */
 const ARRIVAL_GRACE = 2.5;
-/** How loud the world's background sounds stay during a fight, under the battle music. */
-const COMBAT_DUCK = 0.35;
-
-const SITTING_THOUGHTS: Record<string, string[]> = {
-  bench: [
-    'The garden could do with weeding again.',
-    'Smoke curls up from the chimney and drifts over the trees.',
-    'A blackbird is singing somewhere in the hedge.',
-  ],
-  stool: [
-    'The fire pops and settles. It is warm in here, at least.',
-    'The old table is covered in knife marks and candle wax.',
-  ],
-  'hut-stool': [
-    'Somebody has carved a lopsided hen into the table. Two somebodies, by the look of it.',
-    'There is a basket of eggs on the shelf, and a feather in the butter.',
-  ],
-  'market-bench': [
-    'The smell of fresh bread drifts over from the bakehouse stall.',
-    'Somewhere a cart rattles over the cobbles. Two women are arguing about the price of eggs.',
-    'Clang, clang, clang. The smith is at it again.',
-  ],
-  pew: [
-    'The candles gutter and steady. Somewhere behind the altar a brother is humming, very low.',
-    'The light through the windows lies in blue and gold on the floor.',
-  ],
-  'cloister-bench': [
-    'Bees go about the herbs. Somewhere a bell rings once, and stops.',
-    'The moonpetal by the pond nods in the breeze. Brother Anselm is talking to his sage.',
-  ],
-  'abbey-bench': [
-    'A brother crosses the court with an armful of books, nods, and is gone.',
-    'The well bucket creaks in the wind. The whole place smells of lavender and woodsmoke.',
-  ],
-  'refectory-bench': [
-    'The pottage smells of leeks. It always smells of leeks, Brother Hob says, and he is proud of it.',
-    'Someone has carved a very small wolf into the table. It looks a bit like her.',
-  ],
-  // The same bench after the traders have gone home.
-  'tavern-table': [
-    'Someone has carved "COBB IS A CHEAT" into the table. Underneath, in another hand: "ADA IS".',
-    'The fire roars, the tankards clatter, and the floor is sticky underfoot. It is wonderful.',
-    'A dog under the next table is eating something it found. Best not to ask what.',
-  ],
-  'tavern-bar': [
-    'Godric polishes the same tankard, over and over, watching the room.',
-    'A row of tankards hangs over the bar, each with a name scratched on it. One just says "NO".',
-  ],
-  'tavern-table-quiet': [
-    'It is quiet at this hour. Dust turns in the light from the window, and the fire ticks.',
-    'Godric is chalking up debts on a slate. The list for "HARLAN" goes right off the bottom.',
-  ],
-  'tavern-bar-quiet': ['Godric polishes the same tankard, over and over. The taproom is nearly empty.'],
-  'tavern-bench': [
-    'Noise and warm light spill out of the Crooked Tankard every time the door opens.',
-    'The sign over the door creaks in the wind: a tankard, painted crooked, on purpose.',
-  ],
-  'market-bench-closed': [
-    'The stalls are covered over for the night. The square is quiet without the traders.',
-    'A militiaman yawns by the well and leans on his spear.',
-    'Lamplight pools on the trodden earth. Somewhere a shutter bangs in the wind.',
-  ],
-};
-
-/** What's left of each kind of beast once it's slain. */
-const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
-  wolf: [['wolf-pelt', 1], ['wolf-meat', 1]],
-  wolfmother: [['white-hide', 1], ['wolf-meat', 2]],
-  deer: [['venison', 2], ['deer-hide', 1]],
-  hare: [['hare-pelt', 1], ['raw-hare', 1]],
-  boar: [['boar-tusk', 2], ['boar-meat', 2]],
-  rat: [['rat-tail', 1]],
-  // The footpads' purses are counted out separately (see FOOTPAD_PURSE).
-  footpad: [],
-  cutpurse: [['hunting-knife', 1]],
-  // Nothing taken from the goblins: the raid ends with the hero on the ground (see world/GoblinRaid.ts).
-  goblin: [],
-  goblinspear: [],
-  goblintorch: [],
-  goblinbrute: [],
-};
-
-/** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
-const FOOTPAD_PURSE: [number, number] = [8, 16];
-
-/** What the hero thinks over a beast they've brought down, and when one gets away. */
-const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> = {
-  wolf: { slain: 'It lies still now. The pelt might be worth something in the village, and the meat will do for the pot, if I cook it well.', fled: 'It ran off into the trees. I doubt it will come back.' },
-  wolfmother: {
-    slain: 'The Wolf Mother is dead. Even lying still she is enormous, and her hide is as white as new snow. Brother Wystan will want to hear of this.',
-    fled: 'She is gone into the dark.',
-  },
-  deer: { slain: 'Venison for the pot, and a fine hide. Tamsin will want that.', fled: 'Gone, white rump bobbing away over the grass. I need to be quicker.' },
-  hare: { slain: 'A hare. The pelt is soft, and it would roast nicely over a hearth.', fled: 'Gone in a flash. Hares are quicker than they look.' },
-  boar: { slain: 'The boar is still at last. Those tusks are worth keeping, and there is a feast of meat on it.', fled: 'It crashed off into the thicket. Good riddance.' },
-  rat: { slain: 'Rats. Big ones, too. I will take a tail or two to show Godric.', fled: 'It shot off into a hole in the wall. It will be back.' },
-  footpad: { slain: "That's the end of the Plains tithe. There's a purse on him, heavier than mine was.", fled: 'He ran for the trees and never looked back. I doubt he will try this road again.' },
-  cutpurse: { slain: "Nab won't be getting nervous on lonely roads any more. His knife is a good one.", fled: 'Gone, squealing, across the grass. So much for nerves.' },
-  goblin: { slain: 'It lies twitching in the mud. There are so many more of them.', fled: 'It scuttles off, cackling.' },
-  goblinspear: { slain: 'One less. There are so many more of them.', fled: 'It scuttles off, cackling.' },
-  goblintorch: { slain: 'Its torch hisses out in the mud.', fled: 'It scuttles off, waving its torch.' },
-  goblinbrute: { slain: 'The Brute is down.', fled: 'The Brute backs away, laughing.' },
-};
-
-/** Seconds sitting at a tavern table before a maid comes over, the first time, and between her visits after that. */
-const SERVICE_FIRST = 4;
-const SERVICE_AGAIN = 50;
-/** Seconds between bits of chatter among the tavern's regulars. */
-const CHATTER_GAP: [number, number] = [6, 12];
-/** Seconds between the lines of an overheard exchange (and of Pell's song). */
-const LINE_GAP = 3.2;
-
-/** What the militia call out about the market's hours. */
-const MILITIA_CALLS = {
-  closing: "Market's closing! Stalls are shut till morning, folks. Off home with you.",
-  closed: "Market's shut for the night, friend. The traders have all gone home. Come back in the morning.",
-  opening: "Morning! Market's open!",
-};
-
-/** What the hero thinks on waking, by the hour (and in a rented room at the Crooked Tankard, where). */
-function wakingThought(hour: number, area: AreaId): string {
-  if (area === 'tavern-room') {
-    if (hour >= 5 && hour < 12) return 'Morning. Carts in the square below, and the smell of bacon coming up the stairs.';
-    if (hour >= 12 && hour < 18) return 'I slept half the day away in a rented bed. Downstairs, somebody is already arguing about dice.';
-    return 'Dark outside. Through the floor I can hear the taproom: laughing, tankards, and Pell, singing.';
-  }
-  if (hour >= 5 && hour < 10) return 'Morning already. I feel rested, and the fire has burned low.';
-  if (hour >= 10 && hour < 16) return 'I slept half the day away. Still, I feel better for it.';
-  if (hour >= 16 && hour < 20) return 'The light is going. I feel rested, at least.';
-  return 'Dark outside. The fire crackles, and the house is quiet.';
-}
-
-/** Builds the map for an area. */
-function buildArea(area: AreaId): MapData {
-  const raid = raidStage();
-  if (area === 'home') return buildHomeMap(raid === 'over');
-  if (area === 'market') return buildMarketMap(QuestLog.hasFlag('paid-toll'));
-  if (area === 'plains') return buildPlainsMap();
-  if (area === 'monastery') return buildMonasteryMap(QuestLog.hasFlag('monastery-open'));
-  if (area === 'abbey') return buildAbbeyMap();
-  if (area === 'chapel') return buildChapelMap();
-  if (area === 'infirmary') return buildInfirmaryMap();
-  if (area === 'scriptorium') return buildScriptoriumMap();
-  if (area === 'refectory') return buildRefectoryMap();
-  if (area === 'den') return buildDenMap();
-  if (area === 'deepden') return buildDeepDenMap();
-  if (area === 'cave') return buildCaveMap();
-  if (area === 'hut') return buildHutMap(raid === 'over');
-  if (area === 'tavern') return buildTavernMap();
-  if (area === 'tavern-hall') return buildTavernHallMap();
-  if (area === 'tavern-room') return buildTavernRoomMap(Tavern.room ?? 1);
-  if (area === 'cellar') return buildCellarMap();
-  const world = generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
-  if (raid === 'morning') raidWorld(world);
-  if (raid === 'over') ruinWorld(world);
-  return world;
-}
 
 /**
- * Handy for testing the goblin raid: ?raid=night starts with the tincture in
- * the satchel and Mother's errand otherwise done; ?raid=morning wakes on the
- * morning of the raid; ?raid=after comes round in the ruins.
+ * The world: the area the hero is in, everyone and everything in it, the clock,
+ * and the controls. Most of what happens here lives in scenes/game/ (areas,
+ * interactions, dialogue actions, doors, fights, sleeping, the tavern, the raid),
+ * as functions that take this scene; the fields they share are public.
  */
-function raidTestStart(clock: TimeOfDay): void {
-  const params = new URLSearchParams(window.location.search);
-  const which = params.get('raid');
-  if (!which) return;
-  // (An ?hour=, if given, wins.)
-  const setHour = (hour: number) => !params.has('hour') && clock.setHour(hour);
-  QuestLog.start('mother-medicine', ['talk', 'leave', 'find', 'moonpetal', 'willow', 'brew']);
-  if (which === 'night') {
-    Inventory.add('fever-tincture', 1);
-    setHour(20);
-    return;
-  }
-  QuestLog.complete('mother-medicine', 'return');
-  if (which === 'morning') {
-    QuestLog.setFlag('raid-morning');
-    setHour(6.2);
-  } else if (which === 'after') {
-    QuestLog.setFlag('raid-over');
-    QuestLog.start('the-raid');
-    setHour(13);
-  }
-}
-
 export class GameScene extends Phaser.Scene {
   map!: IsoMap;
   player!: Player;
@@ -322,10 +92,10 @@ export class GameScene extends Phaser.Scene {
   /** Wild animals roaming the area. */
   creatures: Creature[] = [];
   /** Chance meetings out on Adowvale Plains (see world/PlainsEvents.ts). */
-  private roadEvents?: PlainsEvents;
+  roadEvents?: PlainsEvents;
   /** Farmer Iran's hens, pottering about their run. */
-  private hens: Hen[] = [];
-  private cluckTimer = 0;
+  hens: Hen[] = [];
+  cluckTimer = 0;
   /** Iran's children, chattering away indoors. */
   private siblings?: Siblings;
   /** True during a fight: the clock stops and health doesn't regenerate. */
@@ -344,31 +114,31 @@ export class GameScene extends Phaser.Scene {
   /** The HUD sets this to show short messages. */
   onHint?: HintListener;
   onSign?: SignListener;
-  private keys!: MoveKeys;
-  private hover!: Phaser.GameObjects.Image;
-  private marker!: Phaser.GameObjects.Image;
+  keys!: MoveKeys;
+  hover!: Phaser.GameObjects.Image;
+  marker!: Phaser.GameObjects.Image;
   /** Walking over to something after it was clicked; use it on arrival. */
-  private walkingTo?: Interaction;
+  walkingTo?: Interaction;
   /** The seat the player is sitting on, if any. */
-  private seat?: Seat;
-  private sitTimer = 0;
+  seat?: Seat;
+  sitTimer = 0;
   private crackleTimer = 0;
   private cropTimer = 0;
   /** Beasts beaten or chased off for good, by spawn id. */
-  private defeatedFoes = new Set<string>();
-  private arrivalGrace = 0;
+  defeatedFoes = new Set<string>();
+  arrivalGrace = 0;
   /** Areas visited this game, for first-visit thoughts. */
-  private visited = new Set<AreaId>();
+  visited = new Set<AreaId>();
   /** A trader's stall to open once the conversation that asked for it closes. */
-  private pendingShop?: ShopId;
+  pendingShop?: ShopId;
   /** Off while the player stands on a road exit they just turned back from, so it isn't asked again at once. */
-  private exitArmed = true;
+  exitArmed = true;
   /** The last tile the player stood on that isn't a road exit: where turning back walks them to. */
-  private lastOffExit: GridPoint = { x: 0, y: 0 };
+  lastOffExit: GridPoint = { x: 0, y: 0 };
   /** Whether the market was open last frame, so the militia can call out when it shuts or opens. */
-  private marketWasOpen = true;
+  marketWasOpen = true;
   /** Sprinting this frame, which sends shy game running. */
-  private sprinting = false;
+  sprinting = false;
   /** Sneaking this frame: slower, and beasts have to be closer to notice. */
   sneaking = false;
   /**
@@ -379,26 +149,26 @@ export class GameScene extends Phaser.Scene {
   /** Whether the hero has been told about sneaking yet this session. */
   private static sneakExplained = false;
   /** The patch of ground with a thought attached (MapData.musings) the player is standing in, so it's only had once. */
-  private musing?: Musing;
+  musing?: Musing;
   /** Something to happen once the conversation that led to it closes (the toll gate swinging open). */
-  private afterTalk?: () => void;
+  afterTalk?: () => void;
   /**
    * A tavern maid looking after the hero's table: on her way over, gone to
    * the bar with an order, or bringing it back.
    */
-  private service?: { maid: Npc; seat: Seat; item?: ItemId; stage: 'coming' | 'fetching' | 'bringing' };
+  service?: { maid: Npc; seat: Seat; item?: ItemId; stage: 'coming' | 'fetching' | 'bringing' };
   /** Seconds until a maid next comes to the hero's table. */
-  private serviceTimer = SERVICE_FIRST;
+  serviceTimer = SERVICE_FIRST;
   /** Seconds until the tavern's regulars next say something among themselves. */
-  private chatterTimer = 3;
+  chatterTimer = 3;
   /** An order just placed with a maid, to fetch once the conversation closes. */
-  private ordered?: ItemId;
+  ordered?: ItemId;
   /** Mother going about her day, at home. */
   private motherRoutine?: MotherRoutine;
   /** The goblins' raid, on the morning it happens. */
   private raid?: RaidDirector;
   /** In the fight the goblins can't lose. */
-  private raidFight = false;
+  raidFight = false;
 
   constructor() {
     super('Game');
@@ -415,7 +185,7 @@ export class GameScene extends Phaser.Scene {
 
   create(data: GameSceneData = {}): void {
     if (data.load) {
-      this.loadSave(data.load);
+      loadSave(this, data.load);
     } else if (data.newGame || !this.stats) {
       this.stats = new PlayerStats();
       this.clock = new TimeOfDay();
@@ -443,13 +213,9 @@ export class GameScene extends Phaser.Scene {
       raidTestStart(this.clock);
     }
     this.area = data.load?.area ?? data.area ?? 'home';
-    // Handy for testing: open the game with ?area=market (or world, or cave) to start there.
+    // Handy for testing: open the game with ?area=market (or world, or cave...) to start there (see game/areas.ts).
     const areaParam = new URLSearchParams(window.location.search).get('area');
-    const testAreas: AreaId[] = [
-      'market', 'world', 'cave', 'hut', 'plains', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium', 'refectory', 'den', 'deepden',
-      'tavern', 'tavern-hall', 'cellar',
-    ];
-    if (data.newGame && testAreas.some((a) => a === areaParam)) this.area = areaParam as AreaId;
+    if (data.newGame && isTestArea(areaParam)) this.area = areaParam;
     // Saves from before the wolves at home counted for anything: if they're all dead, note it.
     if (CAVE_WOLVES.every((id) => this.defeatedFoes.has(id))) QuestLog.setFlag('cleared-cave');
     this.busy = false;
@@ -478,18 +244,18 @@ export class GameScene extends Phaser.Scene {
     this.serviceTimer = SERVICE_FIRST;
     this.chatterTimer = 3;
     this.marketWasOpen = marketOpen(this.clock.hour);
-    this.creatures = this.spawnCreatures();
+    this.creatures = spawnCreatures(this);
     this.roadEvents?.shutdown();
-    this.roadEvents = this.area === 'plains' ? this.startRoadEvents() : undefined;
+    this.roadEvents = this.area === 'plains' ? startRoadEvents(this) : undefined;
     const hens = this.map.data.hens;
     this.hens = (hens?.flock ?? []).map((h) => new Hen(this, this.map, hens!.pen, h.kind, h.gx, h.gy));
     const children = (this.map.data.children ?? []).map((c) => new Child(this, this.map, c.id, c.gx, c.gy));
     const scared = raidStage() === 'over';
     this.siblings = children.length > 0
-      ? new Siblings(children, scared ? SIBLING_SCARED : SIBLING_BANTER, () => (scared ? SIBLING_SCARED_HELLO[0] : this.siblingHello()))
+      ? new Siblings(children, scared ? SIBLING_SCARED : SIBLING_BANTER, () => (scared ? SIBLING_SCARED_HELLO[0] : siblingHello()))
       : undefined;
-    this.syncCrops();
-    this.syncGathered();
+    syncCrops(this);
+    syncGathered(this);
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
     this.drips = this.map.data.drips ? new Drips(this, this.map.data) : undefined;
     this.sounds = new AmbientSounds(this.area, this.map.data);
@@ -509,13 +275,13 @@ export class GameScene extends Phaser.Scene {
     this.marker = this.add.image(0, 0, 'tile-highlight').setDepth(1).setTint(0x9cf09c).setVisible(false);
 
     this.setupCamera();
-    this.setupInput();
+    setupInput(this);
     GameAudio.playMusic(this.map.data.music ?? 'world');
     this.cameras.main.fadeIn(450, 0, 0, 0);
 
     this.raid = undefined;
     if (raidStage() === 'morning' && (this.area === 'world' || this.area === 'home')) {
-      this.raid = this.startRaid();
+      this.raid = startRaid(this);
       if (this.area === 'world') this.raid.beginOutside();
       else this.raid.beginInside(!!data.raidRetreat);
     }
@@ -523,7 +289,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(1200, () => this.onHint?.('I came to on the cottage floor, aching all over. That wolf is still out there.'));
     }
     if (data.raidAftermath) {
-      this.cameAround();
+      cameAround(this);
     } else if (data.slept !== undefined && raidStage() === 'morning') {
       this.time.delayedCall(900, () => this.onHint?.('Shouting. Screaming, outside, and the smell of smoke. What in the world is going on out there?'));
       this.time.delayedCall(5200, () => this.onHint?.("Mother is still asleep. I'd better go and see."));
@@ -537,56 +303,9 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(1200, () => this.onHint?.('Mother is resting by the hearth. She wants to speak with you.'));
     }
     if (this.area !== 'home') QuestLog.complete('mother-medicine', 'leave');
-    if (this.area === 'market' && !this.marketWasOpen) {
-      // Turning up after hours: the militia say so.
-      this.time.delayedCall(1400, () => this.militiaCall(MILITIA_CALLS.closed));
-    }
-    if (this.area === 'market' && !this.visited.has('market')) {
-      const firstSight = this.marketWasOpen
-        ? 'Adowvale at last. Fresh bread, woodsmoke, and the clang of the smithy in the market square.'
-        : 'Adowvale at last, but the market stalls are all covered over for the night.';
-      this.time.delayedCall(1000, () => this.onHint?.(firstSight));
-      QuestLog.writeDiary(
-        'Followed the old road all the way to Adowvale. The market square was busier than I remembered, with the militia ' +
-          'marching about in their tin hats. Someone here must know where to find moonpetal.',
-      );
-    }
-    if (this.area === 'plains' && !this.visited.has('plains')) {
-      this.time.delayedCall(1000, () => this.onHint?.('Open sky at last. The grass runs on for miles, and the wind smells of rain.'));
-      QuestLog.writeDiary(
-        "Went out through Lord Morten's gate onto Adowvale Plains. I have never seen so much sky. Deer grazing in the long " +
-          'grass, the road running off to a crossroads, and not a wall in sight.',
-      );
-    }
-    if (this.area === 'monastery' && !this.visited.has('monastery')) {
-      this.time.delayedCall(1000, () => this.onHint?.('Bells, and bees, and somewhere beyond the wall, men singing. This must be Saint Elda\'s.'));
-      QuestLog.writeDiary(
-        "Followed the Lord's Road east to Saint Elda's monastery. Grey walls, a great shut gate, and the brothers' gardens and fish " +
-          'ponds spread out in front. The moonpetal is somewhere inside. I have to find a way in.',
-      );
-    }
-    if (this.area === 'cave') this.enteredCave();
-    if (this.area === 'den') this.enteredDen();
-    if (this.area === 'abbey' && !this.visited.has('abbey')) {
-      this.time.delayedCall(1000, () => this.onHint?.('Inside at last. Flagstones, a well, and the smell of herbs and woodsmoke. It is so quiet in here.'));
-      QuestLog.writeDiary(
-        "Went in through the gate of Saint Elda's at last. Inside the walls it is like another country: a court with the Saint's well, " +
-          'a cloister round a garden, and brothers going quietly about everywhere. Brother Anselm keeps the moonpetal in the garden.',
-      );
-    }
-    if (this.area === 'deepden' && !this.visited.has('deepden')) {
-      this.time.delayedCall(1000, () => this.onHint?.('The crevice opens out into a cold chamber. The air moves here, as if it comes from somewhere further down.'));
-      QuestLog.writeDiary(
-        "Squeezed through a crevice at the back of the Wolf Mother's den and came out in a cold, empty cave. The passage runs on down " +
-          'into the dark. Something about the place makes the hair on my neck stand up. I will come back better prepared.',
-      );
-    }
-    if (this.area === 'tavern') this.enteredTavern();
-    if (this.area === 'cellar') this.enteredCellar();
-    if (raidStage() === 'over') this.enteredAfterRaid();
-    else if (this.area === 'hut' && !this.visited.has('hut')) {
-      this.time.delayedCall(900, () => this.onHint?.('Warm, smoky, and loud. Iran was not exaggerating about the children.'));
-    }
+    // Each area's own arrival: first-visit thoughts and diary lines, quest steps (see game/areas.ts).
+    AREAS[this.area]?.enter?.(this);
+    if (raidStage() === 'over') enteredAfterRaid(this);
     // Finding somewhere new is worth a little experience (not the hero's own home).
     if (!this.visited.has(this.area) && !data.newGame && this.area !== 'home') {
       const name = AREA_NAMES[this.area];
@@ -608,69 +327,9 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.removeEventListener('beforeunload', GameScene.holdTab));
   }
 
-  /** What the children say when the hero walks in: thanks once the hens are fed, a plain hello otherwise. */
-  private siblingHello() {
-    if (QuestLog.get('chicken-feed')?.completed) return SIBLING_THANKS[0];
-    const met = QuestLog.hasFlag('met-iran-children');
-    QuestLog.setFlag('met-iran-children');
-    return met ? SIBLING_GREETINGS[2] : SIBLING_GREETINGS[Math.floor(Math.random() * 2)];
-  }
-
   /** People besides the NPCs who can say things in speech bubbles (Iran's children), for the HUD. */
   get speakers(): Speaker[] {
     return [...(this.siblings?.speakers ?? []), ...(this.raid?.speakers ?? [])];
-  }
-
-  /** Into the Wolf Mother's den: Brother Wystan's errand moves on, and the first time the hero takes it in. */
-  private enteredDen(): void {
-    QuestLog.complete('wolf-mother', 'den');
-    if (this.visited.has('den')) return;
-    this.time.delayedCall(1000, () => this.onHint?.('This is no hill-hole like the cave at home. It goes on and on, and the whole place reeks of wolf.'));
-    QuestLog.writeDiary(
-      "Found the old den on the plains, in a knoll of grey rock up a track the wolves have trodden. It is far bigger than the " +
-        'cave at home, chamber after chamber, and full of bones. Somewhere in here is the Wolf Mother.',
-    );
-  }
-
-  /** Into the Crooked Tankard: the first time, the hero takes it in. */
-  private enteredTavern(): void {
-    if (this.visited.has('tavern')) return;
-    const busy = this.clock.hour >= 17 || this.clock.hour < 2;
-    this.time.delayedCall(1000, () =>
-      this.onHint?.(busy
-        ? 'Heat, noise and the smell of ale. Every table is full, and somebody is murdering a lute by the fire.'
-        : 'Warm and dim, smelling of woodsmoke and old ale. An old man dozes at the end of the bar.'),
-    );
-    QuestLog.writeDiary(
-      "Went into the Crooked Tankard, the inn on Adowvale's square. Godric the landlord keeps it, a big bald man with a voice like a barrel " +
-        'rolling downstairs. There are rooms to let upstairs, and ale, and more gossip than at Hilde\'s stall.',
-    );
-  }
-
-  /** Down the trapdoor into the cellar: Godric's job moves on. */
-  private enteredCellar(): void {
-    QuestLog.complete('cellar-rats', 'cellar');
-    this.checkCellarClear();
-    if (this.visited.has('cellar')) return;
-    this.time.delayedCall(1000, () => this.onHint?.('Cold stone, the smell of spilt ale and something worse. Little claws skitter in the dark.'));
-  }
-
-  /** All the cellar's rats dead or run off: Godric should hear of it. */
-  private checkCellarClear(): void {
-    if (!CELLAR_RATS.every((id) => this.defeatedFoes.has(id)) || !QuestLog.has('cellar-rats') || QuestLog.isDone('cellar-rats', 'clear')) return;
-    QuestLog.complete('cellar-rats', 'cellar');
-    QuestLog.complete('cellar-rats', 'clear');
-    QuestLog.writeDiary(
-      "Cleared the rats out of the Crooked Tankard's cellar. Six of them, fat as cats on Godric's grain, and one bit me on the ankle. " +
-        'Godric owes me coin, and I have a satchel full of tails I did not want.',
-    );
-  }
-
-  /** Into the wolves' den: the first time, the hero takes it in; on Wil's errand, that step is done. */
-  private enteredCave(): void {
-    QuestLog.complete('lost-sheep', 'cave');
-    if (this.visited.has('cave')) return;
-    this.time.delayedCall(1000, () => this.onHint?.('Cold, wet rock, and the stink of wolf. Something has been dragged in here.'));
   }
 
   update(_time: number, deltaMs: number): void {
@@ -678,21 +337,21 @@ export class GameScene extends Phaser.Scene {
     // Sneaking wins over sprinting: you can't creep and run at once.
     const wantsSneak = !this.busy && (this.keys.sneak.isDown || GameScene.sneakToggled);
     const wantsSprint = !this.busy && !wantsSneak && this.keys.sprint.isDown && this.stats.canSprint();
-    const input = this.busy ? { x: 0, y: 0 } : this.readKeyboard();
+    const input = this.busy ? { x: 0, y: 0 } : readKeyboard(this);
     const moving = input.x !== 0 || input.y !== 0;
     if (moving) {
       this.walkingTo = undefined;
-      if (this.seat) this.standUp();
-      if (this.channel) this.cancelChannel();
+      if (this.seat) standUp(this);
+      if (this.channel) cancelChannel(this);
     }
-    this.updateChannel(dt);
+    updateChannel(this, dt);
     this.setSneaking(wantsSneak);
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : wantsSneak ? SNEAK.speed : 1);
     this.sprinting = wantsSprint && moved;
     this.motherRoutine?.update(dt, this.clock.hour, this.busy);
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
     this.raid?.update(dt, this.busy || this.inCombat);
-    this.updateMarketHours();
+    updateMarketHours(this);
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
     const stepLoudness = !moved ? 0 : this.sprinting ? 1.4 : wantsSneak ? 0.35 : 1;
@@ -703,21 +362,21 @@ export class GameScene extends Phaser.Scene {
       this.clock.timeScale = !this.busy && this.keys.fastForward.isDown ? FAST_FORWARD : 1;
       this.clock.update(dt);
     }
-    this.updateCreatures(dt);
+    updateCreatures(this, dt);
     this.roadEvents?.update(dt);
     this.map.updateFading(this.player.sprite.x, this.player.sprite.y, this.player.sprite.depth, dt);
-    this.updateHens(dt);
+    updateHens(this, dt);
     this.siblings?.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
-    this.checkRoadExits();
-    this.checkMusings();
-    this.updateHover();
-    this.updateFocus();
-    this.updateSitting(dt);
-    this.updateTavern(dt);
+    checkRoadExits(this);
+    checkMusings(this);
+    updateHover(this);
+    updateFocus(this);
+    updateSitting(this, dt);
+    updateTavern(this, dt);
 
     this.cropTimer -= dt;
     if (this.cropTimer <= 0) {
-      this.syncCrops();
+      syncCrops(this);
       this.cropTimer = 1;
     }
 
@@ -728,21 +387,6 @@ export class GameScene extends Phaser.Scene {
         this.crackleTimer = 0.15 + Math.random() * 1.2;
       }
     }
-  }
-
-  /** In the market, the militia call out as the stalls shut in the evening and open in the morning. */
-  private updateMarketHours(): void {
-    if (this.area !== 'market') return;
-    const open = marketOpen(this.clock.hour);
-    if (open !== this.marketWasOpen) this.militiaCall(open ? MILITIA_CALLS.opening : MILITIA_CALLS.closing);
-    this.marketWasOpen = open;
-  }
-
-  /** The militiaman nearest the player calls something out. */
-  private militiaCall(text: string): void {
-    const guards = this.npcs.filter((n) => n.id.startsWith('guard-'));
-    const nearest = guards.sort((a, b) => a.distanceTo(this.player.gx, this.player.gy) - b.distanceTo(this.player.gx, this.player.gy))[0];
-    nearest?.say(text, 6);
   }
 
   /** Do whatever is prompted (the E key, or tapping the prompt). */
@@ -778,9 +422,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Stops whatever the player is doing so a menu can open. */
-  private takeControls(): boolean {
+  takeControls(): boolean {
     if (this.busy || !this.scene.isActive()) return false;
-    if (this.channel) this.cancelChannel();
+    if (this.channel) cancelChannel(this);
     this.busy = true;
     this.walkingTo = undefined;
     this.player.setPath([]);
@@ -795,16 +439,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Hands control back after a menu closes, a moment later so the closing key press isn't reused. */
-  private release(): void {
+  release(): void {
     this.time.delayedCall(80, () => {
       this.busy = false;
     });
   }
 
   /** @param keepSeat stay sitting (a maid taking an order at the table) */
-  private startConversation(npc: Npc, keepSeat = false): void {
-    if (this.seat && !keepSeat) this.standUp();
-    this.syncNpcWorld();
+  startConversation(npc: Npc, keepSeat = false): void {
+    if (this.seat && !keepSeat) standUp(this);
+    syncNpcWorld(this);
     this.ordered = undefined;
     this.busy = true;
     this.walkingTo = undefined;
@@ -813,11 +457,11 @@ export class GameScene extends Phaser.Scene {
     this.pendingShop = undefined;
     const data: DialogueSceneData = {
       script: npc.script(),
-      onAction: (action) => this.runDialogueAction(action),
+      onAction: (action) => runDialogueAction(this, action),
     };
     this.scene.launch('Dialogue', data);
     this.scene.get('Dialogue').events.once('dialogue-closed', () => {
-      if (this.ordered && this.service?.maid === npc) this.fetchOrder(this.ordered);
+      if (this.ordered && this.service?.maid === npc) fetchOrder(this, this.ordered);
       else if (this.service?.maid === npc && !this.service.item) this.service = undefined;
       this.ordered = undefined;
       const shop = this.pendingShop;
@@ -832,72 +476,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Brew at a bench or cook at a hearth (see scenes/StationScene.ts). */
-  private openStation(station: string): void {
+  openStation(station: string): void {
     if (!this.takeControls()) return;
-    if (this.seat) this.standUp();
+    if (this.seat) standUp(this);
     this.scene.launch('Station', { station } satisfies StationSceneData);
     const ui = this.scene.get('Station');
-    const made = (recipe: Recipe) => this.madeAtStation(recipe);
+    const made = (recipe: Recipe) => madeAtStation(this, recipe);
     ui.events.on('station-made', made);
     ui.events.once('station-closed', () => {
       ui.events.off('station-made', made);
       this.release();
     });
-  }
-
-  /** Something brewed or cooked: Mother's tincture moves her errand on. */
-  private madeAtStation(recipe: Recipe): void {
-    if (recipe.makes !== 'fever-tincture' || !QuestLog.has('mother-medicine') || QuestLog.isDone('mother-medicine', 'brew')) return;
-    QuestLog.complete('mother-medicine', 'moonpetal');
-    QuestLog.complete('mother-medicine', 'willow');
-    QuestLog.complete('mother-medicine', 'brew');
-    QuestLog.writeDiary(
-      "Brewed Mother's tincture at old Maud's bench in the Tankard's cellar: ground the willow bark, steeped the moonpetal, and strained it " +
-        'into a little flask. It glows, faintly, like the flowers did. Now home to Mother, as fast as my legs will carry me.',
-    );
-    this.time.delayedCall(400, () => this.onHint?.('It glows, just like the flowers. Now home to Mother, quickly!'));
-  }
-
-  /** Mother takes her tincture: the end of her errand. */
-  private gaveMotherTincture(): void {
-    if (!Inventory.remove('fever-tincture', 1)) return;
-    for (const step of ['leave', 'find', 'moonpetal', 'willow', 'brew', 'return']) QuestLog.complete('mother-medicine', step);
-    GameAudio.questChime();
-    QuestLog.writeDiary(
-      'Gave Mother the tincture, warm, by the fire. She made a face at the taste and said it was just as foul as her own mother\'s, ' +
-        'which she says is how you know it works. She was asleep before I had tucked her in, and not coughing once. Tomorrow we will see.',
-    );
-    // That's the day done: she goes to bed, and so must the hero.
-    QuestLog.setFlag('raid-pending');
-    this.afterTalk = () => this.time.delayedCall(250, () => this.askToSleep());
-  }
-
-  /**
-   * After the tincture: "Get some sleep, and hope she's better in the morning."
-   * There's only the one answer, and it's straight to bed till dawn.
-   */
-  private askToSleep(): void {
-    if (!this.takeControls()) {
-      this.time.delayedCall(300, () => this.askToSleep());
-      return;
-    }
-    if (this.seat) this.standUp();
-    const bed = this.map.data.beds?.find((b) => b.id === 'home-bed');
-    const data: ConfirmSceneData = {
-      question: 'I should get some sleep.',
-      note: 'Mother has had her tincture. All I can do now is rest, and hope to see her improved in the morning.',
-      yes: 'Go to sleep until morning',
-      only: true,
-      onAnswer: () => {
-        if (!bed) {
-          this.release();
-          return;
-        }
-        this.player.faceTowards(bed.gx, bed.gy);
-        this.sleep(bed, this.clock.hoursUntil(6));
-      },
-    };
-    this.scene.launch('Confirm', data);
   }
 
   /** A trader's stall: buy and sell. Opened from the conversation with them (see dialogue/market.ts). */
@@ -907,561 +496,9 @@ export class GameScene extends Phaser.Scene {
     this.scene.get('Shop').events.once('shop-closed', () => this.release());
   }
 
-  /** Story effects triggered by lines of dialogue (see dialogue/*.ts). */
-  private runDialogueAction(action: string): void {
-    if (action.startsWith('shop:') && action.slice(5) in SHOPS) {
-      this.pendingShop = action.slice(5) as ShopId;
-      return;
-    }
-    if (action.startsWith('drink:')) {
-      this.drinkAtBar(action.slice(6) as ItemId);
-      return;
-    }
-    if (action.startsWith('order:')) {
-      this.placeOrder(action.slice(6) as ItemId);
-      return;
-    }
-    if (action.startsWith('road:')) {
-      this.roadEvents?.action(action.slice(5));
-      return;
-    }
-    if (action.startsWith('rent:')) {
-      this.rentRoom(Number(action.slice(5)));
-      return;
-    }
-    switch (action) {
-      case 'start-rats-quest':
-        if (QuestLog.has('cellar-rats')) return;
-        QuestLog.start('cellar-rats', ['talk']);
-        QuestLog.writeDiary(
-          `Godric at the Crooked Tankard has rats in his cellar, big as cats, he says. He will pay ${RAT_REWARD} coins to have them cleared out. ` +
-            'The trapdoor is by the end of the bar.',
-        );
-        this.checkCellarClear();
-        break;
-      case 'finish-rats-quest':
-        if (QuestLog.get('cellar-rats')?.completed) return;
-        QuestLog.complete('cellar-rats', 'return');
-        Inventory.reward(RAT_REWARD);
-        GameAudio.coins();
-        QuestLog.setFlag('tankard-free-drink');
-        QuestLog.writeDiary(
-          `Told Godric his cellar is clear. He went down to look for himself, came back up grinning, and paid me ${RAT_REWARD} coins. ` +
-            'My next drink is on the house, he says. He did not want the tails.',
-        );
-        break;
-      case 'buy-harlan':
-        if (Inventory.addCoins(-HARLAN_DRINK)) GameAudio.coins();
-        break;
-      case 'harlan-secret':
-        if (QuestLog.hasFlag('harlan-secret')) return;
-        QuestLog.setFlag('harlan-secret');
-        QuestLog.writeDiary(
-          'Old Harlan at the Crooked Tankard says the door under the hill was put there by old Lord Morten, this one\'s grandfather, to shut in ' +
-            'something that came up from the deep places. The key went with him: buried, or kept up at the manor.',
-        );
-        break;
-      case 'dice-game':
-        this.afterTalk = () => this.playDice();
-        break;
-      case 'pell-song':
-        if (!Inventory.addCoins(-SONG_PRICE)) return;
-        GameAudio.coins();
-        this.afterTalk = () => this.pellSings();
-        break;
-      case 'start-medicine-quest':
-        if (QuestLog.has('mother-medicine')) return;
-        QuestLog.start('mother-medicine', ['talk']);
-        QuestLog.writeDiary(
-          "Mother's cough is worse. She tried to hide the fever from me, but her hands shake too much to hold a cup. " +
-            'She needs moonpetal and willow bark tincture. I will find someone in the village who has it.',
-        );
-        break;
-      case 'start-sheep-quest':
-        QuestLog.start('lost-sheep', ['talk']);
-        QuestLog.writeDiary(
-          "Met Wil the drover on the road again, still hunting for his master's two ewes. Something dragged them off " +
-            'towards the cave in the hill north of the cottage. He is too scared to look, so I said I would.',
-        );
-        break;
-      case 'start-feed-quest':
-        if (QuestLog.has('chicken-feed')) return;
-        QuestLog.start('chicken-feed', ['talk']);
-        Inventory.reward(FEED_MONEY);
-        GameAudio.coins();
-        // Bought a sack already, before he asked.
-        if (Inventory.count('chicken-feed') > 0) QuestLog.complete('chicken-feed', 'buy');
-        QuestLog.writeDiary(
-          'Met Farmer Iran up the hill, who keeps the hens. He remembered me as a boy. His hens have gone without feed for ' +
-            `two days, so he gave me ${FEED_MONEY} coins to fetch a sack from Hilde at the market.`,
-        );
-        break;
-      case 'finish-feed-quest':
-        Inventory.remove('chicken-feed', 1);
-        QuestLog.complete('chicken-feed', 'buy');
-        QuestLog.complete('chicken-feed', 'return');
-        this.give('egg', EGG_REWARD);
-        QuestLog.writeDiary(
-          "Took Iran his sack of feed. The hens mobbed him before he'd got it open. He sent me off with eggs for Mother, " +
-            'and his little girl shouted goodbye from the doorway until I was halfway down the hill.',
-        );
-        break;
-      case 'pay-toll':
-        this.payToll();
-        break;
-      case 'heard-of-monastery':
-        if (QuestLog.hasFlag('heard-of-monastery')) return;
-        QuestLog.setFlag('heard-of-monastery');
-        QuestLog.writeDiary(
-          "Met a traveller on the Lord's Road who says the monks of Saint Elda grow moonpetal in their cloister pond, a day's " +
-            'walk east of the crossroads. Brother Anselm keeps it dried. If anyone can help Mother, it is them.',
-        );
-        break;
-      case 'start-wolf-quest':
-        if (QuestLog.has('wolf-mother')) return;
-        QuestLog.start('wolf-mother', ['talk']);
-        QuestLog.writeDiary(
-          "Brother Wystan will not open the gate: the Prior has barred it while wolves harry the brothers on the Lord's Road. " +
-            'They are led by a great white she-wolf, the Wolf Mother, from an old den north of the road. I said I would put an end to her.',
-        );
-        break;
-      case 'finish-wolf-quest':
-        this.openMonasteryGate();
-        break;
-      case 'godric-brewing':
-        if (QuestLog.hasFlag('may-use-cellar')) return;
-        QuestLog.setFlag('may-use-cellar');
-        QuestLog.writeDiary(
-          "Godric says his grandmother Maud brewed cordials and cures for half the shire, and her bench is still down in his cellar, " +
-            'still and all. I may use it, if I can get past his rats. The trapdoor is by the end of the bar.',
-        );
-        return;
-      case 'give-tincture':
-        this.gaveMotherTincture();
-        return;
-      case 'found-iran':
-        QuestLog.complete('the-raid', 'search');
-        QuestLog.complete('the-raid', 'outside');
-        if (QuestLog.isDone('the-raid', 'iran')) return;
-        QuestLog.complete('the-raid', 'iran');
-        QuestLog.writeDiary(
-          'Found Iran on the floor of his hut with Pip and Hetty, the fire out and the shutters closed. They are alive, thank the gods. ' +
-            'He saw the big goblin, the one in iron, carry something out of our door wrapped in a quilt, and the whole band went off north, ' +
-            'up past the cave and into the trees. Mother. It has to have been Mother.',
-        );
-        return;
-      case 'anselm-moonpetal':
-        if (QuestLog.hasFlag('may-pick-moonpetal')) return;
-        QuestLog.setFlag('may-pick-moonpetal');
-        QuestLog.complete('mother-medicine', 'find');
-        QuestLog.writeDiary(
-          "Brother Anselm says Mother's tincture is moonpetal and white willow bark steeped together. His dried moonpetal is all gone, " +
-            'but the fresh is flowering round the cloister pond and he has let me pick it. The willow bark I must find for myself.',
-        );
-        break;
-      case 'hob-bread':
-        if (QuestLog.hasFlag('fed-by-hob')) return;
-        QuestLog.setFlag('fed-by-hob');
-        this.give('bread', 1);
-        break;
-      case 'finish-sheep-quest':
-        // He may hear the news without having asked: the ewes were found first.
-        QuestLog.start('lost-sheep', ['talk', 'cave', 'find']);
-        QuestLog.complete('lost-sheep', 'tell');
-        Inventory.reward(SHEEP_REWARD);
-        GameAudio.coins();
-        QuestLog.writeDiary(
-          `Told Wil about Bess and Bramble. He took it quietly, then pressed ${SHEEP_REWARD} coins into my hand and would not ` +
-            'hear of me giving them back. I hope his master is kinder to him than he expects.',
-        );
-        break;
-      default:
-        console.warn(`Unknown dialogue action: ${action}`);
-    }
-  }
-
-  /** The hens peck about by day and roost in the coop at night; now and then one clucks. */
-  private updateHens(dt: number): void {
-    if (this.hens.length === 0) return;
-    const hour = this.clock.hour;
-    const roosting = hour >= 21 || hour < 6;
-    const player = { x: this.player.gx, y: this.player.gy };
-    for (const hen of this.hens) {
-      hen.roosting = roosting;
-      hen.update(dt, player);
-    }
-    this.cluckTimer -= dt;
-    if (this.cluckTimer > 0 || roosting || this.busy) return;
-    this.cluckTimer = 2 + Math.random() * 5;
-    // Louder the closer the player is to the run.
-    const pen = this.map.data.hens!.pen;
-    const d = Math.hypot((pen.x0 + pen.x1) / 2 - player.x, (pen.y0 + pen.y1) / 2 - player.y);
-    if (d < 12) GameAudio.cluck(Math.max(0.1, 1 - d / 12));
-  }
-
-  // ------------------------------------------------------------ the Crooked Tankard
-
-  /** Tells the tavern's people what they need to know about the hero and the clock (see NpcWorld). */
-  private syncNpcWorld(): void {
-    NpcWorld.seated = this.seat?.name === 'tavern-table';
-    NpcWorld.now = this.clock.elapsedHours;
-    NpcWorld.hoursUntil = (h) => this.clock.hoursUntil(h);
-  }
-
-  private updateTavern(dt: number): void {
-    if (this.area !== 'tavern') return;
-    this.updateService(dt);
-    this.updateChatter(dt);
-  }
-
   /** The person with this id, if they're about. */
-  private someone(id: string): Npc | undefined {
+  someone(id: string): Npc | undefined {
     return this.npcs.find((n) => n.id === id && n.present);
-  }
-
-  /** While the hero sits at a table, now and then a maid comes over to take an order. */
-  private updateService(dt: number): void {
-    this.serviceTimer -= dt;
-    const seat = this.seat;
-    if (this.service || !seat || seat.name !== 'tavern-table' || this.busy || this.serviceTimer > 0) return;
-    const player = { x: this.player.gx, y: this.player.gy };
-    const maid = this.npcs
-      .filter((n) => (n.id === 'nell' || n.id === 'rosie') && n.present && n.idle)
-      .sort((a, b) => a.distanceTo(player.x, player.y) - b.distanceTo(player.x, player.y))[0];
-    if (!maid) {
-      this.serviceTimer = 5;
-      return;
-    }
-    const service = { maid, seat, stage: 'coming' as const };
-    this.service = service;
-    maid.goTo(this.serviceSpot(seat), () => this.maidArrives(service));
-  }
-
-  /**
-   * Where a maid stands to serve someone sitting: beside them, but never on the
-   * spot they'd step to on getting up (or she'd be in their way).
-   */
-  private serviceSpot(seat: Seat): Vec2 {
-    const sx = Math.floor(seat.gx);
-    const sy = Math.floor(seat.gy);
-    const stand = { x: Math.floor(seat.standX), y: Math.floor(seat.standY) };
-    let best: Vec2 | undefined;
-    let bestDist = Infinity;
-    for (let y = sy - 1; y <= sy + 1; y++) {
-      for (let x = sx - 1; x <= sx + 1; x++) {
-        if ((x === sx && y === sy) || (x === stand.x && y === stand.y)) continue;
-        if (!this.map.isWalkable(x, y) || this.map.blocked(x + 0.5, y + 0.5, PLAYER_RADIUS, false)) continue;
-        const d = Math.hypot(x + 0.5 - seat.standX, y + 0.5 - seat.standY);
-        if (d < bestDist) {
-          best = { x: x + 0.5, y: y + 0.5 };
-          bestDist = d;
-        }
-      }
-    }
-    return best ?? { x: seat.standX, y: seat.standY };
-  }
-
-  /** The maid is at the table: she takes the hero's order, unless they've got up and gone in the meantime. */
-  private maidArrives(service: NonNullable<GameScene['service']>): void {
-    if (this.service !== service) return;
-    if (this.seat !== service.seat || this.busy) {
-      service.maid.say(this.seat ? "I'll come back by, love." : 'Oh! Never mind, then.', 3);
-      this.service = undefined;
-      this.serviceTimer = this.seat ? 12 : SERVICE_AGAIN;
-      return;
-    }
-    this.serviceTimer = SERVICE_AGAIN;
-    this.startConversation(service.maid, true);
-  }
-
-  /** Ordered from a maid at the table: pay up, and she'll fetch it once she's done talking. */
-  private placeOrder(item: ItemId): void {
-    const menu = MENU[item];
-    if (!menu || !Inventory.addCoins(-menu.price)) return;
-    GameAudio.coins();
-    this.ordered = item;
-  }
-
-  /** The maid goes to the bar for the order, waits on Godric, and brings it back to the table. */
-  private fetchOrder(item: ItemId): void {
-    const service = this.service!;
-    service.item = item;
-    service.stage = 'fetching';
-    const calls: Partial<Record<ItemId, string>> = { stew: 'One stew, Godric!', bread: 'Bread and butter, Godric!', cheese: 'Cheese for the table, Godric!' };
-    service.maid.goTo(BAR_PICKUP, () => {
-      if (this.service !== service) return;
-      service.maid.faceTowards(9.5, 1.5);
-      service.maid.say(calls[item] ?? `Godric! One ${itemDef(item).name.toLowerCase()}!`, 2.5);
-      this.someone('landlord')?.say('Coming up!', 2);
-      this.time.delayedCall(2800, () => {
-        if (this.service !== service) return;
-        service.stage = 'bringing';
-        service.maid.goTo(this.serviceSpot(service.seat), () => this.deliver(service));
-      });
-    });
-  }
-
-  /** The order arrives: eaten (or drunk) at the table, or, if the hero has got up, handed over to take away. */
-  private deliver(service: NonNullable<GameScene['service']>): void {
-    if (this.service !== service || !service.item) return;
-    this.service = undefined;
-    const item = service.item;
-    const menu = MENU[item]!;
-    service.maid.faceTowards(this.player.gx, this.player.gy);
-    service.maid.say(menu.served, 4);
-    if (this.seat === service.seat) this.time.delayedCall(1200, () => this.consume(item, menu.thought));
-    else this.give(item, 1);
-  }
-
-  /** Eat or drink something straight away (served in the tavern), and say how it was. */
-  private consume(item: ItemId, thought: string): void {
-    const def = itemDef(item);
-    if (def.eat?.health) this.stats.heal(def.eat.health);
-    if (def.eat?.stamina) this.stats.restoreStamina(def.eat.stamina);
-    if (def.drink) GameAudio.gulp();
-    else GameAudio.crunch();
-    this.onHint?.(thought);
-  }
-
-  /** A drink across the bar from Godric, drunk there and then (the first after clearing his cellar is on the house). */
-  private drinkAtBar(item: ItemId): void {
-    const menu = MENU[item];
-    if (!menu) return;
-    if (QuestLog.hasFlag('tankard-free-drink')) {
-      QuestLog.clearFlag('tankard-free-drink');
-    } else if (!Inventory.addCoins(-menu.price)) {
-      return;
-    } else {
-      GameAudio.coins();
-    }
-    this.afterTalk = () => {
-      this.someone('landlord')?.say('There you go. Drink up.', 3);
-      this.time.delayedCall(900, () => this.consume(item, menu.thought));
-    };
-  }
-
-  /** Take (or keep on) a room upstairs for some nights: it's the hero's to sleep in until checkout on the last morning. */
-  private rentRoom(nights: number): void {
-    const option = RENT_OPTIONS.find((o) => o.nights === nights);
-    if (!option || !Inventory.addCoins(-option.price)) return;
-    GameAudio.coins();
-    const extending = Tavern.renting(this.clock.elapsedHours);
-    const room = Tavern.rent(nights, this.clock.elapsedHours, this.clock.hoursUntil(CHECKOUT_HOUR));
-    const span = nights === 1 ? 'the night' : nights === 7 ? 'the week' : `${nights} nights`;
-    QuestLog.writeDiary(
-      extending
-        ? `Paid Godric ${option.price} coins to keep my room at the Crooked Tankard for ${span} more.`
-        : `Took a room at the Crooked Tankard for ${span}: room ${room}, up the stairs. ${option.price} coins. A real bed, a lock on the door, and only a few fleas.`,
-    );
-  }
-
-  /** A game of dice with Ada: the higher roll takes the pot, and she wins ties. */
-  private playDice(): void {
-    if (!Inventory.addCoins(-DICE_STAKE)) return;
-    const d6 = () => 1 + Math.floor(Math.random() * 6);
-    const mine = d6() + d6();
-    const hers = d6() + d6();
-    const ada = this.someone('ada');
-    GameAudio.dice();
-    this.time.delayedCall(700, () => {
-      if (mine > hers) {
-        Inventory.reward(DICE_STAKE * 2);
-        GameAudio.coins();
-        ada?.say(mine === 12 ? 'Double sixes?! Well, I never.' : 'Hmph. Beginner\'s luck.', 3.5);
-        this.onHint?.(`I roll ${mine}. Ada rolls ${hers}. I win! She pushes the coins over with a face like thunder.`);
-      } else {
-        ada?.say(mine === hers ? 'A tie goes to the house, dearie.' : 'Thank you kindly!', 3.5);
-        this.onHint?.(`I roll ${mine}. Ada rolls ${hers}. She scoops up the pot before the dice have stopped rolling.`);
-      }
-    });
-  }
-
-  /** Pell sings the Ballad of the Crooked Tankard, a bubble at a time, and the room joins in at the end. */
-  private pellSings(): void {
-    const pell = this.someone('pell');
-    if (!pell) return;
-    this.chatterTimer = PELL_SONG.length * LINE_GAP + 3;
-    PELL_SONG.forEach((line, i) => this.time.delayedCall(i * LINE_GAP * 1000, () => pell.say(line, LINE_GAP + 0.2)));
-    this.time.delayedCall(PELL_SONG.length * LINE_GAP * 1000, () => {
-      const crowd = this.npcs.filter((n) => n.present && n !== pell && n.id !== 'landlord');
-      crowd[Math.floor(Math.random() * crowd.length)]?.say('Hooray! ...More or less.', 3);
-      this.someone('landlord')?.say('Not bad, Pell. Not good, either.', 3);
-    });
-  }
-
-  /** The regulars talk among themselves: an exchange between some of them, someone muttering, or the room raising a cup. */
-  private updateChatter(dt: number): void {
-    if (this.busy) return;
-    this.chatterTimer -= dt;
-    if (this.chatterTimer > 0) return;
-    const gap = () => CHATTER_GAP[0] + Math.random() * (CHATTER_GAP[1] - CHATTER_GAP[0]);
-    const exchanges = TAVERN_CHATTER.filter((ex) => ex.every(([id]) => this.someone(id)?.idle));
-    if (exchanges.length > 0 && Math.random() < 0.55) {
-      const ex = exchanges[Math.floor(Math.random() * exchanges.length)];
-      ex.forEach(([id, text], i) => this.time.delayedCall(i * LINE_GAP * 1000, () => this.someone(id)?.say(text, LINE_GAP + 0.3)));
-      this.chatterTimer = ex.length * LINE_GAP + gap();
-      return;
-    }
-    this.chatterTimer = gap();
-    const about = this.npcs.filter((n) => n.present && n.idle && !n.speech);
-    const patrons = about.filter((n) => !['landlord', 'nell', 'rosie'].includes(n.id));
-    if (patrons.length >= 4 && Math.random() < 0.35) {
-      const who = patrons[Math.floor(Math.random() * patrons.length)];
-      who.say(TAVERN_TOASTS[Math.floor(Math.random() * TAVERN_TOASTS.length)], 3);
-      return;
-    }
-    const talkers = about.filter((n) => TAVERN_MUTTERS[n.id as SpeakerId]);
-    const who = talkers[Math.floor(Math.random() * talkers.length)];
-    const lines = who && TAVERN_MUTTERS[who.id as SpeakerId]!;
-    if (who && lines) who.say(lines[Math.floor(Math.random() * lines.length)], 3.5);
-  }
-
-  // ------------------------------------------------------------ sleeping and saving
-
-  /** Lie down in a bed: choose how long to sleep for, then sleep and save. */
-  private goToBed(bed: Bed): void {
-    if (!QuestLog.has('mother-medicine')) {
-      this.onHint?.("I can't sleep yet. Mother wants to speak with me.");
-      return;
-    }
-    if (raidStage() === 'pending' && bed.id === 'home-bed') {
-      this.askToSleep();
-      return;
-    }
-    if (raidStage() === 'morning') {
-      this.onHint?.("Sleep? With all that shouting outside? Something is very wrong.");
-      return;
-    }
-    if (bed.id === 'tavern-room' && !Tavern.renting(this.clock.elapsedHours)) {
-      this.onHint?.('My time in this room is up. I should see Godric downstairs if I want to stay another night.');
-      return;
-    }
-    if (!this.takeControls()) return;
-    const data: SleepSceneData = { clock: this.clock };
-    this.scene.launch('Sleep', data);
-    this.scene.get('Sleep').events.once('sleep-closed', (hours?: number) => {
-      if (hours) this.sleep(bed, hours);
-      else this.release();
-    });
-  }
-
-  /** Fade to black, let the hours pass, wake rested, and save the game. */
-  private sleep(bed: Bed, hours: number): void {
-    this.player.setPath([]);
-    this.cameras.main.fadeOut(900, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.clock.advance(hours);
-      // The night after the tincture: and in the morning, the goblins.
-      if (raidStage() === 'pending') {
-        QuestLog.clearFlag('raid-pending');
-        QuestLog.setFlag('raid-morning');
-      }
-      this.stats.heal(this.stats.maxHealth);
-      this.stats.restoreStamina(this.stats.maxStamina);
-      const save = this.makeSave(bed);
-      SaveGame.write(save);
-      // Wake up from the save just made, so waking always matches what loading it later gives.
-      this.scene.restart({ load: save, slept: hours } satisfies GameSceneData);
-    });
-  }
-
-  /** Everything needed to come back to this moment, waking in `bed`. */
-  private makeSave(bed: Bed): SaveData {
-    return {
-      version: SAVE_VERSION,
-      savedAt: Date.now(),
-      savePoint: bed.id,
-      area: this.area,
-      position: { x: bed.gx, y: bed.gy },
-      hours: this.clock.elapsedHours,
-      health: this.stats.health,
-      stamina: this.stats.stamina,
-      sections: SaveGame.collect(),
-    };
-  }
-
-  /** Puts the whole game back as it was when a save was made. */
-  private loadSave(save: SaveData): void {
-    this.stats = new PlayerStats();
-    this.stats.health = save.health;
-    this.stats.stamina = save.stamina;
-    this.clock = new TimeOfDay(save.hours);
-    QuestLog.dayProvider = () => this.clock.day;
-    SaveGame.restore(save);
-  }
-
-  // ------------------------------------------------------------ combat
-
-  /** Out on the plains: chance meetings on the road, with the people, beasts, talk and fights they need from the game. */
-  private startRoadEvents(): PlainsEvents {
-    return new PlainsEvents({
-      scene: this,
-      map: this.map,
-      player: () => ({ x: this.player.gx, y: this.player.gy }),
-      busy: () => this.busy || this.inCombat || !this.scene.isActive(),
-      hour: () => this.clock.hour,
-      addNpc: (id, gx, gy) => {
-        const npc = new Npc(this, this.map, id, gx, gy, undefined, this.clock.hour);
-        this.npcs.push(npc);
-        return npc;
-      },
-      removeNpc: (npc) => {
-        npc.destroy();
-        this.npcs = this.npcs.filter((n) => n !== npc);
-      },
-      talk: (npc) => this.startConversation(npc),
-      afterTalk: (fn) => {
-        const before = this.afterTalk;
-        this.afterTalk = () => {
-          before?.();
-          fn();
-        };
-      },
-      addCreature: (id, kind, gx, gy) => {
-        // Met by chance, so never counted among the foes defeated for good.
-        (this.map.data.creatures ??= []).push({ id, kind, gx, gy, respawns: true });
-        const creature = new Creature(this, this.map, id, kind, gx, gy);
-        this.creatures.push(creature);
-        return creature;
-      },
-      removeCreature: (creature) => {
-        creature.destroy();
-        this.creatures = this.creatures.filter((c) => c !== creature);
-      },
-      fight: (first) => this.startCombat(first),
-      hint: (text) => this.onHint?.(text),
-      give: (item, count) => this.give(item, count),
-    });
-  }
-
-  private spawnCreatures(): Creature[] {
-    const spawns = (this.map.data.creatures ?? []).filter((s) => !this.defeatedFoes.has(s.id));
-    // Handy for testing fights against a pack: open the game with ?wolves=3.
-    const pack = Number(new URLSearchParams(window.location.search).get('wolves') ?? 1);
-    const lead = spawns[0];
-    if (lead && pack > 1) {
-      const spots = [[1.5, 1], [-1, 1.5], [2, -1.5], [-2, -1], [0, 2.5]];
-      for (let i = 0; i < Math.min(pack - 1, spots.length); i++) {
-        const gx = lead.gx + spots[i][0];
-        const gy = lead.gy + spots[i][1];
-        const id = `${lead.id}-pack-${i}`;
-        if (!this.defeatedFoes.has(id) && this.map.isWalkable(Math.floor(gx), Math.floor(gy))) spawns.push({ ...lead, id, gx, gy });
-      }
-    }
-    return spawns.map((s) => new Creature(this, this.map, s.id, s.kind, s.gx, s.gy));
-  }
-
-  private updateCreatures(dt: number): void {
-    this.arrivalGrace = Math.max(0, this.arrivalGrace - dt);
-    for (const creature of this.creatures) {
-      const watching = !this.busy && this.arrivalGrace <= 0 && this.scene.isActive();
-      if (creature.update(dt, watching ? { x: this.player.gx, y: this.player.gy } : undefined, this.sprinting, this.noise)) this.startCombat(creature);
-    }
-  }
-
-  /** How far off beasts can notice the hero, as a share of the usual: closer while sneaking, further while sprinting. */
-  private get noise(): number {
-    return this.sneaking ? SNEAK.notice : this.sprinting ? SPRINT_NOTICE : 1;
   }
 
   /** Crouch into a sneak, or straighten up. The first time, the hero says what it's for. */
@@ -1490,35 +527,7 @@ export class GameScene extends Phaser.Scene {
 
   /** A beast has spotted the player (or the player has gone after some game): it and any of its pack close by fight. */
   startCombat(first: Creature, raid?: Creature[]): void {
-    if (this.busy || this.inCombat) {
-      first.disengage();
-      return;
-    }
-    if (this.seat) this.standUp();
-    if (this.channel) this.cancelChannel();
-    this.busy = true;
-    this.inCombat = true;
-    GameAudio.duckAmbience(COMBAT_DUCK);
-    this.walkingTo = undefined;
-    this.player.setPath([]);
-    // Only beasts that hunt in packs (wolves) bring the rest of the pack with them.
-    const pack = FOES[first.kind].packs;
-    // (The Wolf Mother and her wolves are one pack.)
-    const foes = raid ?? this.creatures.filter(
-      (c) =>
-        c === first ||
-        (pack && c.active && FOES[c.kind].packs && isOutlaw(c.kind) === isOutlaw(first.kind) && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
-    );
-    this.raidFight = !!raid;
-    const hunted = first.huntable;
-    foes.forEach((c) => c.engage());
-    if (first.kind === 'rat') GameAudio.squeak();
-    else if (raid) GameAudio.shriek(true);
-    else if (!hunted) GameAudio.growl();
-    GameAudio.playMusic('battle');
-    const data: CombatSceneData = { foes, doom: raid ? RAID_DOOM : undefined };
-    this.scene.launch('Combat', data);
-    this.scene.get('Combat').events.once('combat-ended', (result: CombatResult) => this.endCombat(result, foes));
+    startCombat(this, first, raid);
   }
 
   /** Point the camera at the middle of a fight (grid positions). */
@@ -1529,903 +538,6 @@ export class GameScene extends Phaser.Scene {
     const gy = points.reduce((n, p) => n + p.y, 0) / points.length;
     const p = gridToScreen(gx, gy);
     cam.pan(p.x, p.y - 20, 500, 'Sine.easeInOut');
-  }
-
-  private endCombat(result: CombatResult, foes: Creature[]): void {
-    this.inCombat = false;
-    GameAudio.duckAmbience(1, 2);
-    // Gone for good, except the plains' game, which is back the next time the hero comes this way.
-    const respawns = new Set((this.map.data.creatures ?? []).filter((s) => s.respawns).map((s) => s.id));
-    for (const id of [...result.slain, ...result.fled]) if (!respawns.has(id)) this.defeatedFoes.add(id);
-    this.fitCamera();
-    this.roadEvents?.fightOver();
-    if (this.raidFight) {
-      // However it went, it ends the same way.
-      this.raidDefeat();
-      return;
-    }
-    if (result.outcome === 'defeat') {
-      this.knockedOut();
-      return;
-    }
-    GameAudio.playMusic(this.map.data.music ?? 'world');
-    if (result.outcome === 'escaped') {
-      foes.forEach((c) => c.disengage());
-      this.onHint?.("I got away. Best keep my distance from it for now.");
-    } else {
-      const slain = foes.filter((c) => result.slain.includes(c.id));
-      for (const beast of slain) for (const [item, count] of SPOILS[beast.kind]) this.give(item, count);
-      const outlaws = slain.filter((c) => isOutlaw(c.kind));
-      if (outlaws.length > 0) {
-        const purse = outlaws.reduce((n) => n + Phaser.Math.Between(FOOTPAD_PURSE[0], FOOTPAD_PURSE[1]), 0);
-        Inventory.reward(purse);
-        GameAudio.coins();
-        QuestLog.writeDiary(
-          "Two footpads stopped me on the Lord's Road and asked for half my purse. I said no. They came at me with a cudgel and a knife, " +
-            (outlaws.length > 1 ? 'and I put them both down in the grass. ' : 'and I put one of them down in the grass; the other ran. ') +
-            `${outlaws.length > 1 ? 'Their purses' : 'His purse'} held ${purse} coins, no doubt taken from travellers before me.`,
-        );
-      }
-      const after = AFTER_THE_FIGHT[foes[0].kind];
-      this.onHint?.(slain.length > 0 ? after.slain : after.fled);
-      if (this.area === 'cave' && this.creatures.every((c) => !c.active || foes.includes(c))) {
-        this.time.delayedCall(2600, () => this.onHint?.('The den is quiet now. Only the dripping water, and something pale at the back of the cave.'));
-      }
-      if (CAVE_WOLVES.every((id) => this.defeatedFoes.has(id))) QuestLog.setFlag('cleared-cave');
-      if (this.area === 'cellar') {
-        const before = QuestLog.isDone('cellar-rats', 'clear');
-        this.checkCellarClear();
-        if (!this.creatures.some((c) => c.active)) {
-          this.time.delayedCall(2600, () =>
-            this.onHint?.(QuestLog.isDone('cellar-rats', 'clear') && !before ? 'That is the last of them. Godric will want to hear.' : 'The cellar is quiet now, apart from the dripping.'),
-          );
-        }
-      }
-      if (result.slain.includes('den-mother')) this.slewWolfMother();
-      if (foes.some((c) => c.id === 'cottage-wolf')) {
-        QuestLog.writeDiary(
-          'A grey wolf was nosing around the cottage when I stepped out. It went for me, and I had to fight it off. ' +
-            'My hands are still shaking. I must not tell Mother; she has enough to worry about.',
-        );
-      }
-    }
-    this.release();
-  }
-
-  /**
-   * The Wolf Mother is dead: Brother Wystan's errand moves on (even if he
-   * never asked; he'll hear of it when the hero next speaks to him).
-   */
-  private slewWolfMother(): void {
-    QuestLog.setFlag('slew-wolf-mother');
-    QuestLog.complete('wolf-mother', 'den');
-    QuestLog.complete('wolf-mother', 'slay');
-    QuestLog.writeDiary(
-      QuestLog.has('wolf-mother')
-        ? 'Killed the Wolf Mother in her lair, on a bed of bones under a crack in the roof. She was as big as a pony and as white as frost, ' +
-            'and she nearly had me. I took her hide. Brother Wystan should hear that the road is safe.'
-        : 'Killed a great white she-wolf in an old den out on the plains, on a bed of bones. I have never seen a wolf so big. I took her hide; ' +
-            'there cannot be another like it.',
-    );
-  }
-
-  /**
-   * Brother Wystan keeps his word: the Wolf Mother's errand is done, the gate
-   * swings open as the conversation ends, and it stays open from then on (the
-   * flag is saved, and the monastery is built with it open).
-   */
-  private openMonasteryGate(): void {
-    if (QuestLog.hasFlag('monastery-open')) return;
-    QuestLog.start('wolf-mother', ['talk', 'den', 'slay']);
-    QuestLog.complete('wolf-mother', 'return');
-    QuestLog.setFlag('monastery-open');
-    QuestLog.writeDiary(
-      'Told Brother Wystan the Wolf Mother is dead. The old man went quite pale, and then he took a key from his belt and opened ' +
-        "the gate of Saint Elda for me with his own hands. It is open to me now, he says, now and always.",
-    );
-    this.afterTalk = () => {
-      const gate = this.map.data.objects?.find((o) => o.key === 'mon-gate');
-      if (!gate) return;
-      const open = monasteryGateShape(true);
-      GameAudio.door();
-      this.map.reshapeObject(gate, 'mon-gate-open', open.shapes, open.blocks);
-      this.map.data.doors!.push(...monasteryGateDoors());
-      this.map.data.musings = [];
-      this.time.delayedCall(200, () => this.onHint?.('The great doors swing back. Beyond them, a sunny court, a well, and a cloister. I can go in.'));
-    };
-  }
-
-  // ------------------------------------------------------------ the goblin raid
-
-  /** The raid's hold on this scene: its goblins, its fights, and running back indoors. */
-  private startRaid(): RaidDirector {
-    return new RaidDirector({
-      scene: this,
-      map: this.map,
-      player: () => ({ x: this.player.gx, y: this.player.gy }),
-      follow: () => this.fitCamera(),
-      hint: (text) => this.onHint?.(text),
-      hold: () => this.takeControls(),
-      release: () => this.release(),
-      addCreature: (id, kind, gx, gy) => {
-        const creature = new Creature(this, this.map, id, kind, gx, gy);
-        this.creatures.push(creature);
-        return creature;
-      },
-      fight: (foes) => {
-        this.busy = false;
-        this.startCombat(foes[0], foes);
-      },
-      ask: (question, note, yes, no, onAnswer) => {
-        const data: ConfirmSceneData = { question, note, yes, no, onAnswer };
-        this.scene.launch('Confirm', data);
-      },
-      retreat: () => {
-        this.busy = true;
-        this.player.setPath([]);
-        GameAudio.door();
-        this.cameras.main.fadeOut(350, 0, 0, 0);
-        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-          this.scene.restart({ area: 'home', entry: 'door', raidRetreat: true } satisfies GameSceneData);
-        });
-      },
-      mother: () => this.someone('mother'),
-      backAway: (to) => {
-        const path = this.pathTo({ x: Math.floor(to.x), y: Math.floor(to.y) });
-        if (path) this.player.setPath(path);
-      },
-    });
-  }
-
-  /**
-   * Beaten by the goblins: a few moments half remembered in the dark, then
-   * coming round hours later in the ruins of the cottage. The game is saved
-   * there (in the scorched straw bed), so there's no going back.
-   */
-  private raidDefeat(): void {
-    this.busy = true;
-    GameAudio.stopMusic();
-    this.cameras.main.fadeOut(1600, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      const data: InterludeSceneData = {
-        lines: RAID_BLACKOUT,
-        onDone: () => {
-          QuestLog.clearFlag('raid-morning');
-          QuestLog.clearFlag('raid-pending');
-          QuestLog.setFlag('raid-over');
-          QuestLog.start('the-raid');
-          this.clock.advance(this.clock.hoursUntil(13));
-          this.stats.health = Math.max(1, Math.round(this.stats.maxHealth * 0.3));
-          this.stats.restoreStamina(this.stats.maxStamina * 0.4);
-          const save: SaveData = {
-            version: SAVE_VERSION,
-            savedAt: Date.now(),
-            savePoint: 'home-bed',
-            area: 'home',
-            position: { x: 3.4, y: 2.2 },
-            hours: this.clock.elapsedHours,
-            health: this.stats.health,
-            stamina: this.stats.stamina,
-            sections: SaveGame.collect(),
-          };
-          SaveGame.write(save);
-          this.scene.restart({ load: save, raidAftermath: true } satisfies GameSceneData);
-        },
-      };
-      this.scene.launch('Interlude', data);
-    });
-  }
-
-  /** Coming round on the floor of the burnt-out cottage. */
-  private cameAround(): void {
-    const say = (ms: number, text: string) => this.time.delayedCall(ms, () => this.onHint?.(text));
-    say(1400, 'My head... Everything hurts. How long was I lying here?');
-    say(6000, 'Mother? MOTHER!');
-    say(10500, "She's gone. The roof's gone. And there's blood... all over the floor by her bed.");
-    QuestLog.writeDiary(
-      'Goblins. A whole band of them came down on the farm at first light, burning and smashing and screaming, with a great brute in iron ' +
-        'at their head. I went out to fight them and they beat me to the ground. When I came to it was past midday. The cottage is burnt ' +
-        'to its rafters and everything in it is broken or gone. There is blood by her bed. Mother is gone.',
-    );
-  }
-
-  /** Walking about after the raid: the cottage, the yard, Iran's hut. */
-  private enteredAfterRaid(): void {
-    if (this.area === 'world') {
-      QuestLog.complete('the-raid', 'search');
-      QuestLog.complete('the-raid', 'outside');
-      if (!QuestLog.hasFlag('saw-ruined-yard')) {
-        QuestLog.setFlag('saw-ruined-yard');
-        this.time.delayedCall(900, () => this.onHint?.('The farm... all of it. The garden trampled flat, the fences down, and smoke still rising from the thatch.'));
-        this.time.delayedCall(6000, () => this.onHint?.("No sign of her. No travellers on the road, either. Iran's hut is still standing. Maybe he saw something."));
-      }
-    } else if (this.area === 'hut') {
-      this.time.delayedCall(900, () => this.onHint?.('Dark and cold in here, and the fire out. Iran is huddled on the floor with Pip and Hetty.'));
-    }
-  }
-
-  /** Beaten: black out, and come round at home with a little health. */
-  private knockedOut(): void {
-    this.stats.heal(this.stats.maxHealth * 0.35);
-    this.stats.restoreStamina(this.stats.maxStamina);
-    this.cameras.main.fadeOut(1200, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.restart({ area: 'home', knockedOut: true } satisfies GameSceneData);
-    });
-  }
-
-  // ------------------------------------------------------------ interactions
-
-  /** Everything the player could use from around (gx, gy). */
-  private interactionsNear(gx: number, gy: number): Interaction[] {
-    const list: Interaction[] = [];
-    if (this.seat) {
-      // On a stool at the bar, Godric is the one to talk to (walking off gets up).
-      const godric = this.seat.name === 'tavern-bar' ? this.someone('landlord') : undefined;
-      if (godric) return [this.npcInteraction(godric)];
-      // Sitting: the only thing to do is get up.
-      const head = this.player.sprite;
-      list.push({
-        key: 'stand', label: 'Stand up', gx: this.player.gx, gy: this.player.gy, range: Infinity,
-        promptX: head.x, promptY: head.y - 44, tile: { x: -1, y: -1 }, run: () => this.standUp(),
-      });
-      return list;
-    }
-    for (const npc of this.npcs) if (npc.present) list.push(this.npcInteraction(npc));
-    for (const beast of this.creatures) if (beast.huntable) list.push(this.huntInteraction(beast));
-    if (this.roadEvents) list.push(...this.roadEvents.interactions());
-    for (const door of this.map.data.doors ?? []) if (!door.auto) list.push(this.doorInteraction(door));
-    for (const seat of this.map.data.seats ?? []) list.push(this.seatInteraction(seat));
-    for (const sight of this.map.data.sights ?? []) {
-      // A pile already searched has nothing more to give.
-      if (sight.loot && QuestLog.hasFlag(`searched-${sight.id}`)) continue;
-      if (sight.gather && QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
-      list.push(this.sightInteraction(sight));
-    }
-    for (const bed of this.map.data.beds ?? []) list.push(this.bedInteraction(bed));
-    for (const crop of this.map.data.crops ?? []) {
-      if (Math.abs(crop.tx + 0.5 - gx) < 2 && Math.abs(crop.ty + 0.5 - gy) < 2) {
-        const i = this.cropInteraction(crop);
-        if (i) list.push(i);
-      }
-    }
-    const tx = Math.floor(gx);
-    const ty = Math.floor(gy);
-    for (let y = ty - 2; y <= ty + 2; y++) {
-      for (let x = tx - 2; x <= tx + 2; x++) {
-        const tree = this.treeInteraction(x, y);
-        if (tree) list.push(tree);
-      }
-    }
-    return list;
-  }
-
-  /** What clicking on a tile would use, if anything. */
-  private interactionAt(tile: GridPoint): Interaction | undefined {
-    const npc = this.npcs.find((n) => n.present && n.tileX === tile.x && n.tileY === tile.y);
-    if (npc) return this.npcInteraction(npc);
-    const near = this.interactionsNear(tile.x + 0.5, tile.y + 0.5);
-    return near.find((i) => i.tile.x === tile.x && i.tile.y === tile.y);
-  }
-
-  private inRange(i: Interaction): boolean {
-    return Math.hypot(this.player.gx - i.gx, this.player.gy - i.gy) <= i.range;
-  }
-
-  private npcInteraction(npc: Npc): Interaction {
-    const head = npc.promptPoint;
-    return {
-      key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id.replace(/-hiding$/, '') as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
-      promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
-      // Godric can be called over from a stool at his bar without getting up.
-      run: () => this.startConversation(npc, npc.id === 'landlord' && this.seat?.name === 'tavern-bar'),
-    };
-  }
-
-  /** Go after a deer or a hare: walk up quietly (running sends it off) and the hunt starts as a fight. */
-  private huntInteraction(beast: Creature): Interaction {
-    const p = gridToScreen(beast.gx, beast.gy);
-    return {
-      key: `hunt:${beast.id}`, label: 'Hunt', target: beast.name, gx: beast.gx, gy: beast.gy, range: 2.2,
-      promptX: p.x, promptY: p.y - beast.sprite.displayHeight * beast.sprite.originY - 4,
-      tile: { x: Math.floor(beast.gx), y: Math.floor(beast.gy) },
-      run: () => {
-        if (beast.huntable) this.startCombat(beast);
-      },
-    };
-  }
-
-  private doorInteraction(door: Door): Interaction {
-    // Doors in a wall along the tile's -x edge have the prompt over the doorway; the cave mouth, over its tile.
-    const front = door.facing === 'front';
-    // A door in the wall along the tile's -y edge (the tavern's), over its middle.
-    const p = front
-      ? gridToScreen(door.tx + 0.5, door.ty + 0.5)
-      : door.facing === 'back'
-        ? gridToScreen(door.tx + 0.5, door.ty)
-        : gridToScreen(door.tx, door.ty + 0.5);
-    return {
-      key: `door:${door.tx},${door.ty}`, label: door.label ?? (door.to === 'home' ? 'Go inside' : 'Go outside'),
-      gx: door.tx + 0.5, gy: door.ty + 0.5, range: 1.3, promptX: p.x, promptY: p.y - (front ? 62 : 58),
-      tile: { x: door.tx, y: door.ty }, walkOnto: true, run: () => this.useDoor(door),
-    };
-  }
-
-  private sightInteraction(sight: Sight): Interaction {
-    const p = gridToScreen(sight.gx, sight.gy);
-    return {
-      key: `sight:${sight.id}`, label: sight.label, gx: sight.gx, gy: sight.gy, range: 1.5,
-      promptX: p.x, promptY: p.y - sight.z, tile: { x: Math.floor(sight.gx), y: Math.floor(sight.gy) },
-      run: () => this.examine(sight),
-    };
-  }
-
-  private seatInteraction(seat: Seat): Interaction {
-    const p = gridToScreen(seat.gx, seat.gy);
-    return {
-      key: `seat:${seat.gx},${seat.gy}`, label: 'Sit', gx: seat.gx, gy: seat.gy, range: 1.3,
-      promptX: p.x, promptY: p.y - 26, tile: { x: Math.floor(seat.gx), y: Math.floor(seat.gy) },
-      run: () => this.sitOn(seat),
-    };
-  }
-
-  private bedInteraction(bed: Bed): Interaction {
-    const p = gridToScreen(bed.tx + 0.5, bed.ty + 0.5);
-    return {
-      key: `bed:${bed.id}`, label: 'Sleep', gx: bed.gx, gy: bed.gy, range: 1.2,
-      promptX: p.x, promptY: p.y - 30, tile: { x: bed.tx, y: bed.ty },
-      run: () => this.goToBed(bed),
-    };
-  }
-
-  private cropInteraction(crop: CropPatch): Interaction | undefined {
-    if (!Farm.isRipe(crop.tx, crop.ty, this.clock.elapsedHours)) return undefined;
-    const p = gridToScreen(crop.tx + 0.5, crop.ty + 0.5);
-    return {
-      key: `crop:${crop.tx},${crop.ty}`, label: CROPS[crop.kind].verb, gx: crop.tx + 0.5, gy: crop.ty + 0.5,
-      range: 1.2, promptX: p.x, promptY: p.y - 24, tile: { x: crop.tx, y: crop.ty },
-      run: () => this.pickCrop(crop),
-    };
-  }
-
-  private treeInteraction(tx: number, ty: number): Interaction | undefined {
-    if (!this.map.inBounds(tx, ty) || this.map.data.props[ty][tx] !== Prop.Tree) return undefined;
-    const tree = this.map.trees.get(ty * this.map.width + tx);
-    // Each tree only gives something once a day.
-    if (!tree || Farm.wasShakenToday(tx, ty, this.clock.day)) return undefined;
-    const p = gridToScreen(tx + 0.5, ty + 0.5);
-    return {
-      key: `tree:${tx},${ty}`, label: 'Shake the tree', gx: tx + 0.5, gy: ty + 0.5, range: 1.45,
-      promptX: p.x, promptY: p.y - 40, tile: { x: tx, y: ty },
-      run: () => this.shakeTree(tx, ty, tree.image, tree.pine, tree.apple),
-    };
-  }
-
-  /** The nearest thing in range becomes the prompt; a clicked target is used on arrival. */
-  private updateFocus(): void {
-    if (this.busy || this.channel) {
-      this.focus = undefined;
-      return;
-    }
-    let best: Interaction | undefined;
-    let bestDist = Infinity;
-    for (const i of this.interactionsNear(this.player.gx, this.player.gy)) {
-      const d = Math.hypot(this.player.gx - i.gx, this.player.gy - i.gy);
-      // People come first: someone standing by a tree is more likely to be wanted than the tree.
-      const rank = i.key.startsWith('npc:') ? d - 1 : d;
-      if (d <= i.range && rank < bestDist) {
-        best = i;
-        bestDist = rank;
-      }
-    }
-    this.focus = best;
-    const target = this.walkingTo;
-    if (!target) return;
-    // NPCs are greeted as soon as they're in reach; other things once the walk is over.
-    const arrived = target.walkOnto
-      ? this.player.tileX === target.tile.x && this.player.tileY === target.tile.y
-      : this.inRange(target) && (target.key.startsWith('npc:') || !this.player.hasPath);
-    if (arrived) {
-      this.walkingTo = undefined;
-      this.player.setPath([]);
-      target.run();
-    } else if (!this.player.hasPath) {
-      this.walkingTo = undefined;
-    }
-  }
-
-  // ------------------------------------------------------------ actions
-
-  private startChannel(channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
-    this.walkingTo = undefined;
-    this.channel = { ...channel, elapsed: 0 };
-    this.player.setWorking(true, towards);
-  }
-
-  private updateChannel(dt: number): void {
-    const c = this.channel;
-    if (!c || this.busy) return;
-    c.elapsed += dt;
-    if (c.elapsed < c.seconds) return;
-    this.channel = undefined;
-    this.player.setWorking(false);
-    c.onDone();
-  }
-
-  private cancelChannel(): void {
-    const c = this.channel;
-    if (!c) return;
-    this.channel = undefined;
-    this.player.setWorking(false);
-    c.onCancel?.();
-  }
-
-  private pickCrop(crop: CropPatch): void {
-    const item = CROPS[crop.kind].item;
-    if (!Inventory.canAdd(item)) {
-      this.onHint?.('My satchel is full. I should eat something, or leave it for later.');
-      return;
-    }
-    GameAudio.rustle();
-    this.startChannel(
-      {
-        label: 'Picking',
-        seconds: PICK_SECONDS,
-        onDone: () => {
-          Farm.pick(crop.tx, crop.ty, this.clock.elapsedHours);
-          this.syncCrops();
-          this.give(item, crop.kind === 'cabbage' ? 1 : 2);
-        },
-      },
-      { x: crop.tx + 0.5, y: crop.ty + 0.5 },
-    );
-  }
-
-  private shakeTree(tx: number, ty: number, image: Phaser.GameObjects.Image, pine: boolean, apple = false): void {
-    // The tree sways (pivoting at its base) while leaves drift down.
-    const sway = this.tweens.add({ targets: image, angle: { from: -3, to: 3 }, duration: 110, yoyo: true, repeat: -1 });
-    const leaves = this.time.addEvent({ delay: 140, loop: true, callback: () => this.dropLeaf(image, pine) });
-    const stop = () => {
-      sway.stop();
-      leaves.remove();
-      this.tweens.add({ targets: image, angle: 0, duration: 200 });
-    };
-    GameAudio.rustle();
-    this.startChannel(
-      {
-        label: 'Shaking',
-        seconds: 1.4,
-        onCancel: stop,
-        onDone: () => {
-          stop();
-          Farm.shake(tx, ty, this.clock.day);
-          const roll = Math.random();
-          // An apple tree nearly always gives an apple or two.
-          if (apple) {
-            this.give('apple', roll < 0.4 ? 2 : 1);
-            return;
-          }
-          const found: ItemId | undefined = pine ? (roll < 0.7 ? 'pinecone' : undefined) : roll < 0.55 ? 'apple' : roll < 0.8 ? 'stick' : undefined;
-          if (found) this.give(found, 1);
-          else this.onHint?.(pine ? 'Only a shower of needles.' : 'Just a few leaves. Nothing worth keeping.');
-        },
-      },
-      { x: tx + 0.5, y: ty + 0.5 },
-    );
-  }
-
-  /** A leaf (or needle) falling from somewhere in a tree's canopy. */
-  private dropLeaf(tree: Phaser.GameObjects.Image, pine: boolean): void {
-    const x = tree.x + (Math.random() - 0.5) * tree.width * 0.7;
-    const y = tree.y - tree.height * (0.45 + Math.random() * 0.4);
-    const colors = pine ? [0x24503a, 0x37704a] : [0x5c9e48, 0x8cc456, 0x3e7a3e];
-    const leaf = this.add.rectangle(x, y, 2, 2, colors[Math.floor(Math.random() * colors.length)]).setDepth(tree.depth + 1);
-    this.tweens.add({
-      targets: leaf,
-      y: tree.y - 2 + Math.random() * 6,
-      x: x + (Math.random() - 0.5) * 24,
-      angle: 180,
-      alpha: { from: 1, to: 0.2 },
-      duration: 700 + Math.random() * 500,
-      ease: 'Sine.easeIn',
-      onComplete: () => leaf.destroy(),
-    });
-  }
-
-  /** Look closely at something: a signpost, a pile of bones, the remains of Wil's ewes in the cave. */
-  private examine(sight: Sight): void {
-    this.walkingTo = undefined;
-    this.player.setPath([]);
-    this.player.faceTowards(sight.gx, sight.gy);
-    if (sight.sign) {
-      GameAudio.click();
-      this.onSign?.(sight.sign.heading, sight.sign.lines);
-      return;
-    }
-    if (sight.loot) {
-      this.search(sight);
-      return;
-    }
-    if (sight.locked) {
-      this.tryLockedDoor();
-      return;
-    }
-    if (sight.gather) {
-      this.gather(sight);
-      return;
-    }
-    if (sight.station) {
-      this.openStation(sight.station);
-      return;
-    }
-    if (sight.thought) {
-      this.onHint?.(sight.thought);
-      if (sight.id === 'ruin-mother-bed') QuestLog.complete('the-raid', 'search');
-      return;
-    }
-    const flag = `saw-${sight.id}`;
-    const first = !QuestLog.hasFlag(flag);
-    QuestLog.setFlag(flag);
-    const asked = QuestLog.has('lost-sheep');
-    const thoughts: Record<string, string> = {
-      bess: asked
-        ? 'A ewe, torn open and cold. There is a little bell on a cord round her neck, scratched "BESS". Poor Wil.'
-        : 'A dead ewe, torn open and cold. A bell round her neck is scratched with a name: "BESS".',
-      bramble: asked
-        ? 'Another ewe, just beyond the first. This must be Bramble. She followed Bess right to the end.'
-        : 'Another dead ewe, wool matted with blood. Someone has lost two sheep, and wolves have found them.',
-    };
-    if (!first) {
-      this.onHint?.('I would rather not look again. Wil should hear what happened.');
-      return;
-    }
-    this.onHint?.(thoughts[sight.id] ?? 'Nothing worth a closer look.');
-    if (!QuestLog.hasFlag('saw-bess') || !QuestLog.hasFlag('saw-bramble')) return;
-    if (asked) {
-      QuestLog.complete('lost-sheep', 'cave');
-      QuestLog.complete('lost-sheep', 'find');
-    }
-    QuestLog.writeDiary(
-      asked
-        ? 'Found Bess and Bramble at the back of the wolves\' cave. The wolves got them both. I will have to tell Wil; ' +
-            'I would rather he heard it from me than found them like that.'
-        : 'Found two dead ewes at the back of a wolves\' den in the hill, a bell on one scratched "BESS". Someone on the road ' +
-            'must be missing them.',
-    );
-  }
-
-  /**
-   * The door at the back of the wolves' cave: it won't open, and the hero
-   * notes it in the diary the first time. A hint of things to come.
-   */
-  private tryLockedDoor(): void {
-    GameAudio.rattle();
-    if (QuestLog.hasFlag('found-cave-door')) {
-      this.onHint?.('Still locked fast. Whoever has the key to this, it is not me.');
-      return;
-    }
-    QuestLog.setFlag('found-cave-door');
-    this.onHint?.(
-      'A door, deep in the hill: old oak bound with iron, and a lock as big as my hand. It will not budge. ' +
-        'Someone went to a lot of trouble to keep something in. Or out.',
-    );
-    QuestLog.writeDiary(
-      'There is a door at the back of the wolves\' cave, set right into the rock. Old oak, iron straps, a great lock, ' +
-        'and no key anywhere. Who would build a door down there? I mean to find out what is behind it.',
-    );
-  }
-
-  /**
-   * Pick something growing, once: the moonpetal by the cloister pond, or the
-   * bark of the old white willow up on the plains. The moonpetal is Brother
-   * Anselm's, so not before he has said the hero may; the willow's bark is
-   * only worth cutting once the hero knows Mother's tincture needs it. Each
-   * moves Mother's errand on.
-   */
-  private gather(sight: Sight): void {
-    const { item } = sight.gather!;
-    const bark = item === 'willow-bark';
-    if (!bark && !QuestLog.hasFlag('may-pick-moonpetal')) {
-      this.onHint?.('Pale flowers like little stars, shining faintly. Moonpetal! But these are Brother Anselm\'s. I should ask him before I pick any.');
-      return;
-    }
-    if (bark && !QuestLog.has('mother-medicine')) {
-      this.onHint?.('An old white willow, its bark grey and deeply furrowed. Willow bark is good for aches and fevers, they say. I have no need of it today.');
-      return;
-    }
-    if (!Inventory.canAdd(item)) {
-      this.onHint?.('My satchel is full.');
-      return;
-    }
-    GameAudio.rustle();
-    this.startChannel(
-      {
-        label: bark ? 'Stripping bark' : 'Gathering',
-        seconds: bark ? PICK_SECONDS * 1.6 : PICK_SECONDS,
-        onDone: () => {
-          QuestLog.setFlag(`gathered-${sight.id}`);
-          this.give(item, bark ? 3 : 1);
-          this.syncGathered();
-          if (bark) this.gatheredWillowBark();
-          else this.gatheredMoonpetal();
-        },
-      },
-      { x: sight.gx, y: sight.gy },
-    );
-  }
-
-  private gatheredMoonpetal(): void {
-    if (!MOONPETAL.every((m) => QuestLog.hasFlag(`gathered-${m.id}`))) return;
-    QuestLog.complete('mother-medicine', 'moonpetal');
-    const haveBark = QuestLog.isDone('mother-medicine', 'willow');
-    this.onHint?.(
-      haveBark
-        ? "Three blooms of moonpetal, wrapped in a dock leaf. With the willow bark, that is all of it. Now to brew it, at the old bench in Godric's cellar."
-        : 'Three blooms of moonpetal, wrapped in a dock leaf. Now for the willow bark.',
-    );
-    QuestLog.writeDiary(
-      haveBark
-        ? "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. With the willow bark I cut on the plains, I have all of Mother's tincture. " +
-            "Brother Anselm says it wants brewing at a proper bench, and that Godric's grandmother's is still down in the Tankard's cellar."
-        : "Gathered three blooms of moonpetal from the rim of the cloister pond. They glow a little, even in the satchel. That is half of Mother's " +
-            'tincture. Now I need white willow bark. Brother Anselm says it grows by water.',
-    );
-  }
-
-  private gatheredWillowBark(): void {
-    QuestLog.complete('mother-medicine', 'willow');
-    const havePetal = QuestLog.isDone('mother-medicine', 'moonpetal');
-    this.onHint?.(
-      havePetal
-        ? "Three long curls of white willow bark, bitter as sloes. With the moonpetal, that is all of it. Now to brew it, at the old bench in Godric's cellar."
-        : 'Three long curls of white willow bark, bitter as sloes. Half of the tincture. Now for the moonpetal.',
-    );
-    QuestLog.writeDiary(
-      'Found an old white willow up on the plains, past where the north road climbs into the upland, leaning out over a still pool. ' +
-        'It must be older than the monastery. I cut three long strips of bark from the side away from the water, and begged its pardon. ' +
-        (havePetal
-          ? "With Brother Anselm's moonpetal, that is the whole of Mother's tincture. It only wants brewing now, at the old bench in the Tankard's cellar."
-          : 'Now I need the moonpetal to go with it.'),
-    );
-  }
-
-  /** Shows anything already gathered (the moonpetal, the willow's bark) as picked. */
-  private syncGathered(): void {
-    for (const sight of this.map.data.sights ?? []) {
-      if (!sight.gather || !QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
-      const tx = Math.floor(sight.gx);
-      const ty = Math.floor(sight.gy);
-      // The thing itself: on the sight's tile (the moonpetal), or else standing over it (the willow, whose trunk is mid-footprint).
-      const objects = this.map.data.objects ?? [];
-      const obj =
-        objects.find((o) => o.tx === tx && o.ty === ty) ??
-        objects.find((o) => !o.flat && tx >= o.tx && tx < o.tx + o.w && ty >= o.ty && ty < o.ty + o.h);
-      if (obj) this.map.setObjectArt(obj, sight.gather.picked);
-    }
-  }
-
-  /** Rummage through something (a pile of bones) for a random find. Each can only be searched once. */
-  private search(sight: Sight): void {
-    GameAudio.rustle();
-    this.startChannel(
-      {
-        label: 'Searching',
-        seconds: 1.6,
-        onDone: () => {
-          const find = rollLoot(sight.loot!);
-          // Leave it be if there's no room, so it can be searched again once there is.
-          if (find.item && !Inventory.canAdd(find.item)) {
-            this.onHint?.('There is something under the bones, but my satchel is full.');
-            return;
-          }
-          QuestLog.setFlag(`searched-${sight.id}`);
-          if (find.item) this.give(find.item, 1);
-          if (find.coins) {
-            Inventory.reward(find.coins);
-            GameAudio.coins();
-          }
-          this.onHint?.(find.text);
-        },
-      },
-      { x: sight.gx, y: sight.gy },
-    );
-  }
-
-  /** Adds items to the satchel, or says why not. The HUD shows what was gained. */
-  private give(id: ItemId, count: number): void {
-    if (Inventory.add(id, count)) GameAudio.pickup();
-    else if (Inventory.add(id, 1)) GameAudio.pickup();
-    else this.onHint?.('My satchel is full.');
-  }
-
-  private sitOn(seat: Seat): void {
-    this.walkingTo = undefined;
-    this.seat = seat;
-    NpcWorld.sitting = true;
-    this.sitTimer = 0;
-    // Sitting down at a tavern table: a maid will be over in a moment.
-    if (seat.name === 'tavern-table') this.serviceTimer = Math.max(this.serviceTimer, SERVICE_FIRST);
-    this.player.sitAt(seat.gx, seat.gy, { x: seat.faceX, y: seat.faceY });
-  }
-
-  private standUp(): void {
-    const seat = this.seat;
-    if (!seat) return;
-    this.seat = undefined;
-    NpcWorld.sitting = false;
-    // Step off the seat, round anyone standing just there (a maid with a tray, say).
-    let spot = { x: seat.standX, y: seat.standY };
-    if (this.map.blocked(spot.x, spot.y, PLAYER_RADIUS)) {
-      const around = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => ({ x: Math.floor(seat.gx) + dx + 0.5, y: Math.floor(seat.gy) + dy + 0.5 })));
-      const free = around
-        .filter((p) => !this.map.blocked(p.x, p.y, PLAYER_RADIUS))
-        .sort((a, b) => Math.hypot(a.x - spot.x, a.y - spot.y) - Math.hypot(b.x - spot.x, b.y - spot.y))[0];
-      if (free) spot = free;
-    }
-    this.player.standAt(spot.x, spot.y);
-  }
-
-  /** Sitting for a little while brings on a passing thought. */
-  private updateSitting(dt: number): void {
-    if (!this.seat || this.busy) return;
-    const before = this.sitTimer;
-    this.sitTimer += dt;
-    if (before < 3 && this.sitTimer >= 3) {
-      const closed = this.area === 'market' && !marketOpen(this.clock.hour);
-      const quiet = this.area === 'tavern' && this.clock.hour >= 2 && this.clock.hour < 17;
-      const thoughts = SITTING_THOUGHTS[closed ? `${this.seat.name}-closed` : quiet ? `${this.seat.name}-quiet` : this.seat.name] ?? SITTING_THOUGHTS[this.seat.name] ?? [];
-      if (thoughts.length > 0) this.onHint?.(thoughts[Math.floor(Math.random() * thoughts.length)]);
-    }
-  }
-
-  /** Show each crop as ripe or freshly picked; picked ones grow back over time. */
-  private syncCrops(): void {
-    for (const crop of this.map.data.crops ?? []) {
-      const img = this.map.crops.get(crop.ty * this.map.width + crop.tx);
-      const key = cropKey(crop.kind, Farm.isRipe(crop.tx, crop.ty, this.clock.elapsedHours));
-      if (img && img.texture.key !== key) img.setTexture(key);
-    }
-  }
-
-  /** Walking off the end of a road at the edge of the map goes on to the next area. */
-  private checkRoadExits(): void {
-    if (this.busy) return;
-    const { tileX, tileY } = this.player;
-    const exit = this.map.data.doors?.find((d) => d.auto && d.tx === tileX && d.ty === tileY);
-    if (!exit) {
-      this.exitArmed = true;
-      this.lastOffExit = { x: tileX, y: tileY };
-    } else if (this.exitArmed) {
-      this.useDoor(exit);
-    }
-  }
-
-  /** Stepping into a patch of ground with a thought attached (where a road runs on off the map) brings it on, once each time. */
-  private checkMusings(): void {
-    const { gx, gy } = this.player;
-    const here = this.map.data.musings?.find((m) => gx >= m.x0 && gx < m.x1 && gy >= m.y0 && gy < m.y1);
-    if (here && here !== this.musing && !this.busy) this.onHint?.(here.text);
-    this.musing = here;
-  }
-
-  /**
-   * Paying Lord Morten's tithe at the toll gate: the coins go, the gate swings
-   * open as the conversation ends, and it stays open from then on (the flag
-   * is saved with the quest log, and Adowvale is built with the gate open).
-   */
-  private payToll(): void {
-    if (QuestLog.hasFlag('paid-toll')) return;
-    if (!Inventory.addCoins(-TOLL)) {
-      this.onHint?.("I'm short of the toll. I'll need more coins than that.");
-      return;
-    }
-    QuestLog.setFlag('paid-toll');
-    GameAudio.coins();
-    QuestLog.writeDiary(
-      `Paid Lord Morten's toll guards ${TOLL} coins to use the gate north of Adowvale. A tithe, they called it. ` +
-        "Robbery, Mother would call it. Still, the gate is open to me now, and the Lord's Road beyond.",
-    );
-    this.afterTalk = () => {
-      const gate = this.map.data.objects?.find((o) => o.key === 'toll-gate');
-      if (!gate) return;
-      const open = tollGateShape(true);
-      GameAudio.door();
-      this.map.reshapeObject(gate, 'toll-gate-open', open.shapes, open.blocks);
-      this.time.delayedCall(200, () => this.onHint?.('The guards heave the gate open. Beyond it, the road runs out into open country.'));
-    };
-  }
-
-  private useDoor(door: Door): void {
-    if (this.area === 'home' && !QuestLog.has('mother-medicine')) {
-      // Don't let the story start without its first scene.
-      this.onHint?.("I shouldn't go anywhere before I've spoken with Mother.");
-      return;
-    }
-    if (!this.doorAllowed(door)) return;
-    if (door.ask) this.askBeforeLeaving(door);
-    else this.leaveThrough(door);
-  }
-
-  /**
-   * Doors that may be shut to the hero: the Crooked Tankard's cellar until
-   * Godric asks for the rats to be cleared, and the rooms upstairs, of which
-   * only the one let to the hero opens (and only while it's paid for).
-   */
-  private doorAllowed(door: Door): boolean {
-    if (door.id === 'cellar' && !QuestLog.has('cellar-rats') && !QuestLog.hasFlag('may-use-cellar')) {
-      GameAudio.rattle();
-      this.onHint?.("The trapdoor is bolted, and Godric is watching me over the bar. Not without asking him first.");
-      return false;
-    }
-    const room = door.id?.startsWith('room-') ? Number(door.id.slice(5)) : undefined;
-    if (room === undefined) return true;
-    const renting = Tavern.renting(this.clock.elapsedHours);
-    if (renting && Tavern.room === room) return true;
-    GameAudio.rattle();
-    const others = [
-      `Room ${room} is locked. Somebody on the other side is snoring like a saw.`,
-      `Locked. A voice from inside: "Go away! I paid for this one!"`,
-      `Room ${room} is locked. It smells of pipe smoke and wet dog.`,
-    ];
-    this.onHint?.(
-      !renting
-        ? Tavern.room === room && Tavern.paidUntil > 0
-          ? 'Locked. My time in this room is up. I would have to take it again from Godric.'
-          : "Locked. I'd have to take a room from Godric downstairs first."
-        : others[(room + this.clock.day) % others.length],
-    );
-    return false;
-  }
-
-  /** "Do you want to make the trek to...?" Yes goes; no turns back. */
-  private askBeforeLeaving(door: Door): void {
-    if (!this.takeControls()) return;
-    if (this.seat) this.standUp();
-    const data: ConfirmSceneData = {
-      question: door.ask!,
-      note: door.travelHours ? this.trekNote(door) : undefined,
-      yes: 'Set off',
-      no: 'Not yet',
-      onAnswer: (yes) => (yes ? this.leaveThrough(door) : this.turnBack(door)),
-    };
-    this.scene.launch('Confirm', data);
-  }
-
-  /** "It's about 2 hours on foot: I'd get there around 14:00." And a warning if the market will be shut by then. */
-  private trekNote(door: Door): string {
-    const hours = door.travelHours!;
-    const arrive = this.clock.hour + hours;
-    let note = `It's about ${hours} hour${hours === 1 ? '' : 's'} on foot: I'd get there around ${clockText(arrive)}.`;
-    if (door.to === 'market' && !marketOpen(Phaser.Math.Wrap(arrive, 0, 24))) note += ' The market will be shut by then.';
-    return note;
-  }
-
-  /** Changed their mind at a road's end: step back off it, so the question isn't asked again straight away. */
-  private turnBack(door: Door): void {
-    this.release();
-    if (!door.auto) return;
-    this.exitArmed = false;
-    const path = this.pathTo(this.lastOffExit);
-    if (path) this.player.setPath(path);
-  }
-
-  private leaveThrough(door: Door): void {
-    // An order still on its way from the bar comes along, wrapped in a cloth.
-    const order = this.service?.item;
-    if (order) {
-      this.service = undefined;
-      Inventory.add(order, 1);
-    }
-    this.busy = true;
-    this.player.setPath([]);
-    // Only real doors creak: not the end of a road, nor the mouth of a cave.
-    if (!door.auto && door.facing !== 'front' && !this.map.data.underground) GameAudio.door();
-    this.cameras.main.fadeOut(door.auto ? 500 : 350, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      // The long road takes a while: the clock moves on before the next area is built, so it arrives at the right hour.
-      if (door.travelHours) this.clock.advance(door.travelHours);
-      this.scene.restart({ area: door.to, entry: door.entry } satisfies GameSceneData);
-    });
   }
 
   private setupCamera(): void {
@@ -2445,199 +557,12 @@ export class GameScene extends Phaser.Scene {
    * (a small room, or a narrow phone) are padded out around the map's centre,
    * so the map sits in the middle instead of being pushed into a corner.
    */
-  private fitCamera(): void {
+  fitCamera(): void {
     const cam = this.cameras.main;
     const b = this.map.getWorldBounds();
     const w = Math.max(b.width, this.scale.width / cam.zoom);
     const h = Math.max(b.height, this.scale.height / cam.zoom);
     cam.setBounds(Math.round(b.centerX - w / 2), Math.round(b.centerY - h / 2), Math.ceil(w), Math.ceil(h));
     cam.startFollow(this.player.sprite, true, 0.12, 0.12);
-  }
-
-  private setupInput(): void {
-    const kb = this.input.keyboard!;
-    const K = Phaser.Input.Keyboard.KeyCodes;
-    this.keys = kb.addKeys({
-      up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT,
-      w: K.W, a: K.A, s: K.S, d: K.D,
-      sprint: K.SHIFT, sneak: K.CTRL, fastForward: K.T,
-    }) as MoveKeys;
-
-    kb.on('keydown-ESC', () => this.openPauseMenu());
-    kb.on('keydown-E', () => this.interact());
-    kb.on('keydown-ENTER', () => this.interact());
-    kb.on('keydown-J', () => this.openJournal());
-    kb.on('keydown-I', () => this.openInventory('satchel'));
-    kb.on('keydown-C', () => this.openInventory('equipment'));
-
-    this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
-      if (this.busy) return;
-      const cam = this.cameras.main;
-      cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), CAMERA_ZOOM.min * Display.render, CAMERA_ZOOM.max * Display.render));
-      this.fitCamera();
-    });
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.busy) return;
-      const tile = this.pointerTile(pointer);
-      if (this.channel) this.cancelChannel();
-      // Clicking a person or thing walks over to it and uses it.
-      const target = this.interactionAt(tile);
-      if (this.seat) {
-        if (target?.key === 'stand') return;
-        const callingGodric = target?.key === 'npc:landlord' && this.seat.name === 'tavern-bar' && this.inRange(target);
-        if (!callingGodric) this.standUp();
-      }
-      if (target) {
-        if (this.inRange(target) && !target.walkOnto) {
-          this.walkingTo = undefined;
-          this.player.setPath([]);
-          target.run();
-          return;
-        }
-        const path = target.walkOnto ? this.pathTo(target.tile) : this.pathNextTo(target.tile);
-        if (path) {
-          this.walkingTo = target;
-          this.player.setPath(path);
-          if (path.length === 0) this.updateFocus();
-        }
-        return;
-      }
-      this.walkingTo = undefined;
-      const route = this.routeTo(this.pointerPoint(pointer));
-      if (!route) return;
-      this.player.setPath(route.path, route.end);
-      const c = gridToScreen(tile.x + 0.5, tile.y + 0.5);
-      this.marker.setPosition(c.x, c.y).setVisible(true);
-      this.tweens.killTweensOf(this.marker);
-      this.marker.setAlpha(1);
-      this.tweens.add({ targets: this.marker, alpha: 0, duration: 900, onComplete: () => this.marker.setVisible(false) });
-    });
-  }
-
-  /**
-   * Tile path from the player to a tile. Diagonal steps may squeeze between
-   * two blocked tiles when there's room for the player in between (two tree
-   * trunks, say), since collisions follow each thing's real outline.
-   */
-  private pathTo(tile: GridPoint): GridPoint[] | null {
-    const start = this.startTile();
-    const clear = PLAYER_RADIUS + 0.03;
-    const path = findPath(
-      start,
-      tile,
-      this.map.width,
-      this.map.height,
-      (x, y) => this.map.isWalkable(x, y),
-      5000,
-      (x, y, dx, dy) => this.map.segmentClear({ x: x + 0.5, y: y + 0.5 }, { x: x + dx + 0.5, y: y + dy + 0.5 }, clear),
-    );
-    if (!path) return null;
-    // Starting beside a fence or trunk: step onto the open tile next to it first.
-    return start.x === this.player.tileX && start.y === this.player.tileY ? path : [start, ...path];
-  }
-
-  /**
-   * Where pathfinding starts: the player's tile, or, if they've squeezed onto
-   * part of a tile with a fence or tree on it, the nearest open tile they can
-   * step straight onto.
-   */
-  private startTile(): GridPoint {
-    const { gx, gy, tileX, tileY } = this.player;
-    if (this.map.isWalkable(tileX, tileY)) return { x: tileX, y: tileY };
-    let best: GridPoint | undefined;
-    let bestDist = Infinity;
-    for (let y = tileY - 1; y <= tileY + 1; y++) {
-      for (let x = tileX - 1; x <= tileX + 1; x++) {
-        if (!this.map.isWalkable(x, y)) continue;
-        const d = Math.hypot(x + 0.5 - gx, y + 0.5 - gy);
-        if (d < bestDist && this.map.segmentClear({ x: gx, y: gy }, { x: x + 0.5, y: y + 0.5 }, PLAYER_RADIUS)) {
-          best = { x, y };
-          bestDist = d;
-        }
-      }
-    }
-    return best ?? { x: tileX, y: tileY };
-  }
-
-  /**
-   * A route to the exact spot that was clicked. The spot may be in the open
-   * part of a tile with a tree or a fence on it, which pathfinding (working in
-   * whole tiles) can't go to, so the route goes to the open tile beside it and
-   * then straight to the spot.
-   */
-  private routeTo(point: Vec2): { path: GridPoint[]; end?: Vec2 } | null {
-    const tile = { x: Math.floor(point.x), y: Math.floor(point.y) };
-    const open = !this.map.blocked(point.x, point.y, PLAYER_RADIUS, false);
-    if (this.map.isWalkable(tile.x, tile.y)) {
-      const path = this.pathTo(tile);
-      // A spot too close to a wall to stand on: settle for the middle of its tile.
-      return path && { path, end: open ? point : undefined };
-    }
-    if (!open) return null;
-    const besides: GridPoint[] = [];
-    for (let y = tile.y - 1; y <= tile.y + 1; y++) {
-      for (let x = tile.x - 1; x <= tile.x + 1; x++) {
-        if (this.map.isWalkable(x, y) && this.map.segmentClear({ x: x + 0.5, y: y + 0.5 }, point, PLAYER_RADIUS)) {
-          besides.push({ x, y });
-        }
-      }
-    }
-    besides.sort((a, b) => Math.hypot(a.x + 0.5 - point.x, a.y + 0.5 - point.y) - Math.hypot(b.x + 0.5 - point.x, b.y + 0.5 - point.y));
-    for (const t of besides) {
-      const path = this.pathTo(t);
-      if (path) return { path, end: point };
-    }
-    return null;
-  }
-
-  /** Shortest path to any free tile beside a tile (an NPC, a crop, a tree). Straight neighbours first. */
-  private pathNextTo(tile: GridPoint): GridPoint[] | null {
-    let best: GridPoint[] | null = null;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-      const path = this.pathTo({ x: tile.x + dx, y: tile.y + dy });
-      if (path && (!best || path.length < best.length)) best = path;
-    }
-    return best;
-  }
-
-  /**
-   * Screen-relative controls: "up" moves up the screen, which in grid space
-   * is diagonal (-x, -y). Returns a normalised grid-space direction.
-   */
-  private readKeyboard(): Vec2 {
-    const k = this.keys;
-    const sx = (k.right.isDown || k.d.isDown ? 1 : 0) - (k.left.isDown || k.a.isDown ? 1 : 0);
-    const sy = (k.down.isDown || k.s.isDown ? 1 : 0) - (k.up.isDown || k.w.isDown ? 1 : 0);
-    if (sx === 0 && sy === 0) return { x: 0, y: 0 };
-    const gx = sx + sy;
-    const gy = sy - sx;
-    const len = Math.hypot(gx, gy);
-    return { x: gx / len, y: gy / len };
-  }
-
-  private pointerTile(pointer: Phaser.Input.Pointer): { x: number; y: number } {
-    const g = this.pointerPoint(pointer);
-    return { x: Math.floor(g.x), y: Math.floor(g.y) };
-  }
-
-  /** The exact grid point under the pointer. */
-  private pointerPoint(pointer: Phaser.Input.Pointer): Vec2 {
-    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    return screenToGrid(world.x, world.y);
-  }
-
-  private updateHover(): void {
-    const tile = this.pointerTile(this.input.activePointer);
-    if (this.busy || !this.map.inBounds(tile.x, tile.y)) {
-      this.hover.setVisible(false);
-      return;
-    }
-    const c = gridToScreen(tile.x + 0.5, tile.y + 0.5);
-    const usable = !!this.interactionAt(tile);
-    this.hover
-      .setPosition(c.x, c.y)
-      .setTint(usable ? 0xffe08a : this.map.isWalkable(tile.x, tile.y) ? 0xffffff : 0xff6b6b)
-      .setVisible(true);
   }
 }

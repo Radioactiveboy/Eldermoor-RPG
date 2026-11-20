@@ -9,7 +9,7 @@ import type { DialogueChoice, DialogueScript } from './Dialogue';
 
 /**
  * The toll guards. Until the tithe is paid they bar the gate, and the hero can
- * pay them (the 'pay-toll' action, see GameScene) once they have the coins;
+ * pay them (the 'pay-toll' action, see scenes/game/monastery.ts) once they have the coins;
  * after that the gate stays open for good.
  * @param toll what they ask, in coins
  * @param gruff the second guard, who has less to say for himself
