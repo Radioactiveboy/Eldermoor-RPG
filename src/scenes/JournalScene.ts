@@ -21,6 +21,8 @@ const INK_FADED = '#8a7458';
 const RUBRIC = '#8e2f22';
 const PARCHMENT = 0xefe1c0;
 const PARCHMENT_EDGE = 0xd9c49a;
+/** The Map tab's leather, a weathered brown. */
+const MAP_TAB = 0x7a5a2a;
 const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 
 type Section = 'tasks' | 'quests' | 'diary';
@@ -164,6 +166,7 @@ export class JournalScene extends Phaser.Scene {
     const kb = this.input.keyboard!;
     kb.on('keydown-ESC', () => this.close());
     kb.on('keydown-J', () => this.close());
+    kb.on('keydown-M', () => this.close('map'));
     kb.on('keydown-RIGHT', () => this.turn(1));
     kb.on('keydown-D', () => this.turn(1));
     kb.on('keydown-LEFT', () => this.turn(-1));
@@ -362,11 +365,15 @@ export class JournalScene extends Phaser.Scene {
     this.flipper = this.add.graphics().setVisible(false).setPosition(single ? pageXs[0] : 0, 0);
     this.drawPage(this.flipper, single ? 0 : SPINE_GAP, 'right');
 
-    // Section tabs: down the right edge of an open book, along the top of a single page.
-    const tabs = SECTIONS.map((sec, i) =>
+    // Section tabs: down the right edge of an open book, along the top of a single page. The last, Map, opens the world map.
+    const tabDefs = [
+      ...SECTIONS.map((sec) => ({ label: sec.label, color: sec.color, go: () => this.jumpTo(sec.id) })),
+      { label: 'Map', color: MAP_TAB, go: () => this.close('map') },
+    ];
+    const tabs = tabDefs.map((tab, i) =>
       single
-        ? this.makeTab(sec.label, sec.color, -hw + 70 + i * 104, -hh, 'top', () => this.jumpTo(sec.id))
-        : this.makeTab(sec.label, sec.color, hw - 6, -hh + 70 + i * 52, 'side', () => this.jumpTo(sec.id)),
+        ? this.makeTab(tab.label, tab.color, -hw + 56 + i * 88, -hh, 'top', tab.go)
+        : this.makeTab(tab.label, tab.color, hw - 6, -hh + 70 + i * 52, 'side', tab.go),
     );
 
     const arrowStyle = { fontFamily: THEME.font, fontSize: '30px', color: '#8e2f22' };
@@ -397,7 +404,7 @@ export class JournalScene extends Phaser.Scene {
 
     const touch = this.sys.game.device.input.touch;
     const hint = this.add
-      .text(0, hh + 26, touch ? 'Tap a page or the arrows to turn it' : 'Arrow keys or click to turn pages   ·   J or Esc to close', {
+      .text(0, hh + 26, touch ? 'Tap a page or the arrows to turn it' : 'Arrow keys or click to turn pages   ·   M for the map   ·   J or Esc to close', {
         fontFamily: BODY_FONT,
         fontSize: '14px',
         color: THEME.dimText,
@@ -569,7 +576,8 @@ export class JournalScene extends Phaser.Scene {
     });
   }
 
-  private close(): void {
+  /** @param then 'map' to open the world map once the book has closed */
+  private close(then?: 'map'): void {
     if (this.closing) return;
     this.closing = true;
     GameAudio.bookClose();
@@ -580,7 +588,7 @@ export class JournalScene extends Phaser.Scene {
       duration: 180,
       ease: 'Cubic.easeIn',
       onComplete: () => {
-        this.events.emit('journal-closed');
+        this.events.emit('journal-closed', then);
         this.scene.stop();
       },
     });

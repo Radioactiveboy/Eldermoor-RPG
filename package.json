@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "npm run build && node tests/smoke/smoke.mjs",
-    "sim": "vite-node tools/balance.ts"
+    "sim": "vite-node tools/balance.ts",
+    "atlas": "WRITE_ATLAS=1 vitest run tests/unit/atlasSurvey.test.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

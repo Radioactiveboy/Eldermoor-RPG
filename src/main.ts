@@ -8,6 +8,7 @@ import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { InventoryScene } from './scenes/InventoryScene';
 import { JournalScene } from './scenes/JournalScene';
+import { MapScene } from './scenes/MapScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { PauseScene } from './scenes/PauseScene';
 import { SettingsScene } from './scenes/SettingsScene';
@@ -37,7 +38,7 @@ function startGame(): void {
     // Drawn at the screen's own resolution, with the interface sized to suit it (see ui/Display).
     scale: Display.scaleConfig(),
     // Later scenes draw on top of earlier ones.
-    scene: [BootScene, MainMenuScene, GameScene, UIScene, LetterboxScene, DialogueScene, CombatScene, JournalScene, InventoryScene, ShopScene, BountyBoardScene, StationScene, FishingScene, SleepScene, ConfirmScene, InterludeScene, PauseScene, SaveWarningScene, SettingsScene, DebugScene],
+    scene: [BootScene, MainMenuScene, GameScene, UIScene, LetterboxScene, DialogueScene, CombatScene, JournalScene, MapScene, InventoryScene, ShopScene, BountyBoardScene, StationScene, FishingScene, SleepScene, ConfirmScene, InterludeScene, PauseScene, SaveWarningScene, SettingsScene, DebugScene],
   });
   Display.install(game);
   // Handy for poking at the game from the browser console while developing (and for the smoke test, which adds ?smoke).

@@ -28,7 +28,7 @@ const VOLUMES: [Volume, string][] = [
   ['ambienceVolume', 'Ambience'],
 ];
 
-const PANEL_H = 580;
+const PANEL_H = 640;
 
 /** The choice after `current` in `choices`, round to the first again. */
 function next(choices: number[], current: number): number {
@@ -51,18 +51,18 @@ export class SettingsScene extends Phaser.Scene {
     this.dim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.55).setOrigin(0).setInteractive();
 
     const panel = makePanel(this, 560, PANEL_H);
-    const title = this.add.text(0, -222, 'Settings', titleStyle(40)).setOrigin(0.5);
+    const title = this.add.text(0, -252, 'Settings', titleStyle(40)).setOrigin(0.5);
 
     const sliders = VOLUMES.map(([key, label], i) =>
-      makeSlider(this, 60, -160 + i * 50, label, Settings.get()[key], (v) => Settings.set(key, v)),
+      makeSlider(this, 60, -190 + i * 50, label, Settings.get()[key], (v) => Settings.set(key, v)),
     );
 
     // Display: each button steps through its choices.
-    const resolution = makeButton(this, 0, 40, '', () => {
+    const resolution = makeButton(this, 0, 10, '', () => {
       Settings.set('renderScale', next(RENDER_SCALES, Settings.get().renderScale || 1));
       this.refreshDisplay();
     }, 440);
-    const uiSize = makeButton(this, 0, 100, '', () => {
+    const uiSize = makeButton(this, 0, 70, '', () => {
       Settings.set('uiScale', next(UI_SCALES, Settings.get().uiScale));
       this.refreshDisplay();
     }, 440);
@@ -70,12 +70,28 @@ export class SettingsScene extends Phaser.Scene {
     this.uiSizeText = (uiSize.list[1] as Phaser.GameObjects.Text).setFontSize(18);
     this.refreshDisplay();
 
-    const fullscreen = makeButton(this, -113, 160, this.fullscreenLabel(), () => {
+    // The minimap, and the quest markers (the arrows to the next step, on screen, the minimap and the world map).
+    const toggles = (
+      [
+        ['showMinimap', 'Minimap', -112],
+        ['showQuestMarkers', 'Quest markers', 112],
+      ] as const
+    ).map(([key, label, x]) => {
+      const text = () => `${label}: ${Settings.get()[key] ? 'On' : 'Off'}`;
+      const button = makeButton(this, x, 130, text(), () => {
+        Settings.set(key, !Settings.get()[key]);
+        (button.list[1] as Phaser.GameObjects.Text).setText(text());
+      }, 216);
+      (button.list[1] as Phaser.GameObjects.Text).setFontSize(18);
+      return button;
+    });
+
+    const fullscreen = makeButton(this, -113, 190, this.fullscreenLabel(), () => {
       this.scale.toggleFullscreen();
     }, 214);
     const fsText = (fullscreen.list[1] as Phaser.GameObjects.Text).setFontSize(18);
     // Hunger and rest (systems/Needs.ts): off unless the player wants them.
-    const needs = makeButton(this, 113, 160, '', () => {
+    const needs = makeButton(this, 113, 190, '', () => {
       Settings.set('needs', !Settings.get().needs);
       needsText.setText(needsLabel());
     }, 214);
@@ -88,10 +104,10 @@ export class SettingsScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.ENTER_FULLSCREEN, refreshFs);
     this.scale.on(Phaser.Scale.Events.LEAVE_FULLSCREEN, refreshFs);
 
-    const back = makeButton(this, 0, 222, 'Back', () => this.close(), 200);
-    const hint = this.add.text(0, 262, 'Esc to close', bodyStyle(14, THEME.dimText)).setOrigin(0.5);
+    const back = makeButton(this, 0, 252, 'Back', () => this.close(), 200);
+    const hint = this.add.text(0, 292, 'Esc to close', bodyStyle(14, THEME.dimText)).setOrigin(0.5);
 
-    this.ui = this.add.container(0, 0, [panel, title, ...sliders, resolution, uiSize, fullscreen, needs, back, hint]);
+    this.ui = this.add.container(0, 0, [panel, title, ...sliders, resolution, uiSize, ...toggles, fullscreen, needs, back, hint]);
 
     this.input.keyboard!.on('keydown-ESC', () => this.close());
     this.layout();
