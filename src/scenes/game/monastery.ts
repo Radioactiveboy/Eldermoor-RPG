@@ -3,7 +3,7 @@ import { GameAudio } from '../../audio/Audio';
 import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
 import { TOLL, tollGateShape } from '../../world/MarketMap';
-import { monasteryGateDoors, monasteryGateShape } from '../../world/MonasteryMap';
+import { monasteryGateDoors, monasteryGateShape } from '../../world/landmarks';
 import type { GameScene } from '../GameScene';
 import type { DialogueAction } from './dialogueActions';
 import { give } from './sights';
