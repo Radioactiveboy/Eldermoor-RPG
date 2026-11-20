@@ -1,4 +1,5 @@
 import { HERO_NAME } from '../config';
+import { QuestLog } from '../systems/Quests';
 import type { DialogueChoice, DialogueScript } from './Dialogue';
 
 /**
@@ -19,6 +20,26 @@ export const Wayfarers = {
   toll: 0,
   /** Hal has been given something to eat. */
   courierFed: false,
+};
+
+/** Whether the goblins have burnt the farm in the Hollow: word of it has got about on the road. */
+const afterRaid = () => QuestLog.hasFlag('raid-over');
+
+/**
+ * What the folk on the road call out as the hero passes, once word of the
+ * raid has got about (see world/PlainsEvents.ts).
+ */
+export const RAID_CALLS: Partial<Record<string, string[]>> = {
+  tinker: ['Bolts! Bars! Shutters mended!', 'Locks to keep the goblins out!', 'Tinker! Tinker on the road! Safe while it lasts!'],
+  goatherd: ['Clover! Come back, the goblins will get you!', 'Clooover! Please!'],
+  courier: ['Goblins in the Hollow, and me with one leg.', 'Hello? Please be a person.'],
+};
+
+/** And what they call out when it's pouring. */
+export const WET_CALLS: Partial<Record<string, string[]>> = {
+  tinker: ['Rain! Good for business! Rusts everything!', 'Kettles! Pots! Buckets, for the leaks!'],
+  goatherd: ['Clover! You hate the rain! Come HOME!'],
+  courier: ['Rain. Of course. Of course it is.'],
 };
 
 /** Food that can be handed straight over (nothing raw), in the order the hero would offer it. */
@@ -44,10 +65,15 @@ export function footpadScript(toll: number, slewMother: boolean, again: boolean)
     nodes: {
       greet: {
         speaker: 'footpad',
-        lines: [
-          'Hold up there, friend. No hurry, is there? Lovely day for a walk.',
-          'Lonely road, mind. Nab here gets nervous on lonely roads. And when Nab gets nervous, his knife comes out.',
-        ],
+        lines: afterRaid()
+          ? [
+              'Hold up there, friend. No hurry, is there?',
+              "Lonely road, since the goblins burnt that farm in the Hollow. Nab's been nervous ever since. And when Nab gets nervous, his knife comes out.",
+            ]
+          : [
+              'Hold up there, friend. No hurry, is there? Lovely day for a walk.',
+              'Lonely road, mind. Nab here gets nervous on lonely roads. And when Nab gets nervous, his knife comes out.',
+            ],
         next: 'nab',
       },
       again: {
@@ -154,6 +180,7 @@ export function tinkerScript(first: boolean): DialogueScript {
           { text: "Show me what you've got.", next: 'wares' },
           { text: 'Where are you headed?', next: 'road' },
           { text: 'Heard any news?', next: 'news' },
+          ...(afterRaid() ? [{ text: 'Goblins burnt our farm in the Hollow.', next: 'goblins' }] : []),
           { text: 'Fare you well, Jory.', next: 'bye' },
         ],
       },
@@ -175,6 +202,15 @@ export function tinkerScript(first: boolean): DialogueScript {
         lines: TINKER_NEWS[Math.floor(Math.random() * TINKER_NEWS.length)],
         next: 'ask',
       },
+      goblins: {
+        speaker: 'tinker',
+        lines: [
+          "That was your place? I saw the smoke from the toll road and took it for charcoal burners. Gods. I'm sorry.",
+          "I mended a pot for a goblin once, up in the Greyfells. Paid me in teeth. But they never come down this far, not in a band. Not unless something's driven them.",
+          "Folk are barring their doors from here to Thornwick. I've sold more bolts this week than in a year. I'm not proud of it.",
+        ],
+        next: 'ask',
+      },
       bye: {
         speaker: 'tinker',
         lines: ["And you! If you hear a clanking on the road, that'll be me."],
@@ -194,6 +230,7 @@ export function goatherdScript(stage: GoatStage, first: boolean): DialogueScript
         lines: [
           'Have you seen a goat? A brown one, with a white face and a bell, and a horrible temper?',
           "Her name's Clover. She slipped her tether while I was picking blackberries, and now she's gone, and Gran will skin me.",
+          ...(afterRaid() ? ["And Gran says there's goblins about now, burning farms. Goblins eat goats. Everyone knows that."] : []),
         ],
         choices: [
           { text: "I'll help you look for her.", next: 'help' },
@@ -253,6 +290,7 @@ export function courierScript(fed: boolean, food: string | undefined, first: boo
   const ask: DialogueChoice[] = [
     ...(food ? [{ text: `Here, have my ${food}.`, next: 'fed' }] : []),
     { text: 'Can I help?', next: 'help' },
+    ...(afterRaid() ? [{ text: 'Goblins burnt a farm in the Hollow. Does His Lordship know?', next: 'goblins' }] : []),
     { text: 'Mind how you go.', next: 'bye' },
   ];
   return {
@@ -287,6 +325,14 @@ export function courierScript(fed: boolean, food: string | undefined, first: boo
           "And take these. His Lordship pays me extra for speed, and I'll not be earning it today.",
         ],
         action: 'road:courier-fed',
+      },
+      goblins: {
+        speaker: 'courier',
+        lines: [
+          "Goblins? This side of the Greyfells? ...Then the Prior's letters weren't only about wolves, were they.",
+          "His Lordship will know by tonight, if I have to hop to Harrowford on one leg. Whether he'll do anything is another matter. He hasn't answered the wolves yet.",
+        ],
+        choices: ask.filter((c) => c.next !== 'goblins'),
       },
       better: {
         speaker: 'courier',

@@ -15,11 +15,12 @@ import { ROOM_COUNT, Tavern } from '../systems/Tavern';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
+import { inHours, isVillager, Villager, Whereabouts, whereabouts } from '../systems/VillageDay';
 import { Inventory, itemDef } from '../systems/Inventory';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
 import type { Body, IsoMap } from '../world/IsoMap';
-import type { Commute, MapData } from '../world/MapData';
+import type { Commute, MapData, NpcSpawn } from '../world/MapData';
 
 /** How close (in tiles) the player must be to talk. */
 export const TALK_RANGE = 1.7;
@@ -36,10 +37,16 @@ interface NpcDef {
   /** Which conversation to have, given the story so far and the hour of the day. */
   script: (hour: number) => DialogueScript;
   /**
-   * A trader's conversation while their stall is shut: it opens on 'closing' as
-   * they pack up and walk home, and on 'opening' on their way back in the morning.
+   * A trader's conversation while they're walking about the square on their
+   * round: it opens on 'closing' as they pack up and walk home, 'opening' on
+   * their way back to the stall, 'to-workshop' heading for the bakery or the
+   * smithy, and 'to-tavern' making for the Crooked Tankard.
    */
   offDuty?: DialogueScript;
+  /** What they say out loud as they cover the stall to go somewhere (by where they're off to). */
+  leaving?: Partial<Record<Whereabouts, string[]>>;
+  /** At work in their workshop (the smith at his anvil, the baker at her trough): the '-work-' frames, unless watching the hero. */
+  works?: boolean;
   /** Wanders up and down the road, up to this many steps either side of where it started. */
   wander?: number;
   /** Strolls about anywhere within this many tiles of where it started (the militia on their rounds). */
@@ -174,10 +181,11 @@ function guardScript(hour: number): DialogueScript {
 }
 
 /**
- * Where a trader is in their day: at the stall, covering it over at closing
- * time, walking home, indoors for the night, or walking back in the morning.
+ * Where a trader is in the square on their round: at the stall, covering it
+ * over, walking off to a door, indoors somewhere (home, the workshop, the
+ * tavern), walking back to the stall, or crossing from one door to another.
  */
-type Shift = 'open' | 'packing' | 'leaving' | 'away' | 'arriving';
+type Shift = 'open' | 'packing' | 'leaving' | 'away' | 'arriving' | 'passing';
 /** Seconds spent covering the stall before setting off home. */
 const PACKING_SECONDS = 2.5;
 /** Seconds to fade in or out at the front door. */
@@ -245,8 +253,15 @@ const NPCS: Record<string, NpcDef> = {
     },
   },
   // The market's stallholders stand behind their counters, while the market is open.
-  baker: { texture: 'folk-baker', script: traveller('baker', BAKER), offDuty: BAKER, talkRange: 2.6 },
-  smith: { texture: 'folk-smith', script: traveller('smith', SMITH), offDuty: SMITH, talkRange: 2.6 },
+  // In the square they keep their round (systems/VillageDay.ts); in the bakery, the smithy and the tavern they're there by it too.
+  baker: {
+    texture: 'folk-baker', script: traveller('baker', BAKER), offDuty: BAKER, talkRange: 2.6, works: true,
+    leaving: { workshop: ['Back in a bit, loves! The noon loaves want me.', 'Ovens, ovens. Come and find me in the bakery!'] },
+  },
+  smith: {
+    texture: 'folk-smith', script: traveller('smith', SMITH), offDuty: SMITH, talkRange: 2.6, works: true,
+    leaving: { workshop: ["Hm. Anvil's waiting. I'll be in the smithy.", 'Forge. Knock if you want me.'] },
+  },
   tanner: { texture: 'folk-tanner', script: traveller('tanner', TANNER), offDuty: TANNER, talkRange: 2.6 },
   // Lord Morten's men at the toll gate, who stand their ground.
   'tollguard-1': { texture: 'folk-tollguard', script: () => tollGuardScript(QuestLog.hasFlag('paid-toll'), Inventory.coins >= TOLL, TOLL, false) },
@@ -358,6 +373,10 @@ export class Npc implements Body {
   /** A trader's walk between their stall and their front door, and where they are in their day. */
   private readonly commute?: Commute;
   private shift: Shift = 'open';
+  /** Where a trader is off to (or has gone in to) while away from the stall. */
+  private bound: Whereabouts = 'home';
+  /** Only here while their round has them here (see NpcSpawn.keeps). */
+  private readonly keeps?: Whereabouts;
   /** The hour of the day, as of the last update. */
   private hour: number;
   /** Something said out loud, shown in a bubble over their head (see ui/SpeechBubbles.ts). */
@@ -394,9 +413,11 @@ export class Npc implements Body {
    * @param hour the hour of the day now, so a trader who has gone home isn't there to begin with
    * @param looking for someone who stays put, the grid direction they face when left alone
    * @param hours the hours they're about, if not all day (the tavern's regulars)
+   * @param spawn the rest of how the map placed them: kept here by their round, sat down
    */
   constructor(
     scene: Phaser.Scene, map: IsoMap, id: string, gx: number, gy: number, commute?: Commute, hour = 12, looking?: Vec2, hours?: [number, number],
+    spawn: Pick<NpcSpawn, 'keeps' | 'seated'> = {},
   ) {
     const def = NPCS[id];
     if (!def) throw new Error(`Unknown NPC: ${id}`);
@@ -410,6 +431,8 @@ export class Npc implements Body {
     this.hour = hour;
     this.looking = looking;
     this.hours = hours;
+    this.keeps = isVillager(id) ? spawn.keeps : undefined;
+    this.sitting = !!spawn.seated;
     if (looking) this.face(looking);
     this.restFacing = this.facing;
     this.shadow = scene.add.image(0, 0, 'shadow');
@@ -429,20 +452,28 @@ export class Npc implements Body {
       map.setOccupied(Math.floor(gx), Math.floor(gy), true);
     }
     if (def.anim) this.sprite.play({ key: def.anim, startFrame: Math.floor(Math.random() * 4) });
-    if (commute && !marketOpen(hour, commute.late)) {
-      // Already gone home for the night.
+    const now = commute && whereabouts(commute.villager, hour);
+    if (now && now !== 'stall') {
+      // Already gone in somewhere: home for the night, the workshop, the tavern.
       this.shift = 'away';
+      this.bound = now;
       this.setVisible(false);
       map.setObjectArt(commute.stall, `${commute.stall.key}-closed`);
     }
-    if (hours && !Npc.within(hours, hour)) this.goOff(false);
+    if (!this.about(hour)) this.goOff(true);
     this.sync(false);
   }
 
   /** Whether an hour falls in [from, to), where `to` may run past midnight (e.g. [18, 26] is 6pm to 2am). */
   static within(hours: [number, number], hour: number): boolean {
-    const [from, to] = hours;
-    return (hour >= from && hour < to) || (hour + 24 >= from && hour + 24 < to);
+    return inHours(hours[0], hours[1], hour);
+  }
+
+  /** Whether they're about here at this hour: within their hours, and where their round has them. */
+  private about(hour: number): boolean {
+    if (this.hours && !Npc.within(this.hours, hour)) return false;
+    if (this.keeps && whereabouts(this.id as Villager, hour) !== this.keeps) return false;
+    return true;
   }
 
   /** Here to be seen and talked to (not indoors for the night, nor gone home from the tavern). */
@@ -565,6 +596,17 @@ export class Npc implements Body {
     return { x: this.sprite.x, y: this.sprite.y - FEET_Y - 6 + (this.seated ? 8 : 0) };
   }
 
+  /**
+   * At their trade in their own workshop (Osric at the anvil, Hilde kneading),
+   * rather than watching the hero, who has come close.
+   */
+  private get atWork(): boolean {
+    return !!this.def.works && this.keeps === 'workshop' && !this.watching;
+  }
+
+  /** Turned to look at the hero (standAbout), which stops work for a moment. */
+  private watching = false;
+
   /** Sitting down, always or for now. */
   private get seated(): boolean {
     return !!this.def.sits || this.sitting;
@@ -572,9 +614,14 @@ export class Npc implements Body {
 
   script(): DialogueScript {
     if (this.shift !== 'open' && this.def.offDuty) {
-      return { ...this.def.offDuty, start: this.shift === 'arriving' ? 'opening' : 'closing' };
+      const start = this.shift === 'arriving' ? 'opening' : this.bound === 'home' ? 'closing' : `to-${this.bound}`;
+      return { ...this.def.offDuty, start: this.def.offDuty.nodes[start] ? start : 'closing' };
     }
-    return this.def.script(this.hour);
+    // A trader at the Tankard for the evening doesn't trade; one at work in their workshop says so.
+    if (this.keeps === 'tavern' && this.def.offDuty?.nodes.tavern) return { ...this.def.offDuty, start: 'tavern' };
+    const script = this.def.script(this.hour);
+    if (this.keeps === 'workshop' && script.start === 'again' && script.nodes.workshop) return { ...script, start: 'workshop' };
+    return script;
   }
 
   /** Stallholders are spoken to across their counters; out from behind them, up close like anyone else. */
@@ -588,7 +635,7 @@ export class Npc implements Body {
   }
 
   private get commuting(): boolean {
-    return this.shift === 'leaving' || this.shift === 'arriving';
+    return this.shift === 'leaving' || this.shift === 'arriving' || this.shift === 'passing';
   }
 
   /** Turn to face a point (Mother is only drawn facing forward, so she just mirrors). */
@@ -622,7 +669,7 @@ export class Npc implements Body {
       this.keepHours(dt, paused, player);
       return;
     }
-    if (this.hours && !paused && Npc.within(this.hours, hour) === this.off && !this.errand) {
+    if ((this.hours || this.keeps) && !paused && this.about(hour) === this.off && !this.errand) {
       this.goOff(!this.off, true);
     }
     if (this.off) return;
@@ -692,7 +739,16 @@ export class Npc implements Body {
     if (this.def.anim) return;
     const before = this.facing;
     const near = this.distanceTo(player.x, player.y);
-    if (this.def.sits) {
+    if (this.def.works && this.keeps === 'workshop') {
+      // At work: they look up when the hero comes close, and otherwise keep at it.
+      const watching = near < NOTICE_RANGE;
+      if (watching) this.face({ x: player.x - this.gx, y: player.y - this.gy });
+      else this.facing = this.restFacing;
+      if (watching !== this.watching) {
+        this.watching = watching;
+        this.sync(false);
+      }
+    } else if (this.seated) {
       // Once the player has gone, back to what they were doing.
       if (this.looking && near > NOTICE_RANGE) this.facing = this.restFacing;
     } else if (near < WATCH_RANGE) {
@@ -716,45 +772,64 @@ export class Npc implements Body {
   }
 
   /**
-   * A trader's day: at closing time, cover the stall and walk home; at opening
-   * time, come out of the front door and walk back to the stall. They don't
+   * A trader's round in the square (see systems/VillageDay.ts): when it's time
+   * to go somewhere else, cover the stall and walk to that door (home, the
+   * workshop, the tavern) and go in; when it's time for the stall again, come
+   * out of whichever door they went in at and walk back to it; and between two
+   * places indoors, come out of one door and cross to the other. They don't
    * stop for the player on the way (it's been a long day), but will stop to talk.
    */
   private keepHours(dt: number, paused: boolean, player: Vec2): void {
     const c = this.commute!;
-    const open = marketOpen(this.hour, c.late);
+    const want = whereabouts(c.villager, this.hour);
     if (paused) {
       if (this.commuting) this.sync(false);
       return;
     }
+    const door = (at: Whereabouts) => c.doors[at] ?? c.doors.home!;
     switch (this.shift) {
       case 'open':
-        if (open) {
+        if (want === 'stall') {
           this.standAbout(dt, player);
           return;
         }
         this.shift = 'packing';
+        this.bound = want;
         this.wait = PACKING_SECONDS;
         this.map.setObjectArt(c.stall, `${c.stall.key}-closed`);
+        this.callOut(want);
         return;
       case 'packing':
         this.wait -= dt;
         if (this.wait > 0) return;
         this.shift = 'leaving';
-        this.route = this.commuteRoute(this.origin, c.exit, c.home);
+        this.route = this.commuteRoute(this.origin, c.exit, door(this.bound));
         return;
-      case 'away':
-        if (!open) return;
-        this.shift = 'arriving';
-        this.gx = c.home.x;
-        this.gy = c.home.y;
-        this.route = this.commuteRoute(c.home, c.exit, this.origin, true);
+      case 'away': {
+        if (want === this.bound) return;
+        const from = door(this.bound);
+        if (want !== 'stall' && from === door(want)) {
+          // In at the same door (Hilde's home is over her bakery): nothing to see from the square.
+          this.bound = want;
+          return;
+        }
+        this.gx = from.x;
+        this.gy = from.y;
+        if (want === 'stall') {
+          this.shift = 'arriving';
+          this.route = this.commuteRoute(from, c.exit, this.origin, true);
+        } else {
+          this.shift = 'passing';
+          this.route = this.doorToDoor(from, door(want));
+        }
+        this.bound = want === 'stall' ? this.bound : want;
         this.setVisible(true, true);
         return;
+      }
       default:
         if (this.walkRoute(dt)) return;
-        if (this.shift === 'leaving') {
-          // Home: in at the door, gone till morning.
+        if (this.shift === 'leaving' || this.shift === 'passing') {
+          // In at the door, gone till their round brings them out again.
           this.shift = 'away';
           this.setVisible(false, true);
         } else {
@@ -765,6 +840,20 @@ export class Npc implements Body {
           this.sync(false);
         }
     }
+  }
+
+  /** Covering the stall to go somewhere, they may say where (so the hero knows to look in the smithy). */
+  private callOut(to: Whereabouts): void {
+    const lines = this.def.leaving?.[to];
+    if (lines?.length) this.say(lines[Math.floor(Math.random() * lines.length)], 5);
+  }
+
+  /** Across the open ground from one front door to another. */
+  private doorToDoor(from: Vec2, to: Vec2): Array<{ point: Vec2; index: number }> {
+    const a = { x: Math.floor(from.x), y: Math.floor(from.y) };
+    const b = { x: Math.floor(to.x), y: Math.floor(to.y) };
+    const tiles = findPath(a, b, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 4000) ?? [];
+    return [...tiles.map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 })), to].map((point) => ({ point, index: -1 }));
   }
 
   /**
@@ -932,7 +1021,7 @@ export class Npc implements Body {
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
     if (this.def.anim) return;
-    const pose = moving ? 'walk' : this.seated ? 'sit' : 'idle';
+    const pose = moving ? 'walk' : this.seated ? 'sit' : this.atWork ? 'work' : 'idle';
     // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored,
     // unless the figure is modelled in 3D and has all eight drawn (see figure3d.ts).
     const names: string[] = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];

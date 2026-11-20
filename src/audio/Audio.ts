@@ -538,6 +538,12 @@ class AudioEngine {
     this.soundscape!.bell(strokes, near);
   }
 
+  /** A clap of thunder, `delay` seconds after the lightning (see Soundscape.thunder). */
+  thunder(delay: number, near: number, muffled = 0): void {
+    if (!this.unlocked) return;
+    this.soundscape!.thunder(delay, near, muffled);
+  }
+
   /** Short UI blip for button presses. */
   click(): void {
     this.blip(660, 990, 0.09, 0.25);

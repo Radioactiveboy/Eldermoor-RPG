@@ -22,6 +22,7 @@ import { enteredCave, enteredNorthWoods } from './hollow';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
+import { enteredWorkshop } from './workshops';
 
 export interface AreaDef {
   /** Builds the area's map as things stand (gates open or shut, the farm whole or burnt). Needs load() first, if it has one. */
@@ -99,6 +100,8 @@ export const AREAS: Record<AreaId, AreaDef> = {
   // No ?area= for a rented room: it needs a room taken first.
   'tavern-room': lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernRoomMap(Tavern.room ?? 1)),
   cellar: lazy(() => import('../../world/TavernMap'), (m) => m.buildCellarMap(), { test: true, enter: enteredCellar }),
+  smithy: lazy(() => import('../../world/WorkshopMaps'), (m) => m.buildSmithyMap(), { test: true, enter: enteredWorkshop }),
+  bakery: lazy(() => import('../../world/WorkshopMaps'), (m) => m.buildBakeryMap(), { test: true, enter: enteredWorkshop }),
   plains: lazy(() => import('../../world/PlainsMap'), (m) => m.buildPlainsMap(), {
     test: true,
     enter: firstVisit(

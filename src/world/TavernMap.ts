@@ -83,6 +83,10 @@ export function buildTavernMap(): MapData {
       { id: 'ada', gx: 7.5, gy: 8.5, looking: { x: 1, y: 0 }, hours: [17, 24] },
       { id: 'cobb', gx: 10.5, gy: 8.5, looking: { x: -1, y: 0 }, hours: [17, 24] },
       { id: 'pell', gx: 3.5, gy: 2.4, looking: { x: 1, y: 1 }, hours: [19, 25] },
+      // The market's traders, at their own table by the barrels, when their day is done (see systems/VillageDay.ts).
+      { id: 'smith', gx: 9.5, gy: 6.5, looking: { x: 1, y: 0 }, keeps: 'tavern', seated: true },
+      { id: 'baker', gx: 10.5, gy: 5.55, looking: { x: 0, y: 1 }, keeps: 'tavern', seated: true },
+      { id: 'tanner', gx: 10.5, gy: 7.45, looking: { x: 0, y: -1 }, keeps: 'tavern', seated: true },
     ],
     seats: [],
     sights: [],
@@ -95,7 +99,7 @@ export function buildTavernMap(): MapData {
       { x: 8.5, y: 7.5, face: { x: 0, y: 1 } },
       { x: 2.5, y: 1.6, face: { x: -1, y: -1 } },
       { x: 7.5, y: 3.5, face: { x: 0, y: -1 } },
-      { x: 10.5, y: 5.5, face: { x: 1, y: 0 } },
+      { x: 9.5, y: 7.5, face: { x: 1, y: -1 } },
       { x: 9.5, y: 9.4, face: { x: -1, y: -1 } },
     ],
   };
@@ -150,6 +154,11 @@ export function buildTavernMap(): MapData {
   seat(8, 9, { x: 0, y: -1 }, { x: 7.5, y: 9.5 });
 
   add('furn-barrels', 11, 5, { shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
+  // The traders' table (Osric, Hilde and Tamsin of an evening).
+  add('tav-table-2', 10, 6, { w: 2, shapes: tableShape });
+  add('furn-stool', 9, 6, { shapes: stoolShape });
+  add('furn-stool', 10, 5, { shapes: stoolShape });
+  add('furn-stool', 10, 7, { shapes: stoolShape });
   add('furn-chest', 0, 6, { flipX: true });
 
   data.sights!.push({ id: 'tavern-hearth', gx: 2, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'tavern-hearth' });

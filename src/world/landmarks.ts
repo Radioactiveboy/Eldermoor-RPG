@@ -8,6 +8,17 @@
 import { box, Shape } from './Collision';
 import type { Door } from './MapData';
 
+/** Where Osric stands to the anvil's face, and Hilde's kneading trough (WorkshopMaps), for the sparks and the flour. */
+export const ANVIL = { x: 3.5, y: 3.3 };
+export const TROUGH = { x: 4, y: 3.3 };
+
+/**
+ * Osric's hammer stroke, top (0) to bottom (1), as the frames of his '-work-' animation
+ * (art/workshops.ts), and the frame where it lands on the anvil (scenes/game/workshops.ts).
+ */
+export const HAMMER_STROKE = [1, 0.65, 0.3, 0.05, 0, 0.45, 1, 1];
+export const HAMMER_LANDS = HAMMER_STROKE.indexOf(1, 1);
+
 /** Where a maid goes to fetch an order from the bar (TavernMap). */
 export const BAR_PICKUP = { x: 7.5, y: 3.5 };
 
