@@ -16,7 +16,6 @@ import { generateItemIcons } from './items';
 import { generateStationArt } from './stations';
 import { generateMarket } from './market';
 import { generateMonastery } from './monastery';
-import { generateNpcs } from './npc';
 import { generatePortraits } from './portraits';
 import { generateWayfarers } from './wayfarers3d';
 import { generateProps } from './props';
@@ -49,7 +48,6 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'the cave', draw: generateCave, title: true },
   { label: 'the hen farm', draw: generateHenFarm, title: true },
   { label: 'the river', draw: generateFishing, title: true },
-  { label: 'villagers', draw: generateNpcs },
   { label: 'beasts', draw: generateCreatures },
   { label: 'townsfolk', draw: generateFolk },
   { label: 'wayfarers', draw: generateWayfarers },
