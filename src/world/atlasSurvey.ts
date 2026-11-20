@@ -21,7 +21,7 @@ export const SURVEY: Partial<Record<AreaId, AreaSurvey>> = {
       'TTTTTTTTTT..TTTTTT',
       'T......T..R.....T.',
       'TT.T.....R......TT',
-      'T....T..R.......T.',
+      'T.......R.......T.',
       'T.T...RRR..RRRR.TT',
       'T.......R.RWWWWRT.',
       'T.T.RRRRR.RWWWWRT.',
