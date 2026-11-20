@@ -12,7 +12,15 @@ export interface ConfirmSceneData {
   only?: boolean;
   /** Called once with the answer, as the box closes. */
   onAnswer: (yes: boolean) => void;
+  /**
+   * Instead of yes and no, a short list to pick from (which seed to sow), with
+   * "Never mind" after it: onChoice gets the index picked, or undefined.
+   */
+  choices?: string[];
+  onChoice?: (index: number | undefined) => void;
 }
+
+const NUMBER_KEYS = ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
 
 const W = 340;
 const PAD = 12;
@@ -47,15 +55,17 @@ export class ConfirmScene extends Phaser.Scene {
     this.answered = false;
     // Ignore the key press that opened the box.
     this.readyAt = this.time.now + 150;
-    const answer = (yes: boolean) => {
+    const close = (then: () => void) => {
       if (this.answered || this.time.now < this.readyAt) return;
       this.answered = true;
       GameAudio.click();
       this.tweens.add({ targets: this.box, alpha: 0, duration: 120, onComplete: () => {
         this.scene.stop();
-        data.onAnswer(yes);
+        then();
       } });
     };
+    const answer = (yes: boolean) => close(() => data.onAnswer(yes));
+    const choose = (i: number | undefined) => close(() => (data.onChoice ? data.onChoice(i) : data.onAnswer(i !== undefined)));
 
     // Clicks on the world behind are swallowed rather than walking the player about; the world isn't dimmed.
     this.blocker = this.add.zone(0, 0, 10, 10).setOrigin(0).setInteractive();
@@ -78,8 +88,11 @@ export class ConfirmScene extends Phaser.Scene {
           .setAlpha(0.8)
       : undefined;
     if (note) y += note.height + 4;
-    const options = [this.makeOption(1, data.yes ?? 'Yes', y, () => answer(true))];
-    if (!data.only) options.push(this.makeOption(2, data.no ?? 'No', y + ROW, () => answer(false)));
+    const list = data.choices?.slice(0, NUMBER_KEYS.length - 1);
+    const options = list
+      ? [...list, data.no ?? 'Never mind'].map((label, i) => this.makeOption(i + 1, label, y + ROW * i, () => choose(i < list.length ? i : undefined)))
+      : [this.makeOption(1, data.yes ?? 'Yes', y, () => answer(true))];
+    if (!list && !data.only) options.push(this.makeOption(2, data.no ?? 'No', y + ROW, () => answer(false)));
     y += ROW * options.length + PAD - 6;
     this.boxH = y;
 
@@ -91,8 +104,15 @@ export class ConfirmScene extends Phaser.Scene {
     this.box = this.add.container(0, 0, [frame, question, ...(note ? [note] : []), ...options]);
 
     const kb = this.input.keyboard!;
-    for (const key of ['ONE', 'NUMPAD_ONE', 'Y', 'ENTER', 'E']) kb.on(`keydown-${key}`, () => answer(true));
-    if (!data.only) for (const key of ['TWO', 'NUMPAD_TWO', 'N', 'ESC']) kb.on(`keydown-${key}`, () => answer(false));
+    if (list) {
+      list.forEach((_, i) => {
+        for (const key of [NUMBER_KEYS[i], `NUMPAD_${NUMBER_KEYS[i]}`]) kb.on(`keydown-${key}`, () => choose(i));
+      });
+      for (const key of [NUMBER_KEYS[list.length], `NUMPAD_${NUMBER_KEYS[list.length]}`, 'ESC']) kb.on(`keydown-${key}`, () => choose(undefined));
+    } else {
+      for (const key of ['ONE', 'NUMPAD_ONE', 'Y', 'ENTER', 'E']) kb.on(`keydown-${key}`, () => answer(true));
+      if (!data.only) for (const key of ['TWO', 'NUMPAD_TWO', 'N', 'ESC']) kb.on(`keydown-${key}`, () => answer(false));
+    }
 
     this.layout();
     this.scale.on('resize', this.layout, this);

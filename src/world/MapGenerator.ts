@@ -402,6 +402,30 @@ function addHenFarm(data: MapData, x0: number, y0: number): void {
   data.hens = { pen, flock };
   // Iran keeps an eye on his hens from just outside the run, by the corner nearest his door.
   (data.npcs ??= []).push({ id: 'iran', gx: px1 - 0.5, gy: py0 - 0.5 });
+  addPlot(data, x0 + 3, y0 - 2);
+}
+
+/**
+ * The patch of Iran's yard he lends the hero to grow things in (see
+ * systems/Farm.ts): four tiles by two beside the hut, gone to weeds until
+ * it's dug, with his water butt at the end of it. (x0, y0) is its back corner.
+ */
+function addPlot(data: MapData, x0: number, y0: number): void {
+  const w = 4;
+  const h = 2;
+  // Room to work all round it, and no trees in front hiding it.
+  for (let y = y0 - 1; y <= y0 + h + 1; y++) {
+    for (let x = x0 - 1; x <= x0 + w + 1; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
+  }
+  const plot: Array<{ tx: number; ty: number }> = [];
+  for (let y = y0; y < y0 + h; y++) {
+    for (let x = x0; x < x0 + w; x++) {
+      plot.push({ tx: x, ty: y });
+      data.props[y][x] = Prop.Blocked;
+    }
+  }
+  data.plot = plot;
+  placeObject(data, { key: 'furn-barrels', tx: x0 - 1, ty: y0 + h - 1, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
 }
 
 /**

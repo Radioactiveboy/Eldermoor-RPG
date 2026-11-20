@@ -292,6 +292,8 @@ export interface MapData {
   lights?: LightSource[];
   npcs?: NpcSpawn[];
   crops?: CropPatch[];
+  /** The plot Farmer Iran lends the hero, a tile at a time: dug, sown, watered and picked (see systems/Farm.ts). */
+  plot?: Array<{ tx: number; ty: number }>;
   seats?: Seat[];
   /** Spots where the tavern maids tidy up between orders (wiping a table, sweeping the hearth), and which way they face there. */
   chores?: Array<{ x: number; y: number; face: { x: number; y: number } }>;

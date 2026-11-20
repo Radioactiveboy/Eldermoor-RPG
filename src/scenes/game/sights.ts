@@ -15,6 +15,7 @@ import { CropPatch, Sight } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import type { Channel } from './interactions';
 import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
+import { syncPlot } from './plot';
 
 export function startChannel(g: GameScene, channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
   g.walkingTo = undefined;
@@ -339,8 +340,9 @@ export function give(g: GameScene, id: ItemId, count: number): void {
   else g.onHint?.('My satchel is full.');
 }
 
-/** Show each crop as ripe or freshly picked; picked ones grow back over time. */
+/** Show each crop as ripe or freshly picked; picked ones grow back over time. And the plot in Iran's yard. */
 export function syncCrops(g: GameScene): void {
+  syncPlot(g);
   for (const crop of g.map.data.crops ?? []) {
     const img = g.map.crops.get(crop.ty * g.map.width + crop.tx);
     const key = cropKey(crop.kind, Farm.isRipe(crop.tx, crop.ty, g.clock.elapsedHours));

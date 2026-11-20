@@ -6,6 +6,7 @@ import type { DialogueScript } from './Dialogue';
  * children. He has known the hero since they were small, so he calls them by
  * name. He sends them to the market for chicken feed (the 'chicken-feed'
  * quest), paying for it up front, and gives them eggs when they bring it back.
+ * He also lends them a patch of his yard to grow things in (see systems/Farm.ts).
  */
 
 /** How the errand stands: not asked yet, asked, the feed bought and in the satchel, or done. */
@@ -15,11 +16,14 @@ export type FeedStage = 'none' | 'active' | 'carrying' | 'done';
 export const FEED_MONEY = 10;
 /** Eggs he gives as thanks. */
 export const EGG_REWARD = 4;
+/** Packets of carrot seed he hands over with the plot, to make a start. */
+export const PLOT_SEED_GIFT = 2;
 
 /**
  * @param first whether this is the first time they've spoken
+ * @param plotLent whether he has already lent the hero the plot by his hut
  */
-export function iranScript(stage: FeedStage, first: boolean): DialogueScript {
+export function iranScript(stage: FeedStage, first: boolean, plotLent = false): DialogueScript {
   const start = stage === 'carrying' ? 'feed-back' : stage === 'active' ? 'waiting' : stage === 'done' ? 'laying' : first ? 'greet' : 'again';
   return {
     start,
@@ -54,6 +58,9 @@ export function iranScript(stage: FeedStage, first: boolean): DialogueScript {
           stage === 'none'
             ? { text: 'You look worried. Is something wrong?', next: 'trouble' }
             : { text: 'How are the hens?', next: 'hens' },
+          plotLent
+            ? { text: 'How do I look after my plot?', next: 'plot-tips' }
+            : { text: 'That weedy patch by your hut. Is anyone using it?', next: 'plot' },
           { text: 'Who is the one with the big red comb?', next: 'rooster' },
           { text: 'Where are your children?', next: 'children' },
           { text: 'Goodbye, Iran.', next: 'bye' },
@@ -103,6 +110,37 @@ export function iranScript(stage: FeedStage, first: boolean): DialogueScript {
           stage === 'done'
             ? ['Fat and happy and laying. I owe you for that.']
             : ['Hungry. Grumpy. They keep giving me looks.'],
+        next: 'ask',
+      },
+      plot: {
+        speaker: 'iran',
+        lines: [
+          "That? It was my Ma's herb bed, once. Nobody's touched it since she passed, and it's gone to docks and couch grass.",
+          stage === 'done'
+            ? "Tell you what. You put my hens right, so you have it. Dig it over and grow what you like. It's good soil under all that."
+            : "You want it? Have it, and welcome. Better something grows there than weeds. It's good soil under all that.",
+        ],
+        choices: [
+          { text: "I'd like that. Thank you, Iran.", next: 'plot-yes' },
+          { text: 'Maybe another time.', next: 'ask' },
+        ],
+      },
+      'plot-yes': {
+        speaker: 'iran',
+        action: 'lend-plot',
+        lines: [
+          "Here's my old spade, and the can. The water butt's right there at the end of the bed, it keeps itself full off the roof.",
+          `And a couple of twists of carrot seed, to make a start. Hilde sells more at her stall, turnips and cabbages too.`,
+          'Dig it, sow it, water it every day it doesn\'t rain, and in two or three days you\'ll be pulling your own.',
+          'Go on, then. Those weeds won\'t dig themselves.',
+        ],
+      },
+      'plot-tips': {
+        speaker: 'iran',
+        lines: [
+          'Dig a patch over, then sow it. Seed wants the soil damp to grow at all, so water it every day. A good rain saves you the bother.',
+          'Carrots and turnips take two days or so, cabbages three. Pick them when they\'re ready, and the ground\'s there to sow again.',
+        ],
         next: 'ask',
       },
       rooster: {

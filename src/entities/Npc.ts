@@ -237,7 +237,7 @@ const NPCS: Record<string, NpcDef> = {
     script: () => {
       const first = !met.has('iran');
       met.add('iran');
-      return iranScript(feedStage(), first);
+      return iranScript(feedStage(), first, QuestLog.hasFlag('plot-lent'));
     },
   },
   // After the raid: Iran crouched in the corner of his hut with his children, too frightened to go out.
