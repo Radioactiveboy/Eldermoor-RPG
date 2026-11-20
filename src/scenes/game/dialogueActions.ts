@@ -6,7 +6,6 @@
 import { ItemId } from '../../systems/Inventory';
 import { ShopId, SHOPS } from '../../systems/Shops';
 import type { GameScene } from '../GameScene';
-import { bountyAction } from './bounties';
 import { FISHING_ACTIONS } from './fishing';
 import { HOLLOW_ACTIONS } from './hollow';
 import { MEDICINE_ACTIONS } from './medicine';
@@ -27,7 +26,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...FISHING_ACTIONS,
 };
 
-/** Runs a dialogue action: `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `bounty:<take|claim>:<id>`, or a named one. */
+/** Runs a dialogue action: `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, or a named one. */
 export function runDialogueAction(g: GameScene, action: string): void {
   if (action.startsWith('shop:') && action.slice(5) in SHOPS) {
     g.pendingShop = action.slice(5) as ShopId;
@@ -43,10 +42,6 @@ export function runDialogueAction(g: GameScene, action: string): void {
   }
   if (action.startsWith('road:')) {
     g.roadEvents?.action(action.slice(5));
-    return;
-  }
-  if (action.startsWith('bounty:')) {
-    bountyAction(g, action.slice(7));
     return;
   }
   if (action.startsWith('rent:')) {

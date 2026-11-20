@@ -155,8 +155,9 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   Godric's take-away) give better prices to someone the village likes, and worse to one it distrusts; Jory on the
   road cares for nobody's opinion. The trading window says when something is dear or cheap today, and your standing.
   However the prices move, nothing can be bought for less than any trader pays for it
-- **The militia's bounties**: the notice board by the trough in the market square (**Read the notices**) has three
-  of the four notices up each morning: rats back in the Tankard's cellar (4 rats, 12 coins), boar in the crofts on the
+- **The militia's bounties**: the notice board by the trough in the market square (**Read the notices**) opens close
+  up, with the day's notices pinned to it on parchment: click or tap one (or ←/→, 1-4) to read it along the bottom,
+  then take it down or claim its reward (Enter). Three of the four notices are up each morning: rats back in the Tankard's cellar (4 rats, 12 coins), boar in the crofts on the
   plains (2, 30 coins), the footpads on the Lord's Road (both, 40 coins) and wolves on the plains by night (3, 35
   coins). Take one and it's a quest; kill what it asks for (the HUD counts them) and come back to the board to be
   paid in coins and in the militia's and the village's good opinion. Each can be done again, one claim a day. With
@@ -254,7 +255,7 @@ src/
                           with supply, the day and your standing, and the daily restock
   systems/Reputation.ts   Standing with Adowvale, Saint Elda's and the militia, and how each plains meeting went
   systems/Bounties.ts     The militia's bounty notices: which are up each day, kills counted, claiming
-  dialogue/bounties.ts    The notice board's conversation (the militiaman who minds it)
+  scenes/BountyBoardScene.ts The notice board close up: pinned notices to pick, take and claim
   systems/Tavern.ts       The Crooked Tankard's menu and prices, and the room the hero has let (until when)
   systems/VillageDay.ts   Where the market's traders are at each hour: stall, workshop, the Tankard or home
   systems/Crafting.ts     Brewing and cooking: the recipes, the stations, and which recipes have been found
@@ -511,8 +512,8 @@ tests/
   `Reputation.record(meeting, how)` remembers how a plains meeting ended; quest
   rewards are in `QUEST_STANDING`. Bounties are repeatable quests (`repeatable`
   on a `QuestDef` lets `QuestLog.start` begin a finished one again), defined in
-  `BOUNTIES`; the board's `bounty:take:<id>` and `bounty:claim:<id>` actions
-  run them, and won fights count kills with `Bounties.slain`.
+  `BOUNTIES`; `BountyBoardScene` shows them and takes or claims them, and won
+  fights count kills with `Bounties.slain`.
 - **Conversations and quests are data.** A conversation is a set of nodes in
   `src/dialogue/`; replies point at the next node, and `action` names (like
   `start-medicine-quest`) are carried out in `GameScene.runDialogueAction`.

@@ -488,17 +488,6 @@ export class GameScene extends Phaser.Scene {
     this.runScript(npc.script(), npc);
   }
 
-  /** A conversation with no one standing there to face (the notice board's, see game/bounties.ts). */
-  readScript(script: DialogueScript): void {
-    if (this.seat) standUp(this);
-    syncNpcWorld(this);
-    this.ordered = undefined;
-    this.busy = true;
-    this.walkingTo = undefined;
-    this.player.setPath([]);
-    this.runScript(script);
-  }
-
   private runScript(script: DialogueScript, npc?: Npc): void {
     this.pendingShop = undefined;
     const data: DialogueSceneData = {
