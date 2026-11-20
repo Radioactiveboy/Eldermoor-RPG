@@ -62,7 +62,7 @@ export class UIScene extends Phaser.Scene {
   private progressLabel!: Phaser.GameObjects.Text;
   /** The map the minimap was baked from, so it can be rebuilt when the player changes area. */
   private minimapOf?: IsoMap;
-  /** In a fight the combat screen needs the room: only the health and stamina bars stay. */
+  /** In a fight (or a cut-scene) the screen needs the room: only the health and stamina bars stay. */
   private combatMode = false;
 
   constructor() {
@@ -223,7 +223,9 @@ export class UIScene extends Phaser.Scene {
     this.updatePrompt(toScreen);
     this.updateProgress(toScreen);
     this.updateSneakButton(game.sneaking);
-    if (this.combatMode !== game.inCombat) this.setCombatMode(game.inCombat);
+    // A cut-scene's bars (see ui/CutScene.ts) want the screen clear too, all but the light and the speech bubbles.
+    const clear = game.inCombat || this.scene.isActive('Letterbox');
+    if (this.combatMode !== clear) this.setCombatMode(clear);
   }
 
   private setCombatMode(on: boolean): void {

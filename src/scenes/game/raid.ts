@@ -9,6 +9,7 @@ import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
 import { SAVE_VERSION, SaveData, SaveGame } from '../../systems/SaveGame';
 import { TimeOfDay } from '../../systems/TimeOfDay';
+import { CutScene } from '../../ui/CutScene';
 import { Aftermath } from '../../world/Aftermath';
 import { RAID_BLACKOUT, RaidDirector } from '../../world/GoblinRaid';
 import type { ConfirmSceneData } from '../ConfirmScene';
@@ -130,18 +131,34 @@ export function raidDefeat(g: GameScene): void {
   });
 }
 
-/** Coming round on the floor of the burnt-out cottage. */
+/** Coming round on the floor of the burnt-out cottage, framed as a cut-scene (bars, a slow look round the room, the music held). */
 export function cameAround(g: GameScene): void {
-  const say = (ms: number, text: string) => g.time.delayedCall(ms, () => g.onHint?.(text));
+  // (Called while the scene is still being created, when takeControls() won't yet: the hero lies still till it's over.)
+  g.busy = true;
+  g.walkingTo = undefined;
+  const cut = CutScene.begin(g, { music: 'ruin', ambience: 0.5, follow: () => g.fitCamera(), free: true });
+  const me = { x: g.player.gx, y: g.player.gy };
+  // Close on the hero lying where they fell, then a slow look across to Mother's bed, and back.
+  cut.lookAt(me.x, me.y, 1.45);
+  const say = (ms: number, text: string) => g.time.delayedCall(ms, () => cut.caption(text, undefined, 4200));
   say(1400, 'My head... Everything hurts. How long was I lying here?');
   say(6000, 'Mother? MOTHER!');
+  g.time.delayedCall(6600, () => void cut.panTo(MOTHERS_BED.x, MOTHERS_BED.y, 3800, { zoom: 1.3 }));
   say(10500, "She's gone. The roof's gone. And there's blood... all over the floor by her bed.");
-  QuestLog.writeDiary(
-    'Goblins. A whole band of them came down on the farm at first light, burning and smashing and screaming, with a great brute in iron ' +
-      'at their head. I went out to fight them and they beat me to the ground. When I came to it was past midday. The cottage is burnt ' +
-      'to its rafters and everything in it is broken or gone. There is blood by her bed. Mother is gone.',
-  );
+  g.time.delayedCall(14200, () => void cut.panTo(me.x, me.y, 1600, { zoom: 1 }));
+  g.time.delayedCall(16000, () => {
+    cut.end();
+    g.release();
+    QuestLog.writeDiary(
+      'Goblins. A whole band of them came down on the farm at first light, burning and smashing and screaming, with a great brute in iron ' +
+        'at their head. I went out to fight them and they beat me to the ground. When I came to it was past midday. The cottage is burnt ' +
+        'to its rafters and everything in it is broken or gone. There is blood by her bed. Mother is gone.',
+    );
+  });
 }
+
+/** Where the blood is by Mother's bed, in the burnt cottage (see world/HomeMap.ts). */
+const MOTHERS_BED = { x: 2.2, y: 1.8 };
 
 /** Walking about after the raid: the cottage, the yard, Iran's hut. */
 export function enteredAfterRaid(g: GameScene): void {

@@ -431,6 +431,9 @@ class AudioEngine {
   private hour = 12;
   private musicTimer = 0;
   private musicFade = 2.5;
+  /** A cut-scene has the music held (see holdMusic): what's asked for meanwhile waits until it's let go. */
+  private held = false;
+  private afterHold?: { name: TrackName; fade: number };
 
   constructor() {
     const unlock = () => this.unlock();
@@ -454,6 +457,10 @@ class AudioEngine {
 
   /** Switches to a track (crossfading), or does nothing if it's already playing. */
   playMusic(name: TrackName, fade = 2.5): void {
+    if (this.held) {
+      this.afterHold = { name, fade };
+      return;
+    }
     this.wanted = name;
     this.musicFade = fade;
     // Wait a moment before choosing, so that on entering an area the world can
@@ -489,7 +496,30 @@ class AudioEngine {
     if (name === 'battle') this.sfx?.preload(FIGHT_SFX);
   }
 
+  /**
+   * For a cut-scene: plays this track (or keeps what's playing) and holds it
+   * there, so walking into another area or the hour turning doesn't change it,
+   * until releaseMusic().
+   */
+  holdMusic(name?: TrackName, fade = 2.5): void {
+    this.held = false;
+    if (name) this.playMusic(name, fade);
+    this.afterHold = undefined;
+    this.held = true;
+  }
+
+  /** Lets the music go again after a cut-scene: whatever was asked for meanwhile plays now. */
+  releaseMusic(): void {
+    if (!this.held) return;
+    this.held = false;
+    const next = this.afterHold;
+    this.afterHold = undefined;
+    if (next) this.playMusic(next.name, next.fade);
+  }
+
   stopMusic(): void {
+    this.held = false;
+    this.afterHold = undefined;
     this.wanted = undefined;
     window.clearTimeout(this.musicTimer);
     this.musicTimer = 0;
@@ -503,7 +533,7 @@ class AudioEngine {
   /** Tells the music the in-game hour, so a place's day tune gives way to its night one. */
   setHour(hour: number): void {
     this.hour = hour;
-    if (this.wanted && this.unlocked && this.recorded) {
+    if (!this.held && this.wanted && this.unlocked && this.recorded) {
       const file = musicFileFor(MUSIC_FILES[this.wanted], hour);
       if (file !== this.playing && !this.broken.has(file) && !this.musicTimer) this.switchMusic(this.wanted, 6);
     }
