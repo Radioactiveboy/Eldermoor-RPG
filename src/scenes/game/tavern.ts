@@ -13,7 +13,7 @@ import { Inventory, itemDef, ItemId } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
 import { CHECKOUT_HOUR, MENU, RENT_OPTIONS, Tavern } from '../../systems/Tavern';
 import { Seat } from '../../world/MapData';
-import { BAR_PICKUP, CELLAR_RATS } from '../../world/TavernMap';
+import { BAR_PICKUP, CELLAR_RATS } from '../../world/landmarks';
 import type { GameScene } from '../GameScene';
 import type { DialogueAction } from './dialogueActions';
 import { give } from './sights';

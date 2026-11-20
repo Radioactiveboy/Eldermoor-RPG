@@ -27,10 +27,6 @@ function emptyRoom(floor: Terrain): Pick<MapData, 'width' | 'height' | 'terrain'
   return { width: W, height: H, terrain, props };
 }
 
-/** Where Osric stands at the anvil, and Hilde at her trough (for the sparks and the flour, see scenes/game/workshops.ts). */
-export const ANVIL = { x: 3.5, y: 3.3 };
-export const TROUGH = { x: 4, y: 3.3 };
-
 /**
  * Osric's smithy: flagged floor and bare stone walls, the forge against the
  * back wall with its bellows beside it and the coal heaped in the corner, the

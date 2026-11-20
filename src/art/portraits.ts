@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE as P } from './palette';
 import { PixelCanvas } from './PixelCanvas';
+import { PORTRAIT_SIZE } from './sizes';
 
 /**
  * Talking portraits for conversations: head and shoulders, lit from the
@@ -13,7 +14,8 @@ import { PixelCanvas } from './PixelCanvas';
  * Each portrait has three frames: 0 mouth closed, 1 mouth open, 2 blinking.
  */
 
-export const PORTRAIT_SIZE = 96;
+// The size lives in sizes.ts, so scenes can use it without loading the painters.
+export { PORTRAIT_SIZE };
 const S = PORTRAIT_SIZE;
 /** The middle of the face. */
 const CX = 48;

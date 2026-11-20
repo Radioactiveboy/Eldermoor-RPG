@@ -5,6 +5,7 @@ import { MODEL_ART, registerModel } from './interior';
 import { bakerModel, smithModel } from './models3d';
 import { PixelCanvas } from './PixelCanvas';
 import { PALETTE as P } from './palette';
+import { HAMMER_STROKE } from '../world/landmarks';
 
 /**
  * Inside Adowvale's two workshops (see world/WorkshopMaps.ts): Osric's smithy
@@ -360,7 +361,6 @@ function animated(scene: Phaser.Scene, key: string, build: (frame: number) => Is
 }
 
 /** The two traders' working strokes, top to bottom and back (see generateWorkFrames). */
-const HAMMER_STROKE = [1, 0.65, 0.3, 0.05, 0, 0.45, 1, 1];
 const KNEAD_STROKE = [0, 0.35, 0.75, 1, 0.7, 0.3];
 
 export function generateWorkshops(scene: Phaser.Scene): void {
@@ -381,6 +381,3 @@ export function generateWorkshops(scene: Phaser.Scene): void {
   generateWorkFrames(scene, 'folk-smith', smithModel, HAMMER_STROKE, 8);
   generateWorkFrames(scene, 'folk-baker', bakerModel, KNEAD_STROKE, 6);
 }
-
-/** The frame of the smith's hammer stroke where it lands on the anvil (for the sparks, see scenes/game/workshops.ts). */
-export const HAMMER_LANDS = HAMMER_STROKE.indexOf(1, 1);

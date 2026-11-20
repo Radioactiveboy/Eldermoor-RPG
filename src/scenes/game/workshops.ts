@@ -6,12 +6,11 @@
  */
 import Phaser from 'phaser';
 import { GameAudio } from '../../audio/Audio';
-import { HAMMER_LANDS } from '../../art/workshops';
 import { depthAt, gridToScreen } from '../../iso/IsoMath';
 import { QuestLog } from '../../systems/Quests';
 import { Villager, whereabouts } from '../../systems/VillageDay';
 import { AreaId } from '../../world/MapData';
-import { ANVIL, TROUGH } from '../../world/WorkshopMaps';
+import { ANVIL, HAMMER_LANDS, TROUGH } from '../../world/landmarks';
 import type { GameScene } from '../GameScene';
 
 type Workshop = Extract<AreaId, 'smithy' | 'bakery'>;

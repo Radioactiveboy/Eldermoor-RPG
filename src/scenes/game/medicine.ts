@@ -3,7 +3,7 @@ import { GameAudio } from '../../audio/Audio';
 import { Recipe } from '../../systems/Crafting';
 import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
-import { MOONPETAL } from '../../world/AbbeyMap';
+import { MOONPETAL } from '../../world/landmarks';
 import type { GameScene } from '../GameScene';
 import type { DialogueAction } from './dialogueActions';
 import { askToSleep } from './sleep';

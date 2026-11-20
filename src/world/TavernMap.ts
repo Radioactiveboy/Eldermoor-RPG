@@ -1,6 +1,7 @@
 import { ABBEY_WALL_HEIGHT } from '../art/abbey';
 import { ROOM_COUNT } from '../systems/Tavern';
 import { box, circle } from './Collision';
+import { CELLAR_RATS } from './landmarks';
 import { CreatureSpawn, MapData, MapObject, placeObject, Prop, Seat, Terrain } from './MapData';
 
 /**
@@ -9,11 +10,7 @@ import { CreatureSpawn, MapData, MapObject, placeObject, Prop, Seat, Terrain } f
  * to let, a room, and the cellar where Godric's rats are.
  */
 
-/** Where a maid goes to fetch an order from the bar. */
-export const BAR_PICKUP = { x: 7.5, y: 3.5 };
-
-/** The rats in the cellar, in two nests (see the 'cellar-rats' quest). */
-export const CELLAR_RATS = ['cellar-rat-1', 'cellar-rat-2', 'cellar-rat-3', 'cellar-rat-4', 'cellar-rat-5', 'cellar-rat-6'];
+// Where the maids fetch orders from the bar, and the cellar's rats, are in landmarks.ts.
 
 function emptyRoom(w: number, h: number, floor: Terrain): Pick<MapData, 'width' | 'height' | 'terrain' | 'props'> {
   const terrain: Terrain[][] = [];

@@ -251,9 +251,13 @@ src/
   tools/build-sound.py    Does the same for the music, fight sounds and voice barks
   tools/balance.ts        The balance table from the fight simulator (`npm run sim`)
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
+  world/landmarks.ts      Spots in the maps the rest of the game reads (the bar, the cellar rats, the moonpetal, the
+                          monastery gate), kept out of the map files so those can download on their own
   settings/Settings.ts    Volume and display settings, saved in the browser
   ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
   ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
+  vendor/phaser.js        A slimmer Phaser (what `import Phaser from 'phaser'` gets), built from Phaser's source
+  systems/Download.ts     Retries a download that failed, for the parts of the game fetched after the first
   scenes/BootScene.ts     Draws the art behind a loading bar (the title screen's first, the rest while it's up),
                           repaints the hero when gear changes, then opens the main menu
   scenes/MainMenuScene.ts Title screen over the drifting world map
@@ -261,8 +265,9 @@ src/
   scenes/SettingsScene.ts Volume sliders, resolution, interface size and fullscreen, opened from either menu
   scenes/GameScene.ts     The world scene: builds the area, runs the frame, camera, talking, menus. The rest of what
                           happens in the world is in scenes/game/, as functions that take the scene:
-  scenes/game/areas.ts    The area registry: each area id, how its map is built, whether ?area= starts there, and
-                          what happens on arriving. A new area is one entry here (plus AreaId and AREA_NAMES)
+  scenes/game/areas.ts    The area registry: each area id, how its map is built (most with `lazy(...)`, fetched on
+                          first need), whether ?area= starts there, and what happens on arriving. A new area is one
+                          entry here (plus AreaId and AREA_NAMES)
   scenes/game/interactions.ts  What the E prompt can do (talk, door, sit, sleep, pick, shake, hunt) and which one shows
   scenes/game/dialogueActions.ts  Runs a line's `action`: shop:, drink:, order:, road:, rent:, and the named ones,
                           which live with their part of the story:
@@ -326,6 +331,19 @@ tests/
   "Drawing the rest of the world…" and finishes it first, and any other scene that starts also finishes
   it first, so nothing past the title screen ever sees missing art. A new step goes near the end (each
   step may use art from the steps above it); mark it `title` only if the title screen's map shows it.
+  Steps past the title screen can be `load: () => import('./x').then((m) => m.generateX)` instead of
+  `draw`: their code is then a file of its own, downloaded while the title art is drawn. That only
+  splits it off if nothing else imports the painter (sizes the scenes need go in `art/sizes.ts`).
+- **The download comes in pieces** (see `vite.config.ts`). Phaser is a file of its own (`phaser-*.js`),
+  so an update to the game doesn't make returning players download it again, and it's built from
+  Phaser's source without the parts the game doesn't use (physics, tilemaps, video, meshes...):
+  `src/vendor/phaser.js` lists what's in, and is where to add a Phaser feature back if one turns up
+  missing (say `this.add.tileSprite` is undefined). Most area maps are separate files too, fetched
+  the first time they're needed: the title screen fetches the area the game opens in, each area fetches
+  the maps behind its doors a moment after arriving, and if one still isn't here on arrival the screen
+  stays dark with "On the way…" (or "Waiting for the connection…" if it keeps failing) until it is.
+  Import a map file only from `scenes/game/areas.ts`, through `lazy(...)`; anything else that needs a
+  spot from a map reads it from `world/landmarks.ts`. `npm run build` lists every file and its size.
 - **Measuring boot:** the game sets performance marks you can read in the browser console with
   `performance.getEntriesByName('eldermoor:menu')` (also `eldermoor:boot`, `eldermoor:title-art`,
   `eldermoor:art` when all the art is drawn, and `eldermoor:area` when the first area is up).
