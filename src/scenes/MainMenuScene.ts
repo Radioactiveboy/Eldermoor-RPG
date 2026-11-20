@@ -9,6 +9,8 @@ import type { GameSceneData } from './GameScene';
 import { bodyStyle, makeButton, THEME, titleStyle } from '../ui/Widgets';
 import { openSettings } from './SettingsScene';
 import { ArtLoader } from '../art';
+import { retry } from '../systems/Download';
+import { areaReady, arrivalArea, loadArea, prefetchArea } from './game/areas';
 
 /**
  * Title screen. The real world map drifts slowly behind a darkened veil, with
@@ -114,6 +116,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     // With a saved game, Continue comes first, with where and when it was saved underneath.
     const save = SaveGame.read();
+    // Fetch the map the game will open on while the title screen is up (see game/areas.ts).
+    prefetchArea(arrivalArea(save ? { load: save } : { newGame: true, area: 'home' }));
     const items: Phaser.GameObjects.GameObject[] = [];
     let y = -10;
     if (save) {
@@ -188,9 +192,11 @@ export class MainMenuScene extends Phaser.Scene {
   private startGame(save?: SaveData): void {
     if (this.leaving || !this.input.enabled) return;
     this.leaving = true;
-    if (!ArtLoader.finished) {
-      // The rest of the art is still being drawn (see BootScene). Say so, and once that's on screen
-      // (a frame later), draw the rest in one go.
+    const data: GameSceneData = save ? { load: save } : { newGame: true, area: 'home' };
+    const area = arrivalArea(data);
+    if (!ArtLoader.finished || !areaReady(area)) {
+      // The rest of the art is still being drawn (see BootScene), or the first area's map is still
+      // on its way. Say so, and once that's on screen (a frame later), draw the rest and wait for the map.
       this.waitingFor = this.add.text(0, this.soundHint.y, 'Drawing the rest of the world…', bodyStyle(16, THEME.dimText)).setOrigin(0.5);
       this.ui.add(this.waitingFor);
       this.cameras.main.ignore(this.waitingFor);
@@ -199,21 +205,20 @@ export class MainMenuScene extends Phaser.Scene {
       const wait = () => {
         if (++frames < 2) return;
         this.events.off(Phaser.Scenes.Events.UPDATE, wait);
-        ArtLoader.finish(this);
-        this.leave(save);
+        const stuck = () => this.waitingFor?.setText('Waiting for the connection…');
+        void Promise.all([ArtLoader.drawAll(this), retry(() => loadArea(area), stuck)]).then(() => this.leave(data));
       };
       this.events.on(Phaser.Scenes.Events.UPDATE, wait);
       return;
     }
-    this.leave(save);
+    this.leave(data);
   }
 
-  private leave(save?: SaveData): void {
+  /** Into the game: a new one begins at home, inside the cottage. */
+  private leave(data: GameSceneData): void {
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.uiCam.fadeOut(700, 0, 0, 0);
     this.uiCam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      // A new game begins at home, inside the cottage.
-      const data: GameSceneData = save ? { load: save } : { newGame: true, area: 'home' };
       this.scene.start('Game', data);
       this.scene.launch('UI');
     });

@@ -1,6 +1,6 @@
 import { Display } from '../ui/Display';
 import Phaser from 'phaser';
-import { itemScale } from '../art/items';
+import { itemScale } from '../art/sizes';
 import { GameAudio } from '../audio/Audio';
 import { Inventory, ItemDef, itemDef, itemEffects, ItemId } from '../systems/Inventory';
 import { ShopDef, ShopId, Shops } from '../systems/Shops';
