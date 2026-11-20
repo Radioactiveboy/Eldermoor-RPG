@@ -202,13 +202,19 @@ src/
   art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
                           boulders, bones, the dead ewes and the locked door
   art/fishing.ts          Old Tobin's rod, float and creel
+  art/figure3d.ts         The 3D figure renderer every person is drawn with: rounded solids, turned to 8 directions and
+                          lit as pixel art, with idle, walk, sit and work frames
+  art/models3d.ts         The villagers' 3D models (traders, militia, toll guards, brothers, tavern folk, Iran and his
+                          children, Tobin, the road travellers), registered as 'folk-<id>' by folk.ts
+  art/wayfarers3d.ts      The folk met by chance on the plains (and the footpads' fighting frames)
+  art/mother3d.ts         Mother's 3D model
   art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker
   art/gear.ts             How worn gear looks on the hero's sprite (every head, body, feet and hand item): add an entry to dress new items
   tools/gear-preview.html The hero in every piece of gear, all 8 directions (open /tools/gear-preview.html under `npm run dev`)
   art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
-                          the grey wolf (creatures.ts), travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
+                          the grey wolf (creatures.ts) and birds, ripples and smoke (critters.ts)
   audio/Audio.ts          All the game's sound: picks the music by area and hour, plays fight sounds and voice
                           barks, and composes UI blips (and stand-in tunes and sounds if a recording won't load)
   audio/Recordings.ts     Streams and crossfades the recorded music; fetches and plays the fight sounds and barks

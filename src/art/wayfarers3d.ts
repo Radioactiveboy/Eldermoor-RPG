@@ -498,16 +498,18 @@ export function goatSheet(): BeastSheet {
   return { spec: goatSpec(), models: GOAT_POSES.map((pose, i) => goatModel(pose, i === BEAST_FRAME.dead)) };
 }
 
+/** The people met on the plains, by their 'folk-<id>' key. */
+export const WAYFARER_MODELS: Record<string, (pose: Pose3D) => Model> = {
+  footpad: rookModel,
+  cutpurse: nabModel,
+  tinker: tinkerModel,
+  goatherd: goatherdModel,
+  courier: courierModel,
+};
+
 /** The wayfarers' figures ('folk-<id>'), the footpads' fighting sheets and the goat's ('creature-<kind>'). */
 export function generateWayfarers(scene: Phaser.Scene): void {
-  const folk: Record<string, (pose: Pose3D) => Model> = {
-    footpad: rookModel,
-    cutpurse: nabModel,
-    tinker: tinkerModel,
-    goatherd: goatherdModel,
-    courier: courierModel,
-  };
-  for (const [id, build] of Object.entries(folk)) generateFigure3D(scene, `folk-${id}`, build);
+  for (const [id, build] of Object.entries(WAYFARER_MODELS)) generateFigure3D(scene, `folk-${id}`, build);
   generateBeast(scene, 'footpad', footpadSheet(ROOK), 9);
   generateBeast(scene, 'cutpurse', footpadSheet(NAB), 9);
   generateBeast(scene, 'goat', goatSheet(), 8);

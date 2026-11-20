@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { DrawnDir, FEET_Y, FRAME_H } from '../art/character';
+import { FEET_Y, FRAME_H } from '../art/character';
+import { DIRECTIONS_8 } from '../art/figure3d';
 import type { ChildLine } from '../dialogue/iran';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import type { Speaker } from '../ui/SpeechBubbles';
@@ -88,11 +89,8 @@ export class Child implements Speaker {
     const facing = (Math.round(Math.atan2(screen.x, screen.y) / (Math.PI / 4)) + 8) % 8;
     if (facing === this.facing && this.sprite.anims.isPlaying) return;
     this.facing = facing;
-    // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored.
-    const names: DrawnDir[] = ['s', 'se', 'e', 'ne', 'n'];
-    const mirrored = facing > 4;
-    this.sprite.setFlipX(mirrored);
-    this.sprite.play(`folk-${this.id}-idle-${names[mirrored ? 8 - facing : facing]}`, true);
+    // Modelled in 3D, so all eight facings are drawn (and lit from the same side): no mirroring.
+    this.sprite.play(`folk-${this.id}-idle-${DIRECTIONS_8[facing].name}`, true);
   }
 }
 
