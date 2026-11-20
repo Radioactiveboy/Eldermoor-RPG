@@ -1,4 +1,4 @@
-import { FIST_DIE, Weapon, WEAPON_DIE, weaponEffectText } from './Combat';
+import { boonText, FightBoon, FIST_DIE, Weapon, WEAPON_DIE, weaponEffectText } from './Combat';
 import { SaveGame } from './SaveGame';
 
 /**
@@ -38,6 +38,12 @@ export interface ItemDef {
   eat?: { health?: number; stamina?: number };
   /** Drunk rather than eaten (ale, mead): "Drink" in the satchel, and a gulp instead of a crunch. */
   drink?: boolean;
+  /**
+   * A brew's effect in a fight, for the rest of it (wolfsbane on the blade, a
+   * bracing draught). It's used with the fight's Eat action; an item with a boon
+   * and nothing to eat (an oil) can only be used in a fight.
+   */
+  boon?: FightBoon;
   /** What it costs at a stall, in coins. Traders pay less to buy it (see systems/Shops.ts); no value means nobody will buy it. */
   value?: number;
 }
@@ -561,6 +567,233 @@ export const ITEMS = {
     eat: { health: 38, stamina: 30 },
     value: 9,
   },
+  // Wild herbs, gathered on the plains and in the cloister garden (see systems/Herbs.ts). They grow back in a day or two.
+  yarrow: {
+    name: 'Yarrow',
+    description: "Feathery leaves and flat heads of tiny white flowers. Soldiers' woundwort, Mother calls it: it stops a cut bleeding.",
+    icon: 'item-yarrow',
+    category: 'Material',
+    stack: 20,
+    value: 1,
+  },
+  comfrey: {
+    name: 'Comfrey',
+    description: 'Big hairy leaves and drooping purple bells, from damp ground. Knitbone: good for bruises, sprains and worse.',
+    icon: 'item-comfrey',
+    category: 'Material',
+    stack: 20,
+    value: 1,
+  },
+  nettle: {
+    name: 'Stinging Nettle',
+    description: 'A fistful of nettle tops, picked carefully. They sting like anything raw, but steeped they put the spring back in your legs.',
+    icon: 'item-nettle',
+    category: 'Material',
+    stack: 20,
+    value: 1,
+  },
+  wolfsbane: {
+    name: 'Wolfsbane',
+    description: 'Tall spikes of hooded violet flowers. Deadly poison, every scrap of it; the old hunters rubbed it on their spears for wolves.',
+    icon: 'item-wolfsbane',
+    category: 'Material',
+    stack: 10,
+    value: 3,
+  },
+  sage: {
+    name: 'Sage',
+    description: "Soft grey-green leaves from Brother Anselm's beds, smelling warm and clean. The brothers say it steadies the heart.",
+    icon: 'item-sage',
+    category: 'Material',
+    stack: 20,
+    value: 1,
+  },
+  // More brews from Old Maud's bench.
+  'healing-draught': {
+    name: 'Healing Draught',
+    description: 'Comfrey and yarrow steeped together into a green-gold draught that tastes of hay and pennies. It closes cuts and eases bruises.',
+    icon: 'item-healing-draught',
+    category: 'Potion',
+    stack: 5,
+    eat: { health: 40 },
+    drink: true,
+    value: 10,
+  },
+  'stamina-tonic': {
+    name: 'Nettle Tonic',
+    description: 'Nettle tops steeped with a sweet apple. Sharp, fizzing and bright green: one swig and your legs feel new.',
+    icon: 'item-stamina-tonic',
+    category: 'Potion',
+    stack: 5,
+    eat: { health: 5, stamina: 70 },
+    drink: true,
+    value: 7,
+  },
+  'wolfsbane-oil': {
+    name: 'Wolfsbane Oil',
+    description:
+      'Wolfsbane pounded with pine resin into a dark, sticky oil, in a stoppered horn. Wipe it on your blade before a fight with wolves, ' +
+      'and keep it well away from your mouth.',
+    icon: 'item-wolfsbane-oil',
+    category: 'Potion',
+    stack: 5,
+    boon: { kind: 'bane', family: 'wolf', sides: 6 },
+    value: 12,
+  },
+  'stout-draught': {
+    name: 'Stout Draught',
+    description: 'Sage and nettle in a dark, bitter draught. It sits in your belly like a warm stone, and the next blow seems to matter less.',
+    icon: 'item-stout-draught',
+    category: 'Potion',
+    stack: 5,
+    eat: { health: 8 },
+    drink: true,
+    boon: { kind: 'ward', armour: 2 },
+    value: 10,
+  },
+  // Fishing (see systems/Fishing.ts): Old Tobin's spare rod, and what bites in the lake, the mere and the ponds.
+  'fishing-rod': {
+    name: 'Fishing Rod',
+    description: "Old Tobin's spare: a hazel rod, a horsehair line and a red and white float. Stand at the water's edge and press E to fish.",
+    icon: 'item-fishing-rod',
+    category: 'Tool',
+    stack: 1,
+    value: 4,
+  },
+  perch: {
+    name: 'Perch',
+    description: 'Green-gold with dark bars and a spiny red fin. Bony, but sweet.',
+    icon: 'item-perch',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 2, stamina: 3 },
+    value: 2,
+  },
+  roach: {
+    name: 'Roach',
+    description: 'A little silver fish with red eyes. There are thousands of them; Tobin calls them the lake\'s small change.',
+    icon: 'item-roach',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 1, stamina: 2 },
+    value: 1,
+  },
+  pike: {
+    name: 'Pike',
+    description: 'Long, mottled green and all teeth. Not Old Grandfather, but a good one: it fought all the way to the bank.',
+    icon: 'item-pike',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 3, stamina: 3 },
+    value: 9,
+  },
+  eel: {
+    name: 'Eel',
+    description: 'Slippery, dark and still wriggling. They come out of the mud at night.',
+    icon: 'item-eel',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 2, stamina: 2 },
+    value: 4,
+  },
+  tench: {
+    name: 'Tench',
+    description: 'A fat olive-green fish with little red eyes, from the weedy shallows. The doctor fish, they call it.',
+    icon: 'item-tench',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 2, stamina: 3 },
+    value: 4,
+  },
+  carp: {
+    name: 'Carp',
+    description: "A heavy golden carp from the brothers' ponds. Brother Aldo knows every one by name, so perhaps don't tell him.",
+    icon: 'item-carp',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 3, stamina: 3 },
+    value: 6,
+  },
+  trout: {
+    name: 'Brown Trout',
+    description: 'Speckled red and black, from the cold brook-fed pool under the Greyfells. A lovely fish.',
+    icon: 'item-trout',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 2, stamina: 3 },
+    value: 5,
+  },
+  'old-boot': {
+    name: 'Old Boot',
+    description: 'A sodden leather boot, green with weed. Tobin has caught this one before, by the look of it.',
+    icon: 'item-old-boot',
+    category: 'Material',
+    stack: 1,
+  },
+  // Fish cooked at a hearth.
+  'grilled-perch': {
+    name: 'Grilled Perch',
+    description: 'Crisp skin, white flakes, and only a few bones to pick out.',
+    icon: 'item-grilled-perch',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 14, stamina: 12 },
+    value: 4,
+  },
+  'fried-roach': {
+    name: 'Fried Roach',
+    description: 'Three little roach, fried crisp. Eat them whole, bones and all.',
+    icon: 'item-fried-roach',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 9, stamina: 10 },
+    value: 2,
+  },
+  'baked-pike': {
+    name: 'Baked Pike',
+    description: 'A whole pike baked in the embers, enough for a family. Rich and meaty.',
+    icon: 'item-baked-pike',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 34, stamina: 24 },
+    value: 14,
+  },
+  'smoked-eel': {
+    name: 'Smoked Eel',
+    description: 'Hung over the fire till it turns gold and oily. It keeps for days.',
+    icon: 'item-smoked-eel',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 20, stamina: 18 },
+    value: 7,
+  },
+  'grilled-tench': {
+    name: 'Grilled Tench',
+    description: 'Earthy and soft, with a crackle of skin. Better than it sounds.',
+    icon: 'item-grilled-tench',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 18, stamina: 14 },
+    value: 6,
+  },
+  'roast-carp': {
+    name: 'Roast Carp',
+    description: 'A golden carp roasted on the spit, the way the brothers do it on feast days.',
+    icon: 'item-roast-carp',
+    category: 'Food',
+    stack: 5,
+    eat: { health: 26, stamina: 20 },
+    value: 10,
+  },
+  'grilled-trout': {
+    name: 'Grilled Trout',
+    description: 'Pink-fleshed and delicate, with a sprig of thyme. Lord Morten eats no better.',
+    icon: 'item-grilled-trout',
+    category: 'Food',
+    stack: 10,
+    eat: { health: 22, stamina: 16 },
+    value: 8,
+  },
 } satisfies Record<string, ItemDef>;
 
 export type ItemId = keyof typeof ITEMS;
@@ -582,6 +815,7 @@ export function itemEffects(def: ItemDef): string[] {
   const verb = def.drink ? 'Drink' : 'Eat';
   if (def.eat?.health) lines.push(`${verb}: +${def.eat.health} health`);
   if (def.eat?.stamina) lines.push(`${verb}: +${def.eat.stamina} stamina`);
+  if (def.boon) lines.push(`In a fight: ${boonText(def.boon)}`);
   if (def.slot) lines.push(`Worn: ${EQUIP_SLOTS.find((s) => s.id === def.slot)!.label}`);
   if (def.defence) lines.push(`Defence +${def.defence}`);
   if (def.attack) lines.push(`Attack +${def.attack}`);

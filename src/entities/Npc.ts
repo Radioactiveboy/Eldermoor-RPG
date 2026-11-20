@@ -249,7 +249,11 @@ const NPCS: Record<string, NpcDef> = {
     script: () => {
       const first = !met.has('fisherman');
       met.add('fisherman');
-      return fishermanScript(first, QuestLog.hasFlag('found-cave-door'));
+      return fishermanScript(first, QuestLog.hasFlag('found-cave-door'), {
+        hasRod: Inventory.count('fishing-rod') > 0,
+        coins: Inventory.coins,
+        hasBoot: Inventory.count('old-boot') > 0 && !QuestLog.hasFlag('tobin-boot'),
+      });
     },
   },
   // The market's stallholders stand behind their counters, while the market is open.

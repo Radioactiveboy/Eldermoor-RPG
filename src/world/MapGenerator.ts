@@ -84,6 +84,8 @@ export function generateMap(width: number, height: number, seed: string): MapDat
   addPathNorth(data, home.x + 7, 4);
   addHenFarm(data, home.x - 4, home.y - 23);
   addFisherman(data, Math.round(lake.x));
+  // Fishing, with a rod from Tobin (see systems/Fishing.ts).
+  data.waters = [{ id: 'lake', gx: lake.x, gy: lake.y, r: lake.r }];
   joinDiagonals(terrain, Terrain.Dirt, Terrain.Grass);
   // A lone wolf nosing about south of the cottage, in sight of the door.
   (data.creatures ??= []).push({ id: 'cottage-wolf', kind: 'wolf', gx: home.x + 5.5, gy: home.y + 6.5 });

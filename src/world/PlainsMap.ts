@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { box, circle } from './Collision';
 import { CreatureSpawn, MapData, placeObject, Prop, Terrain } from './MapData';
+import type { HerbKind } from '../systems/Herbs';
+import { plantHerbNear } from './HerbPatches';
 import { tollGateShape } from './MarketMap';
 import { joinDiagonals, paintPath, smoothLine, spaced, Vec } from './MapGenerator';
 
@@ -351,5 +353,28 @@ export function buildPlainsMap(): MapData {
     const p = road[Math.floor(road.length * along)];
     data.npcs!.push({ id, gx: p.x, gy: p.y });
   }
+
+  // Wild herbs for Old Maud's bench (see world/HerbPatches.ts): yarrow by the roads, comfrey on damp ground by the
+  // water, nettles at the edges of the copses, and wolfsbane up by the Wolf Mother's knoll and in the upland.
+  const herbs: Array<[string, HerbKind, number, number]> = [
+    ['yarrow-gate', 'yarrow', gateX + 5, H - 9],
+    ['yarrow-cross', 'yarrow', cross.x - 5, cross.y + 4],
+    ['yarrow-north-road', 'yarrow', northTop.x + 4, 40],
+    ['comfrey-mere', 'comfrey', mere.x - mere.r - 1.5, mere.y + 2],
+    ['comfrey-pond', 'comfrey', pond.x + pond.r + 1.5, pond.y],
+    ['comfrey-willow', 'comfrey', WILLOW_POOL.x - WILLOW_POOL.r - 1.5, WILLOW_POOL.y + 2],
+    ['wolfsbane-den', 'wolfsbane', denMouth.x - 5, denMouth.y + 7],
+    ['wolfsbane-upland', 'wolfsbane', 64, 10],
+  ];
+  copses.slice(0, 3).forEach((c, i) => herbs.push([`nettle-copse-${i}`, 'nettle', c.x - c.r - 1, c.y + 1]));
+  herbs.push(['nettle-gate', 'nettle', gateX - 6, H - 12]);
+  for (const [id, kind, x, y] of herbs) plantHerbNear(data, id, kind, x, y, [Terrain.Grass, Terrain.Sand]);
+
+  // Where there's fishing (see systems/Fishing.ts).
+  data.waters = [
+    { id: 'mere', gx: mere.x, gy: mere.y, r: mere.r },
+    { id: 'reed-pond', gx: pond.x, gy: pond.y, r: pond.r },
+    { id: 'willow-pool', gx: WILLOW_POOL.x, gy: WILLOW_POOL.y, r: WILLOW_POOL.r },
+  ];
   return data;
 }

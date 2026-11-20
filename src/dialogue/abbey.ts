@@ -115,6 +115,7 @@ export function anselmScript(stage: HerbStage, first: boolean): DialogueScript {
           'Moonpetal and white willow, steeped together. Yes, that is the old remedy, and a good one. It breaks a fever and eases the chest.',
           'I had a jar of the dried, but it went on Brother Leofric when the wolves had him. Not to worry. The fresh is in flower now, round the pond. Silver-blue, like little stars.',
           'Pick the three blooms that are open, with my blessing. But you will need the willow bark as well, and that I have none of. White willow grows by water. Find some, and your mother shall have her tincture.',
+          'And take a little of the sage and the comfrey from the beds whenever you need it. They grow back faster than we can use them.',
           "It wants brewing at a proper bench, mind, and our stillroom's copper split in the frost. The new one won't come till spring. But in Adowvale, Godric at the Crooked Tankard had a grandmother, Maud, who brewed the best cordials in the shire. They say her bench is still down in his cellar. Ask him.",
         ],
         action: 'anselm-moonpetal',

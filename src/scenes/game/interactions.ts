@@ -1,17 +1,19 @@
 /**
  * What the hero can do where they stand (talk, use a door, sit, sleep, pick,
- * shake a tree, hunt), and choosing which one the E prompt shows.
+ * shake a tree, hunt, fish), and choosing which one the E prompt shows.
  */
 import { SpeakerId, SPEAKERS } from '../../dialogue/Dialogue';
 import { Creature } from '../../entities/Creature';
 import { Npc } from '../../entities/Npc';
 import { gridToScreen } from '../../iso/IsoMath';
 import { CROPS, Farm } from '../../systems/Farm';
+import { Herbs } from '../../systems/Herbs';
 import { GridPoint } from '../../systems/Pathfinding';
 import { QuestLog } from '../../systems/Quests';
 import { Bed, CropPatch, Door, Prop, Seat, Sight } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import { startCombat } from './combat';
+import { fishInteraction } from './fishing';
 import { examine, pickCrop, shakeTree } from './sights';
 import { sitOn, standUp } from './sitting';
 import { goToBed } from './sleep';
@@ -75,7 +77,10 @@ export function interactionsNear(g: GameScene, gx: number, gy: number): Interact
   for (const sight of g.map.data.sights ?? []) {
     // A pile already searched has nothing more to give.
     if (sight.loot && QuestLog.hasFlag(`searched-${sight.id}`)) continue;
-    if (sight.gather && QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
+    if (sight.gather?.regrow) {
+      // A wild herb: only once it has grown back.
+      if (!Herbs.isReady(sight.id, g.clock.elapsedHours)) continue;
+    } else if (sight.gather && QuestLog.hasFlag(`gathered-${sight.id}`)) continue;
     list.push(sightInteraction(g, sight));
   }
   for (const bed of g.map.data.beds ?? []) list.push(bedInteraction(g, bed));
@@ -85,6 +90,8 @@ export function interactionsNear(g: GameScene, gx: number, gy: number): Interact
       if (i) list.push(i);
     }
   }
+  const fish = fishInteraction(g, gx, gy);
+  if (fish) list.push(fish);
   const tx = Math.floor(gx);
   const ty = Math.floor(gy);
   for (let y = ty - 2; y <= ty + 2; y++) {

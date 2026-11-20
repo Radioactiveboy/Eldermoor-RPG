@@ -1,11 +1,12 @@
 /**
  * Story effects triggered by lines of dialogue (the `action` on a line or reply,
  * see dialogue/Dialogue.ts). The named ones live with their part of the story
- * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts); add new ones there.
+ * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts, fishing.ts); add new ones there.
  */
 import { ItemId } from '../../systems/Inventory';
 import { ShopId, SHOPS } from '../../systems/Shops';
 import type { GameScene } from '../GameScene';
+import { FISHING_ACTIONS } from './fishing';
 import { HOLLOW_ACTIONS } from './hollow';
 import { MEDICINE_ACTIONS } from './medicine';
 import { MONASTERY_ACTIONS } from './monastery';
@@ -22,6 +23,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...MONASTERY_ACTIONS,
   ...TAVERN_ACTIONS,
   ...RAID_ACTIONS,
+  ...FISHING_ACTIONS,
 };
 
 /** Runs a dialogue action: `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, or a named one. */

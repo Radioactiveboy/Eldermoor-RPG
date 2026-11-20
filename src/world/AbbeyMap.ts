@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { abbeyBuilding } from '../art/abbey';
 import { box, circle } from './Collision';
+import type { HerbKind } from '../systems/Herbs';
+import { plantHerb } from './HerbPatches';
 import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { MOONPETAL, monasteryGateShape } from './landmarks';
 import { joinDiagonals } from './MapGenerator';
@@ -13,6 +15,24 @@ const GATE_X = 20;
 /** The cloister: its arcade runs round this square, with a way in through the middle of each side. */
 const CLOISTER = { x0: 13, y0: 9, x1: 30, y1: 23 };
 // Where the moonpetal grows is in landmarks.ts (the medicine quest needs it wherever the hero is).
+
+/**
+ * Herbs in the cloister beds that the hero may gather (for Old Maud's bench),
+ * once Brother Anselm has given leave: sage along the north-west bed, comfrey
+ * in the south-west one (see world/HerbPatches.ts).
+ */
+const CLOISTER_HERBS: Array<{ id: string; kind: HerbKind; tx: number; ty: number }> = [
+  { id: 'cloister-sage-0', kind: 'sage', tx: 15, ty: 13 },
+  { id: 'cloister-sage-1', kind: 'sage', tx: 17, ty: 13 },
+  { id: 'cloister-sage-2', kind: 'sage', tx: 19, ty: 13 },
+  { id: 'cloister-comfrey-0', kind: 'comfrey', tx: 15, ty: 20 },
+  { id: 'cloister-comfrey-1', kind: 'comfrey', tx: 17, ty: 20 },
+  { id: 'cloister-comfrey-2', kind: 'comfrey', tx: 19, ty: 20 },
+];
+const ANSELMS_LEAVE = {
+  flag: 'may-pick-moonpetal',
+  thought: "Brother Anselm's herbs, neat as a page of writing. I should not pick any without asking him first.",
+};
 
 /**
  * Inside Saint Elda's walls, once Brother Wystan has opened the gate to the
@@ -193,7 +213,9 @@ export function buildAbbeyMap(): MapData {
       for (let x = x0; x <= x1; x++) {
         // Every other row is left as a path between the plants.
         if ((y - y0) % 2 === 1 || terrain[y][x] !== Terrain.Soil) continue;
-        add(`abbey-herbs-${(i + y) % 4}`, x, y, WADE);
+        const brothers = CLOISTER_HERBS.find((h) => h.tx === x && h.ty === y);
+        if (brothers) plantHerb(data, brothers.id, brothers.kind, x, y, ANSELMS_LEAVE);
+        else add(`abbey-herbs-${(i + y) % 4}`, x, y, WADE);
       }
     }
   });

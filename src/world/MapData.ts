@@ -2,6 +2,7 @@ import type { TrackName } from '../audio/Audio';
 import type { HenKind } from '../art/henfarm';
 import type { FoeKind } from '../systems/Combat';
 import type { CropKind } from '../systems/Farm';
+import type { WaterId } from '../systems/Fishing';
 import type { ItemId } from '../systems/Inventory';
 import type { Villager, Whereabouts } from '../systems/VillageDay';
 import type { Shape } from './Collision';
@@ -127,7 +128,18 @@ export interface Sight {
   /** A door that won't open (yet): trying it rattles the lock, and the hero wonders what's behind it. */
   locked?: boolean;
   /** Something growing that can be picked once (the moonpetal in the cloister garden): the item, and the art it's left as. */
-  gather?: { item: ItemId; picked: string };
+  gather?: {
+    item: ItemId;
+    picked: string;
+    /**
+     * A wild herb that grows back (see systems/Herbs.ts): the art it has while
+     * grown, how many one picking gives, and what the prompt says. Without it,
+     * it's picked once for good (the moonpetal, the willow's bark).
+     */
+    regrow?: { grown: string; count: number; verb: string };
+    /** A flag that must be set before it may be picked (the brothers' herbs, once Brother Anselm has said so), and the thought until then. */
+    needs?: { flag: string; thought: string };
+  };
   /** Just a thought on looking closely (a carving, a grave). */
   thought?: string;
   /** Somewhere to brew or cook: opens the station window (an id in systems/Crafting.ts STATIONS). */
@@ -308,6 +320,8 @@ export interface MapData {
   orchards?: Array<{ x0: number; y0: number; x1: number; y1: number }>;
   /** Road tiles in order from one end to the other, for travellers to wander along. */
   road?: Array<{ x: number; y: number }>;
+  /** Water that can be fished (see systems/Fishing.ts): which water, and roughly where it is. */
+  waters?: Array<{ id: WaterId; gx: number; gy: number; r: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
   /** Underground (with `indoor`): dark whatever the hour, so the hero's lantern is lit. */

@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import type { HerbKind } from '../systems/Herbs';
 import { circle } from './Collision';
+import { plantHerbNear } from './HerbPatches';
 import { CreatureSpawn, MapData, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine, Vec } from './MapGenerator';
 
@@ -287,6 +289,17 @@ export function buildNorthWoodsMap(goblinTrail: boolean): MapData {
   herd('nw-cat-thicket', 'wildcat', THICKETS.x, THICKETS.y, 2, 4, false);
   herd('nw-cat-tower', 'wildcat', TOWER.tx + 5, TOWER.ty - 1, 1, 2, false);
   herd('nw-cat-oak', 'wildcat', DEADFALL.tx + 3, DEADFALL.ty - 3, 1, 2, false);
+
+  // Wild herbs for Old Maud's bench (see world/HerbPatches.ts): wolfsbane in the shade by the tower and the fallen
+  // oak, nettles round the ruin, comfrey on the damp ground by the ford, and yarrow at the sunny edge of the glade.
+  const herbs: Array<[string, HerbKind, number, number]> = [
+    ['nw-wolfsbane-tower', 'wolfsbane', TOWER.tx + 4, TOWER.ty + 1],
+    ['nw-wolfsbane-oak', 'wolfsbane', DEADFALL.tx + 1, DEADFALL.ty + 3],
+    ['nw-nettle-tower', 'nettle', TOWER.tx - 1, TOWER.ty + 4],
+    ['nw-comfrey-ford', 'comfrey', ford.x - 3, ford.y + 2],
+    ['nw-yarrow-glade', 'yarrow', GLADE.x - GLADE.r, GLADE.y - 2],
+  ];
+  for (const [id, kind, x, y] of herbs) plantHerbNear(data, id, kind, x, y, [Terrain.Grass, Terrain.Sand]);
 
   if (goblinTrail) addGoblinTrail(data, goblinWay);
   return data;

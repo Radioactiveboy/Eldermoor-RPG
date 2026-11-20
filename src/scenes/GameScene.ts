@@ -400,6 +400,7 @@ export class GameScene extends Phaser.Scene {
     this.cropTimer -= dt;
     if (this.cropTimer <= 0) {
       syncCrops(this);
+      syncGathered(this);
       this.cropTimer = 1;
     }
 
@@ -434,12 +435,14 @@ export class GameScene extends Phaser.Scene {
   /** Eat a piece of food from the satchel. */
   eat(index: number): boolean {
     const stack = Inventory.bag[index];
-    const eat = stack && itemDef(stack.id).eat;
-    if (!eat) return false;
+    const def = stack && itemDef(stack.id);
+    // An oil (a boon and nothing to eat) is only used in a fight, which reads its boon itself.
+    if (!def || (!def.eat && !def.boon)) return false;
+    const eat = def.eat ?? {};
     Inventory.takeOne(index);
     if (eat.health) this.stats.heal(eat.health);
     if (eat.stamina) this.stats.restoreStamina(eat.stamina);
-    if (itemDef(stack.id).drink) GameAudio.gulp();
+    if (def.drink) GameAudio.gulp();
     else GameAudio.crunch();
     return true;
   }

@@ -35,6 +35,8 @@ const DRAG_START = 8;
 const SWEET = [0.78, 0.92] as const;
 /** Each stir of the pot (brewing) moves it on this much. */
 const STIR = 0.045;
+/** Recipes on each page of the recipe book; more turn over onto the next page. */
+const BOOK_PAGE = 7;
 
 interface Drag {
   /** Dragged from a satchel slot, or out of one of the station's ingredient slots. */
@@ -77,6 +79,8 @@ export class StationScene extends Phaser.Scene {
   /** What's in each ingredient slot. */
   private slots: Array<ItemId | undefined> = [];
   private batches = 1;
+  /** Which page of the recipe book is open. */
+  private bookPage = 0;
   private drag?: Drag;
   private work?: Work;
   private closing = false;
@@ -118,6 +122,7 @@ export class StationScene extends Phaser.Scene {
     this.def = STATIONS[data.station] ?? STATIONS['home-hearth'];
     this.slots = new Array(STATION_SLOTS).fill(undefined);
     this.batches = 1;
+    this.bookPage = 0;
     this.drag = undefined;
     this.work = undefined;
     this.closing = false;
@@ -470,8 +475,12 @@ export class StationScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     this.content.add(title);
 
-    const recipes = Crafting.recipesFor(this.def.kind);
-    const rowH = Math.min(62, (h - 56) / recipes.length);
+    const all = Crafting.recipesFor(this.def.kind);
+    const pages = Math.max(1, Math.ceil(all.length / BOOK_PAGE));
+    this.bookPage = Math.min(this.bookPage, pages - 1);
+    const recipes = all.slice(this.bookPage * BOOK_PAGE, (this.bookPage + 1) * BOOK_PAGE);
+    const rowH = Math.min(62, (h - 56 - (pages > 1 ? 34 : 0)) / Math.min(all.length, BOOK_PAGE));
+    if (pages > 1) this.buildBookPager(x0, y0 + h - 30, pages);
     recipes.forEach((r, i) => {
       const y = y0 + 48 + i * rowH;
       const known = Crafting.isKnown(r);
@@ -533,7 +542,7 @@ export class StationScene extends Phaser.Scene {
       this.content.add(hit);
     });
     // The rest of the book is still to be written.
-    if (recipes.length < 4) {
+    if (all.length < 4) {
       const blank = this.add.text(x0 + BOOK_W / 2, y0 + h - 40, 'The pages after this are blank...\nfor now.', {
         fontFamily: BODY_FONT,
         fontSize: '13px',
@@ -543,6 +552,34 @@ export class StationScene extends Phaser.Scene {
       }).setOrigin(0.5);
       this.content.add(blank);
     }
+  }
+
+  /** Turn the recipe book's pages: arrows either side of "page 1 of 2". */
+  private buildBookPager(x0: number, y: number, pages: number): void {
+    const label = this.add
+      .text(x0 + BOOK_W / 2, y, `page ${this.bookPage + 1} of ${pages}`, { fontFamily: BODY_FONT, fontSize: '13px', fontStyle: 'italic', color: '#6a5030' })
+      .setOrigin(0.5);
+    this.content.add(label);
+    const arrow = (dx: number, text: string, to: number) => {
+      const enabled = to >= 0 && to < pages;
+      const t = this.add
+        .text(x0 + BOOK_W / 2 + dx, y - 1, text, { fontFamily: THEME.font, fontSize: '22px', color: enabled ? '#5a2a10' : '#c0a880' })
+        .setOrigin(0.5);
+      if (enabled) {
+        t.setInteractive({ useHandCursor: true });
+        t.on('pointerover', () => t.setColor('#a04a18'));
+        t.on('pointerout', () => t.setColor('#5a2a10'));
+        t.on('pointerup', () => {
+          if (this.drag) return;
+          GameAudio.click();
+          this.bookPage = to;
+          this.build();
+        });
+      }
+      this.content.add(t);
+    };
+    arrow(-90, '‹', this.bookPage - 1);
+    arrow(90, '›', this.bookPage + 1);
   }
 
   private stepButton(x: number, y: number, label: string, onClick: () => void): Phaser.GameObjects.Container {

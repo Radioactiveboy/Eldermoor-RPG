@@ -34,7 +34,9 @@ describe('recipes', () => {
   });
 
   it('lists what each station will take', () => {
-    expect(Crafting.ingredientsFor('alchemy')).toEqual(new Set(['moonpetal', 'willow-bark']));
+    expect(Crafting.ingredientsFor('alchemy')).toEqual(
+      new Set(['moonpetal', 'willow-bark', 'comfrey', 'yarrow', 'nettle', 'apple', 'wolfsbane', 'pinecone', 'sage']),
+    );
   });
 });
 
