@@ -23,7 +23,8 @@ export type WolfStage = 'none' | 'active' | 'slain' | 'done';
  * @param clearedCave whether the hero has killed the wolves in the cave at home, which he has a word to say about
  * @param hasHide whether the hero has the Wolf Mother's hide to show for it
  */
-export function porterScript(stage: WolfStage, first: boolean, clearedCave: boolean, hasHide: boolean): DialogueScript {
+/** @param honoured the brothers think the world of the hero (their standing with Saint Elda's, see systems/Reputation.ts) */
+export function porterScript(stage: WolfStage, first: boolean, clearedCave: boolean, hasHide: boolean, honoured = false): DialogueScript {
   const quest: DialogueChoice[] =
     stage === 'none'
       ? [{ text: 'May I come inside?', next: 'inside' }]
@@ -58,7 +59,10 @@ export function porterScript(stage: WolfStage, first: boolean, clearedCave: bool
       },
       'again-open': {
         speaker: 'porter',
-        lines: [`${HERO_NAME}! Peace be with you. The gate is open, as I promised. Go in whenever you like.`],
+        lines: [
+          `${HERO_NAME}! Peace be with you. The gate is open, as I promised. Go in whenever you like.`,
+          ...(honoured ? ['The Prior asks after you, you know. Saint Elda has few better friends than you on this road. We remember you in the evening prayers.'] : []),
+        ],
         next: 'ask',
       },
       ask: {

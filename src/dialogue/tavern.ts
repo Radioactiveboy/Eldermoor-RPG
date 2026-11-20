@@ -1,5 +1,6 @@
 import { HERO_NAME } from '../config';
 import { itemDef, ItemId } from '../systems/Inventory';
+import type { RoadOutcome } from '../systems/Reputation';
 import { BAR_DRINKS, MENU, RENT_OPTIONS, TABLE_DRINKS, TABLE_FOOD } from '../systems/Tavern';
 import type { DialogueChoice, DialogueScript, SpeakerId } from './Dialogue';
 
@@ -228,7 +229,13 @@ export function landlordScript(s: LandlordState): DialogueScript {
 }
 
 /** Things Godric has heard, depending on how far the hero has got. */
-export function landlordNews(flags: { paidToll: boolean; slewWolfMother: boolean; foundCaveDoor: boolean; monasteryOpen: boolean }): string[] {
+export function landlordNews(flags: {
+  paidToll: boolean; slewWolfMother: boolean; foundCaveDoor: boolean; monasteryOpen: boolean;
+  /** How the hero's meetings on the plains went (see systems/Reputation.ts), which gets talked about in the Tankard. */
+  footpads?: RoadOutcome; goat?: RoadOutcome; courier?: RoadOutcome;
+  /** Militia bounties the hero has claimed. */
+  bounties?: number;
+}): string[] {
   const news = [
     "The bridge at Harrowford's still down. Half my barley comes that way. You'll be paying more for your ale by midsummer, mark me.",
     "Fenwick, the wool man there, says Master Coombe has lost two ewes off the old road. Wolves, he reckons. Coombe reckons it's the drover's fault. Coombe would.",
@@ -247,6 +254,15 @@ export function landlordNews(flags: { paidToll: boolean; slewWolfMother: boolean
     news.push("A door in the wolves' cave, under the hill? Old Harlan has been on about that for years. I thought it was the ale talking. Ask him.");
   }
   if (flags.monasteryOpen) news.push("Brother Hob from Saint Elda's came in for leeks last week. Leeks! In a tavern! I sent him to Hilde.");
+  if (flags.goat === 'found') news.push("Little Mags the goatherd was in with her da, telling the whole room how you found her Clover out on the plains. Twice, by the end of the evening.");
+  if (flags.courier === 'fed') news.push("Hal, Lord Morten's messenger, came in on a carter's wagon with his foot up. Says a stranger fed him on the road and saved his life. He'd have lived. But it's a better story.");
+  const footpads: Partial<Record<RoadOutcome, string>> = {
+    fought: "Two footpads came in last night with black eyes, swearing it was six of you. Ada says it was one. Ada's usually right.",
+    paid: "You paid those footpads on the Lord's Road? Don't, friend. Rook drinks it here, in my tavern, and tips nothing.",
+    scared: "Rook the footpad sat in that corner all night, white as milk, telling anyone who'd listen not to cross the wolf-killer.",
+  };
+  if (flags.footpads && footpads[flags.footpads]) news.push(footpads[flags.footpads]!);
+  if ((flags.bounties ?? 0) >= 2) news.push("The sergeant says you've been taking the militia's notices. Good. The lads would rather walk round the square than go looking for boar.");
   return news;
 }
 

@@ -20,6 +20,9 @@ import { PlayerStats } from '../systems/PlayerStats';
 import { QuestLog } from '../systems/Quests';
 import { AREA_NAMES, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops } from '../systems/Shops';
+import { Bounties } from '../systems/Bounties';
+import { Reputation } from '../systems/Reputation';
+import type { DialogueScript } from '../dialogue/Dialogue';
 import { Tavern } from '../systems/Tavern';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { Weather } from '../systems/Weather';
@@ -216,6 +219,8 @@ export class GameScene extends Phaser.Scene {
       Experience.reset();
       Farm.reset();
       Shops.reset();
+      Reputation.reset();
+      Bounties.reset();
       Tavern.reset();
       Crafting.reset();
       Weather.reset();
@@ -496,15 +501,19 @@ export class GameScene extends Phaser.Scene {
     this.walkingTo = undefined;
     this.player.setPath([]);
     npc.faceTowards(this.player.gx, this.player.gy);
+    this.runScript(npc.script(), npc);
+  }
+
+  private runScript(script: DialogueScript, npc?: Npc): void {
     this.pendingShop = undefined;
     const data: DialogueSceneData = {
-      script: npc.script(),
+      script,
       onAction: (action) => runDialogueAction(this, action),
     };
     this.scene.launch('Dialogue', data);
     this.scene.get('Dialogue').events.once('dialogue-closed', () => {
-      if (this.ordered && this.service?.maid === npc) fetchOrder(this, this.ordered);
-      else if (this.service?.maid === npc && !this.service.item) this.service = undefined;
+      if (npc && this.ordered && this.service?.maid === npc) fetchOrder(this, this.ordered);
+      else if (npc && this.service?.maid === npc && !this.service.item) this.service = undefined;
       this.ordered = undefined;
       const shop = this.pendingShop;
       this.pendingShop = undefined;

@@ -5,6 +5,7 @@ import { box, circle, Shape } from './Collision';
 import type { Villager } from '../systems/VillageDay';
 import { Commute, MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
+import { BOUNTY_BOARD } from './landmarks';
 
 export const MARKET_W = 34;
 export const MARKET_H = 30;
@@ -234,6 +235,10 @@ export function buildMarketMap(gateOpen = false): MapData {
     id: 'signpost-market', gx: 27.5, gy: 19.5, label: 'Read the sign', z: 58,
     sign: { heading: 'Signpost', lines: ['→  East: Adowvale Hollow', '←  West: Adowvale market square', '↑  North: the toll gate and the Lord\'s Road'] },
   }];
+  // The militia's notice board, by the trough, where bounties are posted and paid (see systems/Bounties.ts).
+  const board = BOUNTY_BOARD;
+  placeObject(data, { key: 'mkt-noticeboard', tx: board.tx, ty: board.ty, w: 2, h: 1, shapes: [circle(0.14, 0.5, 0.08), circle(1.86, 0.5, 0.08), box(0.1, 0.42, 1.9, 0.54)] });
+  data.sights.push({ id: board.id, gx: board.tx + 1, gy: board.ty + 0.9, label: 'Read the notices', z: 62 });
   addTollGate(data, gateOpen);
 
   // The militia, each walking their own patch of the square.
