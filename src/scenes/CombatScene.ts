@@ -574,8 +574,7 @@ export class CombatScene extends Phaser.Scene {
   private cry(actor: Actor): void {
     const kind = actor.creature?.kind;
     if (!kind) return;
-    if (isGoblin(kind)) GameAudio.shriek(kind === 'goblinbrute');
-    else if (!isOutlaw(kind)) GameAudio.yelp();
+    GameAudio.cry(kind);
   }
 
   /**
@@ -786,8 +785,9 @@ export class CombatScene extends Phaser.Scene {
     const dice = r.mode === 0 ? '' : ` (${r.mode > 0 ? 'advantage' : 'disadvantage'}: rolled ${r.rolls.join(' and ')})`;
     const sum = `${r.roll} ${signed(r.total - r.roll)} = ${r.total} against armour ${r.ac}${dice}`;
     if (r.hit) {
-      GameAudio.hit(r.crit);
+      GameAudio.hit(r.crit, !!style.heavy);
       if (target === this.hero) {
+        GameAudio.hurt();
         this.world.stats.damage(r.damage);
         this.world.cameras.main.shake(160, r.crit ? 0.012 : 0.006);
       }
@@ -822,6 +822,9 @@ export class CombatScene extends Phaser.Scene {
         );
       }
     } else {
+      // A shield (or a guard) turns the blow with a clang; otherwise it whistles past.
+      if (target === this.hero && (Inventory.equipped.offHand || this.battle.has(target.c, 'guarded'))) GameAudio.block();
+      else GameAudio.miss();
       this.float(target, 'Miss', '#d8c8a4');
       void this.hop(target.offset, target === this.hero ? -6 : 6, 0);
       const how = r.roll === 1 ? 'A 1: a clumsy miss.' : 'Miss.';
@@ -840,7 +843,7 @@ export class CombatScene extends Phaser.Scene {
   /** Someone has dropped: a beast dies (and the hero earns its experience), or the hero blacks out. */
   private async fall(actor: Actor): Promise<void> {
     if (actor.creature) {
-      this.cry(actor);
+      GameAudio.death(actor.creature.kind);
       actor.offset.y = 0;
       actor.creature.die();
       const xp = FOES[actor.creature.kind].xp;
@@ -848,6 +851,7 @@ export class CombatScene extends Phaser.Scene {
       this.float(actor, `+${xp} XP`, THEME.goldText);
       this.gainXp(xp, actor.c.name);
     } else {
+      GameAudio.death();
       this.log('Your legs give way and the world goes dark...');
     }
     this.drawOrder();

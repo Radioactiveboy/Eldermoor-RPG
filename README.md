@@ -15,6 +15,28 @@ npm run dev      # dev server with hot reload at http://localhost:5173
 npm run build    # type-check + production build into dist/
 ```
 
+## Tests
+
+```bash
+npm test             # unit tests (Vitest) for the game rules: combat, XP, satchel, crafting, quests, saving
+npm run test:watch   # the same, re-running as you edit
+npm run test:smoke   # builds, then opens every ?area= in headless Chromium and fails on any page error
+```
+
+The unit tests live in `tests/unit/` and run in Node, without Phaser, so they cover the pure systems in
+`src/systems/`. Dice are scripted rather than random (`scripted(...)` and `face(...)` in `tests/unit/helpers.ts`),
+so a test can say "the wolf rolls a 15, then a 1 and a 1 for damage" and check exactly what happens.
+
+The smoke test (`tests/smoke/smoke.mjs`) serves `dist/`, opens each area with `?smoke&area=...` (the `smoke`
+switch puts the game on `window.game`, as the dev server always does), presses Enter on the title screen for a
+new game, waits until the hero stands in that area, walks a step, and fails on any uncaught error. It needs
+Playwright's Chromium (`npx playwright install chromium` once, if you don't already have it). To check just a few
+areas against the existing build: `SMOKE_AREAS=market,cave node tests/smoke/smoke.mjs`. It lists failed requests
+and console errors as warnings without failing on them.
+
+Every pull request and push runs the type-check, `npm test` and `npm run test:smoke` on GitHub Actions
+(`.github/workflows/ci.yml`). Publishing to GitHub Pages is a separate workflow (`deploy.yml`) that runs on `main`.
+
 ## Controls
 
 The HUD doesn't list controls; they're under **Controls** in the pause menu.
@@ -48,7 +70,11 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   (until morning, midday, evening or night; or press 1-4). You wake rested, and the game
   is saved. **Continue** on the title screen, or **Load Last Save** in the pause menu,
   brings you back to that moment. Any bed added to a map (`MapData.beds`) is another save point
-- **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, back to main menu)
+- **When the browser won't keep a save** (some private windows block storage, or it's full): waking shows
+  a **Not Saved** warning instead of "Game saved", with a **Download Save** button. **Download Save** is also
+  in the pause menu once you've slept. **Load from File** on the title screen carries on from a downloaded save
+  (it's the same JSON the game keeps in browser storage)
+- **Esc** or the **II** button: pause menu (resume, controls, settings, load last save, download save, back to main menu)
 - **Settings → Resolution**: native, 75% or 50% of the screen's own resolution (lower is faster on slow machines). **Interface size**: Auto (bigger on large monitors, e.g. 150% at 2560×1440) or 75% to 200%
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
@@ -182,10 +208,15 @@ src/
                           furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
                           the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
                           the grey wolf (creatures.ts), travellers on the road (folk.ts) and birds, ripples and smoke (critters.ts)
-  audio/Audio.ts          Music and UI sounds, composed live with Web Audio
+  audio/Audio.ts          All the game's sound: picks the music by area and hour, plays fight sounds and voice
+                          barks, and composes UI blips (and stand-in tunes and sounds if a recording won't load)
+  audio/Recordings.ts     Streams and crossfades the recorded music; fetches and plays the fight sounds and barks
   audio/Soundscape.ts     The world's background sounds, footsteps and the bell, all recordings
   public/audio/ambience/  The ambient recordings (MP3) and CREDITS.md with their sources and licences
-  tools/build-ambience.py Cuts, loops and levels those recordings from the originals
+  public/audio/music/     The recorded music (MP3) and CREDITS.md
+  public/audio/sfx/       The fight sounds, cries and voice barks (MP3) and CREDITS.md
+  tools/build-ambience.py Cuts, loops and levels the ambient recordings from the originals
+  tools/build-sound.py    Does the same for the music, fight sounds and voice barks
   world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour and who's about
   settings/Settings.ts    Volume and display settings, saved in the browser
   ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
@@ -211,6 +242,13 @@ src/
   ui/DayNightOverlay.ts   Tints the world by time of day; lantern, hearth and candle light
   ui/QuestTracker.ts      HUD reminder of the current quest step
   ui/Toasts.ts            "New quest" banners and the hero's passing thoughts
+tests/
+  unit/*.test.ts          Vitest tests for src/systems (Combat, Experience, Inventory, Crafting, Quests, SaveGame)
+  unit/helpers.ts         Scripted dice and a fake localStorage for the tests
+  smoke/smoke.mjs         Playwright smoke test: every ?area= loads without errors
+.github/workflows/
+  ci.yml                  Type-check, unit tests and smoke test on every PR and push
+  deploy.yml              Build and publish to GitHub Pages from main
 ```
 
 ## Key ideas
@@ -240,13 +278,28 @@ src/
   `eldermoor:art` when all the art is drawn, and `eldermoor:area` when the first area is up).
   Headless Chromium logs "GPU stall due to ReadPixels" for any WebGL page (it reads each frame back
   for its software compositor), so that warning in automated runs isn't from the game.
-- **Music is code, not files.** `audio/Audio.ts` defines each track as a tempo,
-  a chord progression and an arpeggio pattern, played by simple synth voices
-  (harp pluck, pad, drone, flute, and optionally a frame drum and tambourine).
-  There is a calm `menu` track, a livelier `world` track, a sad `home` one, a
-  tense `battle` one, a bouncing `market` dance and a slow, chant-like `monastery` one; add more by adding entries
-  to `TRACKS`. Each map names its track (`MapData.music`). Recorded music can
-  replace it later without changing the scenes.
+- **Music is recorded.** Each map names its track (`MapData.music`: `menu`, `world`, `home`, `market`, `tavern`,
+  `monastery`, `cave`, `battle`, `raid`, `ruin`) and `MUSIC_FILES` in `audio/Recordings.ts` says which recording
+  plays for it. Some change with the hour: out of doors and at home a quieter piece plays from 20:00 to 05:30, and
+  the tavern strikes up a fiddle reel from 18:00. The music is Kevin MacLeod's (CC BY 4.0): Celtic and folk lute
+  and fiddle tunes for the Hollow, home, the market and the tavern, a Gregorian chant at the monastery, darker
+  pieces for the caves, the raid and the ruins, and a heroic one for fights (see `public/audio/music/CREDITS.md`).
+  Each track is streamed from its MP3 the first time it's wanted (about 1 to 2 MB each), looped, and crossfaded
+  into the next; a change of hour fades over six seconds. If a file won't load, the tune composed in code for that
+  track in `audio/Audio.ts` (`TRACKS`: tempo, chords, arpeggio and synth voices) plays instead. To add a track,
+  add an MP3 to `public/audio/music/` (and to `tools/build-sound.py`), a name to `TrackName` with a stand-in
+  in `TRACKS`, and an entry in `MUSIC_FILES`.
+- **Fights and conversations have recorded sounds.** Blows land with a punch or, on a critical, a heavier one
+  with a crack of bone; misses whistle past; a blow turned by the hero's shield (or while on guard) clangs;
+  wolves snarl, the boar squeals, goblins yell and cackle and the Brute bellows; the hero and the footpads cry
+  out when hurt; whoever drops gives a last cry and falls with a thud; and gaining a level, winning and losing
+  each have an orchestral flourish. When someone starts to speak you hear a short bark under the typing blips:
+  a friendly "heh", a laugh (if their line has one in it) or a grunt from gruff men, in one of two men's or two
+  women's voices chosen and pitched from the speaker's blip voice, so each villager keeps their own. The
+  recordings are in `public/audio/sfx/` (CC BY, see `CREDITS.md` there); a fight's sounds are
+  fetched as its music starts (about 250 KB), the barks and stingers (about 130 KB) when sound is first switched on. If a
+  sound isn't loaded, the synthesised one plays instead. All of it goes through the Effects volume slider, and
+  the music through the Music one.
 - **The world has its own sounds, from real recordings.** `world/AmbientSounds.ts` gives each
   area a profile in `PLACES` (out in the open, how windy, how wild, a hearth, a
   cave, the monastery bell, a taproom) and every fraction of a second works out

@@ -1,11 +1,18 @@
 import { Settings, SettingsData } from '../settings/Settings';
 import { AmbientMix, SILENCE, Soundscape, Surface } from './Soundscape';
+import {
+  BarkKind, FIGHT_SFX, MUSIC_FILES, RecordedTrack, SFX, SfxBank, VOICE_FILES, barkFor, barkVoice, foeVoice, musicFileFor,
+} from './Recordings';
 
 /**
- * All game audio, played with the Web Audio API. The music and UI sounds are
- * composed live here in code; the world's background sounds, footsteps and
- * the bell are recordings (see audio/Soundscape.ts and
- * public/audio/ambience/CREDITS.md).
+ * All game audio, played with the Web Audio API. The music is recorded
+ * (public/audio/music/, streamed when an area first wants it and crossfaded
+ * by area and hour), and so are the fight sounds and the voice barks under
+ * dialogue (public/audio/sfx/); see audio/Recordings.ts. The tunes composed
+ * here in code stand in for any recording that fails to load, as do the
+ * synthesised hits, swings and cries. UI blips are synthesised. The world's
+ * background sounds, footsteps and the bell are recordings too (see
+ * audio/Soundscape.ts and public/audio/ambience/CREDITS.md).
  *
  * Browsers only allow sound after the player clicks or presses a key, so the
  * engine starts silent and unlocks itself on the first input. Asking for a
@@ -396,8 +403,17 @@ class AudioEngine {
   private reverb!: ConvolverNode;
   private noiseBuffer!: AudioBuffer;
   private track?: Track;
+  private recorded?: RecordedTrack;
+  private sfx?: SfxBank;
   private wanted?: TrackName;
-  private playing?: TrackName;
+  /** What's playing: a recording's file name, or `synth:<track>` for a composed tune. */
+  private playing?: string;
+  /** Recordings that failed to load; their tracks fall back to the composed tunes. */
+  private readonly broken = new Set<string>();
+  /** The in-game hour, which picks day or night music. */
+  private hour = 12;
+  private musicTimer = 0;
+  private musicFade = 2.5;
 
   constructor() {
     const unlock = () => this.unlock();
@@ -410,6 +426,7 @@ class AudioEngine {
       if (!this.ctx) return;
       if (document.hidden) void this.ctx.suspend();
       else void this.ctx.resume();
+      this.recorded?.setPaused(document.hidden);
     });
     Settings.onChange((s) => this.applyVolumes(s));
   }
@@ -419,19 +436,60 @@ class AudioEngine {
   }
 
   /** Switches to a track (crossfading), or does nothing if it's already playing. */
-  playMusic(name: TrackName): void {
+  playMusic(name: TrackName, fade = 2.5): void {
     this.wanted = name;
-    if (!this.unlocked || this.playing === name) return;
+    this.musicFade = fade;
+    // Wait a moment before choosing, so that on entering an area the world can
+    // say the hour first and the night tune doesn't start out as the day one.
+    if (!this.unlocked || this.musicTimer) return;
+    this.musicTimer = window.setTimeout(() => {
+      this.musicTimer = 0;
+      if (this.wanted) this.switchMusic(this.wanted, this.musicFade);
+    }, 150);
+  }
+
+  private switchMusic(name: TrackName, fade: number): void {
+    const file = musicFileFor(MUSIC_FILES[name], this.hour);
+    const want = this.broken.has(file) ? `synth:${name}` : file;
+    if (this.playing === want) return;
     this.track?.stop();
-    this.track = new Track(this.ctx!, TRACKS[name], this.musicBus, this.reverb);
-    this.playing = name;
+    this.track = undefined;
+    this.recorded?.stop(fade);
+    this.recorded = undefined;
+    this.playing = want;
+    if (want.startsWith('synth:')) {
+      this.track = new Track(this.ctx!, TRACKS[name], this.musicBus, this.reverb);
+    } else {
+      this.recorded = new RecordedTrack(this.ctx!, file, this.musicBus, fade, () => {
+        this.broken.add(file);
+        if (this.playing === file) {
+          this.playing = undefined;
+          if (this.wanted) this.switchMusic(this.wanted, 1);
+        }
+      });
+    }
+    // A fight's sounds are wanted as soon as its music starts.
+    if (name === 'battle') this.sfx?.preload(FIGHT_SFX);
   }
 
   stopMusic(): void {
     this.wanted = undefined;
+    window.clearTimeout(this.musicTimer);
+    this.musicTimer = 0;
     this.playing = undefined;
     this.track?.stop();
     this.track = undefined;
+    this.recorded?.stop(1.5);
+    this.recorded = undefined;
+  }
+
+  /** Tells the music the in-game hour, so a place's day tune gives way to its night one. */
+  setHour(hour: number): void {
+    this.hour = hour;
+    if (this.wanted && this.unlocked && this.recorded) {
+      const file = musicFileFor(MUSIC_FILES[this.wanted], hour);
+      if (file !== this.playing && !this.broken.has(file) && !this.musicTimer) this.switchMusic(this.wanted, 6);
+    }
   }
 
   /** Sets how much of each background sound the world should have (see audio/Soundscape.ts). */
@@ -498,6 +556,20 @@ class AudioEngine {
     o.connect(formant).connect(g).connect(this.sfxBus);
     o.start(t);
     o.stop(t + 0.1);
+  }
+
+  /**
+   * A short recorded bark as someone starts speaking: a friendly "heh", a
+   * laugh or a grunt, in one of four voices pitched to suit the speaker.
+   * Played under the typing blips, and only if the recording is loaded.
+   */
+  bark(name: string, pitch: number, wave: OscillatorType, line: string, kind?: BarkKind): void {
+    if (!this.unlocked) return;
+    // Stage directions, like "(He nods.)", aren't spoken.
+    if (/^[(*]/.test(line.trim())) return;
+    const { voice, rate } = barkVoice(name, pitch);
+    const k = kind ?? barkFor(line, wave, pitch);
+    this.sfx!.play([`voice-${voice}-${k}`], { gain: 0.55, rate: [rate * 0.98, rate * 1.02] });
   }
 
   /** Paper swishing past: a page of the journal turning. */
@@ -641,6 +713,7 @@ class AudioEngine {
   /** A low, rattling snarl. */
   growl(): void {
     if (!this.unlocked) return;
+    if (this.sfx!.play(SFX.snarl, { gain: 0.8, rate: [0.68, 0.8] })) return;
     const ctx = this.ctx!;
     const t = ctx.currentTime;
     const o = ctx.createOscillator();
@@ -671,6 +744,8 @@ class AudioEngine {
   /** A goblin's shriek: a harsh, wavering cry, rising then cracking. The Brute's is a deep bellow. */
   shriek(big = false): void {
     if (!this.unlocked) return;
+    const takes = big ? (Math.random() < 0.5 ? SFX.bruteLaugh : SFX.brute) : Math.random() < 0.4 ? SFX.goblinLaugh : SFX.goblin;
+    if (this.sfx!.play(takes, { gain: 0.7, rate: big ? [0.95, 1.05] : [1.3, 1.5] })) return;
     const ctx = this.ctx!;
     const t = ctx.currentTime;
     const base = big ? 150 : 520 + Math.random() * 260;
@@ -747,15 +822,75 @@ class AudioEngine {
   /** Something swung quickly through the air. */
   swing(heavy = false): void {
     if (!this.unlocked) return;
+    if (this.sfx!.play(heavy ? SFX.swoosh : SFX.whoosh.slice(3), { gain: heavy ? 0.55 : 0.4 })) return;
     this.noise(this.ctx!.currentTime, heavy ? 0.32 : 0.2, 'bandpass', heavy ? 500 : 900, heavy ? 2200 : 3200, 1.5, heavy ? 0.5 : 0.35);
   }
 
   /** A blow landing: a dull thud with a crack on top. Louder for critical hits. */
-  hit(crit = false): void {
+  hit(crit = false, heavy = false): void {
     if (!this.unlocked) return;
+    if (crit) {
+      if (this.sfx!.play(SFX.crit, { gain: 1 })) {
+        this.sfx!.play(SFX.crack, { gain: 0.6, delay: 0.03 });
+        return;
+      }
+    } else if (this.sfx!.play(heavy ? SFX.hitHeavy : SFX.hit, { gain: 0.85 })) {
+      return;
+    }
     this.thump(0);
     this.noise(this.ctx!.currentTime, 0.09, 'lowpass', 1800, 300, 0.8, crit ? 0.8 : 0.45);
     if (crit) this.thump(0.06);
+  }
+
+  /** A blow that misses: it whistles past. */
+  miss(): void {
+    if (!this.unlocked) return;
+    if (this.sfx!.play(SFX.whoosh.slice(0, 3), { gain: 0.6, rate: [0.85, 1] })) return;
+    this.noise(this.ctx!.currentTime, 0.26, 'bandpass', 700, 2600, 1.4, 0.35);
+  }
+
+  /** A blow turned aside by a shield: a ringing clang. */
+  block(): void {
+    if (!this.unlocked) return;
+    if (this.sfx!.play(Math.random() < 0.25 ? SFX.clash : SFX.block, { gain: 0.75 })) return;
+    const t = this.ctx!.currentTime;
+    this.pluckNote(88, t, 0.12);
+    this.pluckNote(95, t, 0.06);
+    this.noise(t, 0.08, 'highpass', 3000, 2000, 0.8, 0.3);
+  }
+
+  /** The hero crying out as a blow lands. */
+  hurt(): void {
+    if (!this.unlocked) return;
+    this.sfx!.play(SFX.heroHurt, { gain: 0.55, rate: [0.97, 1.03], delay: 0.05 });
+  }
+
+  /** A foe crying out as it's hurt, in its own voice (`kind` is its FOES key). */
+  cry(kind: string): void {
+    if (!this.unlocked) return;
+    const v = foeVoice(kind);
+    const s = this.sfx!;
+    if (v === 'goblin' || v === 'brute') this.shriek(v === 'brute');
+    else if (v === 'wolf') {
+      if (!s.play(SFX.snarl, { gain: 0.7, rate: [0.95, 1.1] })) this.yelp();
+    } else if (v === 'boar') {
+      if (!s.play(SFX.pig, { gain: 0.65, rate: [0.62, 0.72] })) this.yelp();
+    } else if (v === 'man') s.play(SFX.manHurt, { gain: 0.6 });
+    else this.yelp();
+  }
+
+  /** A foe's last cry and the thud of it falling (`kind` is its FOES key), or the hero's if none. */
+  death(kind?: string): void {
+    if (!this.unlocked) return;
+    const v = kind ? foeVoice(kind) : 'hero';
+    const s = this.sfx!;
+    if (v === 'goblin') s.play(SFX.goblinDeath, { gain: 0.7, rate: [1.3, 1.45] });
+    else if (v === 'brute') s.play(SFX.bruteDeath, { gain: 0.8 });
+    else if (v === 'man' || v === 'hero') s.play(SFX.manDeath, { gain: 0.6 });
+    else if (v === 'boar') s.play(SFX.pig, { gain: 0.6, rate: [0.5, 0.56] });
+    else if (v === 'wolf' && !s.play(SFX.snarl, { gain: 0.5, rate: [0.55, 0.6] })) this.yelp();
+    else if (v === 'small') this.yelp();
+    if (!s.play(SFX.thud, { gain: 0.7, lowpass: 900, delay: 0.45, rate: [0.7, 0.8] })) this.thump(0.45);
   }
 
   /** Jaws snapping shut. */
@@ -794,6 +929,7 @@ class AudioEngine {
   /** Bright fanfare for winning a fight. */
   victory(): void {
     if (!this.unlocked) return;
+    if (this.sfx!.play(SFX.victory, { gain: 0.6, rate: [1, 1] })) return;
     const t = this.ctx!.currentTime;
     [62, 66, 69, 74].forEach((n, i) => this.pluckNote(n, t + i * 0.12, 0.18));
     this.pluckNote(78, t + 0.5, 0.2);
@@ -802,6 +938,7 @@ class AudioEngine {
   /** Rising run of notes and a held top one, for gaining a level. */
   levelUp(): void {
     if (!this.unlocked) return;
+    if (this.sfx!.play(SFX.levelUp, { gain: 0.65, rate: [1, 1] })) return;
     const t = this.ctx!.currentTime;
     [67, 71, 74, 79, 83].forEach((n, i) => this.pluckNote(n, t + i * 0.08, 0.17));
     this.pluckNote(86, t + 0.45, 0.2);
@@ -811,6 +948,7 @@ class AudioEngine {
   /** Slow falling notes for being beaten. */
   defeat(): void {
     if (!this.unlocked) return;
+    if (this.sfx!.play(SFX.defeat, { gain: 0.6, rate: [1, 1] })) return;
     const t = this.ctx!.currentTime;
     [69, 65, 62, 57].forEach((n, i) => this.pluckNote(n, t + i * 0.3, 0.16));
   }
@@ -1042,6 +1180,10 @@ class AudioEngine {
     this.soundscape = new Soundscape(ctx, this.ambienceBus);
     this.soundscape.setMix(this.ambience);
     this.soundscape.setDuck(this.ambienceDuck, 0.1);
+
+    this.sfx = new SfxBank(ctx, this.sfxBus);
+    // Small, and wanted whenever anyone speaks or a level is gained.
+    this.sfx.preload([...VOICE_FILES, ...SFX.levelUp, ...SFX.victory, ...SFX.defeat]);
 
     this.applyVolumes(Settings.get());
   }

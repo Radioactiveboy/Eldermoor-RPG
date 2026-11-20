@@ -15,6 +15,7 @@ import { ShopScene } from './scenes/ShopScene';
 import { SleepScene } from './scenes/SleepScene';
 import { StationScene } from './scenes/StationScene';
 import { InterludeScene } from './scenes/InterludeScene';
+import { SaveWarningScene } from './scenes/SaveWarningScene';
 import { Display } from './ui/Display';
 
 // Wait (briefly) for the fonts so text isn't first drawn in a fallback (Phaser won't redraw it when they arrive).
@@ -31,9 +32,11 @@ function startGame(): void {
     // Drawn at the screen's own resolution, with the interface sized to suit it (see ui/Display).
     scale: Display.scaleConfig(),
     // Later scenes draw on top of earlier ones.
-    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, CombatScene, JournalScene, InventoryScene, ShopScene, StationScene, SleepScene, ConfirmScene, InterludeScene, PauseScene, SettingsScene],
+    scene: [BootScene, MainMenuScene, GameScene, UIScene, DialogueScene, CombatScene, JournalScene, InventoryScene, ShopScene, StationScene, SleepScene, ConfirmScene, InterludeScene, PauseScene, SaveWarningScene, SettingsScene],
   });
   Display.install(game);
-  // Handy for poking at the game from the browser console while developing.
-  if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+  // Handy for poking at the game from the browser console while developing (and for the smoke test, which adds ?smoke).
+  if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('smoke')) {
+    (window as unknown as { game: Phaser.Game }).game = game;
+  }
 }

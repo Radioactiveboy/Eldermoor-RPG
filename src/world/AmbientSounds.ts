@@ -108,6 +108,7 @@ export class AmbientSounds {
     if (this.mixTimer > 0) return;
     this.mixTimer = MIX_EVERY;
     GameAudio.setAmbience(this.mix(player, hour, npcs));
+    GameAudio.setHour(hour);
   }
 
   /** Silence the world, e.g. on leaving the area. */
