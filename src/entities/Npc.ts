@@ -2,10 +2,10 @@ import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
 import { MedicineStage, MOTHER_ASLEEP, MOTHER_DOZING, MOTHER_INTRO, motherScript } from '../dialogue/mother';
-import { BAKER, GUARD, SMITH, TANNER } from '../dialogue/market';
+import { BAKER, GUARD, militiaScript, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
 import { FeedStage, IRAN_HIDING, iranScript } from '../dialogue/iran';
-import { CARTER, HERBWIFE, tollGuardScript } from '../dialogue/plains';
+import { CARTER, HERBWIFE, tollGuardScript, tollRoadTalk } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
@@ -19,6 +19,8 @@ import { inHours, isVillager, Villager, Whereabouts, whereabouts } from '../syst
 import { Inventory, itemDef } from '../systems/Inventory';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
+import { Bounties } from '../systems/Bounties';
+import { Reputation } from '../systems/Reputation';
 import type { Body, IsoMap } from '../world/IsoMap';
 import type { Commute, MapData, NpcSpawn } from '../world/MapData';
 
@@ -118,6 +120,10 @@ function landlord(hour: number): DialogueScript {
       slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
       foundCaveDoor: QuestLog.hasFlag('found-cave-door'),
       monasteryOpen: QuestLog.hasFlag('monastery-open'),
+      footpads: Reputation.last('footpads'),
+      goat: Reputation.last('goat'),
+      courier: Reputation.last('courier'),
+      bounties: Bounties.timesClaimed(),
     }),
     medicine: QuestLog.has('mother-medicine') && !QuestLog.get('mother-medicine')!.completed,
     toldBench: QuestLog.hasFlag('may-use-cellar'),
@@ -177,7 +183,13 @@ function wayfarer(id: string, script: (first: boolean) => DialogueScript): () =>
 /** The militia grumble about their feet by day; after hours, they tell you the market is shut. */
 const daytimeGuard = anyOf(GUARD, ['greet', 'tired', 'bored']);
 function guardScript(hour: number): DialogueScript {
-  return marketOpen(hour) ? daytimeGuard() : { ...GUARD, start: 'closed' };
+  // What they've heard of the hero colours it (see systems/Reputation.ts).
+  return militiaScript(marketOpen(hour) ? daytimeGuard().start : 'closed', {
+    standing: Reputation.level('militia'),
+    footpads: Reputation.last('footpads'),
+    wolves: Reputation.last('wolves'),
+    bounties: Bounties.timesClaimed(),
+  });
 }
 
 /**
@@ -268,7 +280,7 @@ const NPCS: Record<string, NpcDef> = {
   },
   tanner: { texture: 'folk-tanner', script: traveller('tanner', TANNER), offDuty: TANNER, talkRange: 2.6 },
   // Lord Morten's men at the toll gate, who stand their ground.
-  'tollguard-1': { texture: 'folk-tollguard', script: () => tollGuardScript(QuestLog.hasFlag('paid-toll'), Inventory.coins >= TOLL, TOLL, false) },
+  'tollguard-1': { texture: 'folk-tollguard', script: () => tollGuardScript(QuestLog.hasFlag('paid-toll'), Inventory.coins >= TOLL, TOLL, false, tollRoadTalk(Reputation.last('footpads'), Reputation.last('courier'))) },
   'tollguard-2': { texture: 'folk-tollguard', script: () => tollGuardScript(QuestLog.hasFlag('paid-toll'), Inventory.coins >= TOLL, TOLL, true) },
   // Travellers on the Lord's Road across the plains.
   carter: { texture: 'folk-carter', script: traveller('carter', CARTER), wander: 14 },
@@ -279,7 +291,7 @@ const NPCS: Record<string, NpcDef> = {
     script: () => {
       const first = !met.has('porter');
       met.add('porter');
-      return porterScript(wolfStage(), first, QuestLog.hasFlag('cleared-cave'), Inventory.count('white-hide') > 0);
+      return porterScript(wolfStage(), first, QuestLog.hasFlag('cleared-cave'), Inventory.count('white-hide') > 0, ['liked', 'honoured'].includes(Reputation.level('monastery')));
     },
   },
   gardener: { texture: 'folk-gardener', script: traveller('gardener', GARDENER), roam: 4 },
@@ -324,7 +336,7 @@ const NPCS: Record<string, NpcDef> = {
     loiters: true,
     script: wayfarer('footpad', (first) => {
       Wayfarers.toll = Math.ceil(Inventory.coins / 2);
-      return footpadScript(Wayfarers.toll, QuestLog.hasFlag('slew-wolf-mother'), !first);
+      return footpadScript(Wayfarers.toll, QuestLog.hasFlag('slew-wolf-mother'), !first, Reputation.last('footpads'));
     }),
   },
   cutpurse: { texture: 'folk-cutpurse', loiters: true, script: () => ({ start: 'nab', nodes: { nab: { speaker: 'cutpurse', lines: ["Don't look at me. Talk to Rook."] } } }) },

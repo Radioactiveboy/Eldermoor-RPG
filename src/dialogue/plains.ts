@@ -1,4 +1,5 @@
 import { HERO_NAME } from '../config';
+import type { RoadOutcome } from '../systems/Reputation';
 import type { DialogueChoice, DialogueScript } from './Dialogue';
 
 /**
@@ -14,7 +15,20 @@ import type { DialogueChoice, DialogueScript } from './Dialogue';
  * @param toll what they ask, in coins
  * @param gruff the second guard, who has less to say for himself
  */
-export function tollGuardScript(paid: boolean, canPay: boolean, toll: number, gruff: boolean): DialogueScript {
+/**
+ * What the toll guards have heard about the hero's doings on the road beyond
+ * their gate (see systems/Reputation.ts), said once the hero has paid.
+ */
+export function tollRoadTalk(footpads: RoadOutcome | undefined, courier: RoadOutcome | undefined): string | undefined {
+  if (footpads === 'fought') return "Heard you gave Rook and Nab a hiding out there. Good. That's coin they take that ought to be His Lordship's.";
+  if (courier === 'fed') return "Hal came back through on a carter's wagon, singing your praises. Said you fed him. His Lordship's messengers don't often get fed.";
+  if (footpads === 'paid') return 'Paying footpads now, are we? We take a toll, they take a toll. At least ours comes with a gate.';
+  if (footpads === 'scared') return "Rook and Nab came past here at a run the other day. Said something about a wolf-killer. Was that you?";
+  return undefined;
+}
+
+/** @param road what they've heard of the hero on the road (tollRoadTalk), once the toll's paid */
+export function tollGuardScript(paid: boolean, canPay: boolean, toll: number, gruff: boolean, road?: string): DialogueScript {
   const ask: DialogueChoice[] = paid
     ? []
     : canPay
@@ -38,7 +52,7 @@ export function tollGuardScript(paid: boolean, canPay: boolean, toll: number, gr
       },
       paid: {
         speaker: 'tollguard',
-        lines: [`You've paid your tithe, ${HERO_NAME}. Gate's open to you, on His Lordship's word. Mind the boar out there.`],
+        lines: [`You've paid your tithe, ${HERO_NAME}. Gate's open to you, on His Lordship's word. Mind the boar out there.`, ...(road ? [road] : [])],
         next: 'ask',
       },
       'paid-gruff': {

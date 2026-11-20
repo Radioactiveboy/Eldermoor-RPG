@@ -1,4 +1,5 @@
 import { HERO_NAME } from '../config';
+import type { RoadOutcome, StandingLevel } from '../systems/Reputation';
 import type { DialogueScript } from './Dialogue';
 
 /**
@@ -268,6 +269,7 @@ export const GUARD: DialogueScript = {
         { text: 'Is the road safe?', next: 'road' },
         { text: 'When is the market open?', next: 'hours' },
         { text: 'Who are the soldiers at the north gate?', next: 'tollgate' },
+        { text: "What's the notice board for?", next: 'board' },
         { text: 'Carry on.', next: 'bye' },
       ],
     },
@@ -302,9 +304,62 @@ export const GUARD: DialogueScript = {
       ],
       next: 'ask',
     },
+    board: {
+      speaker: 'guard',
+      lines: [
+        "Bounties. The reeve pays, the sergeant posts 'em, and folk with more nerve than us go and do 'em. Rats, boar, footpads, wolves.",
+        'Take a notice off the board by the trough, see to it, and come back to the board to be paid. New ones go up every morning.',
+      ],
+      next: 'ask',
+    },
     bye: {
       speaker: 'guard',
       lines: ['Move along, then. Peacefully.'],
     },
   },
 };
+
+/** What the militia know of the hero: their standing with them, and what's been heard of the hero's doings on the road. */
+export interface MilitiaTalk {
+  standing: StandingLevel;
+  footpads?: RoadOutcome;
+  wolves?: RoadOutcome;
+  /** Bounties claimed, all told. */
+  bounties: number;
+}
+
+/** Something the militia have heard about the hero on the road, for "Is the road safe?". */
+function roadTalk(t: MilitiaTalk): string | undefined {
+  if (t.footpads === 'fought') return "Word is you put down two footpads on the Lord's Road. The sergeant was right pleased. That's our job, by rights, but we're not allowed past the gate.";
+  if (t.footpads === 'paid') return "And don't go paying them footpads on the Lord's Road, like some do. It only teaches them the road pays.";
+  if (t.footpads === 'scared') return 'They say two footpads ran from you like hares. Something about a white wolf? The sergeant laughed till he wheezed.';
+  if (t.wolves === 'slain') return "And you've been out after the wolves by night, they say. Rather you than me. Rather you than any of us, honestly.";
+  return undefined;
+}
+
+/** A militiaman's conversation (GUARD, opening on `start`), coloured by what they think of the hero. */
+export function militiaScript(start: string, t: MilitiaTalk): DialogueScript {
+  const nodes = { ...GUARD.nodes };
+  const road = roadTalk(t);
+  if (road) nodes.road = { ...nodes.road, lines: [...nodes.road.lines, road] };
+  // The militia stand straighter for a friend of theirs, and look sideways at someone they don't trust.
+  if (start !== 'closed') {
+    if (t.standing === 'honoured' || t.standing === 'liked') {
+      nodes.greet = {
+        speaker: 'guard',
+        lines: [
+          t.bounties > 0
+            ? `${HERO_NAME}! The sergeant says you're to have anything you need. Within reason. He said "within reason" twice.`
+            : `${HERO_NAME}, isn't it? The sergeant speaks well of you. That's rare, that is.`,
+        ],
+        next: 'ask',
+      };
+      start = 'greet';
+    } else if (t.standing === 'distrusted') {
+      nodes.greet = { speaker: 'guard', lines: ["Hm. I know your face. Keep your hands where I can see them, and we'll get on."], next: 'ask' };
+      start = 'greet';
+    }
+  }
+  return { start, nodes };
+}
+

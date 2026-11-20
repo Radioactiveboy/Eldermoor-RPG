@@ -12,6 +12,8 @@ import { Inventory, ItemId } from '../../systems/Inventory';
 import { rollLoot } from '../../systems/Loot';
 import { QuestLog } from '../../systems/Quests';
 import { CropPatch, Sight } from '../../world/MapData';
+import { BOUNTY_BOARD } from '../../world/landmarks';
+import { readBountyBoard } from './bounties';
 import type { GameScene } from '../GameScene';
 import type { Channel } from './interactions';
 import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
@@ -117,6 +119,10 @@ export function examine(g: GameScene, sight: Sight): void {
   g.walkingTo = undefined;
   g.player.setPath([]);
   g.player.faceTowards(sight.gx, sight.gy);
+  if (sight.id === BOUNTY_BOARD.id) {
+    readBountyBoard(g);
+    return;
+  }
   if (sight.sign) {
     GameAudio.click();
     g.onSign?.(sight.sign.heading, sight.sign.lines);

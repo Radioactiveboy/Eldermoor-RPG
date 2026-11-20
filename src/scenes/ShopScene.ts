@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { itemScale } from '../art/sizes';
 import { GameAudio } from '../audio/Audio';
 import { Inventory, ItemDef, itemDef, itemEffects, ItemId } from '../systems/Inventory';
+import { FACTIONS, LEVEL_NAMES } from '../systems/Reputation';
 import { ShopDef, ShopId, Shops } from '../systems/Shops';
 import { bodyStyle, makeButton, makePanel, THEME, titleStyle } from '../ui/Widgets';
 
@@ -297,7 +298,7 @@ export class ShopScene extends Phaser.Scene {
     if (!entry) return;
 
     // The price: what it costs on the stall, or what the trader would pay for it in the satchel.
-    const price = side === 'shop' ? Shops.price(entry.id) : Shops.offer(this.shopId, entry.id);
+    const price = side === 'shop' ? Shops.price(this.shopId, entry.id) : Shops.offer(this.shopId, entry.id);
     const icon = this.add.image(x + SLOT / 2, y + SLOT / 2 + 2, itemDef(entry.id).icon).setScale(itemScale(2.4));
     // Things the trader won't buy are greyed out.
     if (price === 0) icon.setAlpha(0.35);
@@ -375,11 +376,21 @@ export class ShopScene extends Phaser.Scene {
     const wearing = def.slot ? `   (wearing: ${worn ? itemDef(worn).name : 'nothing'})` : '';
     if (side === 'shop') {
       const stock = Shops.goods(this.shopId).find((g) => g.id === id)?.count ?? 0;
-      return { line: `${Shops.price(id)} coins each, ${stock} on the stall${wearing}`, ok: stock > 0 };
+      const trend = Shops.trend(this.shopId, id);
+      const today = trend === 'dear' ? ' (dear today)' : trend === 'cheap' ? ' (cheap today)' : '';
+      return { line: `${Shops.price(this.shopId, id)} coins each${today}, ${stock} on the stall${this.standingNote()}${wearing}`, ok: stock > 0 };
     }
     const offer = Shops.offer(this.shopId, id);
     if (offer === 0) return { line: def.value ? `${this.keeperName} doesn't deal in these.` : "You'd never sell this.", ok: false };
-    return { line: `${this.keeperName} pays ${offer} coin${offer === 1 ? '' : 's'} each`, ok: true };
+    return { line: `${this.keeperName} pays ${offer} coin${offer === 1 ? '' : 's'} each${this.standingNote()}`, ok: true };
+  }
+
+  /** How the keeper's folk regard the hero, when it moves the prices: "  ·  Adowvale: Liked". */
+  private standingNote(): string {
+    const level = Shops.standing(this.shopId);
+    const faction = this.def.faction;
+    if (!faction || level === 'stranger') return '';
+    return `  ·  ${FACTIONS[faction].name}: ${LEVEL_NAMES[level]}`;
   }
 
   // ------------------------------------------------------------ dragging
@@ -447,7 +458,7 @@ export class ShopScene extends Phaser.Scene {
       this.say(reason);
       return;
     }
-    const unit = side === 'shop' ? Shops.price(id) : Shops.offer(this.shopId, id);
+    const unit = side === 'shop' ? Shops.price(this.shopId, id) : Shops.offer(this.shopId, id);
     if (max === 1) {
       this.trade(side, id, 1);
       return;
@@ -462,7 +473,7 @@ export class ShopScene extends Phaser.Scene {
       if (Shops.offer(this.shopId, id) === 0) return { max: 0, reason: this.def.refuse };
       return { max: Inventory.count(id), reason: '' };
     }
-    const price = Shops.price(id);
+    const price = Shops.price(this.shopId, id);
     const stock = Shops.goods(this.shopId).find((g) => g.id === id)?.count ?? 0;
     const afford = price > 0 ? Math.floor(Inventory.coins / price) : stock;
     const room = Inventory.room(id);
@@ -476,7 +487,7 @@ export class ShopScene extends Phaser.Scene {
     const n = Math.min(qty, max);
     if (n <= 0) return;
     if (side === 'shop') {
-      const cost = Shops.price(id) * n;
+      const cost = Shops.price(this.shopId, id) * n;
       if (!Inventory.canAdd(id, n) || !Inventory.addCoins(-cost)) return;
       Inventory.add(id, n);
       Shops.take(this.shopId, id, n);

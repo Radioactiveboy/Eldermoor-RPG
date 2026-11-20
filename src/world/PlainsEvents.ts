@@ -6,11 +6,13 @@ import { Goat } from '../entities/Goat';
 import { foodToShare, Npc } from '../entities/Npc';
 import type { Vec2 } from '../iso/IsoMath';
 import type { Interaction } from '../scenes/GameScene';
-import type { FoeKind } from '../systems/Combat';
+import { Bounties } from '../systems/Bounties';
+import type { FoeKind, Outcome } from '../systems/Combat';
 import { Experience } from '../systems/Experience';
 import { Inventory } from '../systems/Inventory';
 import { findPath } from '../systems/Pathfinding';
 import { QuestLog } from '../systems/Quests';
+import { Reputation } from '../systems/Reputation';
 import { Weather } from '../systems/Weather';
 import type { IsoMap } from './IsoMap';
 
@@ -63,13 +65,22 @@ const LEFT_BEHIND = 42;
 /** The last kind of meeting, so the same one doesn't happen twice running (even across visits). */
 let lastKind: RoadEventKind | undefined;
 
-/** How likely each kind of meeting is at an hour of the day. */
-function weights(hour: number): Record<RoadEventKind, number> {
+/**
+ * How likely each kind of meeting is at an hour of the day. With a militia
+ * bounty out on the footpads or the wolves, the hero is looking for them, and
+ * meets them more often (the wolves still only after dark).
+ */
+export function weights(hour: number, wanted: { footpads?: boolean; wolves?: boolean } = {}): Record<RoadEventKind, number> {
   const night = hour >= 21 || hour < 5;
   const dusk = hour >= 18 || hour < 7;
-  if (night) return { footpads: 3, wolves: 3, tinker: 0, goat: 0, courier: 0 };
-  if (dusk) return { footpads: 3, wolves: 1, tinker: 1, goat: 1, courier: 1 };
-  return { footpads: 1, wolves: 0, tinker: 3, goat: 3, courier: 2 };
+  const w = night
+    ? { footpads: 3, wolves: 3, tinker: 0, goat: 0, courier: 0 }
+    : dusk
+      ? { footpads: 3, wolves: 1, tinker: 1, goat: 1, courier: 1 }
+      : { footpads: 1, wolves: 0, tinker: 3, goat: 3, courier: 2 };
+  if (wanted.footpads) w.footpads *= 3;
+  if (wanted.wolves && w.wolves > 0) w.wolves = w.wolves * 2 + 1;
+  return w;
 }
 
 const between = ([lo, hi]: [number, number]) => lo + Math.random() * (hi - lo);
@@ -173,11 +184,15 @@ export class PlainsEvents {
           `Two footpads stopped me on the Lord's Road, a lanky one in a hood called Rook and a bald one with a knife called Nab. ` +
             `I paid them ${toll} coins to let me by. Lord Morten takes his toll at the gate, and they take theirs out on the plains.`,
         );
+        // Word gets back to the militia, who'd rather folk didn't teach the footpads that the road pays.
+        Reputation.record('footpads', 'paid');
+        Reputation.gain('militia', -2, 'Paid the footpads');
         this.host.afterTalk(() => this.footpadsGo(false));
         break;
       }
       case 'footpads-leave':
         QuestLog.writeDiary("Two footpads stopped me on the Lord's Road, but my purse was empty. They let me go out of pity. I am not sure how I feel about that.");
+        Reputation.record('footpads', 'empty');
         this.host.afterTalk(() => this.footpadsGo(false));
         break;
       case 'footpads-scared':
@@ -186,6 +201,8 @@ export class PlainsEvents {
           "Two footpads stopped me on the Lord's Road and asked for half my purse. I told them I killed the Wolf Mother. " +
             'They went white, and found somewhere else to be. It seems her hide is spoken of in the Tankard.',
         );
+        Reputation.record('footpads', 'scared');
+        Reputation.gain('militia', 3, 'Faced down the footpads');
         this.host.afterTalk(() => this.footpadsGo(true));
         break;
       case 'footpads-fight':
@@ -206,6 +223,8 @@ export class PlainsEvents {
           "Found a little goatherd called Mags on the Lord's Road, crying for her goat. I found Clover grazing out in the long grass and " +
             'led her back by her collar. Mags gave me two cheeses and six coins, which I think was everything she had.',
         );
+        Reputation.record('goat', 'found');
+        Reputation.gain('adowvale', 5, 'Found Clover the goat');
         this.host.afterTalk(() => this.goatGoesHome());
         break;
       case 'courier-fed': {
@@ -220,6 +239,8 @@ export class PlainsEvents {
           "Met Hal, Lord Morten's messenger, sitting by the Lord's Road with his ankle swollen up like a turnip. I gave him something to eat " +
             'and he gave me fifteen coins and the news from Harrowford. He is limping on to the toll gate to beg a cart.',
         );
+        Reputation.record('courier', 'fed');
+        Reputation.gain('adowvale', 3, 'Helped a lamed messenger');
         this.host.afterTalk(() => {
           const hal = m.npcs[0];
           if (hal) this.walkOff(m, hal, this.roadAway(hal, -14));
@@ -237,15 +258,22 @@ export class PlainsEvents {
     this.meeting = undefined;
   }
 
-  /** Called when a fight on the plains has ended, so the footpads' meeting can finish. */
-  fightOver(): void {
-    if (this.meeting?.step === 'fighting') this.end(false);
+  /** Called when a fight on the plains has ended, so the footpads' meeting can finish (and be remembered). */
+  fightOver(outcome?: Outcome): void {
+    if (this.meeting?.step !== 'fighting') return;
+    if (this.meeting.kind === 'footpads') {
+      if (outcome === 'victory') {
+        Reputation.record('footpads', 'fought');
+        Reputation.gainAll({ militia: 4, adowvale: 2 }, 'Beat the footpads');
+      } else Reputation.record('footpads', outcome === 'defeat' ? 'beaten' : 'fled');
+    }
+    this.end(false);
   }
 
   // ------------------------------------------------------------ choosing and setting up
 
   private pick(): RoadEventKind | undefined {
-    const w = weights(this.host.hour());
+    const w = weights(this.host.hour(), { footpads: Bounties.wants('footpad'), wolves: Bounties.wants('wolf') });
     const kinds = KINDS.filter((k) => k !== lastKind && w[k] > 0);
     const total = kinds.reduce((n, k) => n + w[k], 0);
     let roll = Math.random() * total;
@@ -349,6 +377,7 @@ export class PlainsEvents {
     // Outrun them, and they give it up as a bad job.
     if (near > 24) {
       rook.say('Ah, let him go. Not worth the running.', 3);
+      Reputation.record('footpads', 'outran');
       this.footpadsGo(false);
       return;
     }

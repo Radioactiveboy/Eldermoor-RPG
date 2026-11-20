@@ -24,6 +24,14 @@ export const BAR_PICKUP = { x: 7.5, y: 3.5 };
 
 /** The rats in the cellar, in two nests (see the 'cellar-rats' quest and TavernMap). */
 export const CELLAR_RATS = ['cellar-rat-1', 'cellar-rat-2', 'cellar-rat-3', 'cellar-rat-4', 'cellar-rat-5', 'cellar-rat-6'];
+/** Where they nest (TavernMap), which is where more come back to when the militia post a bounty on them (systems/Bounties.ts). */
+export const CELLAR_RAT_SPOTS: Array<[number, number]> = [
+  [11.5, 2.6], [10.4, 3.4], [12.2, 3.6],
+  [2.6, 6.5], [3.6, 7.4], [4.4, 6.2],
+];
+
+/** The militia's notice board in the market square (MarketMap), where bounties are posted and paid. */
+export const BOUNTY_BOARD = { id: 'bounty-board', tx: 21, ty: 13 };
 
 /** Where the moonpetal grows, on the stone rim of the cloister pond (tile positions, AbbeyMap). */
 export const MOONPETAL = [

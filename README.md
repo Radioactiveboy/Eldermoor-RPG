@@ -141,6 +141,27 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   What happens depends on the hour, and the same thing never happens twice running (see `world/PlainsEvents.ts`)
 - Add `?event=footpads` (or `tinker`, `goat`, `courier`, `wolves`) to the URL with `?area=plains` to have that meeting
   happen a few seconds after arriving
+- **Your name in the world**: Adowvale, the brothers of Saint Elda's and the village militia each keep a standing
+  with you, from Distrusted through A stranger, Known and Liked to Honoured (`systems/Reputation.ts`, saved with the
+  game). Quests done for folk raise it (Iran's feed, Wil's ewes, Godric's rats, the Wolf Mother), and so does how you
+  handle the plains' meetings: finding Clover or feeding Hal pleases the village; beating the footpads or facing them
+  down pleases the militia, and paying them off does not. "+5 Adowvale" rises over the hero as it moves, and a banner
+  shows a new level. The world remembers each meeting too: Rook greets you by how your last run-in ended, the militia
+  and the toll guards mention it, and Godric's news at the Tankard has it all (Mags, Hal, the footpads' black eyes).
+  Liked by the militia, they greet you by name; liked by the brothers, Brother Wystan says the Prior asks after you
+- **Prices that move**: each morning the stalls restock (their own goods topped back up a third of the way, what
+  they bought from you sold on), and prices drift a little each day. Goods running short cost more and an
+  overstocked stall charges less and pays less for more of the same. Adowvale's traders (Hilde, Osric, Tamsin,
+  Godric's take-away) give better prices to someone the village likes, and worse to one it distrusts; Jory on the
+  road cares for nobody's opinion. The trading window says when something is dear or cheap today, and your standing.
+  However the prices move, nothing can be bought for less than any trader pays for it
+- **The militia's bounties**: the notice board by the trough in the market square (**Read the notices**) has three
+  of the four notices up each morning: rats back in the Tankard's cellar (4 rats, 12 coins), boar in the crofts on the
+  plains (2, 30 coins), the footpads on the Lord's Road (both, 40 coins) and wolves on the plains by night (3, 35
+  coins). Take one and it's a quest; kill what it asks for (the HUD counts them) and come back to the board to be
+  paid in coins and in the militia's and the village's good opinion. Each can be done again, one claim a day. With
+  the rat bounty out, new rats are in the cellar; with the footpads' or the wolves' out, those meetings come more often
+  on the plains (`systems/Bounties.ts`)
 - Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
   testing fights against several enemies)
 - **Mother's day**: once you've first spoken to her, Mother goes about the cottage by the clock. She's in bed
@@ -229,7 +250,11 @@ src/
   systems/Pathfinding.ts  8-direction A* on the tile grid
   systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
   systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
-  systems/Shops.ts        The market traders (and Godric at the Tankard): stock, what they buy, prices
+  systems/Shops.ts        The market traders (and Godric at the Tankard): stock, what they buy, prices that move
+                          with supply, the day and your standing, and the daily restock
+  systems/Reputation.ts   Standing with Adowvale, Saint Elda's and the militia, and how each plains meeting went
+  systems/Bounties.ts     The militia's bounty notices: which are up each day, kills counted, claiming
+  dialogue/bounties.ts    The notice board's conversation (the militiaman who minds it)
   systems/Tavern.ts       The Crooked Tankard's menu and prices, and the room the hero has let (until when)
   systems/VillageDay.ts   Where the market's traders are at each hour: stall, workshop, the Tankard or home
   systems/Crafting.ts     Brewing and cooking: the recipes, the stations, and which recipes have been found
@@ -478,7 +503,16 @@ tests/
   (`systems/Shops.ts`) has starting stock, the kinds of thing they'll buy, and
   what fraction of an item's value they pay (Tamsin pays extra for wolf pelts).
   What you sell goes onto their stall. A conversation opens a stall with the
-  `shop:<id>` action.
+  `shop:<id>` action. `Shops.price(shop, id)` and `Shops.offer(shop, id)` work
+  out today's prices from stock, a steady daily drift and the keeper's
+  `faction` (see `sellPrice` / `buyPrice`); offers are capped below the lowest
+  price anywhere, so there's no profit in carrying goods between stalls.
+- **Standing and bounties.** `Reputation.gain(faction, n)` moves a standing and
+  `Reputation.record(meeting, how)` remembers how a plains meeting ended; quest
+  rewards are in `QUEST_STANDING`. Bounties are repeatable quests (`repeatable`
+  on a `QuestDef` lets `QuestLog.start` begin a finished one again), defined in
+  `BOUNTIES`; the board's `bounty:take:<id>` and `bounty:claim:<id>` actions
+  run them, and won fights count kills with `Bounties.slain`.
 - **Conversations and quests are data.** A conversation is a set of nodes in
   `src/dialogue/`; replies point at the next node, and `action` names (like
   `start-medicine-quest`) are carried out in `GameScene.runDialogueAction`.
