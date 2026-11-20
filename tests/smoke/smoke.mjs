@@ -60,6 +60,10 @@ async function checkArea(browser, base, area) {
     await page.waitForFunction(() => window.game?.scene.isActive('MainMenu'), null, { timeout: LOAD_TIMEOUT });
     await page.waitForFunction(() => window.game.scene.getScene('MainMenu').input.enabled, null, { timeout: LOAD_TIMEOUT });
     await page.keyboard.press('Enter');
+    // A new game first asks whether the hero needs to eat and rest: answer "no" (2).
+    await page.waitForFunction(() => window.game.scene.isActive('Confirm'), null, { timeout: LOAD_TIMEOUT });
+    await page.waitForTimeout(250);
+    await page.keyboard.press('2');
     await page.waitForFunction(
       (want) => {
         const game = window.game.scene.getScene('Game');
