@@ -1,4 +1,5 @@
 import type { AreaId } from '../world/MapData';
+import { START_HOUR } from '../config';
 import { SaveGame } from './SaveGame';
 
 /**
@@ -132,6 +133,22 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 70,
   },
+  'speckle-and-moppet': {
+    id: 'speckle-and-moppet',
+    title: 'Speckle and Moppet',
+    giver: 'Pip and Hetty',
+    summary:
+      'Pip and Hetty came through the raid without a scratch, but two things are breaking their hearts. Speckle, Hetty\'s own hen, ' +
+      'got out when the goblins fired the coop and ran off down the hill. And Moppet, Hetty\'s rag doll, was down at our cottage: ' +
+      'Mother was sewing a new eye on her. If either of them came through, I mean to bring them home.',
+    objectives: [
+      { id: 'talk', text: 'Hear what Pip and Hetty have lost', target: { area: 'hut', x: 5, y: 4 } },
+      { id: 'moppet', text: "Look for Hetty's rag doll in the ruins of the cottage", target: { area: 'home', x: 4.6, y: 5.6 } },
+      { id: 'speckle', text: 'Find Speckle. Pip saw her run down the hill, towards our garden', target: { area: 'world', x: 26.5, y: 37.5 } },
+      { id: 'return', text: 'Bring Speckle and Moppet back to Pip and Hetty', target: { area: 'hut', x: 5, y: 4 } },
+    ],
+    xp: 60,
+  },
 };
 
 export interface QuestState {
@@ -144,7 +161,18 @@ export interface QuestState {
 
 export interface DiaryEntry {
   day: number;
+  /** Hour of the day it was written, 0 up to 24 (saves from before the diary kept the hour have none). */
+  hour?: number;
   text: string;
+}
+
+/** When an entry was written, for the journal: "Day 3, 14:20", or just "Day 3" for one from an older save. */
+export function diaryStamp(entry: DiaryEntry): string {
+  if (entry.hour === undefined) return `Day ${entry.day}`;
+  const minutes = Math.floor((((entry.hour % 24) + 24) % 24) * 60);
+  const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
+  const mm = String(minutes % 60).padStart(2, '0');
+  return `Day ${entry.day}, ${hh}:${mm}`;
 }
 
 export type QuestEvent =
@@ -165,11 +193,13 @@ class QuestLogStore {
   private focusId?: string;
   /** Supplies the current in-game day for new entries. */
   dayProvider: () => number = () => 1;
+  /** Supplies the hour of the day (0 up to 24) for new entries. */
+  hourProvider: () => number = () => START_HOUR;
 
-  /** Forget everything, for a new game. The opening diary entry is written quietly. */
+  /** Forget everything, for a new game. The opening diary entry is written quietly, at the hour the game begins. */
   reset(openingEntry?: string): void {
     this.quests = [];
-    this.diaryEntries = openingEntry ? [{ day: 1, text: openingEntry }] : [];
+    this.diaryEntries = openingEntry ? [{ day: 1, hour: START_HOUR, text: openingEntry }] : [];
     this.flags.clear();
     this.focusId = undefined;
   }
@@ -288,7 +318,7 @@ class QuestLogStore {
   }
 
   writeDiary(text: string): void {
-    const entry = { day: this.dayProvider(), text };
+    const entry = { day: this.dayProvider(), hour: this.hourProvider(), text };
     this.diaryEntries.push(entry);
     this.emit({ type: 'diary', entry });
   }

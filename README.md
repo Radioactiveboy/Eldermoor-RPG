@@ -1,6 +1,8 @@
-# Fantasy Iso RPG
+# Eldermoor
 
-A minimal isometric RPG framework built with **Phaser 3 + TypeScript + Vite**.
+An isometric fantasy RPG built with **Phaser 3 + TypeScript + Vite**. Arthus sets out from the cottage in
+Adowvale Hollow to find medicine for his sick mother, and the story runs on from there: Adowvale's market and
+inn, the plains and the Wolf Mother, Saint Elda's monastery, and the goblins who come out of the north woods.
 
 ## Play it
 
@@ -60,7 +62,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   picking
 - **During a conversation**: click / Space / Enter / E to skip the typing or carry on;
   pick a reply with the mouse, the number keys, or up/down then Enter
-- **J** or the **book** button: open the journal (arrow keys or click to turn pages)
+- **J** or the **book** button: open the journal (arrow keys or click to turn pages): tasks, quests, the diary and
+  the map. Every quest step and big moment writes a diary entry, headed with the day and hour it was written
 - **M**, or the journal's **Map** tab: the world map, an old hand-inked map on parchment of the places
   you've been (their woods, water, roads and buildings), the country between them, the roads that join
   them, your own mark and the next quest step's. M, Esc or a click closes it
@@ -101,19 +104,13 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
 - **Settings → Resolution**: native, 75% or 50% of the screen's own resolution (lower is faster on slow machines). **Interface size**: Auto (bigger on large monitors, e.g. 150% at 2560×1440) or 75% to 200%
 - **Enter** on the title screen: continue from your save, or start a new game if there isn't one
 - Add `?debug` to the URL for the **debug panel** (bottom left; **`** (backquote) or its title folds it away). It
-  gathers every URL switch below (area, hour, raid, event, give, wolves, weather): pick them and **Start a new game
+  gathers every URL switch (see **URL switches** below): pick them and **Start a new game
   with these** writes them into the address and starts one (on the title screen, begin a new journey to use them).
   Under **Now**: teleport to any area, set the hour, hold the weather, set or clear a story flag (the flags that
   are set show as chips; click one to clear it), add coins or XP, heal, and **Kill all in fight** (in the raid's
   fight, that goes straight on to the blackout and the ruins). A line along the top shows where you are, the day
   and hour, the weather, health, level and coins. Keys typed in the panel don't reach the game (see
   `scenes/DebugScene.ts`)
-- Add `?hour=21` to the URL to start at a given hour (handy for testing night)
-- Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
-  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=northwoods` in the north woods, `?area=watchtower` inside its old watchtower, `?area=plains` on Adowvale Plains,
-  `?area=monastery` outside Saint Elda's monastery, `?area=tavern` in the Crooked Tankard's taproom,
-  `?area=cellar` in its cellar, or `?area=smithy` / `?area=bakery` inside Osric's smithy and Hilde's bakery;
-  every area with `test: true` in `scenes/game/areas.ts` works)
 - **The Crooked Tankard**, Adowvale's inn on the north side of the square: buy a drink across the bar
   from Godric the landlord (drunk there and then), or food and drink to take away. Sit at a table and a
   maid comes over to take your order, fetches it from the bar and brings it back. It's quiet by day and
@@ -152,8 +149,6 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   times for a big one; three slips and it's gone. What bites depends on the water and the hour: perch and roach by
   day, pike at dawn and dusk, eels at night, tench in the mere, trout in the cold willow pool, carp in the brothers'
   ponds, and now and then Tobin's old boot. Every fish cooks at a hearth. Tobin will tell you where they're biting
-- Add `?give=moonpetal,willow-bark,raw-hare:3` to the URL on a new game to start with those things in the
-  satchel (handy for testing the stations)
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
   game sends it running, and in a fight it may bolt rather than stand
 - **The north woods**: from the sheep track by the wolves' cave, a narrow path climbs north behind the hill and
@@ -174,8 +169,6 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   has lost her goat, Clover: find her in the long grass, press E to **Lead** her, and bring her back. Hal, Lord Morten's
   messenger, sits with a twisted ankle and would be glad of something to eat. At night a wolf pack may be out hunting.
   What happens depends on the hour, and the same thing never happens twice running (see `world/PlainsEvents.ts`)
-- Add `?event=footpads` (or `tinker`, `goat`, `courier`, `wolves`) to the URL with `?area=plains` to have that meeting
-  happen a few seconds after arriving
 - **Your name in the world**: Adowvale, the brothers of Saint Elda's and the village militia each keep a standing
   with you, from Distrusted through A stranger, Known and Liked to Honoured (`systems/Reputation.ts`, saved with the
   game). Quests done for folk raise it (Iran's feed, Wil's ewes, Godric's rats, the Wolf Mother), and so does how you
@@ -198,8 +191,6 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   paid in coins and in the militia's and the village's good opinion. Each can be done again, one claim a day. With
   the rat bounty out, new rats are in the cellar; with the footpads' or the wolves' out, those meetings come more often
   on the plains (`systems/Bounties.ts`)
-- Add `?wolves=3` to the URL to meet a pack of wolves instead of the lone one (handy for
-  testing fights against several enemies)
 - **Mother's day**: once you've first spoken to her, Mother goes about the cottage by the clock. She's in bed
   from 21:00 till 07:00 and naps 13:30 to 15:00 (talk to her there and she's drowsy), sits at the table for
   breakfast (07:00), dinner (12:00) and supper (18:00), and the rest of the time potters between the hearth,
@@ -225,13 +216,16 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   are framed as cut-scenes: black bars slide in, the HUD steps aside, the music is held, the camera moves in slow
   pans, and what's said or thought is written in the bottom bar. Later story scenes can use the same helper,
   `CutScene.begin(scene, { music })` in `ui/CutScene.ts`
-- Add `?raid=night` to start at 20:00 with the tincture in the satchel (talk to Mother to give it to her),
-  `?raid=morning` to wake on the morning of the raid, or `?raid=after` to start in the ruins (add `&area=world`
-  or `&area=hut` to start outside or in Iran's hut)
 - **After the raid**: the ruins of the cottage and the coop smoulder, thick and dark at first and dying down
   over two days; crows come down on the trampled garden and the yard (fewer as the days go by) and take off
   when you come near; and the folk on the plains road talk of the goblins (Jory, Hal and the footpads have
   something to say, and they shout about it as you pass) (see `world/Aftermath.ts`)
+- **Speckle and Moppet** (a side story after the raid): once Iran has told you what he saw, Pip and Hetty whisper
+  what they've lost. Hetty's hen Speckle ran off down the hill when the coop burned, and her rag doll Moppet was at
+  your cottage, where Mother was sewing her a new eye. Moppet is under the fallen beam in the ruins (**Look under
+  the fallen beam**); Speckle is hiding in the trampled garden beside the cottage (walk up quietly and press E to
+  **Catch** her). Come back to the hut with both and the children have their say; Speckle lives in the hut after
+  that, and the children chatter more cheerfully (see `scenes/game/speckle.ts`; try `?raid=after&area=hut`)
 - **Weather**: clear skies, cloud, drizzle, rain and the odd thunderstorm, each lasting a few in-game hours and
   following on from the last (rain tends to come after cloud; a storm blows itself out into rain), and on some
   mornings after a dry night, mist lying in the hollows until mid-morning. Rain falls in sheets and splashes,
@@ -239,218 +233,286 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   the light (lanterns come on sooner), and storms bring wind in the trees, lightning and thunder. Indoors you
   hear the rain on the roof and the thunder dulled. The time wheel shows the cloud, rain and mist. The weather
   comes from a seed saved with the game, so the same game always has the same weather (see `systems/Weather.ts`)
-- Add `?weather=rain` to the URL to hold the weather (or `clear`, `overcast`, `drizzle`, `storm`, `mist`)
 - **Water and fire**: waves run round the lake's shore (rougher in a wind), lamps by the water and the hero's
   lantern shine on it after dark, and a hearth's light dances on the walls of the room
 
+## URL switches
+
+Add these to the address to start a new game somewhere else or set up something to test. They're all on the
+`?debug` panel too, which writes them into the address for you (`systems/DebugSwitches.ts`). Except `weather`,
+they only count when a new game starts (on the title screen, begin a new journey).
+
+| Switch | What it does |
+| --- | --- |
+| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
+| `?hour=21` | Start at that hour (0 to 23.99; 21 is 9pm) |
+| `?raid=night` | Start at 20:00 with the tincture in the satchel and Mother's errand otherwise done (talk to her to give it) |
+| `?raid=morning` | Wake on the morning of the goblin raid |
+| `?raid=after` | Start in the ruins after the raid (add `&area=world` or `&area=hut` to start outside or in Iran's hut, where Pip and Hetty's side story begins) |
+| `?event=footpads` | With `?area=plains`, have that chance meeting a few seconds in (or `tinker`, `goat`, `courier`, `wolves`) |
+| `?give=moonpetal,willow-bark,raw-hare:3` | Start with those things in the satchel (`id:count`; ids are the keys of `ITEMS` in `systems/Inventory.ts`) |
+| `?wolves=3` | The first beast you meet in an area comes as a pack this big (1 to 6) |
+| `?weather=rain` | Hold the weather (`clear`, `overcast`, `drizzle`, `rain`, `storm`, `mist`); read on every area |
+| `?debug` | The debug panel (see Controls) |
+| `?smoke` | Puts the game on `window.game`, as the dev server always does (the smoke test uses it) |
+
 ## Project layout
+
+Folder by folder, every file in `src/` (and the tools and tests around it). Most areas' map files, and most of
+the art, download after the title screen (see "The download comes in pieces" under Key ideas), so anything the rest of the
+game needs from a map lives in `world/landmarks.ts` instead.
 
 ```
 src/
-  main.ts                 Phaser game config, scene list
-  config.ts               Tile size, map size/seed, player speed, zoom limits
-  iso/IsoMath.ts          Grid <-> isometric screen conversion, depth sorting
-  world/MapData.ts        Terrain + prop types, walkability table
-  world/MapGenerator.ts   Seeded placeholder map (the family cottage and its vegetable garden, lake, road, forest,
-                          and Old Tobin fishing on the far shore of the lake)
-  world/HomeMap.ts        Inside the cottage: walls, furniture, Mother, stools, the door out (and the burnt-out
-                          ruin of it after the goblin raid)
-  world/MotherRoutine.ts  Mother's day round the cottage: bed, the table at mealtimes, pottering about
-  world/GoblinRaid.ts     The goblins' raid: the farm under attack and after, and the scripted morning itself
-  world/MarketMap.ts      Adowvale, the village at the end of the road: its market square (well, stalls, houses, the
-                          smithy and bakery doors, militia) and the lane north to Lord Morten's toll gate (area id 'market', kept for old saves)
-  world/HerbPatches.ts    Planting wild herb patches on a map (the clump, and its regrowing gather sight)
-  world/PlainsMap.ts      Adowvale Plains past the toll gate: the biggest map (120x120), open grass, copses, a mere
-                          and a pond, the Lord's Road to a crossroads and on east to the monastery, deer, hares
-                          and boar, and two travellers
-  world/NorthWoodsMap.ts  The north woods beyond the wolves' cave (60x76): forest, a brook and its ford, the ruined
-                          watchtower, fallen trees, bramble thickets, a glade, wild cats and game, and after the
-                          raid the goblins' trail north (scenery only)
-  world/WatchtowerMap.ts  Inside the old watchtower (7x7): roofless, the broken stair, the last watch's table,
-                          logbook, spears, fire ring and chest, a rooks' nest, and two rats
-  world/MonasteryMap.ts   The grounds outside Saint Elda's monastery, east of the plains: the wall and its barred
-                          gatehouse with the chapel and bell tower showing over it, the Saint's statue, wayside
-                          shrines, vegetable beds, beehives, fish ponds with benches, and four of the brothers
-  world/BakedLayer.ts     Bakes the ground into textures of at most 2048px, so big maps fit on phones
-  world/HutMap.ts         Inside Farmer Iran's hut, where his children Pip and Hetty squabble
-  world/WorkshopMaps.ts   Inside Osric's smithy (forge, bellows, anvil, quench tub, tool and iron racks, his slate)
-                          and Hilde's bakery (bread oven, loaf racks, kneading trough, the counter)
-  world/TavernMap.ts      The Crooked Tankard: the taproom (bar, hearth, tables, stairs, cellar trapdoor), the
-                          passage upstairs with four rooms to let, a room, and the cellar with its rats
-  world/CaveMap.ts        The wolves' cave in the hill north of the cottage: rock walls, stalactites and
-                          stalagmites, a pool, three wolves, the drover's lost ewes, bone piles to search, and
-                          a locked door in the back wall (a hint of a quest to come)
-  world/Drips.ts          Water dripping from the cave's stalactites
-  world/IsoMap.ts         Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
-  world/Collision.ts      Collision outlines: round trunks and boulders, thin fence rails, full tiles
-  world/Ambience.ts       Living world: water glints and foam, birds, bats, sparrows, butterflies,
-                          fireflies, cloud shadows, chimney smoke, falling leaves; rain, puddles and mist;
-                          lamps reflected on the water; the ruins smouldering and crows after the raid
-  world/Aftermath.ts      When the raid was (saved), how hard the ruins smoulder and how many crows come after it
-  world/FireGlow.ts       A hearth's light dancing on the walls of a room
-  art/weather.ts          Rain sheets, splashes, puddles, mist, crows, lamp reflections, firelight on walls
-  systems/Pathfinding.ts  8-direction A* on the tile grid
-  systems/PlayerStats.ts  Health and stamina (sprinting drains stamina)
-  systems/Needs.ts        Optional hunger and rest: how fast they fall, what meals and sleep restore, the penalties
-  systems/Inventory.ts    Item definitions, the satchel's slots and what's worn
-  systems/Shops.ts        The market traders (and Godric at the Tankard): stock, what they buy, prices that move
-                          with supply, the day and your standing, and the daily restock
-  systems/Reputation.ts   Standing with Adowvale, Saint Elda's and the militia, and how each plains meeting went
-  systems/Bounties.ts     The militia's bounty notices: which are up each day, kills counted, claiming
-  scenes/BountyBoardScene.ts The notice board close up: pinned notices to pick, take and claim
-  systems/Tavern.ts       The Crooked Tankard's menu and prices, and the room the hero has let (until when)
-  systems/VillageDay.ts   Where the market's traders are at each hour: stall, workshop, the Tankard or home
-  systems/Crafting.ts     Brewing and cooking: the recipes, the stations, and which recipes have been found
-  systems/Loot.ts         Random finds: what searching a pile of bones can turn up, and how likely each is
-  systems/Farm.ts         Crops (picked ones regrow), which trees were shaken today, and the plot in Iran's yard:
-                          dug, sown, watered (or rained on) and how far each tile has grown
-  systems/Herbs.ts        Wild herbs: the kinds, what each gives, and when each patch was picked (they regrow)
-  systems/Fishing.ts      Fishing: each water's fish by time of day, bite timing, how hard each fish fights, the reel
-  systems/SaveGame.ts     Save and load: one save in browser storage, made of a section per system
-  systems/TimeOfDay.ts    In-game clock and the lighting colour for each hour
-  systems/Weather.ts      The weather: seeded spells of clear, cloud, rain and storm, morning mist, wet ground,
-                          the light under cloud and lightning; ?weather=
-  systems/Experience.ts   XP and levels: what each level needs, what it gives, XP for quests
-  systems/Combat.ts       Fight rules: initiative, attack rolls against armour, damage dice, advantage,
-                          conditions (prone, dazed...), fleeing, how beasts choose their moves, and the
-                          beasts' stats and traits (FOES)
-  systems/CombatSim.ts    Headless fights for tuning FOES: a seeded rng, a typical kit per level, simple hero tactics
-  systems/FightTally.ts   The sums for the end-of-fight card: damage each way, blows, XP, spoils
-  systems/Abilities.ts    The hero's combat skills: action or bonus action, stamina, cooldowns, levels
-  ui/AbilityIcons.ts      The hotbar's skill icons, painted with canvas gradients and glows into textures
-  entities/Player.ts      Movement, collision, click-to-move path following
-  entities/Npc.ts         People you can talk to, which conversation they have, travellers
-                          who wander up and down the road, and the militia on their rounds
-  entities/Hen.ts         Farmer Iran's hens: peck, strut about the run, scurry from the hero, roost at night
-  entities/Child.ts       Children who chatter to each other in speech bubbles and say hello as you come near
-  scenes/InterludeScene.ts A few half-remembered lines in the dark between scenes (beaten in the raid)
-  ui/CutScene.ts          Cut-scene framing for story moments: letterbox bars, the HUD away, held music, slow camera pans
-                          and captions (ui/CutSceneLayout.ts has the bar and caption sums)
-  scenes/LetterboxScene.ts The cut-scene's bars and the caption in the bottom one, over the HUD
-  scenes/DebugScene.ts    The ?debug panel: an HTML overlay with every URL switch and testing buttons
-  systems/DebugSwitches.ts Every URL switch the game reads, and reading/writing them in the address
-  entities/Creature.ts    Wild animals: wander and sniff near their den, start a fight when you come close
-  dialogue/               Conversations as data (lines, replies, story actions) and speakers
-  systems/Quests.ts       Quest log: quest definitions, progress, diary entries
-  systems/QuestTargets.ts Where each quest step is done (an area, a spot and maybe a person), for the markers and map
-  art/market.ts           Market stalls, townhouses and the inn, the well, lamp posts, benches, crates, signpost
-  art/tavern.ts           The Crooked Tankard inside: bar counter pieces, kegs, bottle shelf, stairs, trapdoor,
-                          notice board, laid tables, washstand, sacks and the passage's runner
-  art/rats.ts             The cellar rats
-  art/goblins3d.ts        The raiding goblins, modelled in 3D: cutters, a spearman, torch-bearing firebrands,
-                          and the Goblin Brute in iron with a shield
-  art/mother3d.ts         Mother, modelled in 3D, so she can walk about, sit and turn
-  art/scorch.ts           Fire damage: wraps any shader (or finished texture) so it comes out charred and holed
-  art/ruin.ts             After the raid: burnt walls and furniture, blood and ash on the floor, fires, and burnt
-                          copies of the farm's fences, coop and hut
-  art/tollgate.ts         Lord Morten's toll gate (shut and open), the palisade, the guards' booth and his banner
-  art/monastery.ts        Saint Elda's: the wall, gatehouse, chapel, bell tower, shrines, statue, bean rows,
-                          beehive skeps and water lilies
-  art/henfarm.ts          Farmer Iran's hut, the hen coop and trough, and the hens and rooster
-  art/cave.ts             The cave mouth in the hillside, rock walls, stalactites, stalagmites, columns,
-                          boulders, bones, the dead ewes and the locked door
-  art/fishing.ts          Old Tobin's rod, float and creel
-  art/herbs.ts            Wild herb patches (yarrow, comfrey, nettle, wolfsbane, sage), grown and picked
-  art/figure3d.ts         The 3D figure renderer every person is drawn with: rounded solids, turned to 8 directions and
-                          lit as pixel art, with idle, walk, sit and work frames
-  art/models3d.ts         The villagers' 3D models (traders, militia, toll guards, brothers, tavern folk, Iran and his
-                          children, Tobin, the road travellers), registered as 'folk-<id>' by folk.ts
-  art/wayfarers3d.ts      The folk met by chance on the plains (and the footpads' fighting frames)
-  art/northwoods.ts       The north woods' watchtower, fallen trees, brambles, bracken, leaf litter, ford stones,
-                          and the goblins' trodden trail, dropped torch and the scrap of quilt
-  art/mother3d.ts         Mother's 3D model
-  art/workshops.ts        The smithy's and bakery's furnishings (the forge's coals and the oven's fire flicker), and
-                          Osric's hammer stroke and Hilde's kneading as their 'work' frames
-  art/portraits.ts        Talking portraits for conversations: shaded faces, hair, clothes, per speaker
-  art/mapInk.ts           The world map's pen work: parchment, frame, banner, compass rose, trees, firs, hills,
-                          mountains, water, roads, fields, walls and little buildings
-  art/gear.ts             How worn gear looks on the hero's sprite (every head, body, feet and hand item): add an entry to dress new items
-  tools/gear-preview.html The hero in every piece of gear, all 8 directions (open /tools/gear-preview.html under `npm run dev`)
-  art/                    Palette and pixel-art generators: tiles, props, the hero, Mother,
-                          furniture and buildings (IsoModel.ts draws 3D-ish iso objects),
-                          the garden (farm.ts: soil, crops, fences), painted item icons (items.ts),
-                          the beasts (beasts3d.ts, registered by creatures.ts: wolves, deer, hares, boar,
-                          rats and the north woods' wild cat) and birds, ripples and smoke (critters.ts)
-  audio/Audio.ts          All the game's sound: picks the music by area and hour, plays fight sounds and voice
-                          barks, and composes UI blips (and stand-in tunes and sounds if a recording won't load)
-  audio/Recordings.ts     Streams and crossfades the recorded music; fetches and plays the fight sounds and barks
-  audio/Soundscape.ts     The world's background sounds, footsteps and the bell, all recordings
-  public/audio/ambience/  The ambient recordings (MP3) and CREDITS.md with their sources and licences
-  public/audio/music/     The recorded music (MP3) and CREDITS.md
-  public/audio/sfx/       The fight sounds, cries and voice barks (MP3) and CREDITS.md
-  tools/build-ambience.py Cuts, loops and levels the ambient recordings from the originals
-  tools/build-sound.py    Does the same for the music, fight sounds and voice barks
-  tools/balance.ts        The balance table from the fight simulator (`npm run sim`)
-  world/AmbientSounds.ts  Sets the background sounds' levels from the area, the hour, the weather and who's about;
-                          times the lightning and thunder
-  world/atlas.ts          How the areas join up (each door and road, at which tile) and where each lies on the world
-                          map; the way from any area to any other, for the quest markers
-  world/atlasSurvey.ts    Generated by `npm run atlas` (tools/atlasSurvey.ts): each region's ground in 3x3-tile cells
-                          (woods, water, fields, rock, roads, paving, walls) and its buildings, for the world map
-  world/landmarks.ts      Spots in the maps the rest of the game reads (the bar, the cellar rats, the moonpetal, the
-                          monastery gate), kept out of the map files so those can download on their own
-  settings/Settings.ts    Volume, display, minimap, quest marker and hunger-and-rest settings, saved in the browser
-  ui/Display.ts           Draws at the screen's own resolution (sharp on high-density and 1440p/4K screens) and sizes the interface to suit
-  ui/Widgets.ts           Shared menu look: panels, buttons, sliders, fonts
-  vendor/phaser.js        A slimmer Phaser (what `import Phaser from 'phaser'` gets), built from Phaser's source
-  systems/Download.ts     Retries a download that failed, for the parts of the game fetched after the first
-  scenes/BootScene.ts     Draws the art behind a loading bar (the title screen's first, the rest while it's up),
-                          repaints the hero when gear changes, then opens the main menu
-  scenes/MainMenuScene.ts Title screen over the drifting world map
-  scenes/PauseScene.ts    Esc menu during play
-  scenes/SettingsScene.ts Volume sliders, resolution, interface size, minimap and quest markers on or off, fullscreen and
-                          hunger & rest, opened from either menu
-  scenes/GameScene.ts     The world scene: builds the area, runs the frame, camera, talking, menus. The rest of what
-                          happens in the world is in scenes/game/, as functions that take the scene:
-  scenes/game/areas.ts    The area registry: each area id, how its map is built (most with `lazy(...)`, fetched on
-                          first need), whether ?area= starts there, and what happens on arriving. A new area is one
-                          entry here (plus AreaId and AREA_NAMES)
-  scenes/game/interactions.ts  What the E prompt can do (talk, door, sit, sleep, pick, shake, hunt, fish, work the plot) and which one shows
-  scenes/game/dialogueActions.ts  Runs a line's `action`: shop:, drink:, order:, road:, rent:, and the named ones,
-                          which live with their part of the story:
-  scenes/game/medicine.ts Mother's medicine: moonpetal, willow bark, the tincture brewed and given
-  scenes/game/hollow.ts   Wil's ewes, Farmer Iran's hens, feed and children, the wolves' cave
-  scenes/game/monastery.ts The toll gate, the Wolf Mother, Saint Elda's gate
-  scenes/game/tavern.ts   The Crooked Tankard: maids, the bar, rooms, dice, Pell's song, chatter, the cellar rats
-  scenes/game/raid.ts     The scene's side of the goblin raid, coming round in the ruins, ?raid=
-  scenes/game/debug.ts    What the ?debug panel does to the game: teleport, hour, weather, flags, coins, XP, kill all
-  scenes/game/market.ts   Arriving in Adowvale, the militia calling the market's hours
-  scenes/game/workshops.ts The smithy and the bakery: barred at night, first visits, sparks off the anvil, flour
-  scenes/game/combat.ts   Starting fights (and packs), the plains' chance meetings, spoils and what comes after
-  scenes/game/sights.ts   Few-second actions, crops, trees, examining, searching, gathering, giving items
-  scenes/game/plot.ts     The plot Iran lends: how each tile looks, and digging, sowing, watering and picking
-  scenes/game/sitting.ts  Seats and the thoughts that come while sitting
-  scenes/game/fishing.ts  The Fish prompt at the water's edge, first-catch diary lines, Tobin's rod and his boot
-  scenes/game/travel.ts   Doors, road exits, locked doors, the trek question, fading to the next area
-  scenes/game/sleep.ts    Beds, sleeping, saving and loading
-  scenes/game/input.ts    Keys, click-to-walk, pathfinding to a spot, the hover tile
-  scenes/DialogueScene.ts Conversation box: talking portrait, typewriter text, voice blips, replies
-  scenes/JournalScene.ts  The journal book: tasks, quests, diary, page turning, and a Map tab
-  scenes/MapScene.ts      The world map (M): an inked fantasy map of the places seen so far, drawn from the survey,
-                          the wilds between them, the roads, the hero and the quest step's mark
-  scenes/InventoryScene.ts Satchel and equipment tabs: item grid with filter tabs and sorting, worn gear, details, eat/wear
-  scenes/ShopScene.ts     Trading window: the stall's goods and your satchel, drag to buy and sell, how-many box
-  scenes/StationScene.ts  Brewing bench and hearth window: drag ingredients in, recipe book, progress bar, result popup
-  scenes/FishingScene.ts  The fishing window: the float on the water, striking a bite, the reel bar
-  scenes/SleepScene.ts    "How long to sleep?" box, opened from a bed
-  scenes/CombatScene.ts   Turn-based fights over the world: turn order, skill hotbar and tooltips, dice, combat log
-  scenes/UIScene.ts       HUD overlay, separate from the world camera
-  ui/StatusBars.ts        Slim health and stamina bars, the hero's level and an XP bar
-  ui/TimeWheel.ts         Rotating sun/moon dial showing the time of day, with the weather's cloud, rain and mist
-  ui/Minimap.ts           Isometric minimap with player, camera view and the quest marker
-  ui/LocationLabel.ts     Current area name (and nearby landmark) under the minimap
-  ui/DayNightOverlay.ts   Tints the world by time of day (and weather); lantern, hearth and candle light; lightning
-  ui/QuestTracker.ts      HUD reminder of the current quest step, and which place it's in
-  ui/QuestMarkers.ts      The quest marker: a pointer over the step's spot, or an arrow at the screen's edge
-  ui/Toasts.ts            "New quest" banners and the hero's passing thoughts
+  main.ts                   Phaser game config and the scene list (puts the game on window.game under the dev server,
+                            ?debug or ?smoke)
+  config.ts                 Tile size, map size and seed, player speed, zoom limits, the start hour, the trek time
+  vendor/phaser.js          A slimmer Phaser (what `import Phaser from 'phaser'` gets), built from Phaser's source
+
+  iso/
+    IsoMath.ts              Grid <-> isometric screen conversion, depth sorting
+
+  world/                    The maps, and the living world on top of them
+    MapData.ts              Area ids, terrain and prop types, the walkability table, and everything a map can hold
+                            (doors, seats, beds, sights, lights, hens, children, creatures)
+    MapGenerator.ts         The Hollow, seeded: the cottage and its garden, the lake, the road, the forest, Farmer
+                            Iran's hut, run and plot, the cave in the hill, Old Tobin on the far shore
+    HomeMap.ts              Inside the cottage (and its burnt-out ruin after the raid)
+    HutMap.ts               Inside Farmer Iran's hut, where Pip and Hetty squabble (hiding in the dark after the
+                            raid; Speckle pecking about the floor once she's home)
+    CaveMap.ts              The wolves' cave in the hill: three wolves, the drover's ewes, bone piles, the locked door
+    NorthWoodsMap.ts        The north woods beyond the cave: the brook and ford, the ruined watchtower, brambles and
+                            wild cats, and after the raid the goblins' trail north (scenery only)
+    WatchtowerMap.ts        Inside the old watchtower (7x7): roofless, the broken stair, the last watch's table,
+                            logbook, spears, fire ring and chest, a rooks' nest, and two rats
+    MarketMap.ts            Adowvale: the market square (stalls, well, houses, the inn, smithy and bakery doors,
+                            the militia, the bounty board) and the lane north to Lord Morten's toll gate
+    TavernMap.ts            The Crooked Tankard: taproom, the passage upstairs, a room to let, the cellar and its rats
+    WorkshopMaps.ts         Inside Osric's smithy and Hilde's bakery
+    PlainsMap.ts            Adowvale Plains past the toll gate (120x120): grass, copses, the mere and the pond, the
+                            Lord's Road to the crossroads and on to the monastery, the old white willow, game
+    PlainsEvents.ts         Chance meetings on the plains: the footpads, Jory the tinker, Mags's goat, Hal the
+                            messenger, a wolf pack at night (?event=)
+    DenMap.ts               The Wolf Mother's den on the plains (halls, a gallery round a black pool, her lair), and
+                            the deep den through the crevice at the back (?area=den, ?area=deepden)
+    MonasteryMap.ts         Outside Saint Elda's: the wall and gatehouse, shrines, beds, hives, fish ponds, brothers
+    AbbeyMap.ts             Inside Saint Elda's walls: the court and well, the cloister and its herb garden (the
+                            moonpetal), the chapel, dorter, infirmary, scriptorium, refectory, the brothers' graves
+    AbbeyRooms.ts           The rooms off the abbey grounds: chapel, infirmary, scriptorium and refectory
+    GoblinRaid.ts           The goblin raid: the farm on the morning of it, the scripted fight, and the ruins after
+    Aftermath.ts            When the raid was (saved), how hard the ruins smoulder, how many crows come
+    MotherRoutine.ts        Mother's day round the cottage: bed, meals at the table, pottering about
+    HerbPatches.ts          Planting wild herb patches on a map (the clump, and its regrowing gather sight)
+    landmarks.ts            Spots in the maps the rest of the game reads (the bar, the cellar rats, the moonpetal,
+                            the monastery gate, the bounty board, where Speckle and Moppet are), kept out of the
+                            map files so those can download on their own
+    atlas.ts                How the areas join up (each door and road) and where each lies on the world map; the
+                            way from any area to any other, for the quest markers
+    atlasSurvey.ts          Generated by `npm run atlas`: each region's ground and buildings, for the world map
+    IsoMap.ts               Renders a MapData and answers "can I walk here?" (per tile, and per exact spot)
+    BakedLayer.ts           Bakes the ground into textures of at most 2048px, so big maps fit on phones
+    Collision.ts            Collision outlines: round trunks and boulders, thin fence rails, full tiles
+    Ambience.ts             Water glints and foam, birds, bats, butterflies, fireflies, cloud shadows, chimney
+                            smoke, falling leaves; rain, puddles and mist; the ruins smouldering and crows after the raid
+    AmbientSounds.ts        The background sounds' levels from the area, the hour, the weather and who's about
+    Drips.ts                Water dripping from the cave's stalactites
+    FireGlow.ts             A hearth's light dancing on the walls of a room
+
+  entities/                 Things that move about the maps
+    Player.ts               Movement, collision, click-to-move path following
+    Npc.ts                  People you can talk to: their conversation, their day's round, travellers on the
+                            road, the militia on their rounds
+    Creature.ts             Wild beasts: wander and sniff near their den, start a fight when you come close
+    Hen.ts                  Farmer Iran's hens: peck, strut about, scurry from the hero, roost at night
+    Child.ts                Pip and Hetty: chatter in speech bubbles, say hello, and tell the hero things
+    Goat.ts                 Clover, Mags's runaway goat on the plains: grazes, then follows when led
+
+  systems/                  The game's rules, kept free of drawing (most have unit tests)
+    Quests.ts               The quest log: quest definitions, steps, flags, and the diary (each entry with its
+                            day and hour)
+    QuestTargets.ts         Where each older quest's steps are done, for the markers and the map
+    Experience.ts           XP and levels: what each level needs and gives, XP for quests
+    PlayerStats.ts          Health and stamina (sprinting drains stamina)
+    Needs.ts                Optional hunger and rest: how fast they fall, what meals and sleep restore, the penalties
+    Inventory.ts            Item definitions, the satchel's slots and what's worn
+    Loot.ts                 Random finds from searching a pile of bones
+    Shops.ts                The traders: stock, what they buy, prices that move with supply, the day and your standing
+    MarketHours.ts          When the market trades (stalls open, packing up, shut)
+    VillageDay.ts           Where Hilde, Osric and Tamsin are at each hour: stall, workshop, the Tankard or home
+    Tavern.ts               The Crooked Tankard's menu and prices, and the room the hero has let
+    Reputation.ts           Standing with Adowvale, Saint Elda's and the militia, and how each plains meeting went
+    Bounties.ts             The militia's bounty notices: which are up each day, kills counted, claiming
+    Crafting.ts             Brewing and cooking: recipes, stations, which recipes have been found
+    Farm.ts                 The garden's crops, shaken trees, and the plot in Iran's yard (dug, sown, watered, grown)
+    Herbs.ts                Wild herbs: the kinds, what each gives, when each patch was picked
+    Fishing.ts              Each water's fish by time of day, bite timing, how hard each fights, the reel
+    Combat.ts               Fight rules: initiative, attack rolls, damage dice, advantage, conditions, fleeing,
+                            how beasts choose their moves, and their stats (FOES)
+    Abilities.ts            The hero's combat skills: action or bonus action, stamina, cooldowns, levels
+    CombatSim.ts            Headless fights for tuning FOES (`npm run sim`)
+    FightTally.ts           The sums for the end-of-fight card
+    TimeOfDay.ts            The in-game clock and the lighting colour for each hour
+    Weather.ts              Seeded spells of clear, cloud, rain and storm, morning mist, wet ground (?weather=)
+    SaveGame.ts             Save and load: one save in browser storage, a section per system; area names
+    Download.ts             Retries a download that failed, for the parts fetched after the first
+    DebugSwitches.ts        Every URL switch the game reads, and reading/writing them in the address
+    Pathfinding.ts          8-direction A* on the tile grid
+
+  dialogue/                 Conversations as data: lines, replies, and named story actions
+    Dialogue.ts             The node graph, speakers and their voices and portraits
+    mother.ts               Mother, at home
+    travellers.ts           Folk on the road past the cottage (Wil the drover and his lost ewes)
+    iran.ts                 Farmer Iran and the feed, and Pip and Hetty's lines: squabbles, hellos, after the
+                            raid, and Speckle and Moppet
+    fisherman.ts            Old Tobin on the lake shore
+    market.ts               The stallholders and the militia in Adowvale's square
+    tavern.ts               Godric, the maids and the Tankard's regulars
+    plains.ts               The toll guards and the folk on the Lord's Road
+    wayfarers.ts            The plains' chance meetings (footpads, tinker, goatherd, messenger)
+    monastery.ts            Brother Wystan at Saint Elda's gate
+    abbey.ts                The brothers inside: the Prior, Anselm, Leofric, Edmund and Hob
+
+  scenes/
+    BootScene.ts            Draws the art behind a loading bar, repaints the hero when gear changes, opens the menu
+    MainMenuScene.ts        The title screen over the drifting world map
+    GameScene.ts            The world scene: builds the area, runs the frame, camera, talking, menus. The rest of
+                            what happens in the world is in scenes/game/, as functions that take the scene:
+    game/
+      areas.ts              The area registry: each id, how its map is built (most `lazy(...)`, fetched on first
+                            need), whether ?area= starts there, and what happens on arriving
+      interactions.ts       What the E prompt can do and which one shows
+      input.ts              Keys, click-to-walk, pathfinding to a spot, the hover tile
+      travel.ts             Doors, road exits, locked doors, the trek question, fading to the next area
+      sights.ts             Few-second actions, crops, trees, examining, searching, gathering, giving items
+      sitting.ts            Seats and the thoughts that come while sitting
+      sleep.ts              Beds, sleeping, saving and loading
+      combat.ts             Starting fights (and packs), spoils, being beaten, what comes after
+      dialogueActions.ts    Runs a line's `action`: shop:, drink:, order:, road:, rent:, and the named ones, which
+                            live with their part of the story:
+      medicine.ts           Mother's medicine: leaving home, moonpetal, willow bark, the tincture brewed and given
+      hollow.ts             Wil's ewes, Iran's hens and feed, the wolves' cave, the north woods, the children's hello
+      speckle.ts            Pip and Hetty's side story after the raid: Speckle the hen and Moppet the rag doll
+      raid.ts               The scene's side of the goblin raid, coming round in the ruins, ?raid=
+      monastery.ts          The toll gate, the Wolf Mother, Saint Elda's gate
+      tavern.ts             The Crooked Tankard: maids, the bar, rooms, dice, Pell's song, chatter, the cellar rats
+      market.ts             Arriving in Adowvale, the militia calling the market's hours
+      workshops.ts          The smithy and the bakery: barred at night, first visits, sparks and flour
+      bounties.ts           The bounty board: reading it, taking a notice, kills counted, being paid
+      plot.ts               The plot Iran lends: digging, sowing, watering and picking
+      fishing.ts            The Fish prompt, first-catch diary lines, Tobin's rod and his boot
+      debug.ts              What the ?debug panel does: teleport, hour, weather, flags, coins, XP, kill all
+    UIScene.ts              The HUD, over the world camera
+    DialogueScene.ts        The conversation box: talking portrait, typewriter text, voice blips, replies
+    JournalScene.ts         The journal book: tasks, quests, the diary (day and hour on each entry), and a Map tab
+    MapScene.ts             The world map (M): an inked map of the places seen so far, the hero and the quest's mark
+    InventoryScene.ts       Satchel and equipment: item grid with filter tabs and sorting, worn gear, eat/wear
+    ShopScene.ts            Trading: the stall's goods and your satchel, drag to buy and sell, how-many box
+    StationScene.ts         Brewing bench and hearth: drag ingredients in, the recipe book, progress, the result
+    FishingScene.ts         The float on the water, striking a bite, the reel bar
+    CombatScene.ts          Turn-based fights: turn order, skill hotbar and tooltips, dice, combat log
+    BountyBoardScene.ts     The notice board close up: pinned notices to pick, take and claim
+    SleepScene.ts           "How long to sleep?", opened from a bed
+    ConfirmScene.ts         A yes/no question with numbered answers (the trek, the raid's choice, hunger and rest)
+    SaveWarningScene.ts     "Not saved" on waking when the browser refused the save, with Download Save
+    InterludeScene.ts       A few half-remembered lines in the dark between scenes (beaten in the raid)
+    LetterboxScene.ts       A cut-scene's bars and the caption in the bottom one
+    PauseScene.ts           The Esc menu
+    SettingsScene.ts        Volume, resolution, interface size, minimap, quest markers, fullscreen, hunger and rest
+    DebugScene.ts           The ?debug panel: an HTML overlay with every URL switch and testing buttons
+
+  ui/                       Pieces of the HUD and menus
+    theme.ts                The HUD's look: dark leather panels with gold trim, fonts
+    Widgets.ts              Shared menu look: panels, buttons, sliders
+    Display.ts              Draws at the screen's own resolution and sizes the interface to suit
+    StatusBars.ts           Health and stamina bars (and hunger and rest), level and XP
+    TimeWheel.ts            The sun and moon dial, with the weather's cloud, rain and mist
+    Minimap.ts              The isometric minimap with the player, the view and the quest marker
+    LocationLabel.ts        The area's name (and nearby landmark) under the minimap
+    QuestTracker.ts         The current quest step, and which place it's in
+    QuestMarkers.ts         A pointer over the step's spot, or an arrow at the screen's edge
+    Toasts.ts               "New quest" banners, level-ups and the hero's passing thoughts
+    SpeechBubbles.ts        Little bubbles over anyone saying something out loud (the militia, Pip and Hetty)
+    DayNightOverlay.ts      Tints the world by time of day and weather; lantern, hearth and candle light; lightning
+    CutScene.ts             Cut-scene framing: bars, the HUD away, held music, slow pans, captions
+    CutSceneLayout.ts       The cut-scene's bar and caption sums
+    AbilityIcons.ts         The hotbar's skill icons, painted into textures
+
+  settings/
+    Settings.ts             Volume, display, minimap, quest marker and hunger-and-rest settings, kept in the browser
+
+  audio/
+    Audio.ts                All the game's sound: music by area and hour, fight sounds, voice barks, UI blips
+                            (and stand-in tunes if a recording won't load)
+    Recordings.ts           Streams and crossfades the recorded music; plays the fight sounds and barks
+    Soundscape.ts           The world's background sounds, footsteps and the bell
+
+  art/                      All the pixel art, generated in code from one palette
+    index.ts                The drawing steps, in order, for the loading screen (the first ones before the title)
+    palette.ts              The Eldermoor palette every painter picks from
+    sizes.ts                Sizes the scenes need from art drawn later (icons, faces)
+    PixelCanvas.ts          A pixel-by-pixel painter, uploaded as a crisp texture
+    IsoModel.ts             A tiny 3D painter for isometric objects (furniture, buildings), shaded per surface
+    tiles.ts                Ground tiles, in look-alike variants
+    ground.ts               Rocks and small things on the ground (tufts, flowers, mushrooms, pebbles)
+    trees.ts                Broadleaf and pine trees, lit as forms
+    props.ts                Standing props and flat ground decorations, with where each one's base sits
+    willow.ts               The old white willow on the plains (and stripped of its bark)
+    farm.ts                 The garden: tilled soil, crops ripe and picked, the split-rail fence
+    henfarm.ts              Iran's hut, the coop and trough, the hens and the rooster
+    interior.ts             The cottage's walls, floor and furniture, and the cottage from outside
+    market.ts               Market stalls, townhouses and the inn, well, lamp posts, benches, crates, signpost
+    tavern.ts               The Crooked Tankard inside: bar, kegs, stairs, trapdoor, tables
+    workshops.ts            The smithy's and the bakery's furnishings, and Osric's and Hilde's work frames
+    tollgate.ts             Lord Morten's toll gate, palisade, booth and banner
+    monastery.ts            Saint Elda's from outside: wall, gatehouse, chapel, bell tower, shrines, hives
+    abbey.ts                Saint Elda's within: the ranges round the cloister, the herb garden, the rooms' furnishings
+    cave.ts                 The cave mouth, rock walls, stalactites, bones, the dead ewes, the locked door
+    northwoods.ts           The watchtower (and its roofless inside), fallen trees, brambles, ford stones, the goblins' trail
+    ruin.ts                 After the raid: burnt walls and furniture, blood and ash, fires, burnt fences and coop
+    scorch.ts               Fire damage: makes any shader or texture come out charred and holed
+    herbs.ts                Wild herb patches, grown and picked
+    fishing.ts              Old Tobin's rod, float and creel
+    stations.ts             The brewing still and the cooking pot, in layers, for the station window
+    weather.ts              Rain sheets, splashes, puddles, mist, crows, lamp reflections, firelight on walls
+    critters.ts             Water glints, foam, ripples, birds, bats, butterflies, chimney smoke
+    mapInk.ts               The world map's pen work: parchment, frame, compass, trees, hills, water, roads
+    items.ts                The satchel's painted item icons
+    portraits.ts            Talking portraits for conversations
+    character.ts            What every person's sprite sheet shares: frame size, feet, colour helpers
+    figure3d.ts             The 3D figure renderer: rounded solids turned to 8 directions and lit as pixel art
+    hero3d.ts               Arthus, the hero
+    gear.ts                 How worn gear looks on the hero (add an entry to dress a new item)
+    mother3d.ts             Mother
+    models3d.ts             The villagers' models (traders, militia, guards, brothers, tavern folk, Iran and his
+                            children, Tobin, the road travellers)
+    folk.ts                 Registers the villagers as 'folk-<id>'
+    wayfarers3d.ts          The plains' chance meetings, Clover the goat, and the footpads' fighting frames
+    beasts3d.ts             The beasts' 3D models: wolves, the Wolf Mother, deer, hares, boar, rats, the wild cat
+    creatures.ts            Registers the beasts' sheets
+    goblins3d.ts            The raiding goblins: cutters, a spearman, firebrands and the Goblin Brute
+
+public/audio/
+  ambience/                 The ambient recordings (MP3) and CREDITS.md with their sources and licences
+  music/                    The recorded music (MP3) and CREDITS.md
+  sfx/                      The fight sounds, cries and voice barks (MP3) and CREDITS.md
+
+tools/
+  balance.ts                The balance table from the fight simulator (`npm run sim`)
+  atlasSurvey.ts            Surveys the outdoor maps into src/world/atlasSurvey.ts (`npm run atlas`)
+  gear-preview.html / .ts   The hero in every piece of gear, all 8 directions (/tools/gear-preview.html under `npm run dev`)
+  phaserFlags.ts            Phaser's build flags, for building Phaser from its source (see vite.config.ts)
+  build-ambience.py         Cuts, loops and levels the ambient recordings from the originals
+  build-sound.py            Does the same for the music, fight sounds and voice barks
+
 tests/
-  unit/*.test.ts          Vitest tests for src/systems (Combat, Experience, Inventory, Crafting, Quests, SaveGame)
-  unit/balance.test.ts    The simulator, the balance targets and the fight tally
-  unit/helpers.ts         Scripted dice and a fake localStorage for the tests
-  smoke/smoke.mjs         Playwright smoke test: every ?area= loads without errors
+  unit/*.test.ts            Vitest tests, one file per system (quests, combat, satchel, shops, weather, the maps...)
+  unit/helpers.ts           Scripted dice and a fake localStorage
+  unit/maps.ts              Every area's map built in Node (with a Phaser maths mock), for tests against the maps
+  smoke/smoke.mjs           Playwright smoke test: every ?area= loads without errors, and the ?debug panel works
+
 .github/workflows/
-  ci.yml                  Type-check, unit tests and smoke test on every PR and push
-  deploy.yml              Build and publish to GitHub Pages from main
+  ci.yml                    Type-check, unit tests and smoke test on every PR and push
+  deploy.yml                Build and publish to GitHub Pages from main
 ```
 
 ## Key ideas
@@ -463,8 +525,8 @@ tests/
   and characters are individual sprites so they can overlap correctly.
 - **Pixel art is generated in code** (`src/art/`) from one shared palette
   (`palette.ts`), so there are no image files to manage. The hero is built from
-  simple body parts rotated to face 8 directions, with idle and walk animations
-  (`player-idle-<dir>`, `player-walk-<dir>`). Tiles come in several variants and
+  rounded 3D solids (`art/hero3d.ts`, drawn by `art/figure3d.ts` like everyone else) turned to face 8 directions,
+  with idle, walk, sit and work animations (`player-idle-<dir>`, `player-walk-<dir>`). Tiles come in several variants and
   the ground is sprinkled with flowers, grass tufts and pebbles. To use
   hand-drawn art instead, load it in `BootScene` under the same texture keys
   (`tile-grass`, `prop-tree`, `player`, ...).
@@ -665,14 +727,26 @@ tests/
 
 ## Good next steps
 
-The locked door at the back of the wolves' cave: trying it sets the
-`found-cave-door` flag and writes in the diary, and Old Tobin the fisherman
-then has a story about men digging in the hill long ago. Nothing opens it yet.
-Inside Saint Elda's monastery, where the travellers say moonpetal grows (the
-`heard-of-monastery` flag is set once one tells you). The grounds outside are
-built (`world/MonasteryMap.ts`); the gatehouse is shut, and Brother Wystan the
-porter (`dialogue/monastery.ts`) is the one to change when the way in is written.
-The village herbalist (the next step of "Medicine for Mother"; Hilde the baker
-mentions Old Maud), more villagers and buildings to go into,
-more beasts, weapon skills for the new weapons, a reward for the wolf pelt, cooking with the garden's
-crops, save/load.
+Threads the story has left open, roughly in the order the game points at them:
+
+- **Finding Mother.** The last step of **Ashes** ("Find out what the goblins did with Mother") has nowhere to go
+  yet: it's the one step in `tests/unit/questTargets.test.ts`'s `NO_TARGET`. The goblins' trail through the north
+  woods is scenery only (`world/NorthWoodsMap.ts`, `art/northwoods.ts`), and runs off the north edge into the deep
+  woods. Following it, and the goblins' camp, is the next big piece. Iran tells the hero to get word to Adowvale
+  first: the militia and Lord Morten have nothing to say about the raid yet (`dialogue/market.ts`,
+  `dialogue/plains.ts`).
+- **The door under the hill.** The locked door at the back of the wolves' cave sets `found-cave-door`; Old Tobin
+  then tells of men digging in the hill long ago, and Old Harlan at the Tankard (`harlan-secret`) says old Lord
+  Morten shut something in down there and the key went with him, buried or kept at the manor. There's no manor
+  yet, and nothing opens the door (`scenes/game/sights.ts` `tryLockedDoor`).
+- **Deeper under the plains.** The deep den behind the Wolf Mother's lair (`?area=deepden`) has a passage running
+  on into the dark "for another day" (`world/DenMap.ts`).
+- **After the raid, at home.** The cottage stays a ruin and Iran's hens are gone (bar Speckle). Rebuilding the
+  coop, or the cottage, would give the Hollow a way back to life; Iran's plot (`systems/Farm.ts`) already works
+  after the raid.
+- **More of the world.** More bounties (`BOUNTIES` in `systems/Bounties.ts` is data), more chance meetings
+  (`world/PlainsEvents.ts`), more recipes (`systems/Crafting.ts`) and more brothers' errands at Saint Elda's.
+- **A new area** is one entry in `scenes/game/areas.ts`, plus its id in `MapData.AreaId`, its name in
+  `AREA_NAMES` (`systems/SaveGame.ts`), its doors in `world/atlas.ts`, and `npm run atlas` to survey it for the
+  world map. **A new quest** is an entry in `QUESTS` (`systems/Quests.ts`) with a `target` on each step, story
+  actions in the matching `scenes/game/` module, and a diary line (`QuestLog.writeDiary`) for each step.

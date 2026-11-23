@@ -104,6 +104,8 @@ export class Siblings {
   private readonly banter: ChildLine[][];
   private readonly greetings: () => ChildLine[];
   private queue: ChildLine[] = [];
+  /** Called once the scene in `queue` has been said, for a scene that moves the story on (see tell). */
+  private onTold?: () => void;
   private wait = 1.5;
   private last = -1;
   private greeted = false;
@@ -125,6 +127,24 @@ export class Siblings {
     return this.children;
   }
 
+  /** Whether they're in the middle of saying something that moves the story on. */
+  get telling(): boolean {
+    return !!this.onTold;
+  }
+
+  /**
+   * Break off whatever they're squabbling about to say these lines to the
+   * player, turned towards them, then call onDone once the last has been said.
+   */
+  tell(lines: ChildLine[], onDone?: () => void): void {
+    this.children.forEach((c) => c.hush());
+    this.greeted = true;
+    this.queue = [...lines];
+    this.onTold = onDone ?? (() => undefined);
+    this.wait = 0.2;
+    this.watching = 1;
+  }
+
   update(dt: number, player: Vec2, paused: boolean): void {
     for (const c of this.children) c.update(dt);
     if (paused) return;
@@ -144,6 +164,11 @@ export class Siblings {
       }
     }
     if (this.children.some((c) => c.speaking)) return;
+    if (this.onTold && this.queue.length === 0) {
+      const done = this.onTold;
+      this.onTold = undefined;
+      done();
+    }
     this.wait -= dt;
     if (this.wait > 0) return;
     const next = this.queue.shift();

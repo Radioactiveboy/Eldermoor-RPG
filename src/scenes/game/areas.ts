@@ -92,7 +92,7 @@ function enteredHut(g: GameScene): void {
 export const AREAS: Record<AreaId, AreaDef> = {
   home: lazy(() => import('../../world/HomeMap'), (m) => m.buildHomeMap(raidStage() === 'over')),
   world: { build: buildHollow, test: true },
-  hut: lazy(() => import('../../world/HutMap'), (m) => m.buildHutMap(raidStage() === 'over'), { test: true, enter: enteredHut }),
+  hut: lazy(() => import('../../world/HutMap'), (m) => m.buildHutMap(raidStage() === 'over', !!QuestLog.get('speckle-and-moppet')?.completed), { test: true, enter: enteredHut }),
   cave: lazy(() => import('../../world/CaveMap'), (m) => m.buildCaveMap(), { test: true, enter: enteredCave }),
   market: { build: () => buildMarketMap(QuestLog.hasFlag('paid-toll')), test: true, enter: enteredMarket },
   tavern: lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernMap(), { test: true, enter: enteredTavern }),

@@ -1,3 +1,4 @@
+import { HUT_HEN_PEN, HUT_SPECKLE } from './landmarks';
 import { MapData, placeObject, Prop, Terrain } from './MapData';
 
 export const HUT_ROOM_W = 7;
@@ -8,8 +9,11 @@ export const HUT_ROOM_H = 6;
  * his bed in the corner and the children's straw beds along the far side, a
  * table in the middle, and the door out on the left wall. His two children,
  * Pip and Hetty, are at home squabbling (see entities/Child.ts).
+ *
+ * @param hiding after the raid: Iran and the children hiding in the dark
+ * @param speckle Hetty's hen, Speckle, brought home (see scenes/game/speckle.ts), pecking about the floor
  */
-export function buildHutMap(hiding = false): MapData {
+export function buildHutMap(hiding = false, speckle = false): MapData {
   const terrain: Terrain[][] = [];
   const props: Prop[][] = [];
   for (let y = 0; y < HUT_ROOM_H; y++) {
@@ -61,6 +65,7 @@ export function buildHutMap(hiding = false): MapData {
   add('stool', 4, 2);
   add('chest', 0, 5, 1, 1, { flipX: true });
   if (hiding) hideAway(data);
+  if (speckle) data.hens = { pen: HUT_HEN_PEN, flock: [{ kind: 'speckled', gx: HUT_SPECKLE.x, gy: HUT_SPECKLE.y }] };
   // Iran's pan over the fire: cook here (see systems/Crafting.ts).
   else data.sights = [...(data.sights ?? []), { id: 'hut-hearth', gx: 3, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'hut-hearth' }];
   return data;

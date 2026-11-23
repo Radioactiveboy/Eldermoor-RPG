@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { PUDDLE_KINDS } from '../world/Puddles';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 
 /**
@@ -216,7 +217,7 @@ export function generateWeatherArt(scene: Phaser.Scene): void {
   scene.anims.create({ key: 'rain-splash', frames: scene.anims.generateFrameNumbers('rain-splash', {}), frameRate: 16 });
   strip(scene, 'rain-ring', rainRing(), 4);
   scene.anims.create({ key: 'rain-ring', frames: scene.anims.generateFrameNumbers('rain-ring', {}), frameRate: 10 });
-  for (let i = 0; i < 3; i++) puddle(40 + i * 7).toTexture(scene, `puddle-${i}`);
+  for (let i = 0; i < PUDDLE_KINDS; i++) puddle(40 + i * 7).toTexture(scene, `puddle-${i}`);
   strip(scene, 'crow', crow(), 3);
   strip(scene, 'lamp-reflection', lampReflection(), 3);
   scene.anims.create({ key: 'lamp-reflection', frames: scene.anims.generateFrameNumbers('lamp-reflection', {}), frameRate: 5, repeat: -1 });

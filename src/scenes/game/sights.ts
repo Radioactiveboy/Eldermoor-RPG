@@ -12,8 +12,9 @@ import { Inventory, ItemId } from '../../systems/Inventory';
 import { NO_ROOM, rollLoot } from '../../systems/Loot';
 import { QuestLog } from '../../systems/Quests';
 import { CropPatch, Sight } from '../../world/MapData';
-import { BOUNTY_BOARD } from '../../world/landmarks';
+import { BOUNTY_BOARD, MOPPET_SIGHT } from '../../world/landmarks';
 import { readBountyBoard } from './bounties';
+import { foundMoppet } from './speckle';
 import type { GameScene } from '../GameScene';
 import type { Channel } from './interactions';
 import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
@@ -124,6 +125,10 @@ export function examine(g: GameScene, sight: Sight): void {
     readBountyBoard(g);
     return;
   }
+  if (sight.id === MOPPET_SIGHT.id) {
+    foundMoppet(g);
+    return;
+  }
   if (sight.sign) {
     GameAudio.click();
     g.onSign?.(sight.sign.heading, sight.sign.lines);
@@ -147,7 +152,13 @@ export function examine(g: GameScene, sight: Sight): void {
   }
   if (sight.thought) {
     g.onHint?.(sight.thought);
-    if (sight.id === 'ruin-mother-bed') QuestLog.complete('the-raid', 'search');
+    if (sight.id === 'ruin-mother-bed' && !QuestLog.isDone('the-raid', 'search')) {
+      QuestLog.complete('the-raid', 'search');
+      QuestLog.writeDiary(
+        "Made myself look at Mother's bed. The quilt is gone and the straw is soaked dark, and there is a trail of blood from it to the door, " +
+          'as if they dragged her. But there is no body. They took her. Whatever they wanted her for, they wanted her alive. I have to believe that.',
+      );
+    }
     return;
   }
   const flag = `saw-${sight.id}`;
