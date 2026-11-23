@@ -50,7 +50,7 @@ export const AREA_NAMES: Record<AreaId, string> = {
   plains: 'Adowvale Plains',
   northwoods: 'The north woods',
   watchtower: 'The old watchtower',
-  greyfells: 'The Greyfells',
+  greyfells: 'Greyfells Clearing',
   monastery: "Saint Elda's Monastery",
   abbey: "Within Saint Elda's walls",
   chapel: "Saint Elda's chapel",

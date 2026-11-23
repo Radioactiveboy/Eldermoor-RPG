@@ -611,7 +611,21 @@ function bones(seed: number): { canvas: PixelCanvas; anchorX: number; anchorY: n
  * one tile of the footprint that's open (2, 2) so the player can walk into it.
  */
 export function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
-  const peak = S * 0.42;
+  return mound(S, MAXH, salt, true);
+}
+
+/**
+ * A crag on open moor: an S x S footprint of rock thrust up out of the turf,
+ * steep and broken, with heather and grass only on its gentler shoulders.
+ * `jag` is how broken its top is (0 a smooth knoll, 1 split and stepped).
+ */
+export function crag(S = 3, MAXH = 90, salt = 0, jag = 0.7): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
+  return mound(S, MAXH, salt, false, jag);
+}
+
+/** A mound or crag drawn as a lit heightfield; with `mouth`, a cave opening at its front corner (see caveEntrance). */
+function mound(S: number, MAXH: number, salt: number, mouth: boolean, jag = 0): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
+  const peak = mouth ? S * 0.42 : S * (0.4 + noise(salt, 2) * 0.2);
   // Height of the mound at grid point (x, y) of the footprint, in pixels.
   const height = (x: number, y: number): number => {
     const edge = Math.min(x, y, S - x, S - y);
@@ -620,7 +634,23 @@ export function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas;
     const dy = y - peak;
     const r = Math.hypot(dx, dy) / (S * 0.62);
     let h = MAXH * Math.max(0, 1 - r * r) + (noise(x * 4 + salt, y * 4) - 0.5) * 14 + (S > 3 ? (noise(x * 1.6 + salt, y * 1.6) - 0.5) * 26 : 0);
-    h *= Math.min(1, edge / 0.35);
+    if (jag > 0) {
+      // A crag: two or three heads of rock of different heights run together, broken by clefts.
+      h = 0;
+      for (let k = 0; k < 3; k++) {
+        const px = S * (0.25 + noise(salt + k * 3.1, 1.7) * 0.5);
+        const py = S * (0.25 + noise(salt + k * 5.3, 4.1) * 0.5);
+        const rad = S * (0.34 + noise(salt + k, 9.2) * 0.26);
+        const tall = MAXH * (k === 0 ? 1 : 0.5 + noise(salt + k, 7.7) * 0.4);
+        const d = Math.hypot(x - px, (y - py) * (0.8 + k * 0.2)) / rad;
+        h = Math.max(h, tall * Math.max(0, 1 - Math.pow(d, 1.5)));
+      }
+      // Ridged noise: sharp edges and clefts in the rock.
+      const ridge = 1 - Math.abs(noise(x * 1.3 + salt, y * 1.3 + 11) * 2 - 1);
+      h += (ridge - 0.5) * MAXH * 0.35 * jag + (noise(x * 5 + salt, y * 5) - 0.5) * 10;
+    }
+    h *= Math.min(1, edge / (jag > 0 ? 0.22 : 0.35));
+    if (!mouth) return Math.max(0, h);
     // The open tile in front of the mouth, with a steep rock face round it.
     const open = Math.min(x - (S - 1), y - (S - 1));
     if (open > 0) return 0;
@@ -656,7 +686,7 @@ export function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas;
     // Lit from the upper left, like everything else: the +y side bright, the +x side in shade.
     const light = (hx * 0.6 - hy * 0.6 + 0.7) / len;
     const n = hash(Math.floor(x * 40), Math.floor(y * 40));
-    const steep = nz < 0.42 + (noise(x * 3, y * 3) - 0.5) * 0.35;
+    const steep = nz < 0.42 + jag * 0.36 + (noise(x * 3, y * 3) - 0.5) * 0.35;
     const ramp = steep ? rock : grass;
     const i = Math.max(0, Math.min(3, Math.floor(light * 3.2 + (n - 0.5) * 0.8)));
     let col: number = ramp[i];
@@ -672,6 +702,10 @@ export function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas;
     for (let py = t.y + 1; py <= g.y; py++) c.set(t.x, py, ramp === grass && py < t.y + 3 ? grass[side] : rock[side]);
   }
 
+  if (!mouth) {
+    c.outline();
+    return { canvas: c, anchorX: ax, anchorY: ay };
+  }
   // The mouth: a dark arch in the rock face behind the open tile.
   const m = at(S - 1, S - 1, 0);
   const mw = 25;

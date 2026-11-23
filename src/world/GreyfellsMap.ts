@@ -95,7 +95,7 @@ export function buildGreyfellsMap(): MapData {
       const roll = rnd.frac();
       if (edge < 2) props[y][x] = y > H - 6 ? Prop.Tree : roll < 0.8 ? Prop.Rock : Prop.None;
       else if (roll < 0.03 + woods * 0.5) props[y][x] = Prop.Tree;
-      else if (roll < 0.03 + woods * 0.5 + (stony ? 0.34 : 0.06)) props[y][x] = Prop.Rock;
+      else if (roll < 0.03 + woods * 0.5 + (stony ? 0.2 : 0.04)) props[y][x] = Prop.Rock;
     }
   }
 
@@ -128,6 +128,47 @@ export function buildGreyfellsMap(): MapData {
       },
     ],
   };
+
+  // ---- The crags ----
+  // The clearing is a bowl among crags: a wall of great buttresses along the north where the fell climbs on into the hills,
+  // broken ridges down either side, and tors standing out of the heather in between.
+  const taken = new Set<number>();
+  const nearTarn = (x: number, y: number) => Math.hypot((x - TARN.x) / (TARN.rx + 2.5), (y - TARN.y) / (TARN.ry + 2.5)) < 1;
+  const fits = (tx: number, ty: number, size: number) => {
+    if (tx < 0 || ty < 0 || tx + size > W || ty + size > H - 7) return false;
+    for (let y = ty; y < ty + size; y++) {
+      for (let x = tx; x < tx + size; x++) {
+        const cx = x + 0.5;
+        const cy = y + 0.5;
+        if (terrain[y][x] !== Terrain.Grass || taken.has(y * W + x)) return false;
+        if (near(trail, cx, cy, 2.6) || Math.hypot(cx - GOBLIN_CAMP.x, (cy - GOBLIN_CAMP.y) * 1.1) < 10 || underHill(cx, cy) || nearTarn(cx, cy)) return false;
+      }
+    }
+    return true;
+  };
+  const crag = (tx: number, ty: number, size: number): boolean => {
+    if (!fits(tx, ty, size)) return false;
+    for (let y = ty; y < ty + size; y++) for (let x = tx; x < tx + size; x++) {
+      taken.add(y * W + x);
+      props[y][x] = Prop.None;
+    }
+    placeObject(data, { key: `gf-crag-${size}-${rnd.between(0, 2)}`, tx, ty, w: size, h: size, fades: size >= 3 });
+    return true;
+  };
+  const biggest = (tx: number, ty: number, sizes: number[]) => sizes.find((size) => crag(tx, ty, size));
+  // Along the north.
+  for (let tx = 0; tx < W; ) tx += biggest(tx, rnd.between(0, 1), [5, 4, 3]) ?? 1;
+  for (let tx = 1; tx < W; ) tx += (rnd.frac() < 0.55 ? biggest(tx, 5, [3, 2]) : undefined) ?? 2;
+  // Down either side, leaving gaps.
+  for (const side of [0, 1]) {
+    for (let ty = 6; ty < H - 10; ) {
+      const size = rnd.pick([3, 4, 4, 5]);
+      const tx = side === 0 ? rnd.between(0, 1) : W - size - rnd.between(0, 1);
+      ty += crag(tx, ty, size) ? size + (rnd.frac() < 0.3 ? rnd.between(1, 2) : 0) : 1;
+    }
+  }
+  // Tors in the heather.
+  for (let i = 0; i < 40; i++) crag(rnd.between(5, W - 8), rnd.between(8, H - 12), rnd.pick([2, 2, 3]));
 
   // The trail runs off the south edge, back down into the north woods.
   for (let x = 0; x < W; x++) {

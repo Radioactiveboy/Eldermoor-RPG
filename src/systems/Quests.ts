@@ -153,7 +153,7 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'prisoner', text: 'Question the goblin in the cells under the garrison', target: { area: 'jail', x: 6.3, y: 2.55, npc: 'snikkit' } },
       {
         id: 'fells',
-        text: "Follow the goblins' trail up out of the woods onto the Greyfells",
+        text: "Follow the goblins' trail up out of the woods to Greyfells Clearing",
         target: { area: 'greyfells', x: 23.5, y: 26 },
       },
       { id: 'camp', text: "Search the goblins' camp for any sign of Mother", target: { area: 'greyfells', x: 21, y: 23 } },
