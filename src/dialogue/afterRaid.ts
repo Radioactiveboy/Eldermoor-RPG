@@ -81,7 +81,7 @@ export function applyRaidTalk(script: DialogueScript, talk: RaidTalk): DialogueS
   const asks = talk.ask?.filter((c) => !c.next || !talk.when?.[c.next] || talk.when[c.next]());
   if (asks && asks.length > 0 && at?.choices) {
     const choices = [...at.choices];
-    choices.splice(Math.max(0, choices.length - 1), 0, ...asks);
+    choices.splice(Math.max(0, choices.length - 1), 0, ...asks.map((c) => ({ key: true, ...c })));
     nodes[talk.at ?? 'ask'] = { ...at, choices };
   }
   let start = script.start;

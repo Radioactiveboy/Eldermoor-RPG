@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { DialogueChoice, DialogueNode, DialogueScript, Speaker, SPEAKERS } from '../dialogue/Dialogue';
+import { DialogueChoice, DialogueNode, DialogueScript, Speaker, SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
+import { arrangeChoices, ChoiceMenu, MenuRow, MenuView, scrollToShow } from '../dialogue/ChoiceMenu';
 import { PORTRAIT_SIZE } from '../art/sizes';
 import { THEME } from '../ui/Widgets';
 
@@ -10,6 +11,13 @@ export interface DialogueSceneData {
 }
 
 const CHOICE_H = 44;
+const ARROW_H = 24;
+/** The most rows of replies shown at once; past that the list folds or scrolls (see ChoiceMenu.ts). */
+const MAX_ROWS = 6;
+
+/** Replies picked so far this session, so they can be dimmed and folded away next time. */
+const HEARD = new Set<string>();
+const heardKey = (speaker: SpeakerId, c: DialogueChoice) => `${speaker}|${c.next ?? ''}|${c.text}`;
 /** Below this screen width the box switches to a phone layout with the portrait above it. */
 const COMPACT = 640;
 
@@ -62,10 +70,12 @@ const TEXT_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 /**
  * Conversation box: the speaker's portrait (which talks and blinks), their
  * name, and their words typed out letter by letter with little voice blips.
- * When a node offers replies they appear as a list above the box.
+ * When a node offers replies they appear as a list above the box; a long list
+ * folds its everyday questions under "Ask about…" and scrolls (see ChoiceMenu.ts).
  *
  * Click, tap, Space, Enter or E to skip the typing or move on. Replies can be
- * picked with the mouse, number keys, or up/down then Enter.
+ * picked with the mouse, number keys, or up/down then Enter; the mouse wheel
+ * scrolls a long list, and Esc goes back out of "Ask about…".
  */
 export class DialogueScene extends Phaser.Scene {
   private data_!: DialogueSceneData;
@@ -95,6 +105,16 @@ export class DialogueScene extends Phaser.Scene {
   private blinkTimer = 3;
   private choices: DialogueChoice[] = [];
   private choiceButtons: Array<{ draw: (on: boolean) => void }> = [];
+  /** The open list's rows (its scrolling rows, then its pinned ones); number keys and `selected` index into this. */
+  private rows: MenuRow[] = [];
+  private menu?: ChoiceMenu;
+  private view: 'top' | 'sub' = 'top';
+  /** First scrolling row in view, and how many are. */
+  private offset = 0;
+  private visible = 0;
+  private nodeId = '';
+  /** The node whose "Ask about…" list the last reply was picked from, to open it again on coming back. */
+  private subFor?: string;
   private selected = 0;
   private closing = false;
   private readyAt = 0;
@@ -107,6 +127,7 @@ export class DialogueScene extends Phaser.Scene {
     this.data_ = data;
     this.closing = false;
     this.barked = undefined;
+    this.subFor = undefined;
     // Ignore the key press or click that opened the conversation.
     this.readyAt = this.time.now + 150;
 
@@ -122,6 +143,11 @@ export class DialogueScene extends Phaser.Scene {
     kb.on('keydown-W', () => this.moveSelection(-1));
     kb.on('keydown-DOWN', () => this.moveSelection(1));
     kb.on('keydown-S', () => this.moveSelection(1));
+    kb.on('keydown-ESC', () => this.back());
+    kb.on('keydown-BACKSPACE', () => this.back());
+    this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
+      if (this.rows.length > 0) this.scrollBy(dy > 0 ? 1 : -1);
+    });
     ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'].forEach((key, i) => kb.on(`keydown-${key}`, () => this.choose(i)));
 
     this.layout();
@@ -207,11 +233,16 @@ export class DialogueScene extends Phaser.Scene {
     if (!this.L || this.L.w !== L.w) {
       this.L = L;
       this.buildBox(L);
-      if (this.choices.length > 0) {
-        const pending = this.choices;
-        this.clearChoices();
-        this.showChoices(pending);
-      }
+    }
+    // The number of rows that fit depends on the height too, so lay the replies out again, in the same list.
+    if (this.choices.length > 0) {
+      const pending = this.choices;
+      const inSub = this.view === 'sub';
+      const keep = this.subFor;
+      this.clearChoices();
+      if (inSub) this.subFor = this.nodeId;
+      this.showChoices(pending);
+      this.subFor = keep;
     }
     const scale = L.compact ? 1 : Math.min(1, (width - 20) / L.w, (height - 20) / 420);
     this.root.setScale(scale).setPosition(width / 2, height - (L.h + 10) * scale);
@@ -232,6 +263,7 @@ export class DialogueScene extends Phaser.Scene {
     const node = this.data_.script.nodes[id];
     if (!node) throw new Error(`Missing dialogue node: ${id}`);
     this.node = node;
+    this.nodeId = id;
     this.lineIndex = 0;
     const speaker = SPEAKERS[node.speaker];
     // A short bark as someone starts speaking, under the typing blips.
@@ -288,7 +320,7 @@ export class DialogueScene extends Phaser.Scene {
   }
 
   private confirm(): void {
-    if (this.choices.length > 0 && !this.typing) this.choose(this.selected);
+    if (this.rows.length > 0 && !this.typing) this.choose(this.selected);
     else this.advance();
   }
 
@@ -317,69 +349,224 @@ export class DialogueScene extends Phaser.Scene {
 
   private showChoices(choices: DialogueChoice[]): void {
     this.choices = choices;
-    this.selected = 0;
+    const heard = choices.map((c) => HEARD.has(heardKey(this.node.speaker, c)));
+    const last = choices[choices.length - 1];
+    const lastLeaves = !!last && this.leaves(last);
+    this.menu = arrangeChoices({ choices, heard, lastLeaves, fit: this.fitRows() });
+    // Back from one of the folded-away questions: open them again, as that's likely where the player is browsing.
+    const reopen = this.menu.sub && this.subFor === this.nodeId;
+    this.openView(reopen ? 'sub' : 'top');
+  }
+
+  /** Whether a reply ends the conversation: it goes nowhere, or to a last word with nothing after it. */
+  private leaves(c: DialogueChoice): boolean {
+    if (!c.next) return true;
+    const to = this.data_.script.nodes[c.next];
+    return !!to && !to.choices && !to.next && !to.action && !c.action;
+  }
+
+  /** How many rows of replies fit between the box and the top of the screen (the HUD lives up there). */
+  private fitRows(): number {
+    const L = this.L!;
+    const { width, height } = this.scale;
+    const scale = L.compact ? 1 : Math.min(1, (width - 20) / L.w, (height - 20) / 420);
+    const bottom = height - (L.h + 10) * scale - L.choiceGap * scale;
+    const room = bottom - (L.compact ? 90 : 70);
+    return Phaser.Math.Clamp(Math.floor(room / ((CHOICE_H + 8) * scale)), 3, MAX_ROWS);
+  }
+
+  private openView(view: 'top' | 'sub'): void {
+    this.view = view;
+    const v = this.currentView();
+    this.rows = [...v.scroll, ...v.pinned];
+    this.offset = 0;
+    const fit = this.fitRows();
+    this.visible = v.scroll.length + v.pinned.length > fit ? Math.max(2, fit - v.pinned.length - 1) : v.scroll.length;
+    // Start on the first thing not yet asked.
+    const first = v.scroll.findIndex((r) => typeof r === 'number' && !HEARD.has(heardKey(this.node.speaker, this.choices[r])));
+    this.selected = Math.max(0, first);
+    this.offset = scrollToShow(0, this.selected, this.visible, v.scroll.length);
+    this.renderChoices(true);
+  }
+
+  private currentView(): MenuView {
+    return (this.view === 'sub' && this.menu?.sub) || this.menu!.top;
+  }
+
+  /** Draws the rows of the open list that are in view, growing upwards from just above the box. */
+  private renderChoices(slideIn = false): void {
+    this.choiceBox.removeAll(true);
     this.choiceButtons = [];
+    const v = this.currentView();
     const W = this.L!.choiceW;
-    const top = -(choices.length * (CHOICE_H + 8));
-    choices.forEach((choice, i) => {
-      const y = top + i * (CHOICE_H + 8) + CHOICE_H / 2;
-      const bg = this.add.graphics();
+    const compact = this.L!.compact;
+    const shown = v.scroll.slice(this.offset, this.offset + this.visible);
+    const above = this.offset;
+    const below = v.scroll.length - this.offset - shown.length;
+
+    const items: Phaser.GameObjects.Container[] = [];
+    const heights: number[] = [];
+    const addArrow = (up: boolean, n: number) => {
+      const t = this.add
+        .text(0, 0, `${up ? '▲' : '▼'}  ${n} more`, { fontFamily: TEXT_FONT, fontSize: '15px', color: THEME.goldText })
+        .setOrigin(0.5);
+      // A small dark tab behind it, so it reads over the map.
+      const pill = this.add.graphics();
+      const pw = t.width + 28;
+      pill.fillStyle(THEME.panel, 0.9);
+      pill.fillRoundedRect(-pw / 2, -ARROW_H / 2 + 1, pw, ARROW_H - 2, 9);
+      pill.lineStyle(1, THEME.gold, 0.5);
+      pill.strokeRoundedRect(-pw / 2, -ARROW_H / 2 + 1, pw, ARROW_H - 2, 9);
+      const c = this.add.container(0, 0, [pill, t]).setSize(W, ARROW_H).setInteractive({ useHandCursor: true });
+      c.on('pointerup', () => this.scrollBy(up ? -1 : 1));
+      items.push(c);
+      heights.push(ARROW_H);
+    };
+    const addRow = (row: MenuRow, at: number) => {
+      const choice = typeof row === 'number' ? this.choices[row] : undefined;
+      const heard = !!choice && HEARD.has(heardKey(this.node.speaker, choice));
+      const sub = this.menu?.sub;
+      const text = row === 'more' ? 'Ask about…' : row === 'back' ? 'Back' : choice!.text;
       const label = this.add
-        .text(-W / 2 + 46, 0, choice.text, {
+        .text(-W / 2 + 46, 0, text, {
           fontFamily: TEXT_FONT,
-          fontSize: this.L!.compact ? '16px' : '18px',
+          fontSize: compact ? '16px' : '18px',
           color: THEME.text,
-          wordWrap: { width: W - 64 },
+          fontStyle: row === 'more' || row === 'back' ? 'italic' : 'normal',
+          wordWrap: { width: W - (row === 'more' ? 150 : 74) },
         })
         .setOrigin(0, 0.5);
+      const H = Math.max(CHOICE_H, Math.ceil(label.height) + 14);
       const num = this.add
-        .text(-W / 2 + 22, 0, `${i + 1}`, { fontFamily: THEME.font, fontSize: '18px', color: THEME.goldText })
+        .text(-W / 2 + 22, 0, row === 'back' ? '←' : `${at + 1}`, { fontFamily: THEME.font, fontSize: '18px', color: THEME.goldText })
         .setOrigin(0.5);
+      const parts: Phaser.GameObjects.GameObject[] = [];
+      const bg = this.add.graphics();
+      parts.push(bg, num, label);
+      if (row === 'more' && sub) {
+        const fresh = sub.scroll.filter((r) => typeof r === 'number' && !HEARD.has(heardKey(this.node.speaker, this.choices[r]))).length;
+        const count = this.add
+          .text(W / 2 - 18, 0, `${sub.scroll.length} questions  ›`, {
+            fontFamily: TEXT_FONT, fontSize: '15px', color: fresh > 0 ? THEME.goldText : THEME.dimText,
+          })
+          .setOrigin(1, 0.5);
+        parts.push(count);
+      }
+      if (heard) {
+        parts.push(this.add.text(W / 2 - 16, 0, '✓', { fontFamily: TEXT_FONT, fontSize: '15px', color: THEME.dimText }).setOrigin(1, 0.5));
+      }
+      const idle = heard ? THEME.dimText : THEME.text;
       const draw = (on: boolean) => {
         bg.clear();
         bg.fillStyle(on ? THEME.panelLight : THEME.panel, 0.95);
-        bg.fillRoundedRect(-W / 2, -CHOICE_H / 2, W, CHOICE_H, 10);
-        bg.lineStyle(2, THEME.gold, on ? 1 : 0.5);
-        bg.strokeRoundedRect(-W / 2, -CHOICE_H / 2, W, CHOICE_H, 10);
-        label.setColor(on ? THEME.goldText : THEME.text);
+        bg.fillRoundedRect(-W / 2, -H / 2, W, H, 10);
+        bg.lineStyle(2, THEME.gold, on ? 1 : row === 'more' ? 0.8 : 0.5);
+        bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 10);
+        label.setColor(on ? THEME.goldText : idle);
       };
-      const button = this.add.container(0, y, [bg, num, label]);
-      button.setSize(W, CHOICE_H).setInteractive({ useHandCursor: true });
-      button.on('pointerover', () => this.select(i));
-      button.on('pointerup', () => this.choose(i));
-      this.choiceBox.add(button);
-      this.choiceButtons.push({ draw });
-      // Slide in one after another.
-      button.setAlpha(0).x += 24;
-      this.tweens.add({ targets: button, alpha: 1, x: 0, delay: i * 70, duration: 180, ease: 'Cubic.easeOut' });
+      const button = this.add.container(0, 0, parts);
+      button.setSize(W, H).setInteractive({ useHandCursor: true });
+      button.on('pointerover', () => this.select(at));
+      button.on('pointerup', () => this.pick(at));
+      items.push(button);
+      heights.push(H);
+      this.choiceButtons[at] = { draw };
+    };
+
+    if (above > 0) addArrow(true, above);
+    shown.forEach((row, i) => addRow(row, this.offset + i));
+    if (below > 0) addArrow(false, below);
+    v.pinned.forEach((row, i) => addRow(row, v.scroll.length + i));
+
+    // Stack them upwards from y = 0, with a little more space before the pinned goodbye.
+    const pinnedFrom = items.length - v.pinned.length;
+    let y = 0;
+    for (let i = items.length - 1; i >= 0; i--) {
+      y -= heights[i];
+      items[i].y = y + heights[i] / 2;
+      y -= i === pinnedFrom && pinnedFrom > 0 ? 14 : 8;
+    }
+    items.forEach((item, i) => {
+      this.choiceBox.add(item);
+      if (!slideIn) return;
+      item.setAlpha(0).x += 24;
+      this.tweens.add({ targets: item, alpha: 1, x: 0, delay: i * 60, duration: 180, ease: 'Cubic.easeOut' });
     });
-    this.select(0, false);
+    this.select(this.selected, false);
   }
 
   private select(i: number, sound = true): void {
-    if (i < 0 || i >= this.choiceButtons.length) return;
+    if (i < 0 || i >= this.rows.length || !this.choiceButtons[i]) return;
     if (sound && i !== this.selected) GameAudio.hover();
     this.selected = i;
-    this.choiceButtons.forEach((b, j) => b.draw(j === i));
+    this.choiceButtons.forEach((b, j) => b?.draw(j === i));
   }
 
   private moveSelection(delta: number): void {
-    if (this.choices.length === 0) return;
-    this.select((this.selected + delta + this.choices.length) % this.choices.length);
+    if (this.rows.length === 0) return;
+    const next = (this.selected + delta + this.rows.length) % this.rows.length;
+    const total = this.currentView().scroll.length;
+    if (next < total) {
+      const offset = scrollToShow(this.offset, next, this.visible, total);
+      if (offset !== this.offset) {
+        this.offset = offset;
+        this.selected = next;
+        this.renderChoices();
+        GameAudio.hover();
+        return;
+      }
+    }
+    this.select(next);
   }
 
+  private scrollBy(delta: number): void {
+    const total = this.currentView().scroll.length;
+    const offset = Phaser.Math.Clamp(this.offset + delta, 0, Math.max(0, total - this.visible));
+    if (offset === this.offset) return;
+    this.offset = offset;
+    // Keep the selection on a row that's in view.
+    if (this.selected < total) this.selected = Phaser.Math.Clamp(this.selected, offset, offset + this.visible - 1);
+    this.renderChoices();
+  }
+
+  /** A number key: the reply with that number in the open list. */
   private choose(i: number): void {
-    if (this.closing || this.typing || i >= this.choices.length || this.time.now < this.readyAt) return;
-    const choice = this.choices[i];
+    if (this.closing || this.typing || i >= this.rows.length || this.time.now < this.readyAt) return;
+    this.pick(i);
+  }
+
+  private pick(at: number): void {
+    if (this.closing || this.typing || this.time.now < this.readyAt) return;
+    const row = this.rows[at];
+    if (row === undefined) return;
     GameAudio.click();
+    if (row === 'more' || row === 'back') {
+      this.subFor = undefined;
+      this.openView(row === 'more' ? 'sub' : 'top');
+      return;
+    }
+    const choice = this.choices[row];
+    this.subFor = this.view === 'sub' ? this.nodeId : undefined;
+    HEARD.add(heardKey(this.node.speaker, choice));
     this.clearChoices();
     this.leaveNode();
     if (choice.action) this.data_.onAction?.(choice.action);
     this.goTo(choice.next);
   }
 
+  /** Esc / Backspace in the "Ask about…" list goes back up. */
+  private back(): void {
+    if (this.view === 'sub' && this.rows.length > 0 && !this.typing) {
+      GameAudio.click();
+      this.subFor = undefined;
+      this.openView('top');
+    }
+  }
+
   private clearChoices(): void {
     this.choices = [];
+    this.rows = [];
+    this.menu = undefined;
     this.choiceButtons = [];
     this.choiceBox.removeAll(true);
   }

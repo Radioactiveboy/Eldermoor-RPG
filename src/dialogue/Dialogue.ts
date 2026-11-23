@@ -11,6 +11,12 @@ export interface DialogueChoice {
   /** Node to go to; leave out to end the conversation. */
   next?: string;
   action?: string;
+  /**
+   * New and to do with what's going on (a quest, the raid): kept up front when a
+   * long list folds its everyday questions under "Ask about…" (see ChoiceMenu.ts).
+   * A reply with an `action` counts as one too.
+   */
+  key?: boolean;
 }
 
 export interface DialogueNode {
