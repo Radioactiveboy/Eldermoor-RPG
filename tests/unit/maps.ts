@@ -30,6 +30,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const tavern = await import('../../src/world/TavernMap');
   const workshops = await import('../../src/world/WorkshopMaps');
   const { buildWatchtowerMap } = await import('../../src/world/WatchtowerMap');
+  const garrison = await import('../../src/world/GarrisonMaps');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
     northwoods: buildNorthWoodsMap(false),
@@ -53,5 +54,8 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     cellar: tavern.buildCellarMap(),
     smithy: workshops.buildSmithyMap(),
     bakery: workshops.buildBakeryMap(),
+    garrison: garrison.buildGarrisonMap(),
+    jail: garrison.buildJailMap(),
+    residence: garrison.buildResidenceMap(),
   };
 }

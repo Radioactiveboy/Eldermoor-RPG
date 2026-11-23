@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
-import type { DialogueScript } from '../dialogue/Dialogue';
-import { raidAware, raidIsOver } from '../dialogue/afterRaid';
+import type { DialogueScript, SpeakerId } from '../dialogue/Dialogue';
+import { raidAware, raidIsOver, toldOfRaid } from '../dialogue/afterRaid';
+import { jailerScript, prisonerScript, sergeantScript } from '../dialogue/garrison';
+import { HOUSEMAID_CHORES, headmanScript, housecookScript, housemaidScript, stewardScript } from '../dialogue/residence';
 import { MedicineStage, MOTHER_ASLEEP, MOTHER_DOZING, MOTHER_INTRO, motherScript } from '../dialogue/mother';
 import { BAKER, GUARD, militiaScript, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
@@ -352,11 +354,64 @@ const NPCS: Record<string, NpcDef> = {
       return courierScript(Wayfarers.courierFed, food && itemDef(food).name.toLowerCase(), first);
     }),
   },
-  // The village militia, walking their rounds of the square, day and night.
+  // The village militia, walking their rounds of the square, day and night; the fifth keeps the garrison door.
   ...Object.fromEntries(
     [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),
   ),
+  'guard-5': { texture: 'folk-guard', script: guardScript },
+  // The garrison: Sergeant Brannock at his table, Hamm on the cells below, and Wat the poacher in one of them.
+  sergeant: {
+    texture: 'folk-sergeant',
+    talkRange: 2.4,
+    script: () => {
+      const first = !met.has('sergeant');
+      met.add('sergeant');
+      return sergeantScript({
+        first,
+        raidOver: raidIsOver(),
+        toldRaid: onceAfterRaid('sergeant'),
+        standing: Reputation.level('militia'),
+        bounties: Bounties.timesClaimed(),
+        slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
+      });
+    },
+  },
+  jailer: { texture: 'folk-guard', script: wayfarer('jailer', (first) => jailerScript(raidIsOver(), first)) },
+  prisoner: { texture: 'folk-prisoner', sits: true, talkRange: 3, script: wayfarer('prisoner', (first) => prisonerScript(raidIsOver(), first)) },
+  // The Headman's house: the Headman at his desk (spoken to across it), and his household.
+  headman: {
+    texture: 'folk-headman',
+    talkRange: 2.6,
+    script: () => {
+      const first = !met.has('headman');
+      met.add('headman');
+      const medicine = QuestLog.get('mother-medicine');
+      return headmanScript({
+        first,
+        raidOver: raidIsOver(),
+        toldRaid: onceAfterRaid('headman'),
+        medicine: !!medicine && !medicine.completed,
+        paidToll: QuestLog.hasFlag('paid-toll'),
+        slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
+      });
+    },
+  },
+  steward: { texture: 'folk-steward', script: (hour) => wayfarer('steward', (first) => stewardScript(raidIsOver(), first, Npc.within([7, 22], hour)))() },
+  housemaid: { texture: 'folk-housemaid', roam: 3, bustles: true, script: () => housemaidScript(raidIsOver()) },
+  housecook: { texture: 'folk-housecook', roam: 2, script: () => housecookScript(raidIsOver()) },
 };
+
+/**
+ * Whether someone has already said their piece about the raid (and if not,
+ * marks that they now have, since they're about to). False before the raid.
+ */
+function onceAfterRaid(id: SpeakerId): boolean {
+  if (!raidIsOver()) return false;
+  const flag = toldOfRaid(id);
+  const told = QuestLog.hasFlag(flag);
+  QuestLog.setFlag(flag);
+  return told;
+}
 
 /**
  * Someone in the world who can be talked to. People who stay put (Mother, the
@@ -977,7 +1032,7 @@ export class Npc implements Body {
     this.chore = undefined;
     if (chore && this.distanceTo(chore.x, chore.y) < 0.6) {
       this.face(chore.face);
-      const lines = MAID_CHORES[this.id as 'nell' | 'rosie'];
+      const lines = this.id === 'housemaid' ? HOUSEMAID_CHORES : MAID_CHORES[this.id as 'nell' | 'rosie'];
       if (lines && Math.random() < 0.35) this.say(lines[Math.floor(Math.random() * lines.length)], 3.5);
       this.wait = 5 + Math.random() * 6;
       return;

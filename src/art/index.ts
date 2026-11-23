@@ -70,6 +70,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'the north woods', load: () => import('./northwoods').then((m) => m.generateNorthWoods) },
   // After the townsfolk: it redraws the smith's and the baker's working frames.
   { label: 'the smithy and bakery', load: () => import('./workshops').then((m) => m.generateWorkshops) },
+  { label: "the garrison and the Headman's house", load: () => import('./garrison').then((m) => m.generateGarrison) },
   // Last: it makes burnt copies of art drawn above.
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },
 ];

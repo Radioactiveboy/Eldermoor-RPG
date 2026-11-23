@@ -33,7 +33,8 @@ export type SpeakerId =
   | 'tollguard' | 'carter' | 'herbwife' | 'fisherman' | 'porter' | 'gardener' | 'silent' | 'novice'
   | 'prior' | 'anselm' | 'cook' | 'scribe' | 'leofric'
   | 'landlord' | 'nell' | 'rosie' | 'harlan' | 'fenwick' | 'sigrun' | 'ada' | 'cobb' | 'pell'
-  | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier';
+  | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier'
+  | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook';
 
 export interface Speaker {
   name: string;
@@ -81,4 +82,12 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   tinker: { name: 'Jory the Tinker', portrait: 'portrait-tinker', voice: { pitch: 200, spread: 0.24, wave: 'triangle' } },
   goatherd: { name: 'Mags', portrait: 'portrait-goatherd', voice: { pitch: 420, spread: 0.2, wave: 'triangle' } },
   courier: { name: 'Hal the Messenger', portrait: 'portrait-courier', voice: { pitch: 210, spread: 0.12, wave: 'sine' } },
+  // The militia garrison and the Headman's residence, on the lane at the south end of Adowvale.
+  sergeant: { name: 'Sergeant Brannock', portrait: 'portrait-sergeant', voice: { pitch: 125, spread: 0.06, wave: 'sawtooth' } },
+  jailer: { name: 'Hamm the Jailer', portrait: 'portrait-jailer', voice: { pitch: 205, spread: 0.18, wave: 'sawtooth' } },
+  prisoner: { name: 'Wat the Poacher', portrait: 'portrait-prisoner', voice: { pitch: 175, spread: 0.24, wave: 'triangle' } },
+  headman: { name: 'Headman Osbert Hale', portrait: 'portrait-headman', voice: { pitch: 135, spread: 0.08, wave: 'sine' } },
+  steward: { name: 'Aldwin the Steward', portrait: 'portrait-steward', voice: { pitch: 145, spread: 0.04, wave: 'sine' } },
+  housemaid: { name: 'Elsie', portrait: 'portrait-housemaid', voice: { pitch: 380, spread: 0.2, wave: 'triangle' } },
+  housecook: { name: 'Marjory the Cook', portrait: 'portrait-housecook', voice: { pitch: 280, spread: 0.14, wave: 'triangle' } },
 };

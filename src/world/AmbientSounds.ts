@@ -30,6 +30,7 @@ const ROOFS: Partial<Record<AreaId, number>> = {
   tavern: 0.45,
   chapel: 0.55,
   cellar: 0.12,
+  jail: 0.12,
   // No roof left at all: the rain comes straight in.
   watchtower: 0.05,
 };
@@ -72,6 +73,9 @@ const PLACES: Record<AreaId, Place> = {
   cellar: { cave: 0.35, tavern: 0.12, echo: 0.6 },
   smithy: { fire: 0.85, echo: 0.3 },
   bakery: { fire: 0.55, echo: 0.15 },
+  garrison: { fire: 0.6, echo: 0.35 },
+  jail: { cave: 0.3, echo: 0.7 },
+  residence: { fire: 0.55, echo: 0.25 },
   chapel: { bell: 0.7, echo: 0.9 },
   infirmary: { fire: 0.5, bell: 0.35, echo: 0.3 },
   scriptorium: { fire: 0.3, bell: 0.35, echo: 0.3 },
