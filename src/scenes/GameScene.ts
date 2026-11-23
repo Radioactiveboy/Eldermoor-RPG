@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, SNEAK, SPRINT_MULTIPLIER } from '../config';
 import { Child, Siblings } from '../entities/Child';
+import { Companion, Trail } from '../entities/Companion';
 import { Creature } from '../entities/Creature';
 import { Hen } from '../entities/Hen';
 import { Npc, NpcWorld } from '../entities/Npc';
@@ -20,6 +21,7 @@ import { QuestLog } from '../systems/Quests';
 import { AREA_NAMES, SaveData, SaveGame } from '../systems/SaveGame';
 import { ShopId, Shops } from '../systems/Shops';
 import { Bounties } from '../systems/Bounties';
+import { Companions } from '../systems/Companions';
 import { Reputation } from '../systems/Reputation';
 import type { DialogueScript } from '../dialogue/Dialogue';
 import { Tavern } from '../systems/Tavern';
@@ -39,9 +41,11 @@ import { MotherRoutine } from '../world/MotherRoutine';
 import { PlainsEvents } from '../world/PlainsEvents';
 import type { DialogueSceneData } from './DialogueScene';
 import type { InventoryTab } from './InventoryScene';
+import type { PartySceneData } from './PartyScene';
 import type { StationSceneData } from './StationScene';
 import { areaReady, AREAS, arrivalArea, buildArea, loadArea, prefetchArea } from './game/areas';
-import { CAVE_WOLVES, COMBAT_DUCK, spawnCreatures, startCombat, startRoadEvents, updateCreatures } from './game/combat';
+import { npcHidden, offerCompanion, sendHome, spawnCompanions, updateCompanions } from './game/companions';
+import { CAVE_WOLVES, COMBAT_DUCK, spawnCreatures, takeKnockedOutBy, startCombat, startRoadEvents, updateCreatures } from './game/combat';
 import { runDialogueAction } from './game/dialogueActions';
 import { boughtFeed, updateHens } from './game/hollow';
 import { readKeyboard, setupInput, updateHover, type MoveKeys } from './game/input';
@@ -104,6 +108,10 @@ export class GameScene extends Phaser.Scene {
   clock!: TimeOfDay;
   area: AreaId = 'home';
   npcs: Npc[] = [];
+  /** Whoever is travelling with the hero (see systems/Companions.ts), following in their footsteps. */
+  companions: Companion[] = [];
+  /** The hero's footsteps, for the companions to walk in. */
+  trail = new Trail();
   /** Wild animals roaming the area. */
   creatures: Creature[] = [];
   /** Chance meetings out on Adowvale Plains (see world/PlainsEvents.ts). */
@@ -235,6 +243,7 @@ export class GameScene extends Phaser.Scene {
       Crafting.reset();
       Weather.reset();
       Needs.reset();
+      Companions.reset();
       this.defeatedFoes.clear();
       this.visited.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
@@ -271,7 +280,11 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.map, start.x, start.y);
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
-    this.npcs = (this.map.data.npcs ?? []).filter((n) => !absent(n.id)).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking, n.hours, n));
+    // (Someone travelling with the hero isn't also waiting where they were met.)
+    this.npcs = (this.map.data.npcs ?? []).filter((n) => !npcHidden(n.id) && !absent(n.id)).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking, n.hours, n));
+    this.companions = spawnCompanions(this);
+    // A night's sleep sets everyone right.
+    if (data.slept !== undefined) Companions.rested();
     const mother = this.someone('mother');
     NpcWorld.motherInBed = false;
     this.motherRoutine = mother ? new MotherRoutine(mother, this.map, () => this.seat) : undefined;
@@ -324,7 +337,10 @@ export class GameScene extends Phaser.Scene {
       else this.raid.beginInside(!!data.raidRetreat);
     }
     if (data.knockedOut) {
-      this.time.delayedCall(1200, () => this.onHint?.('I came to on the cottage floor, aching all over. That wolf is still out there.'));
+      const by = takeKnockedOutBy();
+      this.time.delayedCall(1200, () =>
+        this.onHint?.(by ? `I came to on the cottage floor, aching all over. ${by} must have dragged me home.` : 'I came to on the cottage floor, aching all over. That wolf is still out there.'),
+      );
     }
     if (data.gateAftermath) wokeAfterGate(this);
     if (data.raidAftermath) {
@@ -370,7 +386,7 @@ export class GameScene extends Phaser.Scene {
 
   /** People besides the NPCs who can say things in speech bubbles (Iran's children), for the HUD. */
   get speakers(): Speaker[] {
-    return [...(this.siblings?.speakers ?? []), ...(this.raid?.speakers ?? []), ...(this.gateAttack?.speakers ?? [])];
+    return [...(this.siblings?.speakers ?? []), ...(this.raid?.speakers ?? []), ...(this.gateAttack?.speakers ?? []), ...this.companions];
   }
 
   update(_time: number, deltaMs: number): void {
@@ -388,8 +404,10 @@ export class GameScene extends Phaser.Scene {
     }
     updateChannel(this, dt);
     this.setSneaking(wantsSneak);
+    const before = { x: this.player.gx, y: this.player.gy };
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : wantsSneak ? SNEAK.speed : 1);
     this.sprinting = wantsSprint && moved;
+    updateCompanions(this, dt, dt > 0 ? Math.hypot(this.player.gx - before.x, this.player.gy - before.y) / dt : 0);
     this.motherRoutine?.update(dt, this.clock.hour, this.busy);
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
     this.raid?.update(dt, this.busy || this.inCombat);
@@ -469,6 +487,13 @@ export class GameScene extends Phaser.Scene {
     this.scene.get('Inventory').events.once('inventory-closed', () => this.release());
   }
 
+  /** Who travels with the hero (P, or a companion's card on the HUD): see scenes/PartyScene.ts. */
+  openParty(): void {
+    if (!this.takeControls()) return;
+    this.scene.launch('Party', { onSendHome: (id) => sendHome(this, id) } satisfies PartySceneData);
+    this.scene.get('Party').events.once('party-closed', () => this.release());
+  }
+
   /** Eat a piece of food from the satchel. */
   eat(index: number): boolean {
     const stack = Inventory.bag[index];
@@ -518,7 +543,17 @@ export class GameScene extends Phaser.Scene {
     this.walkingTo = undefined;
     this.player.setPath([]);
     npc.faceTowards(this.player.gx, this.player.gy);
-    this.runScript(npc.script(), npc);
+    // Someone who could come along is asked here too (see game/companions.ts).
+    this.runScript(offerCompanion(npc.id, npc.script()), npc);
+  }
+
+  /** A conversation with someone who isn't one of the map's NPCs (a companion following the hero). */
+  startScript(script: DialogueScript): void {
+    if (this.seat) standUp(this);
+    this.busy = true;
+    this.walkingTo = undefined;
+    this.player.setPath([]);
+    this.runScript(script);
   }
 
   private runScript(script: DialogueScript, npc?: Npc): void {

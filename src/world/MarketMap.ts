@@ -264,6 +264,8 @@ export function buildMarketMap(gateOpen = false): MapData {
     { id: 'guard-2', gx: 19.5, gy: 12.5 },
     { id: 'guard-3', gx: 17.5, gy: 20.5 },
     { id: 'guard-4', gx: 25.5, gy: 16.5 },
+    // Wat, on the east watch towards the Hollow, once the goblins have been (hidden before; see scenes/game/companions.ts).
+    { id: 'wat', gx: 27.5, gy: 14.5 },
   );
   data.npcs!.push(...MARKET_CROWD);
   return data;

@@ -361,7 +361,7 @@ const RAID_TALK: Record<string, RaidTalk> = {
         speaker: 'sigrun',
         lines: [
           "Goblins. I heard. Who's paying? ...You? With what?",
-          "Hm. Find out where they've gone, first. I don't walk into woods blind, not for coin and not for anyone's mother. Then ask me again.",
+          "Forty coins, and I walk with you as far as the trail goes. Not for less, not for anyone's mother. If you haven't got it, find someone in this village who has. The Headman owes the Hollow that much.",
           "And go in daylight. They hate the sun. It's the only thing they hate more than us.",
         ],
         next: 'ask',
