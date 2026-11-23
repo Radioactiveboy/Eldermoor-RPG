@@ -133,9 +133,48 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'search', text: 'Search what is left of the cottage' },
       { id: 'outside', text: 'Go outside and look for Mother' },
       { id: 'iran', text: "See if Farmer Iran and his children are safe" },
+      {
+        id: 'trail',
+        text: "Follow the goblins' trail north, past the wolves' cave and into the woods",
+        target: { area: 'northwoods', x: 30.5, y: 72 },
+      },
+      { id: 'signs', text: 'Look along the trail for any sign of Mother', target: { area: 'northwoods', x: 33.5, y: 32.5 } },
+      { id: 'edge', text: 'See where the trail leads', target: { area: 'northwoods', x: 41, y: 6 } },
+      {
+        id: 'word',
+        text: "Take word to the militia in Adowvale's market square, as Iran said",
+        target: { area: 'market', x: 11.5, y: 15.5, npc: 'guard-1' },
+      },
+      {
+        id: 'sergeant',
+        text: 'Tell Sergeant Brannock at the garrison where the trail leads',
+        target: { area: 'garrison', x: 8, y: 1.6, npc: 'sergeant' },
+      },
+      { id: 'prisoner', text: 'Question the goblin in the cells under the garrison', target: { area: 'jail', x: 6.3, y: 2.55, npc: 'snikkit' } },
+      {
+        id: 'fells',
+        text: "Follow the goblins' trail up out of the woods onto the Greyfells",
+        target: { area: 'greyfells', x: 23.5, y: 26 },
+      },
+      { id: 'camp', text: "Search the goblins' camp for any sign of Mother", target: { area: 'greyfells', x: 21, y: 23 } },
+      { id: 'warren', text: 'Find where the trail goes from the camp', target: { area: 'greyfells', x: 24.5, y: 7.5 } },
       { id: 'mother', text: 'Find out what the goblins did with Mother' },
     ],
     xp: 300,
+  },
+  'the-gate': {
+    id: 'the-gate',
+    title: 'The Night They Came',
+    kind: 'main',
+    giver: 'Myself',
+    summary:
+      "I fought the goblins keeping their camp on the Greyfells, and one more got away up the hill, blowing a horn. They know someone found " +
+      "their camp now, and it won't take them long to guess where from. Adowvale. I have to warn the militia, and be there when they come.",
+    objectives: [
+      { id: 'warn', text: "Warn the militia in Adowvale's square that the goblins will come", target: { area: 'market', x: 11.5, y: 15.5, npc: 'guard-1' } },
+      { id: 'hold', text: 'Stand with the militia on the old road into Adowvale when the goblins come, after dark', target: { area: 'market', x: 29.5, y: 17.5 } },
+    ],
+    xp: 250,
   },
   'cellar-rats': {
     id: 'cellar-rats',

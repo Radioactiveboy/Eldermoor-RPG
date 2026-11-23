@@ -39,6 +39,15 @@ export function enteredGarrison(g: GameScene): void {
 }
 
 export function enteredJail(g: GameScene): void {
+  if (raidIsOver()) {
+    firstTime(
+      g,
+      'Cold, and low, and it smells of old straw. Somebody in the middle cell is whistling. And in the cell at the foot of the steps, a hiss, and two yellow eyes.',
+      "Went down to the cells under the garrison. Three of them, barred. Hamm of the cooper's boys keeps the keys, Dickon the poacher keeps the " +
+        'middle cell, and in the one at the foot of the steps there is a goblin. A live one. It watched me all the way down.',
+    );
+    return;
+  }
   firstTime(
     g,
     'Cold, and low, and it smells of old straw. Somebody in the middle cell is whistling.',

@@ -1774,12 +1774,79 @@ const housecook = townsfolk({
   iris: 0x5a4a3a, brow: 'flat', smile: 1, width: 19, jaw: 10, old: true, blush: [0xd05a4a, 0.7],
 });
 
+/** Snikkit's green, used for the ears painted behind the face as well as the face itself. */
+const SNIKKIT_SKIN = 0x86a04a;
+/**
+ * Snikkit, the goblin in the cells: green and warty, a heavy brow, little
+ * yellow eyes deep in their sockets, a long hooked nose, tusks jutting up from
+ * the lower jaw, and great ears sweeping out and back like a bat's. Iron at
+ * the neck, and rags.
+ */
+const snikkit = townsfolk({
+  skin: SNIKKIT_SKIN, hair: 0x5e7430, style: 'bald', cloth: 0x5e4a36, shirt: 0x40301f,
+  iris: 0xffd23a, brow: 'heavy', smile: 0, width: 17, jaw: 9, nose: 3, tired: true,
+  behind: (c) => {
+    // The ears: long leaves of skin from the sides of the head out and up to a point, darker inside.
+    const skin = ramp(SNIKKIT_SKIN);
+    for (const side of [-1, 1]) {
+      for (let y = 20; y < 66; y++) {
+        for (let x = 0; x < S; x++) {
+          const dx = (x + 0.5 - CX) * side;
+          const t = (dx - 12) / 34;
+          if (t < 0 || t > 1) continue;
+          const mid = 52 - t * 26;
+          const half = 8 * (1 - t) ** 0.8 + 0.6;
+          const d = (y + 0.5 - mid) / half;
+          if (Math.abs(d) > 1) continue;
+          const inner = Math.abs(d) < 0.55 && t > 0.12 && t < 0.8;
+          const v = lightness(side * 0.3, d * 0.6, inner ? -0.32 : 0.02 - t * 0.1);
+          c.set(x, y, tone(skin, v, x, y));
+        }
+      }
+    }
+  },
+  over: (c, f) => {
+    const skin = ramp(SNIKKIT_SKIN);
+    // Deep sockets under the brow, and a glint of yellow in each (or a slit, blinking).
+    for (const side of [-1, 1]) {
+      blob(c, CX + side * EYE_DX, EYE_Y, 5.5, 3.2, skin, -0.55);
+      if (f.blink) {
+        for (let x = -3; x <= 3; x++) c.set(CX + side * EYE_DX + x, EYE_Y, skin[0]);
+      } else {
+        const yellow = ramp(0xffd23a);
+        for (const [dx, dy, i] of [[-1, 0, 3], [0, 0, 4], [1, 0, 2], [0, 1, 2], [-1, 1, 1]] as const) c.set(CX + side * EYE_DX + dx, EYE_Y + dy, yellow[i]);
+        c.set(CX + side * EYE_DX, EYE_Y, 0x1a1008);
+      }
+    }
+    // Warts and blotches.
+    for (const [x, y] of [[CX - 13, EYE_Y + 9], [CX + 11, EYE_Y - 7], [CX + 6, EYE_Y + 14], [CX - 5, 33]]) {
+      c.set(x, y, skin[1]);
+      c.set(x + 1, y, skin[3]);
+    }
+    // Tusks jutting up from the lower jaw, either side of the mouth.
+    const tusk = ramp(0xf0e6c8);
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 6; i++) {
+        const x = CX + side * (6 + Math.floor(i / 3));
+        const y = EYE_Y + 20 - i;
+        c.set(x, y, tusk[i > 3 ? 4 : 3]);
+        if (i < 4) c.set(x + side, y, tusk[1]);
+      }
+    }
+    // An iron collar at the neck.
+    const iron = ramp(0x5a5a64);
+    for (let y = 70; y < 76; y++) for (let x = CX - 12; x <= CX + 12; x++) c.set(x, y, tone(iron, lightness((x - CX) / 16, (y - 72) / 6), x, y));
+    c.set(CX, 76, iron[1]);
+    c.set(CX, 77, iron[2]);
+  },
+});
+
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
   footpad, cutpurse, tinker, goatherd, courier,
-  sergeant, jailer, prisoner, headman, steward, housemaid, housecook,
+  sergeant, jailer, prisoner, headman, steward, housemaid, housecook, snikkit,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */

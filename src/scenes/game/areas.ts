@@ -19,6 +19,8 @@ import { generateMap } from '../../world/MapGenerator';
 import { buildMarketMap } from '../../world/MarketMap';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { enteredCave, enteredNorthWoods } from './hollow';
+import { enteredGreyfells, greyfellsOpen } from './trail';
+import { gateAftermath } from '../../world/GateAftermath';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
@@ -95,7 +97,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
   world: { build: buildHollow, test: true },
   hut: lazy(() => import('../../world/HutMap'), (m) => m.buildHutMap(raidStage() === 'over', !!QuestLog.get('speckle-and-moppet')?.completed), { test: true, enter: enteredHut }),
   cave: lazy(() => import('../../world/CaveMap'), (m) => m.buildCaveMap(), { test: true, enter: enteredCave }),
-  market: { build: () => buildMarketMap(QuestLog.hasFlag('paid-toll')), test: true, enter: enteredMarket },
+  market: { build: () => gateAftermath(buildMarketMap(QuestLog.hasFlag('paid-toll'))), test: true, enter: enteredMarket },
   tavern: lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernMap(), { test: true, enter: enteredTavern }),
   'tavern-hall': lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernHallMap(), { test: true }),
   // No ?area= for a rented room: it needs a room taken first.
@@ -105,7 +107,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
   bakery: lazy(() => import('../../world/WorkshopMaps'), (m) => m.buildBakeryMap(), { test: true, enter: enteredWorkshop }),
   // On the lane at the south end of Adowvale: the militia's garrison, the cells under it, and the Headman's house.
   garrison: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildGarrisonMap(), { test: true, enter: enteredGarrison }),
-  jail: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildJailMap(), { test: true, enter: enteredJail }),
+  jail: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildJailMap(raidStage() === 'over'), { test: true, enter: enteredJail }),
   residence: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildResidenceMap(), { test: true, enter: enteredResidence }),
   plains: lazy(() => import('../../world/PlainsMap'), (m) => m.buildPlainsMap(), {
     test: true,
@@ -115,8 +117,10 @@ export const AREAS: Record<AreaId, AreaDef> = {
         'grass, the road running off to a crossroads, and not a wall in sight.',
     ),
   }),
-  // The woods north of the Hollow; after the raid, the goblins' trail through them shows (as scenery, for now).
-  northwoods: lazy(() => import('../../world/NorthWoodsMap'), (m) => m.buildNorthWoodsMap(raidStage() === 'over'), { test: true, enter: enteredNorthWoods }),
+  // The woods north of the Hollow; after the raid, the goblins' trail through them shows, and in time leads on up onto the Greyfells.
+  northwoods: lazy(() => import('../../world/NorthWoodsMap'), (m) => m.buildNorthWoodsMap(raidStage() === 'over', greyfellsOpen()), { test: true, enter: enteredNorthWoods }),
+  // Up the goblins' trail out of the north woods: their camp, and the hole in the hill.
+  greyfells: lazy(() => import('../../world/GreyfellsMap'), (m) => m.buildGreyfellsMap(), { test: true, enter: enteredGreyfells }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

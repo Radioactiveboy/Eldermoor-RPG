@@ -26,6 +26,10 @@ export interface HeadmanTalk {
   paidToll: boolean;
   /** The Wolf Mother is dead. */
   slewWolfMother: boolean;
+  /** The goblin in the cells has told the hero where Mother is, and the Headman hasn't yet offered to pay for help. */
+  goblinTalked?: boolean;
+  /** He's promised to pay Sigrun's hire. */
+  paysSigrun?: boolean;
 }
 
 /**
@@ -60,6 +64,34 @@ export function headmanTopics(t: HeadmanTalk): HeadmanTopic[] {
           lines: [
             'Come back to me. Often. Anything you learn, out there, I want to hear it, and I may have need of someone who is not afraid of the woods.',
           ],
+          next: 'ask',
+        },
+      },
+    },
+    {
+      when: (x) => !!x.goblinTalked && !x.paysSigrun,
+      choice: { text: 'The goblin in the cells talked. They have Mother up on the Greyfells.', next: 'raid-greyfells' },
+      nodes: {
+        'raid-greyfells': {
+          speaker: 'headman',
+          lines: [
+            'The Greyfells. Under the hill, where my grandfather always said they were. And she is alive? Then I was right not to give up on her.',
+            "A healer for their sick queen... Gods. I have no men to give you, lad. Brannock has his twelve, and I'll not strip the village of them; you know why.",
+            "But I have the village chest, and this is what it is for. There is a sellsword drinking at the Tankard, Sigrun, who came for the Wolf Mother's bounty and stayed. She has done this sort of work before.",
+            'Go and see her. Tell her Hale sends you, and Hale pays. Whatever she asks. And bring your mother home.',
+          ],
+          action: 'headman-pays-sigrun',
+          next: 'ask',
+        },
+      },
+    },
+    {
+      when: (x) => !!x.paysSigrun,
+      choice: { text: 'About the sellsword.', next: 'raid-sigrun' },
+      nodes: {
+        'raid-sigrun': {
+          speaker: 'headman',
+          lines: ["Sigrun, at the Tankard. Hale sends you, Hale pays. If she argues, tell her I said she's to send the bill to me, and I'll argue with her myself."],
           next: 'ask',
         },
       },

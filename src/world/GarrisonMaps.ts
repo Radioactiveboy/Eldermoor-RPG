@@ -119,7 +119,7 @@ export function buildGarrisonMap(): MapData {
  * to the hatch out in the lane. Hamm keeps the keys at a little table by the
  * steps; Dickon the poacher is in the middle cell, and the end one has had a goose in it.
  */
-export function buildJailMap(): MapData {
+export function buildJailMap(goblin = false): MapData {
   const W = 16;
   const H = 8;
   const foot = { x: 1.5, y: 1.7 };
@@ -146,10 +146,14 @@ export function buildJailMap(): MapData {
       { gx: 13.5, gy: 1.2, z: 70, radius: 120, flicker: 0.5 },
       { gx: 3.6, gy: 4.6, z: 36, radius: 130, flicker: 0.7 },
       { gx: 8, gy: 3.4, z: 80, radius: 120, flicker: 0.4 },
+      // A rushlight Hamm has stuck in the bars of the goblin's cell, so he can see where it is.
+      ...(goblin ? [{ gx: 6.2, gy: 3.1, z: 26, radius: 90, flicker: 0.8 }] : []),
     ],
     npcs: [
       { id: 'jailer', gx: 4.6, gy: 4.5, looking: { x: 1, y: -1 } },
       { id: 'prisoner', gx: 7.55, gy: 1.75, looking: { x: 0, y: 1 } },
+      // Snikkit, the goblin the militia caught after the raid (see dialogue/garrison.ts), crouched at the bars of the cell by the steps.
+      ...(goblin ? [{ id: 'snikkit', gx: 6.3, gy: 2.55, looking: { x: 0, y: 1 } }] : []),
     ],
     seats: [],
     sights: [
@@ -161,7 +165,10 @@ export function buildJailMap(): MapData {
       },
       {
         id: 'jail-tally', gx: 6, gy: 3.1, label: 'Look into the cell', z: 30,
-        thought: 'Scratched into the stone at the back of the cell, rows and rows of tally marks, and a crude little drawing of a hare. Somebody had a long time to think in here.',
+        thought: goblin
+          ? 'Tally marks scratched into the back wall, a drawing of a hare, and under them, fresh and deep, claw marks. Lots of claw marks. ' +
+            'Hamm has nailed a board over the lowest bars, where something has been gnawing at them.'
+          : 'Scratched into the stone at the back of the cell, rows and rows of tally marks, and a crude little drawing of a hare. Somebody had a long time to think in here.',
       },
       {
         id: 'jail-keys', gx: 2.5, gy: 4.3, label: 'Look at the keys', z: 24,

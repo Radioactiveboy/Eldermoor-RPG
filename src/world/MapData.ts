@@ -36,6 +36,8 @@ export type AreaId =
   | 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains' | 'monastery'
   // The forest north of the Hollow, beyond the wolves' cave, and inside the old watchtower there.
   | 'northwoods' | 'watchtower'
+  // The open moor above the north woods, where the goblins camped on their way home with Mother.
+  | 'greyfells'
   // Inside Saint Elda's walls: the grounds, and the rooms off them.
   | 'abbey' | 'chapel' | 'infirmary' | 'scriptorium' | 'refectory'
   // The Wolf Mother's den on the plains, and the passage beyond its crevice.
@@ -242,6 +244,11 @@ export interface CreatureSpawn {
   gy: number;
   /** Game that's back the next time the area is visited, however many times it's hunted (the plains' deer and hares). */
   respawns?: boolean;
+  /**
+   * How close the hero can come before it attacks, in tiles, if not as its kind usually does (the goblins
+   * in their camp on the Greyfells, who keep watch; the raiders only fight when the story says).
+   */
+  notice?: number;
 }
 
 /** A named spot, shown under the area's name when the player is near it (see ui/LocationLabel.ts). */
@@ -255,6 +262,8 @@ export interface Landmark {
 
 /** A stretch of ground where the hero has a thought on stepping into it, e.g. where a road runs on off the map. */
 export interface Musing {
+  /** Names it, for a quest step that's done by standing there (see scenes/game/raid.ts). */
+  id?: string;
   x0: number;
   y0: number;
   x1: number;

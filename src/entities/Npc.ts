@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import type { DialogueScript, SpeakerId } from '../dialogue/Dialogue';
 import { raidAware, raidIsOver, toldOfRaid } from '../dialogue/afterRaid';
-import { jailerScript, prisonerScript, sergeantScript } from '../dialogue/garrison';
+import { goblinPrisonerScript, jailerScript, prisonerScript, sergeantScript } from '../dialogue/garrison';
 import { HOUSEMAID_CHORES, headmanScript, housecookScript, housemaidScript, stewardScript } from '../dialogue/residence';
 import { MedicineStage, MOTHER_ASLEEP, MOTHER_DOZING, MOTHER_INTRO, motherScript } from '../dialogue/mother';
 import { BAKER, GUARD, militiaScript, SMITH, TANNER } from '../dialogue/market';
@@ -392,11 +392,22 @@ const NPCS: Record<string, NpcDef> = {
         standing: Reputation.level('militia'),
         bounties: Bounties.timesClaimed(),
         slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
+        trailNews: QuestLog.isDone('the-raid', 'edge') && !QuestLog.isDone('the-raid', 'sergeant'),
+        goblinTalked: QuestLog.isDone('the-raid', 'prisoner'),
       });
     },
   },
   jailer: { texture: 'folk-guard', script: wayfarer('jailer', (first) => jailerScript(raidIsOver(), first)) },
   prisoner: { texture: 'folk-prisoner', sits: true, talkRange: 3, script: wayfarer('prisoner', (first) => prisonerScript(raidIsOver(), first)) },
+  // Snikkit, the goblin the militia caught after the raid, in the cell at the foot of the steps (only there once the raid is over).
+  snikkit: {
+    texture: 'folk-snikkit',
+    talkRange: 3,
+    script: wayfarer('snikkit', (first) => {
+      const food = foodToShare();
+      return goblinPrisonerScript({ first, talked: QuestLog.isDone('the-raid', 'prisoner'), food: food && itemDef(food).name.toLowerCase() });
+    }),
+  },
   // The Headman's house: the Headman at his desk (spoken to across it), and his household.
   headman: {
     texture: 'folk-headman',
@@ -413,6 +424,8 @@ const NPCS: Record<string, NpcDef> = {
         medicine: !!medicine && !medicine.completed,
         paidToll: QuestLog.hasFlag('paid-toll'),
         slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
+        goblinTalked: QuestLog.isDone('the-raid', 'prisoner'),
+        paysSigrun: QuestLog.hasFlag('headman-pays-sigrun'),
       });
     },
   },

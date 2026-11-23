@@ -80,7 +80,7 @@ export class Creature implements Body {
   /** The animation playing ('walk', 'sniff', 'idle'), or the frame it's held on. */
   private showing: { anim: string } | { frame: number } = { anim: 'sniff' };
 
-  constructor(scene: Phaser.Scene, map: IsoMap, id: string, kind: FoeKind, gx: number, gy: number) {
+  constructor(scene: Phaser.Scene, map: IsoMap, id: string, kind: FoeKind, gx: number, gy: number, notice?: number) {
     this.scene = scene;
     this.map = map;
     this.id = id;
@@ -88,7 +88,7 @@ export class Creature implements Body {
     this.gx = gx;
     this.gy = gy;
     this.home = { x: gx, y: gy };
-    this.ways = WAYS[kind];
+    this.ways = notice === undefined ? WAYS[kind] : { ...WAYS[kind], notice };
     const art = CREATURE_ART[kind];
     this.eight = !!art.eight;
     const scale = art.scale ?? 1;

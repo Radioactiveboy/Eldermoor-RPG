@@ -46,6 +46,7 @@ export interface Link {
 export const REGIONS: Region[] = [
   { id: 'world', tiles: { w: 52, h: 60 }, box: { x: 15, y: 0, w: 26, h: 30 }, look: 'fields', label: { x: 40, y: 46 } },
   { id: 'northwoods', tiles: { w: 60, h: 76 }, box: { x: 19.5, y: -34, w: 24, h: 30 }, look: 'woods', label: { x: 30, y: 64 } },
+  { id: 'greyfells', tiles: { w: 48, h: 56 }, box: { x: 27.7, y: -56.4, w: 19.2, h: 22.4 }, look: 'plains', label: { x: 34, y: 44 } },
   { id: 'market', tiles: { w: 34, h: 44 }, box: { x: -60, y: 18.5, w: 17, h: 22 }, look: 'village' },
   { id: 'plains', tiles: { w: 120, h: 150 }, box: { x: -67.6, y: -34.2, w: 40, h: 50 }, look: 'plains', label: { x: 40, y: 108 } },
   { id: 'monastery', tiles: { w: 64, h: 60 }, box: { x: -24.9, y: -22.2, w: 22, h: 20 }, look: 'grounds', label: { x: 36, y: 42 } },
@@ -58,6 +59,7 @@ export const LINKS: Link[] = [
   link('world', { x: 0.5, y: 54.5 }, 'market', { x: 33, y: 17.5 }, 'The old road'),
   link('world', { x: 33.5, y: 0.5 }, 'northwoods', { x: 30.5, y: 75 }, 'The path north'),
   link('northwoods', { x: 13.5, y: 22.5 }, 'watchtower', { x: 0.5, y: 5.5 }),
+  link('northwoods', { x: 41.5, y: 0.5 }, 'greyfells', { x: 21, y: 55.5 }, "The goblins' trail"),
   link('world', { x: 21.5, y: 37.5 }, 'home', { x: 0.5, y: 5.5 }),
   link('world', { x: 16.5, y: 14.5 }, 'hut', { x: 0.5, y: 3.5 }),
   link('world', { x: 27.5, y: 6.5 }, 'cave', { x: 0.5, y: 2.5 }),

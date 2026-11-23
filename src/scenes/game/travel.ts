@@ -10,6 +10,7 @@ import { Door } from '../../world/MapData';
 import type { ConfirmSceneData } from '../ConfirmScene';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { pathTo } from './input';
+import { reachedTrailEnd } from './trail';
 import { standUp } from './sitting';
 import { residenceOpen } from './garrison';
 import { workshopOpen } from './workshops';
@@ -31,7 +32,10 @@ export function checkRoadExits(g: GameScene): void {
 export function checkMusings(g: GameScene): void {
   const { gx, gy } = g.player;
   const here = g.map.data.musings?.find((m) => gx >= m.x0 && gx < m.x1 && gy >= m.y0 && gy < m.y1);
-  if (here && here !== g.musing && !g.busy) g.onHint?.(here.text);
+  if (here && here !== g.musing && !g.busy) {
+    g.onHint?.(here.text);
+    if (here.id === 'goblin-trail-end') reachedTrailEnd();
+  }
   g.musing = here;
 }
 

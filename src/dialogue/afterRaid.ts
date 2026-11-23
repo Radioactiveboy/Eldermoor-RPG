@@ -37,6 +37,10 @@ export interface RaidTalk {
   at?: string;
   /** New nodes those lead to. */
   nodes?: Record<string, DialogueNode>;
+  /** Asks only offered while something holds, by the node they lead to (warning the militia the goblins are coming). */
+  when?: Record<string, () => boolean>;
+  /** The flag kept once `first` has been said, if not {@link toldOfRaid}'s. */
+  flag?: string;
 }
 
 /** The flag kept once someone has said their piece about the raid, so they only say it once. */
@@ -50,7 +54,11 @@ export const toldOfRaid = (speaker: SpeakerId) => `raid-told:${speaker}`;
 export function raidAware(id: string, script: DialogueScript): DialogueScript {
   if (!raidIsOver()) return script;
   const talk = RAID_TALK[talkerOf(id)];
-  return talk ? applyRaidTalk(script, talk) : script;
+  const after = talk ? applyRaidTalk(script, talk) : script;
+  // And once the goblins have come for Adowvale itself, what they say about that night.
+  const night = QuestLog.hasFlag('gate-fell') ? GATE_FELL_TALK : QuestLog.hasFlag('gate-held') ? GATE_HELD_TALK : undefined;
+  const more = night?.[talkerOf(id)];
+  return more ? applyRaidTalk(after, more) : after;
 }
 
 /** Whose talk an NPC has: the four militiamen share theirs, as do the two toll guards. */
@@ -70,17 +78,25 @@ export function applyRaidTalk(script: DialogueScript, talk: RaidTalk): DialogueS
   }
   Object.assign(nodes, talk.nodes);
   const at = nodes[talk.at ?? 'ask'];
-  if (talk.ask && at?.choices) {
+  const asks = talk.ask?.filter((c) => !c.next || !talk.when?.[c.next] || talk.when[c.next]());
+  if (asks && asks.length > 0 && at?.choices) {
     const choices = [...at.choices];
-    choices.splice(Math.max(0, choices.length - 1), 0, ...talk.ask);
+    choices.splice(Math.max(0, choices.length - 1), 0, ...asks);
     nodes[talk.at ?? 'ask'] = { ...at, choices };
   }
   let start = script.start;
-  const flag = toldOfRaid(talk.speaker);
+  const flag = talk.flag ?? toldOfRaid(talk.speaker);
   if (talk.first && !QuestLog.hasFlag(flag)) {
     QuestLog.setFlag(flag);
-    nodes['raid-first'] = { speaker: talk.speaker, lines: talk.first, next: start };
-    start = 'raid-first';
+    const earlier = start === 'raid-first' ? nodes['raid-first'] : undefined;
+    if (earlier) {
+      // Already opening with what they make of the raid (an earlier layer of talk): this comes straight after it.
+      nodes['raid-first-2'] = { speaker: talk.speaker, lines: talk.first, next: earlier.next };
+      nodes['raid-first'] = { ...earlier, next: 'raid-first-2' };
+    } else {
+      nodes['raid-first'] = { speaker: talk.speaker, lines: talk.first, next: start };
+      start = 'raid-first';
+    }
   }
   return { start, nodes };
 }
@@ -120,10 +136,13 @@ const RAID_TALK: Record<string, RaidTalk> = {
     ask: [
       { text: TOOK_MOTHER, next: 'raid-mother' },
       { text: 'What is the militia doing about the goblins?', next: 'raid-doing' },
+      { text: "I fought the goblins at their camp on the fell. They'll come here next.", next: 'gate-warn' },
     ],
+    when: { 'gate-warn': () => QuestLog.has('the-gate') && !QuestLog.isDone('the-gate', 'warn') },
     nodes: {
       'raid-mother': {
         speaker: 'guard',
+        action: 'told-militia',
         lines: [
           'Took her? Alive? ...Then there\'s hope, isn\'t there. Goblins don\'t carry off the dead.',
           "Which way did they go? Did anyone see?",
@@ -147,6 +166,17 @@ const RAID_TALK: Record<string, RaidTalk> = {
           "I... We're the cooper's boys and the miller's nephew and old Garrick, who's deaf in one ear. None of us has ever seen a goblin. Not a live one.",
           "The sergeant says the militia's for the village, and if we march off into the woods there's nobody on the gate. He's not wrong. I hate that he's not wrong.",
           "He's sent to Lord Morten for men. If you go after her first, take a proper blade off Osric, and a helm. And come back and tell us what you find.",
+          "Better yet, tell the sergeant yourself. He's at the garrison, down the lane past the backs of the houses. He's got something down in the cells you'll want to see.",
+        ],
+        next: 'ask',
+      },
+      'gate-warn': {
+        speaker: 'guard',
+        action: 'warned-militia',
+        lines: [
+          'You... went up there? Alone? And one got away, blowing a horn? Gods. Gods! Then they know.',
+          "Right. RIGHT. I'll tell the sergeant. Every man on the old road from dusk, torches lit, spears out. We'll not be caught in our beds like the Hollow was.",
+          "If they come, they come up that road from the east. Will you stand with us? ...I thought you might.",
         ],
         next: 'ask',
       },
@@ -516,3 +546,40 @@ export const MILITIA_WATCH = [
   'Keep your spear up, Garrick!',
   "If it's small and it's grinning, shout!",
 ];
+
+/** What folk say once the goblins have got into Adowvale, burnt Hilde's bakery and carried her off (see scenes/game/gate.ts). */
+const GATE_FELL_TALK: Record<string, RaidTalk> = Object.fromEntries(
+  Object.entries({
+    guard: [
+      "We couldn't hold them. There were too many, and in the dark... You went down on the road and they just ran past you, into the square.",
+      "They fired the bakery. Hilde came out with a bread peel in her hands, swinging it, and they dragged her off down the road. We couldn't stop them. I'm sorry.",
+    ],
+    smith: ["...Hilde. Forty years I've had my bread off her.", "You get her back. Whatever you need from my anvil, it's yours. No coin. Don't argue."],
+    tanner: ["Her stall's just standing there, empty. Somebody keeps putting flowers on it.", "Don't look at me like that. I don't blame you. Not everybody's so kind, mind."],
+    landlord: [
+      `We carried you in off the road, ${HERO_NAME}. You were cold as a stone. I thought we'd lost you too.`,
+      "They took Hilde. You'll be going after her, I know that look. Eat first. That's not a request.",
+    ],
+    nell: ["Hilde's gone. Hilde! She was here, laughing, the night before. I keep looking at her chair."],
+    rosie: ['I heard her screaming. All the way down the road. I can still hear it.'],
+    harlan: ["My grandad said they'd come back. I didn't think they'd come here. I didn't think they'd take Hilde."],
+  }).map(([speaker, first]) => [speaker, { speaker: speaker as SpeakerId, first, flag: `gate-told:${speaker}` }]),
+);
+
+/** What folk say once the hero and the militia have beaten the goblins back from Adowvale. */
+const GATE_HELD_TALK: Record<string, RaidTalk> = Object.fromEntries(
+  Object.entries({
+    guard: [
+      `There's the hero of the old road! ${HERO_NAME}, we held them! We HELD them! Garrick hasn't stopped telling it. It gets bigger every time.`,
+      "Sergeant says the next time you tell us something, we listen the first time.",
+    ],
+    baker: [
+      `${HERO_NAME}! Come here, you. I watched it all from my upstairs window, with the rolling pin in my hand. You were magnificent.`,
+      "If anyone in this village ever says a word against you again, they'll answer to me and my rolling pin.",
+    ],
+    smith: ["Hm. Saw you on the road. ...Good work.", "That blade wants regrinding after a night like that. Bring it by."],
+    landlord: ['Free ale for the hero of the old road! ...One. One free ale. I know this lot.'],
+    nell: ["They're all talking about you. Every table. I've never seen the taproom like it."],
+    pell: ["I've started the song. The Night of the Old Road. Nineteen verses so far. Godric says that's eighteen too many."],
+  }).map(([speaker, first]) => [speaker, { speaker: speaker as SpeakerId, first, flag: `gate-told:${speaker}` }]),
+);

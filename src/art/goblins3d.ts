@@ -22,7 +22,7 @@ import { PALETTE as P } from './palette';
 /** What a goblin's weapon arm (its right, screen-left facing us) is doing. */
 type Act = 'rest' | 'ready' | 'strike' | 'hurt';
 
-type Weapon = 'cleaver' | 'spear' | 'hatchet' | 'club';
+type Weapon = 'cleaver' | 'spear' | 'hatchet' | 'club' | 'none';
 
 interface GoblinLook {
   skin: Tones;
@@ -50,6 +50,8 @@ interface GoblinLook {
   cap?: 'leather' | 'helm';
   /** Iron on the shoulders, shins and forearms. */
   armoured?: boolean;
+  /** Iron cuffs on the wrists, chained together (a prisoner). */
+  manacles?: boolean;
   /** A string of teeth and finger bones round the neck. */
   bones?: boolean;
   /** A ragged hood and cape. */
@@ -219,8 +221,17 @@ function goblinModel(pose: Pose3D, look: GoblinLook, act: Act = 'rest'): Model {
       }
       solids.push(knob([side * 5.2 * w, shoulderY + 2.4, sz - 0.2], 0.6, IRON));
     }
+    if (look.manacles) solids.push({ cx: elbow[0] + (hand[0] - elbow[0]) * 0.78, cy: elbow[1] + (hand[1] - elbow[1]) * 0.78, cz: elbow[2] + (hand[2] - elbow[2]) * 0.78, rx: 1.6 * w, ry: 1, rz: 1.6 * w, material: BLACK_IRON });
     if (weapon) weaponHand = hand;
     else offHand = hand;
+  }
+  // The chain between the cuffs, sagging in front of the belly.
+  if (look.manacles) {
+    for (let i = 1; i < 8; i++) {
+      const t = i / 8;
+      const sag = Math.sin(t * Math.PI) * 2.4;
+      solids.push(knob([weaponHand[0] + (offHand[0] - weaponHand[0]) * t, weaponHand[1] + 1 + (offHand[1] - weaponHand[1]) * t - sag, weaponHand[2] + 1.2 + (offHand[2] - weaponHand[2]) * t + sag * 0.5], 0.45, i % 2 ? IRON : BLACK_IRON));
+    }
   }
 
   // --- Head: big, jutting forward on the neck.
@@ -330,6 +341,8 @@ function weaponSolids(weapon: Weapon, h: V3, act: Act, b: number, look: GoblinLo
   const [x, y, z] = h;
   const w = look.bulk ?? 1;
   switch (weapon) {
+    case 'none':
+      return [];
     case 'cleaver': {
       // A notched, rusty butcher's cleaver.
       const tip: V3 =
@@ -496,6 +509,28 @@ export const GOBLIN_BRUTE: GoblinLook = {
   bulk: 1.35,
   hunch: 1.6,
 };
+
+/**
+ * Snikkit, the goblin the militia caught after the raid (in the cells under the
+ * garrison): a scrawny, sorry little cutter with nothing in its hands but iron
+ * cuffs, its vest gone and its topknot coming apart, hunched over its belly.
+ */
+export const GOBLIN_CAPTIVE: GoblinLook = {
+  skin: [0x86a04a, 0x4e6624, 0xaccc70],
+  mottle: [0x647a34, 0x445620, 0x7e9846],
+  kilt: [0x5e4a36, 0x40301f, 0x7a6248],
+  hair: [0x1e1a1c, 0x100e10, 0x343034],
+  eye: 0xffd23a,
+  weapon: 'none',
+  manacles: true,
+  bulk: 0.9,
+  hunch: 3.2,
+};
+
+/** Snikkit as townsfolk are drawn (see folk.ts), standing in the cell, for the 'folk-snikkit' figure. */
+export function captiveGoblinModel(pose: Pose3D): Model {
+  return goblinModel(pose, GOBLIN_CAPTIVE);
+}
 
 export type GoblinKind = 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute';
 
