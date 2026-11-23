@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { CAMERA_ZOOM, FAST_FORWARD, SNEAK, SPRINT_MULTIPLIER } from '../config';
-import { SIBLING_BANTER, SIBLING_SCARED, SIBLING_SCARED_HELLO } from '../dialogue/iran';
 import { Child, Siblings } from '../entities/Child';
 import { Creature } from '../entities/Creature';
 import { Hen } from '../entities/Hen';
@@ -44,13 +43,15 @@ import type { StationSceneData } from './StationScene';
 import { areaReady, AREAS, arrivalArea, buildArea, loadArea, prefetchArea } from './game/areas';
 import { CAVE_WOLVES, COMBAT_DUCK, spawnCreatures, startCombat, startRoadEvents, updateCreatures } from './game/combat';
 import { runDialogueAction } from './game/dialogueActions';
-import { siblingHello, updateHens } from './game/hollow';
+import { boughtFeed, updateHens } from './game/hollow';
 import { readKeyboard, setupInput, updateHover, type MoveKeys } from './game/input';
 import { updateFocus, type Channel, type Interaction } from './game/interactions';
 import { updateMarketHours } from './game/market';
 import { madeAtStation } from './game/medicine';
 import { cameAround, enteredAfterRaid, raidTestStart, startRaid } from './game/raid';
 import { cancelChannel, syncCrops, syncGathered, updateChannel } from './game/sights';
+import { enteredForSpeckle, siblingLines, updateSpeckle } from './game/speckle';
+import { leftHome } from './game/medicine';
 import { standUp, updateSitting } from './game/sitting';
 import { loadSave, wakingThought } from './game/sleep';
 import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
@@ -105,7 +106,7 @@ export class GameScene extends Phaser.Scene {
   hens: Hen[] = [];
   cluckTimer = 0;
   /** Iran's children, chattering away indoors. */
-  private siblings?: Siblings;
+  siblings?: Siblings;
   /** True during a fight: the clock stops and health doesn't regenerate. */
   inCombat = false;
   /** Birds, rippling water and the like, outdoors only. */
@@ -215,6 +216,7 @@ export class GameScene extends Phaser.Scene {
           'and her hands were cold as river stones. I should sit with her today.',
       );
       QuestLog.dayProvider = () => this.clock.day;
+      QuestLog.hourProvider = () => this.clock.hour;
       Inventory.reset();
       Experience.reset();
       Farm.reset();
@@ -276,10 +278,9 @@ export class GameScene extends Phaser.Scene {
     const hens = this.map.data.hens;
     this.hens = (hens?.flock ?? []).map((h) => new Hen(this, this.map, hens!.pen, h.kind, h.gx, h.gy));
     const children = (this.map.data.children ?? []).map((c) => new Child(this, this.map, c.id, c.gx, c.gy));
-    const scared = raidStage() === 'over';
-    this.siblings = children.length > 0
-      ? new Siblings(children, scared ? SIBLING_SCARED : SIBLING_BANTER, () => (scared ? SIBLING_SCARED_HELLO[0] : siblingHello()))
-      : undefined;
+    // What they chatter about depends on the raid, and on Speckle and Moppet after it (see game/speckle.ts).
+    const lines = siblingLines();
+    this.siblings = children.length > 0 ? new Siblings(children, lines.banter, lines.hello) : undefined;
     syncCrops(this);
     syncGathered(this);
     this.ambience = this.map.data.indoor ? undefined : new Ambience(this, this.map, this.clock);
@@ -329,10 +330,11 @@ export class GameScene extends Phaser.Scene {
     if (data.newGame) {
       this.time.delayedCall(1200, () => this.onHint?.('Mother is resting by the hearth. She wants to speak with you.'));
     }
-    if (this.area !== 'home') QuestLog.complete('mother-medicine', 'leave');
+    if (this.area !== 'home') leftHome();
     // Each area's own arrival: first-visit thoughts and diary lines, quest steps (see game/areas.ts).
     AREAS[this.area]?.enter?.(this);
     if (raidStage() === 'over') enteredAfterRaid(this);
+    enteredForSpeckle(this);
     // Finding somewhere new is worth a little experience (not the hero's own home).
     if (!this.visited.has(this.area) && !data.newGame && this.area !== 'home') {
       const name = AREA_NAMES[this.area];
@@ -347,7 +349,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, offXp);
     // Buying Iran's chicken feed moves his errand on.
     const offItems = Inventory.onChange((e) => {
-      if (e.type === 'added' && e.id === 'chicken-feed') QuestLog.complete('chicken-feed', 'buy');
+      if (e.type === 'added' && e.id === 'chicken-feed') boughtFeed();
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, offItems);
     // The scene object is reused across restarts: start each one stood up, with a fresh hero.
@@ -398,6 +400,7 @@ export class GameScene extends Phaser.Scene {
     this.map.updateFading(this.player.sprite.x, this.player.sprite.y, this.player.sprite.depth, dt);
     updateHens(this, dt);
     this.siblings?.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
+    updateSpeckle(this);
     checkRoadExits(this);
     checkMusings(this);
     updateHover(this);

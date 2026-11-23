@@ -262,3 +262,44 @@ export const SIBLING_SCARED: ChildLine[][] = [
 export const SIBLING_SCARED_HELLO: ChildLine[][] = [
   [['hetty', `${HERO_NAME}! Da, it's ${HERO_NAME}!`], ['pip', 'Did you fight them? Did you win?']],
 ];
+
+/**
+ * Pip and Hetty's own trouble after the raid (the 'speckle-and-moppet' quest):
+ * once Iran has told the hero what he saw, the children whisper what they've lost.
+ */
+export const SIBLING_LOST: ChildLine[] = [
+  ['hetty', `${HERO_NAME}... did you see Speckle? She's my hen. My very own one.`],
+  ['pip', 'She got out when they burned the coop. I saw her run down the hill, to your house.'],
+  ['hetty', 'And Moppet was at yours. Your mam was sewing her a new eye.'],
+  ['pip', "Hetty can't sleep without Moppet. She kicks."],
+  ['hetty', 'Will you look for them? Please?'],
+];
+
+/** While the hero is looking: what they worry about, between the frightened whispers. */
+export const SIBLING_WAITING: ChildLine[][] = [
+  [['hetty', 'Do you think Speckle is cold out there?'], ['pip', 'Hens have feathers, Hetty.'], ['hetty', 'Not on their feet.']],
+  [['pip', "Speckle's clever. She'll have hid somewhere."], ['hetty', "She's not clever. She ate a wasp."]],
+  [['hetty', 'Moppet only had one eye anyway.'], ['pip', "You're not crying. It's the smoke."], ['hetty', '...Yes.']],
+];
+
+/** The hero comes back with both of them. */
+export const SIBLING_REUNITED: ChildLine[] = [
+  ['hetty', 'SPECKLE!'],
+  ['pip', "She's all sooty! She looks like a crow!"],
+  ['hetty', "And Moppet! She's got her new eye and everything."],
+  ['hetty', 'Your mam finished it. She finished it, before...'],
+  ['pip', `Thank you, ${HERO_NAME}. Da, look! ${HERO_NAME} found them both!`],
+];
+
+/** Afterwards, with Speckle pecking about the hut floor and Moppet back where she belongs. */
+export const SIBLING_COMFORTED: ChildLine[][] = [
+  [['pip', "Speckle laid an egg in Da's boot."], ['hetty', 'That means she likes him.'], ['pip', 'He stepped in it.']],
+  [['hetty', 'Moppet says the goblins are scared of Speckle.'], ['pip', "Moppet can't talk."], ['hetty', 'She can to ME.']],
+  [['pip', "When I'm big I'm going to find those goblins."], ['hetty', `And bring back ${HERO_NAME}'s mam.`], ['pip', 'And all our hens. And Sir Reginald.']],
+  [['hetty', 'I still want Mam.'], ['pip', '...Me too.'], ['hetty', 'Moppet does as well.']],
+];
+
+/** Their hello once Speckle is home. */
+export const SIBLING_GLAD_HELLO: ChildLine[][] = [
+  [['hetty', `${HERO_NAME}! Speckle sleeps in the bread crock now.`], ['pip', "Da says she can stay indoors till there's a new coop."]],
+];

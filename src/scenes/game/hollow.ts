@@ -20,9 +20,29 @@ export function siblingHello() {
   return met ? SIBLING_GREETINGS[2] : SIBLING_GREETINGS[Math.floor(Math.random() * 2)];
 }
 
-/** Into the wolves' den: the first time, the hero takes it in; on Wil's errand, that step is done. */
+/** A sack of chicken feed in the satchel: on Iran's errand, that step is done. */
+export function boughtFeed(): void {
+  const quest = QuestLog.get('chicken-feed');
+  if (!quest || quest.completed || QuestLog.isDone('chicken-feed', 'buy')) return;
+  QuestLog.complete('chicken-feed', 'buy');
+  QuestLog.writeDiary(
+    "Bought Iran's sack of feed from Hilde. It weighs as much as a lamb, and it has a hen painted on the front, in case anyone " +
+      'should wonder what it is for. Back up the hill with it.',
+  );
+}
+
+/** Into the wolves' den: the first time, the hero takes it in, and on Wil's errand that step is done. */
 export function enteredCave(g: GameScene): void {
+  const onErrand = QuestLog.has('lost-sheep') && !QuestLog.isDone('lost-sheep', 'cave');
   QuestLog.complete('lost-sheep', 'cave');
+  if (onErrand) {
+    QuestLog.writeDiary(
+      "Followed Wil's tracks up the hill and into the cave. It is cold and wet and it stinks of wolf, and something has been " +
+        'dragged along the floor towards the back. I have a bad feeling about Bess and Bramble.',
+    );
+  } else if (!g.visited.has('cave')) {
+    QuestLog.writeDiary('Went into the cave in the hill above the cottage. Cold, wet rock, the stink of wolf, and old bones underfoot. I did not stay long.');
+  }
   if (g.visited.has('cave')) return;
   g.time.delayedCall(1000, () => g.onHint?.('Cold, wet rock, and the stink of wolf. Something has been dragged in here.'));
 }
@@ -52,7 +72,8 @@ export function enteredNorthWoods(g: GameScene): void {
 export function updateHens(g: GameScene, dt: number): void {
   if (g.hens.length === 0) return;
   const hour = g.clock.hour;
-  const roosting = hour >= 21 || hour < 6;
+  // Indoors (Speckle, in Iran's hut) there's no coop to go to.
+  const roosting = !g.map.data.indoor && (hour >= 21 || hour < 6);
   const player = { x: g.player.gx, y: g.player.gy };
   for (const hen of g.hens) {
     hen.roosting = roosting;
