@@ -101,6 +101,7 @@ for (const b of Object.values(BOUNTIES)) {
     id: questId(b.id),
     title: b.title,
     giver: 'The militia',
+    kind: 'bounty',
     summary: b.summary,
     objectives: [
       { id: 'hunt', text: b.task },
