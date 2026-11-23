@@ -25,10 +25,24 @@ export interface QuestTarget {
   npc?: string;
 }
 
+/**
+ * What sort of quest it is, which the journal groups its quest list by: the main story, a favour for
+ * someone met along the way, or one of the militia's bounties.
+ */
+export type QuestKind = 'main' | 'side' | 'bounty';
+
+/** The kinds in the order the journal lists them, with their headings and how a quest's page names one. */
+export const QUEST_KINDS: ReadonlyArray<{ kind: QuestKind; heading: string; one: string }> = [
+  { kind: 'main', heading: 'Main Quests', one: 'main quest' },
+  { kind: 'side', heading: 'Side Quests', one: 'side quest' },
+  { kind: 'bounty', heading: 'Bounties', one: 'bounty' },
+];
+
 export interface QuestDef {
   id: string;
   title: string;
   giver: string;
+  kind: QuestKind;
   /** A short paragraph for the journal, in the hero's own words. */
   summary: string;
   objectives: ObjectiveDef[];
@@ -43,6 +57,7 @@ export const QUESTS: Record<string, QuestDef> = {
     id: 'mother-medicine',
     title: 'Medicine for Mother',
     giver: 'Mother',
+    kind: 'main',
     summary:
       "Mother's cough has turned to fever, and it worsens with every night. She says a tincture of moonpetal and willow bark " +
       'could ease it, but we have none left. Someone in Eldermoor must sell it.',
@@ -61,6 +76,7 @@ export const QUESTS: Record<string, QuestDef> = {
     id: 'lost-sheep',
     title: 'The Lost Ewes',
     giver: 'Wil the Drover',
+    kind: 'side',
     summary:
       "Wil, a drover on the old road, has lost two of Master Coombe's ewes, Bess and Bramble. Something big spooked them " +
       'by the lake, and its tracks lead north past our cottage, to the cave in the hill. He is too frightened to look himself.',
@@ -76,6 +92,7 @@ export const QUESTS: Record<string, QuestDef> = {
     id: 'wolf-mother',
     title: 'The Wolf Mother',
     giver: 'Brother Wystan',
+    kind: 'main',
     summary:
       "Wolves have been harrying the brothers of Saint Elda on the Lord's Road, and the Prior has barred the gate to all guests " +
       'until they stop. Brother Wystan says they are led by a great white she-wolf, the Wolf Mother, from an old den out on ' +
@@ -92,6 +109,7 @@ export const QUESTS: Record<string, QuestDef> = {
     id: 'chicken-feed',
     title: 'Feed for the Hens',
     giver: 'Farmer Iran',
+    kind: 'side',
     summary:
       'Farmer Iran, who keeps hens on the hill north of our cottage, has run out of chicken feed, and hungry hens do not lay. ' +
       "He can't leave the farm with wolves about, so he gave me ten coins to buy a sack from Hilde's bakehouse stall at the market.",
@@ -106,6 +124,7 @@ export const QUESTS: Record<string, QuestDef> = {
     id: 'the-raid',
     title: 'Ashes',
     giver: 'Myself',
+    kind: 'main',
     summary:
       'Goblins came out of the north woods at dawn and fell on the farm. I tried to stop them, and they beat me senseless. When I came ' +
       "to, the cottage was burnt to its rafters, there was blood all over the floor, and Mother was gone. I have to find out what " +
@@ -122,6 +141,7 @@ export const QUESTS: Record<string, QuestDef> = {
     id: 'cellar-rats',
     title: 'Rats in the Cellar',
     giver: 'Godric the Landlord',
+    kind: 'side',
     summary:
       "Godric, who keeps the Crooked Tankard in Adowvale, has rats in his cellar: big as cats, he says, and twice as bold. They have " +
       "been at his grain and his kegs, and the maids won't go down there. He'll pay 25 coins to have them cleared out.",
@@ -137,6 +157,7 @@ export const QUESTS: Record<string, QuestDef> = {
     id: 'speckle-and-moppet',
     title: 'Speckle and Moppet',
     giver: 'Pip and Hetty',
+    kind: 'side',
     summary:
       'Pip and Hetty came through the raid without a scratch, but two things are breaking their hearts. Speckle, Hetty\'s own hen, ' +
       'got out when the goblins fired the coop and ran off down the hill. And Moppet, Hetty\'s rag doll, was down at our cottage: ' +

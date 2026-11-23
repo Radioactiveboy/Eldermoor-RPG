@@ -109,9 +109,11 @@ export function raidWorld(data: MapData): void {
  * The farm the day after: the cottage a burnt-out shell, still smoking; the
  * garden trampled flat; the fences broken and charred; Iran's coop burnt to
  * its frame and his hut scorched; feathers and blood across the yard; and
- * nobody on the road.
+ * nobody on the road. From then on the Hollow's music is a lament, not the
+ * old walking tune.
  */
 export function ruinWorld(data: MapData): void {
+  data.music = 'mourning';
   emptyTheFarm(data);
   trampleGarden(data);
   const { home, hut, coop } = farmCorners(data);

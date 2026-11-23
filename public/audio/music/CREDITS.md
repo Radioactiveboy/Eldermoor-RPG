@@ -10,7 +10,7 @@ composed. The game streams each track the first time a place needs it and loops 
 | File | Where it plays | Track | Licence |
 |---|---|---|---|
 | `menu.mp3` | The title screen and the pause menu | [Lord of the Land](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400022) | CC BY 4.0 |
-| `hollow-day.mp3` | Out of doors (the Hollow, the plains) by day | [Achaidh Cheide](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100340) | CC BY 4.0 |
+| `hollow-day.mp3` | Out of doors (the Hollow until the raid, the plains) by day | [Achaidh Cheide](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100340) | CC BY 4.0 |
 | `hollow-night.mp3` | Out of doors from 20:00 to 05:30 | [Deep Haze](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100886) | CC BY 4.0 |
 | `woods-day.mp3` | The north woods by day | [Magic Forest](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600044) | CC BY 4.0 |
 | `woods-night.mp3` | The north woods from 20:00 to 05:30 | [Lightless Dawn](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100655) | CC BY 4.0 |
@@ -24,10 +24,13 @@ composed. The game streams each track the first time a place needs it and loops 
 | `battle.mp3` | Fights | [Heroic Age](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100848) | CC BY 4.0 |
 | `raid.mp3` | The goblin raid | [Failing Defense](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100726) | CC BY 4.0 |
 | `ruin.mp3` | The ruined cottage after the raid | [Dark Times](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100747) | CC BY 4.0 |
+| `mourning-day.mp3` | The Hollow by day, from the raid onwards | Ossuary 5 - Rest | CC BY 4.0 |
+| `mourning-night.mp3` | The Hollow from 20:00 to 05:30, from the raid onwards | Ossuary 6 - Air | CC BY 4.0 |
 
 ## Credit line (required)
 
 > Music by Kevin MacLeod (incompetech.com): "Lord of the Land", "Achaidh Cheide", "Deep Haze", "Magic Forest", "Lightless Dawn", "Teller of the
 > Tales", "Long Note Two", "Minstrel Guild", "Folk Round", "Fiddles McGinty", "Gregorian Chant", "Oppressive
-> Gloom", "Heroic Age", "Failing Defense" and "Dark Times". Licensed under Creative Commons: By Attribution 4.0
+> Gloom", "Heroic Age", "Failing Defense", "Dark Times",
+> "Ossuary 5 - Rest" and "Ossuary 6 - Air". Licensed under Creative Commons: By Attribution 4.0
 > License, http://creativecommons.org/licenses/by/4.0/

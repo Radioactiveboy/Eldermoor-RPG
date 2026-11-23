@@ -71,7 +71,7 @@ export function interactionsNear(g: GameScene, gx: number, gy: number): Interact
     });
     return list;
   }
-  for (const npc of g.npcs) if (npc.present) list.push(npcInteraction(g, npc));
+  for (const npc of g.npcs) if (npc.present && npc.talks) list.push(npcInteraction(g, npc));
   for (const beast of g.creatures) if (beast.huntable) list.push(huntInteraction(g, beast));
   if (g.roadEvents) list.push(...g.roadEvents.interactions());
   for (const door of g.map.data.doors ?? []) if (!door.auto) list.push(doorInteraction(g, door));
@@ -110,7 +110,7 @@ export function interactionsNear(g: GameScene, gx: number, gy: number): Interact
 
 /** What clicking on a tile would use, if anything. */
 export function interactionAt(g: GameScene, tile: GridPoint): Interaction | undefined {
-  const npc = g.npcs.find((n) => n.present && n.tileX === tile.x && n.tileY === tile.y);
+  const npc = g.npcs.find((n) => n.present && n.talks && n.tileX === tile.x && n.tileY === tile.y);
   if (npc) return npcInteraction(g, npc);
   const near = interactionsNear(g, tile.x + 0.5, tile.y + 0.5);
   return near.find((i) => i.tile.x === tile.x && i.tile.y === tile.y);

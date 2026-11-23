@@ -53,6 +53,8 @@ MUSIC = {
     'battle': (f'{KM}heroic-age.ogg', 0),
     'raid': (f'{KM}failing-defense.ogg', 0),
     'ruin': (f'{KM}dark-times.ogg', 0),
+    'mourning-day': (f'{KM}ossuary-5-rest.ogg', 0),
+    'mourning-night': (f'{KM}ossuary-6-air.ogg', 0),
 }
 
 OC = 'meta/corpora/oculus-audio-pack/ogg/'
