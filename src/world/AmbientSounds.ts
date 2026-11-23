@@ -30,6 +30,8 @@ const ROOFS: Partial<Record<AreaId, number>> = {
   tavern: 0.45,
   chapel: 0.55,
   cellar: 0.12,
+  // No roof left at all: the rain comes straight in.
+  watchtower: 0.05,
 };
 
 /** How each place sounds, apart from what the hour and the people in it add. */
@@ -57,6 +59,8 @@ const PLACES: Record<AreaId, Place> = {
   plains: { open: true, wind: 0.95, wild: 1, wolves: true },
   // Sheltered under the trees: the wind only in the tops, but the woods full of birds, owls and, somewhere, wolves.
   northwoods: { open: true, wind: 0.3, wild: 1, wolves: true },
+  // Open to the sky, the wind moaning over the broken top, and the stone throwing every sound back.
+  watchtower: { open: true, wind: 0.5, wild: 0.6, echo: 0.45 },
   market: { open: true, wind: 0.35, wild: 0.4 },
   monastery: { open: true, wind: 0.5, wild: 0.9, bell: 0.45 },
   abbey: { open: true, wind: 0.35, wild: 0.6, bell: 0.85, echo: 0.2 },

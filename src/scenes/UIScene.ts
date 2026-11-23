@@ -256,7 +256,7 @@ export class UIScene extends Phaser.Scene {
     const sprite = game.player.sprite;
     const toScreen = (x: number, y: number) => ({ x: (x - cam.worldView.x) * (cam.zoom / Display.zoom), y: (y - cam.worldView.y) * (cam.zoom / Display.zoom) });
     const lantern = indoor && !underground ? null : toScreen(sprite.x, sprite.y - 20);
-    this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5)), flash);
+    this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5), outdoor.darkness), flash);
     if (this.bars.syncNeeds()) this.layout();
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock, sky);
@@ -307,15 +307,17 @@ export class UIScene extends Phaser.Scene {
   /**
    * The area's fires, candles and lanterns, flickering, in screen pixels.
    * @param lit how strongly they show: lanterns outdoors only glow as it gets dark
+   * @param dark how dark it is outside (0..1): daylight let into a room fades with it
    */
-  private roomLights(toScreen: (x: number, y: number) => { x: number; y: number }, lit: number): ScreenLight[] {
+  private roomLights(toScreen: (x: number, y: number) => { x: number; y: number }, lit: number, dark: number): ScreenLight[] {
     const lights = this.world.map.data.lights ?? [];
     const t = this.time.now / 1000;
     const fires = lights.map((l, i) => {
       const p = gridToScreen(l.gx, l.gy);
       // Two out-of-step waves make a flicker that never visibly repeats.
       const wobble = (Math.sin(t * 9.3 + i * 2) * 0.6 + Math.sin(t * 23.7 + i) * 0.4) * l.flicker;
-      return { ...toScreen(p.x, p.y - l.z), radius: l.radius * (1 + wobble * 0.04), alpha: (0.85 + wobble * 0.12) * lit };
+      const sky = l.daylight ? Math.max(0.12, 1 - dark * 1.3) : 1;
+      return { ...toScreen(p.x, p.y - l.z), radius: l.radius * (1 + wobble * 0.04), alpha: (0.85 + wobble * 0.12) * lit * sky };
     });
     // Fireflies, outdoors at night.
     const glows = (this.world.ambience?.lights() ?? []).map((l) => ({ ...toScreen(l.x, l.y), radius: l.radius, alpha: l.alpha }));

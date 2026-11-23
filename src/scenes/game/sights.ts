@@ -9,7 +9,7 @@ import { Vec2 } from '../../iso/IsoMath';
 import { CROPS, Farm, PICK_SECONDS } from '../../systems/Farm';
 import { Herbs } from '../../systems/Herbs';
 import { Inventory, ItemId } from '../../systems/Inventory';
-import { rollLoot } from '../../systems/Loot';
+import { NO_ROOM, rollLoot } from '../../systems/Loot';
 import { QuestLog } from '../../systems/Quests';
 import { CropPatch, Sight } from '../../world/MapData';
 import { BOUNTY_BOARD } from '../../world/landmarks';
@@ -323,7 +323,7 @@ export function search(g: GameScene, sight: Sight): void {
         const find = rollLoot(sight.loot!);
         // Leave it be if there's no room, so it can be searched again once there is.
         if (find.item && !Inventory.canAdd(find.item)) {
-          g.onHint?.('There is something under the bones, but my satchel is full.');
+          g.onHint?.(NO_ROOM[sight.loot!]);
           return;
         }
         QuestLog.setFlag(`searched-${sight.id}`);

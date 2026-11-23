@@ -30,7 +30,24 @@ const BONES: Drop[] = [
   { weight: 2, roll: () => ({ item: 'short-sword', text: 'A short sword, half buried in the bones. The blade is still keen.' }) },
 ];
 
-const TABLES = { bones: BONES };
+/**
+ * What the last watch left in their chest in the old watchtower, when they were
+ * called down: nothing much, but always something.
+ */
+const CACHE: Drop[] = [
+  { weight: 30, roll: () => ({ item: 'spear', text: 'Wrapped in oiled sacking at the bottom, a spear the rust never got to. Someone looked after this one.' }) },
+  { weight: 25, roll: () => ({ item: 'iron-cap', text: 'An iron cap, a watchman\'s, wrapped in a mouldy cloak. A rub of the sleeve and it will serve.' }) },
+  { weight: 20, roll: () => ({ item: 'buckler', text: 'A little round buckler under a rotted cloak. The leather is gone, but the iron is sound.' }) },
+  { weight: 25, roll: () => ({ coins: between(12, 30), text: 'A purse of the watch\'s pay, never spent: old pennies, with a king\'s head nobody remembers.' }) },
+];
+
+const TABLES = { bones: BONES, cache: CACHE };
+
+/** What the hero thinks when there's something to find but no room for it. */
+export const NO_ROOM: Record<keyof typeof TABLES, string> = {
+  bones: 'There is something under the bones, but my satchel is full.',
+  cache: 'There is something in the chest, but my satchel is full.',
+};
 
 /** Rolls once on a loot table. */
 export function rollLoot(table: keyof typeof TABLES): Find {

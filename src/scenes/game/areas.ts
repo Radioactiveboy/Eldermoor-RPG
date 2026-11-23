@@ -112,6 +112,14 @@ export const AREAS: Record<AreaId, AreaDef> = {
   }),
   // The woods north of the Hollow; after the raid, the goblins' trail through them shows (as scenery, for now).
   northwoods: lazy(() => import('../../world/NorthWoodsMap'), (m) => m.buildNorthWoodsMap(raidStage() === 'over'), { test: true, enter: enteredNorthWoods }),
+  watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
+    test: true,
+    enter: firstVisit(
+      'No roof at all: the walls just stop, and there is the sky. It smells of wet stone and rook.',
+      'Climbed over the rubble into the old watchtower in the north woods. The top fell in long ago and the stair is broken, ' +
+        'but the last watch left their things behind: a table, rusted spears, a chest, and their logbook, rotted nearly to pulp.',
+    ),
+  }),
   den: lazy(() => import('../../world/DenMap'), (m) => m.buildDenMap(), { test: true, enter: enteredDen }),
   deepden: lazy(() => import('../../world/DenMap'), (m) => m.buildDeepDenMap(), {
     test: true,

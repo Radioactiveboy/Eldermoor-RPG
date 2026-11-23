@@ -110,7 +110,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   `scenes/DebugScene.ts`)
 - Add `?hour=21` to the URL to start at a given hour (handy for testing night)
 - Add `?area=market` to start in Adowvale's market square (or `?area=world` outside the cottage, `?area=cave`
-  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=northwoods` in the north woods, `?area=plains` on Adowvale Plains,
+  in the wolves' cave, `?area=hut` inside Farmer Iran's hut, `?area=northwoods` in the north woods, `?area=watchtower` inside its old watchtower, `?area=plains` on Adowvale Plains,
   `?area=monastery` outside Saint Elda's monastery, `?area=tavern` in the Crooked Tankard's taproom,
   `?area=cellar` in its cellar, or `?area=smithy` / `?area=bakery` inside Osric's smithy and Hilde's bakery;
   every area with `test: true` in `scenes/game/areas.ts` works)
@@ -163,6 +163,11 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   their claws make you bleed, but a level-1 hero beats one (and takes its striped pelt). After the goblin raid the
   goblins' trail shows: bracken trodden flat all the way north, a burnt-out torch, and a scrap of Mother's quilt on
   the thorns. It's scenery for now, and doesn't move the **Ashes** quest on (try `?area=northwoods&raid=after`)
+- **The old watchtower**: in the north woods, climb in over the rubble in its doorway (E). The top fell in long ago,
+  so it's open to the sky (and the rain); the stair breaks off five steps up. The last watch left their things: a
+  table with their logbook on it (read it), rusted spears, their fire ring, tally marks on the wall, and their chest,
+  which can be searched once for something worth having (a spear, an iron cap, a buckler or old pennies). Two rats
+  live in the heap of fallen stone
 - **Chance meetings on Adowvale Plains**: now and then, out on the plains, something happens along the Lord's Road.
   Footpads (Rook and Nab) step out of the grass and ask for half your purse: pay, talk your way out (if you've killed
   the Wolf Mother), or fight them. Jory the tinker has stopped to rest and will trade odds and ends. Mags the goatherd
@@ -261,6 +266,8 @@ src/
   world/NorthWoodsMap.ts  The north woods beyond the wolves' cave (60x76): forest, a brook and its ford, the ruined
                           watchtower, fallen trees, bramble thickets, a glade, wild cats and game, and after the
                           raid the goblins' trail north (scenery only)
+  world/WatchtowerMap.ts  Inside the old watchtower (7x7): roofless, the broken stair, the last watch's table,
+                          logbook, spears, fire ring and chest, a rooks' nest, and two rats
   world/MonasteryMap.ts   The grounds outside Saint Elda's monastery, east of the plains: the wall and its barred
                           gatehouse with the chapel and bell tower showing over it, the Saint's statue, wayside
                           shrines, vegetable beds, beehives, fish ponds with benches, and four of the brothers
