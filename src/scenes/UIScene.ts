@@ -15,6 +15,7 @@ import { Minimap } from '../ui/Minimap';
 import { aimMarker, QuestMarkers } from '../ui/QuestMarkers';
 import { QuestTracker } from '../ui/QuestTracker';
 import { SpeechBubbles } from '../ui/SpeechBubbles';
+import { PartyStrip } from '../ui/PartyStrip';
 import { StatusBars } from '../ui/StatusBars';
 import { TimeWheel } from '../ui/TimeWheel';
 import { Toasts } from '../ui/Toasts';
@@ -48,6 +49,8 @@ export class UIScene extends Phaser.Scene {
   private world!: GameScene;
   private lighting!: DayNightOverlay;
   private bars!: StatusBars;
+  /** Who's travelling with the hero, under the bars. */
+  private party!: PartyStrip;
   private wheel!: TimeWheel;
   private minimap?: Minimap;
   /** Where the player is, under the minimap (shown and hidden with it). */
@@ -83,6 +86,7 @@ export class UIScene extends Phaser.Scene {
     this.world = this.scene.get('Game') as GameScene;
     this.lighting = new DayNightOverlay(this);
     this.bars = new StatusBars(this);
+    this.party = new PartyStrip(this, () => this.world.openParty());
     this.wheel = new TimeWheel(this);
     this.location = new LocationLabel(this);
     this.pauseButton = this.makeIconButton((g) => {
@@ -258,6 +262,7 @@ export class UIScene extends Phaser.Scene {
     const lantern = indoor && !underground ? null : toScreen(sprite.x, sprite.y - 20);
     this.lighting.update(ambient, lantern, cam.zoom / Display.zoom, this.roomLights(toScreen, indoor ? 1 : Math.min(1, outdoor.darkness * 1.5), outdoor.darkness), flash);
     if (this.bars.syncNeeds()) this.layout();
+    if (this.party.update()) this.layout();
     this.bars.update(game.stats, dt);
     this.wheel.update(game.clock, sky);
     const aim = Settings.get().showQuestMarkers && !game.inCombat ? aimMarker(game) : undefined;
@@ -285,6 +290,7 @@ export class UIScene extends Phaser.Scene {
     const show = !on;
     this.wheel.setVisible(show);
     this.tracker.setVisible(show);
+    this.party.setVisible(show);
     this.showMinimap();
     for (const button of [this.pauseButton, this.journalButton, this.satchelButton, this.sneakButton]) button.setVisible(show);
   }
@@ -426,12 +432,14 @@ export class UIScene extends Phaser.Scene {
     this.bars.setMaxWidth(narrow ? width - this.wheel.width - MARGIN * 3 : Infinity);
     this.bars.setPosition(MARGIN, MARGIN);
     this.tracker.setMaxWidth(narrow ? width - this.wheel.width - MARGIN * 3 : 300);
-    this.tracker.setPosition(MARGIN, MARGIN + this.bars.height + 8);
+    this.party.setPosition(MARGIN, MARGIN + this.bars.height + 6);
+    const partyH = this.party.height > 0 ? this.party.height + 6 : 0;
+    this.tracker.setPosition(MARGIN, MARGIN + this.bars.height + partyH + 8);
     this.tracker.update(Settings.get().showQuestMarkers ? this.world.area : undefined);
     if (narrow) {
       // Beside the column of buttons down the right-hand side.
       const room = width - MARGIN * 3 - PAUSE_SIZE;
-      this.toasts.setPosition(MARGIN + room / 2, MARGIN + this.bars.height + this.tracker.height + 24, room);
+      this.toasts.setPosition(MARGIN + room / 2, MARGIN + this.bars.height + partyH + this.tracker.height + 24, room);
     } else {
       this.toasts.setPosition(width / 2, MARGIN + this.wheel.height + 14, width - MARGIN * 2);
     }

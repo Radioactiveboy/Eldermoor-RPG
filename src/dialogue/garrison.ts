@@ -5,7 +5,7 @@ import type { DialogueChoice, DialogueNode, DialogueScript } from './Dialogue';
 /**
  * The militia garrison at the south end of Adowvale (see world/GarrisonMaps.ts):
  * Sergeant Brannock at his table in the guardroom, Hamm of the cooper's boys
- * keeping the cells below, and Wat the poacher in one of them.
+ * keeping the cells below, and Dickon the poacher in one of them.
  *
  * It follows what the militia say in the square (dialogue/market.ts, and
  * dialogue/afterRaid.ts once the goblins have been): the sergeant is the man
@@ -84,8 +84,8 @@ export function sergeantScript(t: SergeantTalk): DialogueScript {
     cells: {
       speaker: 'sergeant',
       lines: [
-        "Wat, the poacher. Took a hare off the plains, and Lord Morten's men brought him to us rather than walk him all the way to the manor. He's ours till the Headman says.",
-        "He's harmless. Go down and see him if you like; Hamm has the keys. Don't let Wat talk you into anything.",
+        "Dickon, the poacher. Took a hare off the plains, and Lord Morten's men brought him to us rather than walk him all the way to the manor. He's ours till the Headman says.",
+        "He's harmless. Go down and see him if you like; Hamm has the keys. Don't let Dickon talk you into anything.",
       ],
       next: 'ask',
     },
@@ -148,7 +148,7 @@ export function sergeantScript(t: SergeantTalk): DialogueScript {
   return { start, nodes };
 }
 
-/** Hamm, one of the cooper's boys, who keeps the cells (and the keys, and Wat's supper). */
+/** Hamm, one of the cooper's boys, who keeps the cells (and the keys, and Dickon's supper). */
 export function jailerScript(raidOver: boolean, first: boolean): DialogueScript {
   return {
     start: first ? 'greet' : 'again',
@@ -163,7 +163,7 @@ export function jailerScript(raidOver: boolean, first: boolean): DialogueScript 
         ],
         next: 'ask',
       },
-      again: { speaker: 'jailer', lines: [raidOver ? 'Anything moving up there? ...No? Good.' : "Back again? It's not much of a show. Wat mostly sleeps."], next: 'ask' },
+      again: { speaker: 'jailer', lines: [raidOver ? 'Anything moving up there? ...No? Good.' : "Back again? It's not much of a show. Dickon mostly sleeps."], next: 'ask' },
       ask: {
         speaker: 'jailer',
         lines: ['What do you want?'],
@@ -177,7 +177,7 @@ export function jailerScript(raidOver: boolean, first: boolean): DialogueScript 
       wat: {
         speaker: 'jailer',
         lines: [
-          "Just Wat. Poacher. He's been in and out of here since before I could hold a spear. I think he likes it. Dry, and somebody brings him his dinner.",
+          "Just Dickon. Poacher. He's been in and out of here since before I could hold a spear. I think he likes it. Dry, and somebody brings him his dinner.",
           "Don't give him anything sharp. Or anything at all. Last time somebody gave him a spoon he dug half a brick out of the wall.",
         ],
         next: 'ask',
@@ -205,7 +205,7 @@ export function jailerScript(raidOver: boolean, first: boolean): DialogueScript 
   };
 }
 
-/** Wat the poacher, on the straw in the middle cell: cheerful, unrepentant, and always hungry. */
+/** Dickon the poacher, on the straw in the middle cell: cheerful, unrepentant, and always hungry. */
 export function prisonerScript(raidOver: boolean, first: boolean): DialogueScript {
   return {
     start: first ? 'greet' : 'again',
@@ -214,7 +214,7 @@ export function prisonerScript(raidOver: boolean, first: boolean): DialogueScrip
         speaker: 'prisoner',
         lines: [
           "Psst. You. Yes, you, with the face. You wouldn't have a file on you? A key? A big spoon?",
-          "...No? A pie, then. I'd settle for a pie. Wat's the name. I'm a guest of the militia.",
+          "...No? A pie, then. I'd settle for a pie. Dickon's the name. I'm a guest of the militia.",
         ],
         next: 'ask',
       },
@@ -226,7 +226,7 @@ export function prisonerScript(raidOver: boolean, first: boolean): DialogueScrip
           { text: 'What are you in for?', next: 'crime' },
           { text: 'When do you get out?', next: 'out' },
           ...(raidOver ? [{ text: 'Goblins took my mother.', next: 'raid' }] : []),
-          { text: 'Goodbye, Wat.', next: 'bye' },
+          { text: 'Goodbye, Dickon.', next: 'bye' },
         ],
       },
       crime: {

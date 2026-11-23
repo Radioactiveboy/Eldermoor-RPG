@@ -1741,7 +1741,7 @@ export function hettyModel(pose: Pose3D): Model {
   }));
 }
 
-/** Wat the poacher, on the straw in his cell: a patched brown jerkin, red hair every which way, and a week's stubble. */
+/** Dickon the poacher, on the straw in his cell: a patched brown jerkin, red hair every which way, and a week's stubble. */
 export function prisonerModel(pose: Pose3D): Model {
   const patch: Tones = [0x8a7a5a, 0x6a5c40, 0xa4946e];
   return regularModel(pose, {

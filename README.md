@@ -71,6 +71,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   that's out of sight, an arrow at the screen's edge points the way (with how many tiles off it is). The
   minimap shows it too. In another area, it points at the door or road that leads there, and the quest
   tracker says which place it's in. Switch them off (and the minimap) in **Settings**
+- **P**, or a companion's card under the health bars: who travels with you (see Companions below), with
+  their health, and a button to send each one home
 - **I** or the **satchel** button: the satchel (inventory). **C**: equipment.
   Tab switches between them; select an item to eat, wear or take it off. Tabs over the satchel (All, Food,
   Gear, Materials, Quest) pick out one kind of thing and fade the rest; **Sort by** Type, Value or Name tidies it.
@@ -208,7 +210,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   while their keeper is in bed. Try `?area=smithy&hour=12`, `?area=bakery&hour=5` or `?area=tavern&hour=20`
 - **The garrison lane**: a dirt path runs south out of the square to the militia garrison, a squat stone guardhouse
   where Sergeant Brannock keeps his table, and next to it, behind a garden wall, the Headman's house. Steps inside
-  the garrison (and a hatch in the lane outside) go down to the cells, where Hamm keeps the keys and Wat the poacher
+  the garrison (and a hatch in the lane outside) go down to the cells, where Hamm keeps the keys and Dickon the poacher
   keeps the straw warm. Headman Osbert Hale sits at his desk upstairs, with his steward, maid and cook about the
   house; the house is barred from 22:00 to 06:00. Both men have their own lines after the raid. The Headman's talk is
   a list of topics (`HeadmanTopic` in `dialogue/residence.ts`), so quests can add their own. Try `?area=garrison`,
@@ -334,6 +336,7 @@ src/
                             road, the militia on their rounds
     Creature.ts             Wild beasts: wander and sniff near their den, start a fight when you come close
     Hen.ts                  Farmer Iran's hens: peck, strut about, scurry from the hero, roost at night
+    Companion.ts            Someone travelling with the hero: walks in their footsteps, stands in fights
     Child.ts                Pip and Hetty: chatter in speech bubbles, say hello, and tell the hero things
     Goat.ts                 Clover, Mags's runaway goat on the plains: grazes, then follows when led
 
@@ -360,6 +363,7 @@ src/
                             how beasts choose their moves, and their stats (FOES)
     Abilities.ts            The hero's combat skills: action or bonus action, stamina, cooldowns, levels
     CombatSim.ts            Headless fights for tuning FOES (`npm run sim`)
+    Companions.ts           Who can travel with the hero, who does, their fighting numbers and turns, their health
     FightTally.ts           The sums for the end-of-fight card
     TimeOfDay.ts            The in-game clock and the lighting colour for each hour
     Weather.ts              Seeded spells of clear, cloud, rain and storm, morning mist, wet ground (?weather=)
@@ -376,7 +380,7 @@ src/
                             raid, and Speckle and Moppet
     fisherman.ts            Old Tobin on the lake shore
     market.ts               The stallholders and the militia in Adowvale's square
-    garrison.ts             Sergeant Brannock, Hamm the jailer, and Wat the poacher
+    garrison.ts             Sergeant Brannock, Hamm the jailer, and Dickon the poacher
     residence.ts            Headman Hale (talk built from topics that quests can add to) and his household
     tavern.ts               Godric, the maids and the Tankard's regulars
     plains.ts               The toll guards and the folk on the Lord's Road
@@ -430,6 +434,7 @@ src/
     InterludeScene.ts       A few half-remembered lines in the dark between scenes (beaten in the raid)
     LetterboxScene.ts       A cut-scene's bars and the caption in the bottom one
     PauseScene.ts           The Esc menu
+    PartyScene.ts           Companions (P): who's with the hero, who's waiting, sending someone home
     SettingsScene.ts        Volume, resolution, interface size, minimap, quest markers, fullscreen, hunger and rest
     DebugScene.ts           The ?debug panel: an HTML overlay with every URL switch and testing buttons
 
@@ -438,6 +443,7 @@ src/
     Widgets.ts              Shared menu look: panels, buttons, sliders
     Display.ts              Draws at the screen's own resolution and sizes the interface to suit
     StatusBars.ts           Health and stamina bars (and hunger and rest), level and XP
+    PartyStrip.ts           A card for each companion under the bars: face, name, health
     TimeWheel.ts            The sun and moon dial, with the weather's cloud, rain and mist
     Minimap.ts              The isometric minimap with the player, the view and the quest marker
     LocationLabel.ts        The area's name (and nearby landmark) under the minimap
@@ -727,6 +733,26 @@ tests/
   (`skittish`). What each leaves behind is `SPOILS` in `GameScene` (venison and a
   hide from a deer, a hare's pelt, a boar's tusks). Spawns marked `respawns` (the
   plains' and the north woods' game) are back every visit.
+
+- **Companions** (`systems/Companions.ts`). After the raid, people can be asked to come along: Sigrun the
+  sellsword at the Crooked Tankard of an evening (40 coins, or nothing once the `headman-pays-sigrun` flag is
+  set) and Wat, a militia lad on the east side of the square. Up to two travel with the hero at once, walking
+  in their footsteps from area to area (`entities/Companion.ts`, `scenes/game/companions.ts`). In a fight
+  they're on the hero's side of the turn order and take their own turns (`chooseCompanionAction`): Sigrun
+  finishes off whatever she can kill in one blow and shield-bashes the big ones off their feet every few
+  turns; Wat goes for whatever the hero has marked or has hurt most, and raises his guard when badly hurt.
+  Beasts go for whoever on the hero's side is weakest. A companion knocked down is out of that fight and
+  gets up afterwards with a quarter of their health; if the hero falls while a companion stands, the fight
+  goes on, and winning it hauls the hero back up. Running away takes everyone. Health comes back at
+  `REGEN_PER_HOUR` and all at once after a sleep, and the save keeps who agreed to come, who's along, and
+  how hurt each is. Talk to a companion (step right up to them) to ask how they are or send them home; P
+  does the same from anywhere. To ask someone along again, find them where they wait.
+
+  To add one: an NPC where they wait, an entry in `COMPANIONS` (their numbers, `tactic`, price, the flag
+  they wait for, what they say), and an `ask` node in their talk: `offerCompanion` adds the asking to it.
+  The dialogue actions are `companion:hire:<id>`, `companion:join:<id>` and `companion:leave:<id>`.
+  Someone who should come but not fight (a guide) sets `fights: false`. The ?debug panel's Companion
+  buttons bring someone along (or send them home) at once.
 
 - **Experience and levels.** The hero earns XP for slaying beasts (each beast
   in `FOES` has an `xp` value; a grey wolf is 40), for each step of a quest (20),

@@ -1728,7 +1728,7 @@ const sergeant = townsfolk({
 });
 /** Hamm, who keeps the cells: one of the militia, helm and all. */
 const jailer = guard;
-/** Wat the poacher: a mop of red curls, a week's stubble, freckles, and a grin he hasn't earned. */
+/** Dickon the poacher: a mop of red curls, a week's stubble, freckles, and a grin he hasn't earned. */
 const prisoner = townsfolk({
   skin: 0xe8b896, hair: 0xb4582a, style: 'curly', cloth: 0x6a5038, shirt: 0xb8a888,
   iris: 0x5a7a4a, brow: 'arched', smile: 1, width: 16, jaw: 7, freckles: true, beard: 0xa45028, look: 1, tired: true,

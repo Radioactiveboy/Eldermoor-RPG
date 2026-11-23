@@ -185,6 +185,7 @@ export class DebugScene extends Phaser.Scene {
       row('Coins', button('+10', () => this.say(Debug.giveCoins(10))), button('+100', () => this.say(Debug.giveCoins(100))), button('+1000', () => this.say(Debug.giveCoins(1000)))),
       row('XP', button('+50', () => this.say(Debug.giveXp(50))), button('+250', () => this.say(Debug.giveXp(250))), button('+1000', () => this.say(Debug.giveXp(1000)))),
       row('Hero', button('Heal', () => this.say(Debug.heal(this.game))), button('Kill all in fight', () => this.say(Debug.killAll(this.game)))),
+      row('Companion', button('Sigrun', () => this.say(Debug.toggleCompanion(this.game, 'sigrun'))), button('Wat', () => this.say(Debug.toggleCompanion(this.game, 'wat')))),
     );
     this.said = el('div', 'said');
     body.append(this.said);

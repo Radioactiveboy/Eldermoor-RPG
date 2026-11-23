@@ -43,7 +43,7 @@ export function enteredJail(g: GameScene): void {
     g,
     'Cold, and low, and it smells of old straw. Somebody in the middle cell is whistling.',
     'Went down to the cells under the garrison. Three of them, barred, with steps up to the guardroom at one end and to the hatch in the lane ' +
-      'at the other. Hamm of the cooper\'s boys keeps the keys, and Wat the poacher keeps the middle cell.',
+      'at the other. Hamm of the cooper\'s boys keeps the keys, and Dickon the poacher keeps the middle cell.',
   );
 }
 

@@ -34,7 +34,8 @@ export type SpeakerId =
   | 'prior' | 'anselm' | 'cook' | 'scribe' | 'leofric'
   | 'landlord' | 'nell' | 'rosie' | 'harlan' | 'fenwick' | 'sigrun' | 'ada' | 'cobb' | 'pell'
   | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier'
-  | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook';
+  | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook'
+  | 'wat';
 
 export interface Speaker {
   name: string;
@@ -85,9 +86,11 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   // The militia garrison and the Headman's residence, on the lane at the south end of Adowvale.
   sergeant: { name: 'Sergeant Brannock', portrait: 'portrait-sergeant', voice: { pitch: 125, spread: 0.06, wave: 'sawtooth' } },
   jailer: { name: 'Hamm the Jailer', portrait: 'portrait-jailer', voice: { pitch: 205, spread: 0.18, wave: 'sawtooth' } },
-  prisoner: { name: 'Wat the Poacher', portrait: 'portrait-prisoner', voice: { pitch: 175, spread: 0.24, wave: 'triangle' } },
+  prisoner: { name: 'Dickon the Poacher', portrait: 'portrait-prisoner', voice: { pitch: 175, spread: 0.24, wave: 'triangle' } },
   headman: { name: 'Headman Osbert Hale', portrait: 'portrait-headman', voice: { pitch: 135, spread: 0.08, wave: 'sine' } },
   steward: { name: 'Aldwin the Steward', portrait: 'portrait-steward', voice: { pitch: 145, spread: 0.04, wave: 'sine' } },
   housemaid: { name: 'Elsie', portrait: 'portrait-housemaid', voice: { pitch: 380, spread: 0.2, wave: 'triangle' } },
   housecook: { name: 'Marjory the Cook', portrait: 'portrait-housecook', voice: { pitch: 280, spread: 0.14, wave: 'triangle' } },
+  // The militia lad who can come along (see systems/Companions.ts): one of the militia, so he has their face.
+  wat: { name: 'Wat of the Militia', portrait: 'portrait-guard', voice: { pitch: 230, spread: 0.22, wave: 'triangle' } },
 };

@@ -117,7 +117,7 @@ export function buildGarrisonMap(): MapData {
  * back, barred across the front and between. Steps climb the back wall at
  * each end: on the left up to the trapdoor in the guardroom, on the right up
  * to the hatch out in the lane. Hamm keeps the keys at a little table by the
- * steps; Wat the poacher is in the middle cell, and the end one has had a goose in it.
+ * steps; Dickon the poacher is in the middle cell, and the end one has had a goose in it.
  */
 export function buildJailMap(): MapData {
   const W = 16;
