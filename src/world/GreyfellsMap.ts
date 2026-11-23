@@ -2,18 +2,9 @@ import Phaser from 'phaser';
 import { box, circle } from './Collision';
 import { CreatureSpawn, MapData, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine, Vec } from './MapGenerator';
+import { GOBLIN_CAMP, GREYFELLS_H, GREYFELLS_SOUTH_X, GREYFELLS_TRAIL, GREYFELLS_W, greyfellsHills, HILL_BLOCKS, TARN, WARREN, WARREN_MOUTH } from './greyfellsHills';
 
-export const GREYFELLS_W = 48;
-export const GREYFELLS_H = 56;
-
-/** Where the goblins' trail comes up out of the north woods, along the south edge. */
-export const GREYFELLS_SOUTH_X = 21;
-/** The middle of the goblins' camp: their cookfire. */
-export const GOBLIN_CAMP = { x: 23.5, y: 21.5 };
-/** The back corner of the hole in the hill (4x4; its mouth is the front corner tile, (3, 3)). */
-export const WARREN = { tx: 21, ty: 3 };
-/** The tarn, a cold little lake east of the camp. */
-const TARN = { x: 37, y: 31, rx: 5.5, ry: 3.8 };
+export { GOBLIN_CAMP, GREYFELLS_H, GREYFELLS_SOUTH_X, GREYFELLS_W, WARREN } from './greyfellsHills';
 
 /**
  * The edge of the Greyfells: the open moor above the north woods, where the
@@ -55,17 +46,8 @@ export function buildGreyfellsMap(): MapData {
   }
 
   // The goblins' trail: up from the woods, through the camp, and on to the hole in the hill.
-  const mouth = { x: WARREN.tx + 3.5, y: WARREN.ty + 4.4 };
-  const trail = smoothLine([
-    { x: GREYFELLS_SOUTH_X + 0.5, y: H + 2 },
-    { x: 20, y: H - 9 },
-    { x: 23, y: 40 },
-    { x: 21.5, y: 31 },
-    { x: GOBLIN_CAMP.x, y: GOBLIN_CAMP.y + 3.5 },
-    { x: GOBLIN_CAMP.x + 1.5, y: GOBLIN_CAMP.y - 4 },
-    { x: 25.5, y: 12 },
-    { x: mouth.x, y: mouth.y - 0.8 },
-  ]);
+  const mouth = WARREN_MOUTH;
+  const trail = smoothLine(GREYFELLS_TRAIL);
   paintPath(terrain, trail, (t) => 0.55 + 0.12 * Math.sin(t * 17.3));
   // The camp's trodden ground round the fire.
   for (let y = 0; y < H; y++) {
@@ -79,6 +61,7 @@ export function buildGreyfellsMap(): MapData {
 
   const near = (line: Vec[], x: number, y: number, within: number) => line.some((p) => Math.hypot(p.x - x, p.y - y) < within);
   const inCamp = (x: number, y: number) => Math.hypot(x - GOBLIN_CAMP.x, (y - GOBLIN_CAMP.y) * 1.1) < 8;
+  const hills = greyfellsHills();
   const underHill = (x: number, y: number) => x >= WARREN.tx - 2 && x < WARREN.tx + 7 && y < WARREN.ty + 6;
 
   // Boulders on the open fell, thick where the rock breaks through, trees only near the wood's edge to the south,
@@ -88,14 +71,24 @@ export function buildGreyfellsMap(): MapData {
       if (terrain[y][x] !== Terrain.Grass) continue;
       const cx = x + 0.5;
       const cy = y + 0.5;
+      // Where the land rises into the hills, nobody goes; scree spills out at their foot.
+      const rise = hills.tileMax(x, y);
+      if (rise >= HILL_BLOCKS) {
+        props[y][x] = Prop.Blocked;
+        continue;
+      }
       if (near(trail, cx, cy, 1.5) || inCamp(cx, cy) || underHill(cx, cy)) continue;
+      if (hills.tileMax(x - 1, y - 1) >= HILL_BLOCKS * 3 || hills.tileMax(x + 1, y + 1) >= HILL_BLOCKS * 3 || rise > 1) {
+        if (rnd.frac() < 0.3) props[y][x] = Prop.Rock;
+        continue;
+      }
       const edge = Math.min(x, y, W - 1 - x, H - 1 - y);
       const woods = Math.max(0, (y - (H - 12)) / 12);
       const stony = scree(cx, cy);
       const roll = rnd.frac();
-      if (edge < 2) props[y][x] = y > H - 6 ? Prop.Tree : roll < 0.8 ? Prop.Rock : Prop.None;
+      if (edge < 2 && y > H - 6) props[y][x] = Prop.Tree;
       else if (roll < 0.03 + woods * 0.5) props[y][x] = Prop.Tree;
-      else if (roll < 0.03 + woods * 0.5 + (stony ? 0.2 : 0.04)) props[y][x] = Prop.Rock;
+      else if (roll < 0.03 + woods * 0.5 + (stony ? 0.12 : 0.03)) props[y][x] = Prop.Rock;
     }
   }
 
@@ -110,12 +103,8 @@ export function buildGreyfellsMap(): MapData {
     decor: 0.12,
     // Open moor: browner and greyer than the Hollow's grass.
     groundShade: 0xa89c7e,
-    // Past the north and the flanks the crags run on into the hills; only the south falls away into the woods.
-    outskirts: {
-      crags: ['gf-crag-3-0', 'gf-crag-3-1', 'gf-crag-4-0', 'gf-crag-4-1', 'gf-crag-4-2', 'gf-crag-5-0', 'gf-crag-5-1', 'gf-crag-5-2'],
-      cragSize: 5,
-      forestFromY: H - 9,
-    },
+    // The hills all round the clearing.
+    hills,
     entries: { northwoods: entry },
     doors: [],
     sights: [],
@@ -129,64 +118,11 @@ export function buildGreyfellsMap(): MapData {
     ],
     musings: [
       {
-        x0: 2, y0: 2, x1: 14, y1: 10,
+        x0: 17, y0: 9, x1: 31, y1: 14,
         text: 'The fell climbs on north into the hills, grey on grey, as far as I can see. Nothing up there but wind and stone.',
       },
     ],
   };
-
-  // ---- The crags ----
-  // The clearing is a bowl among crags: a wall of great buttresses along the north where the fell climbs on into the hills,
-  // broken ridges down either side, and tors standing out of the heather in between.
-  const taken = new Set<number>();
-  const nearTarn = (x: number, y: number) => Math.hypot((x - TARN.x) / (TARN.rx + 2.5), (y - TARN.y) / (TARN.ry + 2.5)) < 1;
-  const fits = (tx: number, ty: number, size: number) => {
-    if (tx < 0 || ty < 0 || tx + size > W || ty + size > H - 7) return false;
-    for (let y = ty; y < ty + size; y++) {
-      for (let x = tx; x < tx + size; x++) {
-        const cx = x + 0.5;
-        const cy = y + 0.5;
-        if (terrain[y][x] !== Terrain.Grass || taken.has(y * W + x)) return false;
-        if (near(trail, cx, cy, 2.6) || Math.hypot(cx - GOBLIN_CAMP.x, (cy - GOBLIN_CAMP.y) * 1.1) < 10 || underHill(cx, cy) || nearTarn(cx, cy)) return false;
-      }
-    }
-    return true;
-  };
-  const crag = (tx: number, ty: number, size: number): boolean => {
-    if (!fits(tx, ty, size)) return false;
-    for (let y = ty; y < ty + size; y++) for (let x = tx; x < tx + size; x++) {
-      taken.add(y * W + x);
-      props[y][x] = Prop.None;
-    }
-    placeObject(data, { key: `gf-crag-${size}-${rnd.between(0, 2)}`, tx, ty, w: size, h: size, fades: size >= 3 });
-    return true;
-  };
-  const biggest = (tx: number, ty: number, sizes: number[]) => sizes.find((size) => crag(tx, ty, size));
-  // Along the north.
-  for (let tx = 0; tx < W; ) tx += biggest(tx, rnd.between(0, 1), [5, 4, 3]) ?? 1;
-  for (let tx = 1; tx < W; ) tx += (rnd.frac() < 0.55 ? biggest(tx, 5, [3, 2]) : undefined) ?? 2;
-  // Down either side, leaving gaps.
-  for (const side of [0, 1]) {
-    for (let ty = 6; ty < H - 10; ) {
-      const size = rnd.pick([3, 4, 4, 5]);
-      const tx = side === 0 ? rnd.between(0, 1) : W - size - rnd.between(0, 1);
-      ty += crag(tx, ty, size) ? size + (rnd.frac() < 0.3 ? rnd.between(1, 2) : 0) : 1;
-    }
-  }
-  // A few tors in the heather.
-  for (let i = 0; i < 24; i++) crag(rnd.between(5, W - 8), rnd.between(8, H - 12), rnd.pick([3, 3, 4]));
-  // Scree spilling from the crags' feet out into the heather.
-  for (let y = 0; y < H - 6; y++) {
-    for (let x = 0; x < W; x++) {
-      if (taken.has(y * W + x) || terrain[y][x] !== Terrain.Grass || props[y][x] !== Prop.None) continue;
-      const cx = x + 0.5;
-      const cy = y + 0.5;
-      if (near(trail, cx, cy, 1.5) || underHill(cx, cy)) continue;
-      let by = 0;
-      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (taken.has((y + dy) * W + x + dx) && x + dx >= 0 && x + dx < W) by++;
-      if (by > 0 && noise(x, y, 11) < 0.12 + by * 0.025) props[y][x] = Prop.Rock;
-    }
-  }
 
   // The trail runs off the south edge, back down into the north woods.
   for (let x = 0; x < W; x++) {
@@ -276,7 +212,7 @@ export function buildGreyfellsMap(): MapData {
   });
 
   // ---- The hole in the hill ----
-  for (let y = WARREN.ty - 1; y < WARREN.ty + 5; y++) for (let x = WARREN.tx - 1; x < WARREN.tx + 5; x++) if (props[y]?.[x] !== undefined) props[y][x] = Prop.None;
+  for (let y = WARREN.ty - 1; y < WARREN.ty + 5; y++) for (let x = WARREN.tx - 1; x < WARREN.tx + 5; x++) if (props[y]?.[x] !== undefined && hills.tileMax(x, y) < HILL_BLOCKS) props[y][x] = Prop.None;
   for (let y = WARREN.ty; y < WARREN.ty + 4; y++) for (let x = WARREN.tx; x < WARREN.tx + 4; x++) terrain[y][x] = Terrain.Grass;
   const warrenBlocks: Array<[number, number]> = [];
   for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (!(x === 3 && y === 3)) warrenBlocks.push([x, y]);

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_HEIGHT } from '../config';
-import { caveEntrance, crag } from './cave';
+import { caveEntrance } from './cave';
 import { MODEL_ART, registerModel } from './interior';
 import { IsoModel, Shader } from './IsoModel';
 import { PALETTE as P } from './palette';
@@ -314,17 +314,5 @@ export function generateGreyfells(scene: Phaser.Scene): void {
   const warren = caveEntrance(4, 104, 37);
   warren.canvas.toTexture(scene, 'gf-warren');
   MODEL_ART['gf-warren'] = { key: 'gf-warren', originX: warren.anchorX / warren.canvas.width, originY: warren.anchorY / warren.canvas.height };
-  // The crags the clearing sits among: grey rock thrust up out of the heather, from tors two tiles across to great buttresses of five.
-  for (const [size, height] of GF_CRAGS) {
-    for (let i = 0; i < CRAG_VARIANTS; i++) {
-      const key = `gf-crag-${size}-${i}`;
-      const art = crag(size, height + i * 10, 53 + size * 31 + i * 7, 0.55 + i * 0.15);
-      art.canvas.toTexture(scene, key);
-      MODEL_ART[key] = { key, originX: art.anchorX / art.canvas.width, originY: art.anchorY / art.canvas.height };
-    }
-  }
 }
 
-/** The crags' sizes (tiles across) and heights (pixels); each comes in {@link CRAG_VARIANTS} shapes, 'gf-crag-<size>-<n>'. */
-const GF_CRAGS: Array<[number, number]> = [[2, 36], [3, 50], [4, 64], [5, 78]];
-const CRAG_VARIANTS = 3;

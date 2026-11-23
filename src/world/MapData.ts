@@ -1,3 +1,4 @@
+import type { HillField } from './greyfellsHills';
 import type { TrackName } from '../audio/Audio';
 import type { HenKind } from '../art/henfarm';
 import type { FoeKind } from '../systems/Combat';
@@ -334,7 +335,8 @@ export interface MapData {
    * north, west and east run on into crags (these art keys, all `cragSize` tiles across), and only the
    * south, below `forestFromY`, is forest.
    */
-  outskirts?: { crags: string[]; cragSize: number; forestFromY: number };
+  /** The lie of the land, where there are hills to paint (see HillPainter); the hills block the way where they rise. */
+  hills?: HillField;
   /** How much of the grass has flowers, tufts and pebbles on it (0..1; 0.22 if not given). */
   decor?: number;
   /** Tile rectangles (x0, y0 inclusive; x1, y1 exclusive) where the trees are apple trees. */

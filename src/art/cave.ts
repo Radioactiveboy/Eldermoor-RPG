@@ -611,21 +611,7 @@ function bones(seed: number): { canvas: PixelCanvas; anchorX: number; anchorY: n
  * one tile of the footprint that's open (2, 2) so the player can walk into it.
  */
 export function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
-  return mound(S, MAXH, salt, true);
-}
-
-/**
- * A crag on open moor: an S x S footprint of rock thrust up out of the turf,
- * steep and broken, with heather and grass only on its gentler shoulders.
- * `jag` is how broken its top is (0 a smooth knoll, 1 split and stepped).
- */
-export function crag(S = 3, MAXH = 90, salt = 0, jag = 0.7): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
-  return mound(S, MAXH, salt, false, jag);
-}
-
-/** A mound or crag drawn as a lit heightfield; with `mouth`, a cave opening at its front corner (see caveEntrance). */
-function mound(S: number, MAXH: number, salt: number, mouth: boolean, jag = 0): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
-  const peak = mouth ? S * 0.42 : S * (0.4 + noise(salt, 2) * 0.2);
+  const peak = S * 0.42;
   // Height of the mound at grid point (x, y) of the footprint, in pixels.
   const height = (x: number, y: number): number => {
     const edge = Math.min(x, y, S - x, S - y);
@@ -634,36 +620,7 @@ function mound(S: number, MAXH: number, salt: number, mouth: boolean, jag = 0): 
     const dy = y - peak;
     const r = Math.hypot(dx, dy) / (S * 0.62);
     let h = MAXH * Math.max(0, 1 - r * r) + (noise(x * 4 + salt, y * 4) - 0.5) * 14 + (S > 3 ? (noise(x * 1.6 + salt, y * 1.6) - 0.5) * 26 : 0);
-    if (jag > 0) {
-      // A crag: two or three heads of rock of different heights run together, broken by clefts.
-      // Each head is a steep knob of rock standing on a long, low skirt of turf and scree, so the crag
-      // rises out of the ground round it rather than sitting on it.
-      h = 0;
-      for (let k = 0; k < 4; k++) {
-        const px = S * (0.3 + noise(salt + k * 3.1, 1.7) * 0.4);
-        const py = S * (0.3 + noise(salt + k * 5.3, 4.1) * 0.4);
-        const rad = S * (0.27 + noise(salt + k, 9.2) * 0.14);
-        const tall = MAXH * (k === 0 ? 1 : 0.35 + noise(salt + k, 7.7) * 0.45);
-        const d = Math.hypot(x - px, (y - py) * (0.8 + k * 0.15)) / rad;
-        const knob = 1 / (1 + Math.pow(d * 1.1, 4));
-        const skirt = Math.exp(-d * d * 0.12) * 0.4;
-        h = Math.max(h, tall * Math.max(knob, skirt));
-      }
-      // Ridged noise: sharp edges and clefts in the rock, strongest high up.
-      const ridge = 1 - Math.abs(noise(x * 1.3 + salt, y * 1.3 + 11) * 2 - 1);
-      h += (ridge - 0.5) * Math.min(h, MAXH * 0.4) * jag + (noise(x * 5 + salt, y * 5) - 0.5) * 6;
-      // Gritstone weathers into ledges: step the rock into tiers, leaving the turf skirt smooth.
-      const tier = 10 + noise(salt, 5.5) * 8;
-      if (h > MAXH * 0.32) h = MAXH * 0.32 + Math.floor((h - MAXH * 0.32) / tier) * tier + ((h - MAXH * 0.32) % tier) * 0.25;
-      // Feather out to nothing well inside the footprint, along a ragged line rather than its square edges.
-      const ang = Math.atan2(y - S / 2, x - S / 2);
-      const reach = (S / 2) * (0.82 + (noise(Math.floor((ang + Math.PI) * 2.2) + salt, 3.3) - 0.5) * 0.2 + Math.sin(ang * 3 + salt) * 0.05);
-      const r = Math.hypot(x - S / 2, y - S / 2) / reach;
-      const fall = Math.max(0, Math.min(1, (1 - r) / 0.45));
-      h *= fall * fall * (3 - 2 * fall);
-    }
-    h *= Math.min(1, edge / (jag > 0 ? 0.05 : 0.35));
-    if (!mouth) return Math.max(0, h);
+    h *= Math.min(1, edge / 0.35);
     // The open tile in front of the mouth, with a steep rock face round it.
     const open = Math.min(x - (S - 1), y - (S - 1));
     if (open > 0) return 0;
@@ -699,7 +656,7 @@ function mound(S: number, MAXH: number, salt: number, mouth: boolean, jag = 0): 
     // Lit from the upper left, like everything else: the +y side bright, the +x side in shade.
     const light = (hx * 0.6 - hy * 0.6 + 0.7) / len;
     const n = hash(Math.floor(x * 40), Math.floor(y * 40));
-    const steep = nz < 0.42 + jag * 0.36 + (noise(x * 3, y * 3) - 0.5) * 0.35;
+    const steep = nz < 0.42 + (noise(x * 3, y * 3) - 0.5) * 0.35;
     const ramp = steep ? rock : grass;
     const i = Math.max(0, Math.min(3, Math.floor(light * 3.2 + (n - 0.5) * 0.8)));
     let col: number = ramp[i];
@@ -715,10 +672,6 @@ function mound(S: number, MAXH: number, salt: number, mouth: boolean, jag = 0): 
     for (let py = t.y + 1; py <= g.y; py++) c.set(t.x, py, ramp === grass && py < t.y + 3 ? grass[side] : rock[side]);
   }
 
-  if (!mouth) {
-    c.outline();
-    return { canvas: c, anchorX: ax, anchorY: ay };
-  }
   // The mouth: a dark arch in the rock face behind the open tile.
   const m = at(S - 1, S - 1, 0);
   const mw = 25;
