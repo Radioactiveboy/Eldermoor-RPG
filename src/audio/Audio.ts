@@ -19,7 +19,7 @@ import {
  * track before then just remembers it and starts it on unlock.
  */
 
-export type TrackName = 'menu' | 'world' | 'woods' | 'home' | 'battle' | 'market' | 'cave' | 'monastery' | 'tavern' | 'raid' | 'ruin';
+export type TrackName = 'menu' | 'world' | 'woods' | 'home' | 'battle' | 'market' | 'cave' | 'monastery' | 'tavern' | 'raid' | 'ruin' | 'mourning';
 
 interface TrackDef {
   bpm: number;
@@ -135,6 +135,21 @@ const TRACKS: Record<TrackName, TrackDef> = {
     scale: [57, 59, 60, 62, 64, 65, 68],
     melodyChance: 0.12,
     padCutoff: 420,
+  },
+  // The Hollow after the raid: the outdoor tune's D minor, slowed right down and emptied out, with nothing to lift it.
+  mourning: {
+    bpm: 50,
+    chords: [
+      [50, 53, 57], // Dm
+      [46, 50, 53], // Bb
+      [43, 46, 50], // Gm
+      [45, 48, 52], // Am, never resolving to the A major of the old tune
+    ],
+    barsPerChord: 2,
+    arp: [0, -1, -1, 2, -1, -1, 1, -1],
+    scale: [62, 64, 65, 67, 69, 70, 72],
+    melodyChance: 0.1,
+    padCutoff: 480,
   },
   // A fight: quicker, darker and restless, rocking between D minor and its neighbours.
   battle: {
