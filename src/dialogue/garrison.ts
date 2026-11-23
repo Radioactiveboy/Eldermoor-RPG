@@ -27,11 +27,16 @@ export interface SergeantTalk {
   bounties: number;
   /** The hero has put the Wolf Mother down. */
   slewWolfMother: boolean;
+  /** The hero has followed the goblins' trail to where it leaves the north woods, and not yet told him. */
+  trailNews?: boolean;
+  /** The goblin in the cells has talked. */
+  goblinTalked?: boolean;
 }
 
 /** Sergeant Brannock: square, grey, tired, and fair. He never raises his voice and never needs to. */
 export function sergeantScript(t: SergeantTalk): DialogueScript {
   const ask: DialogueChoice[] = [];
+  if (t.trailNews) ask.push({ text: "I followed their trail. It runs north out of the woods, up towards the Greyfells.", next: 'trail' });
   if (t.raidOver) {
     ask.push({ text: 'Will you send men after my mother?', next: 'raid-men' });
     ask.push({ text: 'What do you know about goblins?', next: 'raid-goblins' });
@@ -81,12 +86,29 @@ export function sergeantScript(t: SergeantTalk): DialogueScript {
       ],
       next: 'ask',
     },
+    trail: {
+      speaker: 'sergeant',
+      action: 'told-sergeant',
+      lines: [
+        "The Greyfells. Nobody's lived up there since my grandad's day. Nothing up there but sheep and stones and wind.",
+        "I can't give you men. You know that. But I can give you this: two nights after the Hollow, my lads caught one of them skulking round Coombe's fold. A goblin. Alive.",
+        "It's in the cell at the foot of the steps downstairs. It won't say a word to us; it just hisses and spits. Hamm won't go near it. Maybe it'll talk to you. It's your mother.",
+      ],
+      next: 'ask',
+    },
     cells: {
       speaker: 'sergeant',
-      lines: [
-        "Dickon, the poacher. Took a hare off the plains, and Lord Morten's men brought him to us rather than walk him all the way to the manor. He's ours till the Headman says.",
-        "He's harmless. Go down and see him if you like; Hamm has the keys. Don't let Dickon talk you into anything.",
-      ],
+      lines: t.raidOver
+        ? [
+            "Dickon, the poacher, who's in so often he's got his own cup. And in the cell by the steps, a goblin. The lads caught it by Coombe's fold two nights after the Hollow.",
+            t.goblinTalked
+              ? "It talked to you, I hear. More than it ever did to us. Hamm says it sat up and listened to you. Hamm's not sure how he feels about that."
+              : "It won't talk. Not to us. Hamm feeds it through the bars on the end of a spear. Go down if you like; mind your fingers.",
+          ]
+        : [
+            "Dickon, the poacher. Took a hare off the plains, and Lord Morten's men brought him to us rather than walk him all the way to the manor. He's ours till the Headman says.",
+            "He's harmless. Go down and see him if you like; Hamm has the keys. Don't let Dickon talk you into anything.",
+          ],
       next: 'ask',
     },
     headman: {
@@ -257,4 +279,129 @@ export function prisonerScript(raidOver: boolean, first: boolean): DialogueScrip
       bye: { speaker: 'prisoner', lines: ["Come back soon! I'm not going anywhere. That's the problem."] },
     },
   };
+}
+
+/** What Snikkit, the goblin in the cells, knows of the hero. */
+export interface GoblinTalk {
+  /** The first time it's been spoken to. */
+  first: boolean;
+  /** It has already told the hero about the Mother and the hole on the fells. */
+  talked: boolean;
+  /** Something in the satchel it could be given to eat (its name), if anything. */
+  food?: string;
+}
+
+/**
+ * Snikkit, the goblin the militia caught by Coombe's fold two nights after the
+ * raid: a straggler from the band that burnt the Hollow, left behind, starved and
+ * terrified, in the cell at the foot of the jail steps. Threats get nothing from
+ * it; feeding it, or guessing why they took Mother, gets the truth. They took her
+ * because she is a healer, for their own Mother, who is dying; and they have her
+ * in the hole in the hill at the top of the trail, on the Greyfells.
+ */
+export function goblinPrisonerScript(t: GoblinTalk): DialogueScript {
+  const ask: DialogueChoice[] = [
+    { text: 'Where did your people take my mother?', next: 'where' },
+    { text: "Talk, or I'll come in there.", next: 'threat' },
+    t.food ? { text: `Here. Eat this. (Give it the ${t.food}.)`, next: 'fed' } : { text: 'When did you last eat?', next: 'hungry' },
+    { text: "She's a healer. That's why you took her, isn't it?", next: 'healer' },
+    { text: 'Leave it.', next: 'bye' },
+  ];
+  const nodes: Record<string, DialogueNode> = {
+    greet: {
+      speaker: 'snikkit',
+      lines: [
+        'Hssss! Long-legs. Long-legs come to poke Snikkit with a stick too? Come close. Closer. Snikkit bite.',
+        "...You smell of smoke. Of the burning. You is from the little house in the trees.",
+      ],
+      next: 'ask',
+    },
+    again: { speaker: 'snikkit', lines: ['Long-legs again. Hsss.'], next: 'ask' },
+    ask: { speaker: 'snikkit', lines: ['What long-legs want?'], choices: ask },
+    where: {
+      speaker: 'snikkit',
+      lines: ["Snikkit not know any mother. Snikkit not know anything. Snikkit is a stone. Go away."],
+      next: 'ask',
+    },
+    threat: {
+      speaker: 'snikkit',
+      lines: [
+        'Come in! Come in, then! Snikkit bite your face off, Snikkit...',
+        "(It has backed into the corner of the cell, all the same, ears flat to its skull.) Big-folk all same. Stick, stick, stick. Snikkit say nothing to sticks.",
+      ],
+      next: 'ask',
+    },
+    hungry: {
+      speaker: 'snikkit',
+      lines: [
+        "Spear-boy throws bones through the bars. Bones! With nothing on! Snikkit not a dog.",
+        "Not since before the burning. Snikkit was so hungry, Snikkit went to the sheep, and the spear-boys was waiting.",
+      ],
+      next: 'ask',
+    },
+    fed: {
+      speaker: 'snikkit',
+      action: 'fed-goblin',
+      lines: [
+        "(It snatches it through the bars and crams it in whole, growling, watching you the whole time. Then it licks its fingers, one by one.)",
+        '...Why long-legs feed Snikkit? Snikkit burnt your house.',
+        "Hsss. All right. All right. Snikkit tell. You is not a stick.",
+      ],
+      next: 'tell',
+    },
+    healer: {
+      speaker: 'snikkit',
+      lines: [
+        "(Its ears come up.) How long-legs know that? Who told? Snikkit told nobody, Snikkit is a stone!",
+        '...Hsss. No point now. Long-legs knows.',
+      ],
+      next: 'tell',
+    },
+    tell: {
+      speaker: 'snikkit',
+      action: 'questioned-goblin',
+      lines: [
+        "The Mother is sick. Our Mother, the big one, the one who lays. Sick a long time. Hot, and the eggs go cold, and the little ones die in the shell.",
+        "The Shamans smelled the green-medicine on the long-legs woman, when she went in the trees for her herbs. Long-legs healer. So the Brute took a band and went for her.",
+        "Carried her careful. Carried her soft. She is alive. She is in the deep, with the Mother, making the Mother well. If she makes the Mother well, maybe they let her live.",
+        "Up the trail, past the trees, on the grey hills. A camp, and a hole in the hill above it. That is the way down.",
+      ],
+      next: 'after',
+    },
+    after: {
+      speaker: 'snikkit',
+      lines: ["Long-legs go down there, long-legs dies. Lots of us. And the Brute. Snikkit has said it."],
+      choices: [
+        { text: 'Why are you telling me?', next: 'why' },
+        { text: "I'm going anyway.", next: 'bye' },
+      ],
+    },
+    why: {
+      speaker: 'snikkit',
+      lines: [
+        "They left Snikkit. Snikkit fell in a ditch and they left Snikkit for the spear-boys. Snikkit owes them nothing.",
+        "And here is warm. Here nobody eats Snikkit when the food runs short.",
+      ],
+      next: 'bye',
+    },
+    told: {
+      speaker: 'snikkit',
+      lines: [
+        "Long-legs! Snikkit told you already. The grey hills, the camp, the hole. Why long-legs still here? Go and get your mother.",
+        ...(t.food ? [] : ['...Bring more food next time.']),
+      ],
+      choices: [
+        ...(t.food ? [{ text: `Here. (Give it the ${t.food}.)`, next: 'fed-again' }] : []),
+        { text: 'Goodbye, Snikkit.', next: 'bye' },
+      ],
+    },
+    'fed-again': {
+      speaker: 'snikkit',
+      action: 'fed-goblin',
+      lines: ['(It snatches it and wolfs it down.) Long-legs is soft. Snikkit likes soft.'],
+      next: 'bye',
+    },
+    bye: { speaker: 'snikkit', lines: [t.talked ? 'Hsss. Mind the Brute.' : 'Hsss.'] },
+  };
+  return { start: t.talked ? 'told' : t.first ? 'greet' : 'again', nodes };
 }

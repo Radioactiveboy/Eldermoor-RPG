@@ -61,7 +61,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     smithy: workshops.buildSmithyMap(),
     bakery: workshops.buildBakeryMap(),
     garrison: garrison.buildGarrisonMap(),
-    jail: garrison.buildJailMap(),
+    jail: garrison.buildJailMap(true),
     residence: garrison.buildResidenceMap(),
   };
 }

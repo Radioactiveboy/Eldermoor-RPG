@@ -365,7 +365,7 @@ function addGoblinTrail(data: MapData, way: Vec[], greyfells: boolean): void {
       id: 'goblin-trail-end',
       x0: 37, y0: 2, x1: 46, y1: 9,
       text: greyfells
-        ? 'Their trail climbs on north out of the trees, up onto the Greyfells. Nobody is coming to help. So be it.'
+        ? "Their trail climbs on north out of the trees, up onto the Greyfells. Just where Snikkit said it would."
         : 'Their trail runs on north into the deep woods, up towards the Greyfells, further than I can see. Dozens of them, and me half beaten. ' +
           'Not alone, and not like this. Iran was right: Adowvale first.',
     },

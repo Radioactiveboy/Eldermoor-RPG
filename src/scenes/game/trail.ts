@@ -4,6 +4,8 @@
  * Kept apart from raid.ts so travel.ts can use it without pulling in the
  * rest of the scene's code.
  */
+import { SHAREABLE_FOOD } from '../../dialogue/wayfarers';
+import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
 import type { GameScene } from '../GameScene';
 
@@ -34,10 +36,60 @@ export function reachedTrailEnd(): void {
   );
 }
 
-/** Whether the goblins' trail leads on off the north woods, up onto the Greyfells: once the hero has taken word to Adowvale. */
+/** Whether the goblins' trail leads on off the north woods, up onto the Greyfells: once the goblin in the cells has said where it goes. */
 export function greyfellsOpen(): boolean {
-  return QuestLog.hasFlag('raid-over') && QuestLog.isDone('the-raid', 'word');
+  return QuestLog.hasFlag('raid-over') && QuestLog.isDone('the-raid', 'prisoner');
 }
+
+/** Telling Sergeant Brannock where the trail goes (dialogue/garrison.ts): he has a goblin in the cells. */
+export function toldSergeant(): void {
+  if (QuestLog.isDone('the-raid', 'sergeant')) return;
+  QuestLog.complete('the-raid', 'word');
+  QuestLog.complete('the-raid', 'sergeant');
+  QuestLog.writeDiary(
+    'Told Sergeant Brannock where their trail goes. He has no men to send, but he has something else: his lads caught a goblin two nights ' +
+      "after the raid, skulking round Coombe's fold, and it's in the cells under the garrison. It won't talk to them. He thinks it might talk to me.",
+  );
+}
+
+/** The goblin in the cells talked (dialogue/garrison.ts): the Mother, the healer, and the hole on the Greyfells. */
+export function questionedGoblin(): void {
+  if (QuestLog.isDone('the-raid', 'prisoner')) return;
+  QuestLog.complete('the-raid', 'word');
+  QuestLog.complete('the-raid', 'sergeant');
+  QuestLog.complete('the-raid', 'prisoner');
+  QuestLog.writeDiary(
+    "The goblin in the cells is called Snikkit, and in the end it talked. They took Mother because she is a healer: they could smell " +
+      "the medicine on her. Their own Mother, the great one who lays their young, is dying, and they want her made well. She is alive, then. " +
+      'They have her in a hole in the hill on the Greyfells, at the top of the trail. I am going up there.',
+  );
+}
+
+/** The Headman offers to pay Sigrun's hire out of the village chest (dialogue/residence.ts). */
+export function headmanPaysSigrun(): void {
+  if (QuestLog.hasFlag('headman-pays-sigrun')) return;
+  QuestLog.setFlag('headman-pays-sigrun');
+  QuestLog.writeDiary(
+    "Told Headman Hale what the goblin said. He can't send the militia, but he'll pay a sellsword out of the village chest: Sigrun, " +
+      "who drinks at the Tankard. \"Tell her Hale sends you and Hale pays.\" I won't have to go down that hole alone.",
+  );
+}
+
+/** Handing Snikkit, the goblin in the cells, something to eat through the bars. */
+export function fedGoblin(): void {
+  const food = SHAREABLE_FOOD.find((id) => Inventory.count(id) > 0);
+  if (!food) return;
+  Inventory.remove(food, 1);
+  QuestLog.setFlag('fed-snikkit');
+}
+
+/** The story's dialogue actions on the way to the Greyfells. */
+export const TRAIL_ACTIONS: Record<string, () => void> = {
+  'told-sergeant': toldSergeant,
+  'fed-goblin': fedGoblin,
+  'questioned-goblin': questionedGoblin,
+  'headman-pays-sigrun': headmanPaysSigrun,
+};
 
 /** The things in the goblins' camp on the Greyfells that move the Ashes quest on, and what the hero writes of each. */
 const CAMP_FINDS: Record<string, { step?: string; flag: string; diary: string }> = {

@@ -107,7 +107,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
   bakery: lazy(() => import('../../world/WorkshopMaps'), (m) => m.buildBakeryMap(), { test: true, enter: enteredWorkshop }),
   // On the lane at the south end of Adowvale: the militia's garrison, the cells under it, and the Headman's house.
   garrison: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildGarrisonMap(), { test: true, enter: enteredGarrison }),
-  jail: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildJailMap(), { test: true, enter: enteredJail }),
+  jail: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildJailMap(raidStage() === 'over'), { test: true, enter: enteredJail }),
   residence: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildResidenceMap(), { test: true, enter: enteredResidence }),
   plains: lazy(() => import('../../world/PlainsMap'), (m) => m.buildPlainsMap(), {
     test: true,

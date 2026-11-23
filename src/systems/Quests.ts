@@ -146,6 +146,12 @@ export const QUESTS: Record<string, QuestDef> = {
         target: { area: 'market', x: 11.5, y: 15.5, npc: 'guard-1' },
       },
       {
+        id: 'sergeant',
+        text: 'Tell Sergeant Brannock at the garrison where the trail leads',
+        target: { area: 'garrison', x: 8, y: 1.6, npc: 'sergeant' },
+      },
+      { id: 'prisoner', text: 'Question the goblin in the cells under the garrison', target: { area: 'jail', x: 6.3, y: 2.55, npc: 'snikkit' } },
+      {
         id: 'fells',
         text: "Follow the goblins' trail up out of the woods onto the Greyfells",
         target: { area: 'greyfells', x: 23.5, y: 26 },

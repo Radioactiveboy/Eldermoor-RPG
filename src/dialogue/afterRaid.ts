@@ -166,6 +166,7 @@ const RAID_TALK: Record<string, RaidTalk> = {
           "I... We're the cooper's boys and the miller's nephew and old Garrick, who's deaf in one ear. None of us has ever seen a goblin. Not a live one.",
           "The sergeant says the militia's for the village, and if we march off into the woods there's nobody on the gate. He's not wrong. I hate that he's not wrong.",
           "He's sent to Lord Morten for men. If you go after her first, take a proper blade off Osric, and a helm. And come back and tell us what you find.",
+          "Better yet, tell the sergeant yourself. He's at the garrison, down the lane past the backs of the houses. He's got something down in the cells you'll want to see.",
         ],
         next: 'ask',
       },

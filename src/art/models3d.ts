@@ -1,6 +1,7 @@
 import { darker, type Tones } from './character';
 import { Detail, Hit, limb, Material, Model, Pose3D, Solid } from './figure3d';
 import { PALETTE as P } from './palette';
+import { captiveGoblinModel } from './goblins3d';
 import { MORTEN } from './tollgate';
 
 /**
@@ -119,6 +120,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   steward: stewardModel,
   housemaid: housemaidModel,
   housecook: housecookModel,
+  snikkit: captiveGoblinModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */

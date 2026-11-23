@@ -13,6 +13,7 @@ import { MEDICINE_ACTIONS } from './medicine';
 import { MONASTERY_ACTIONS } from './monastery';
 import { RAID_ACTIONS } from './raid';
 import { GATE_ACTIONS } from './gate';
+import { TRAIL_ACTIONS } from './trail';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 
 /** A named story effect: what happens when a line with this action is said. */
@@ -26,6 +27,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...TAVERN_ACTIONS,
   ...RAID_ACTIONS,
   ...GATE_ACTIONS,
+  ...TRAIL_ACTIONS,
   ...FISHING_ACTIONS,
 };
 
