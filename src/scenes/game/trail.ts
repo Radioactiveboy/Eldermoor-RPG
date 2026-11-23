@@ -127,22 +127,9 @@ export function lookedAtCamp(id: string): void {
   QuestLog.writeDiary(find.diary);
 }
 
-/** What each companion makes of the cold up on the fell (see enteredGreyfells). */
-const COLD: Record<string, string[]> = {
-  sigrun: ['Wind up here cuts like a knife. Keep moving, or freeze where you stand.', "I've stood watch on colder hills. Not many."],
-  wat: ["Gods, it's cold! My ma said I'd want my good cloak. I didn't bring my good cloak.", "I can't feel my nose. Is my nose still there?"],
-};
-
-/** Up to Greyfells Clearing: the first time, a thought and a diary line, and the quest moves on; and every time, the cold. */
+/** Up to Greyfells Clearing: the first time, a thought and a diary line, and the quest moves on. (Companions remark on the cold through the travel chatter.) */
 export function enteredGreyfells(g: GameScene): void {
   QuestLog.complete('the-raid', 'fells');
-  // Somebody with the hero says what everybody's thinking.
-  const along = g.companions.filter((c) => COLD[c.id]);
-  if (along.length > 0) {
-    const who = along[Math.floor(Math.random() * along.length)];
-    const lines = COLD[who.id];
-    g.time.delayedCall(g.visited.has('greyfells') ? 1800 : 6200, () => who.say(lines[Math.floor(Math.random() * lines.length)], 4.5));
-  }
   if (g.visited.has('greyfells')) return;
   g.time.delayedCall(1000, () =>
     g.onHint?.('Out of the trees and onto the fell, and the cold hits like a slap. Crags all round, wind, heather. And smoke up ahead: a fire, where nobody honest would light one.'),
