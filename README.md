@@ -61,7 +61,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   bed, pick crops, shake a tree. Moving or pressing E again gets up from a seat; moving cancels
   picking
 - **During a conversation**: click / Space / Enter / E to skip the typing or carry on;
-  pick a reply with the mouse, the number keys, or up/down then Enter. A long list keeps what's new up front and
+  pick a reply with the mouse, the number keys, or up/down then Enter. Replies are listed inside the box, under what
+  was said, and the box grows to fit them (six rows at most). A long list keeps what's new up front and
   folds the everyday questions under **Ask about…** (Esc goes back); one still too long scrolls (mouse wheel, the
   ▲/▼ tabs, or up/down). Questions already asked are dimmed with a tick
 - **J** or the **book** button: open the journal (arrow keys or click to turn pages): tasks, quests, the diary and

@@ -10,8 +10,10 @@ export interface DialogueSceneData {
   onAction?: (action: string) => void;
 }
 
-const CHOICE_H = 44;
-const ARROW_H = 24;
+/** A reply's row inside the box (taller on a phone, for thumbs), and a "▲ 3 more" row. */
+const ROW_H = 34;
+const ROW_H_TOUCH = 38;
+const ARROW_H = 22;
 /** The most rows of replies shown at once; past that the list folds or scrolls (see ChoiceMenu.ts). */
 const MAX_ROWS = 6;
 
@@ -34,10 +36,6 @@ interface BoxLayout {
   textW: number;
   nameX: number;
   font: number;
-  choiceW: number;
-  /** Where the replies list sits: its centre x, and how far above the box its bottom is. */
-  choiceX: number;
-  choiceGap: number;
 }
 
 function boxLayout(screenW: number): BoxLayout {
@@ -48,7 +46,6 @@ function boxLayout(screenW: number): BoxLayout {
     return {
       compact: true, w, h: 150, portrait, px, py: -portrait + 16,
       textX: -w / 2 + 18, textY: 26, textW: w - 36, nameX: px + portrait + 24, font: 17,
-      choiceW: w, choiceX: 0, choiceGap: portrait - 4,
     };
   }
   const w = 860;
@@ -58,7 +55,6 @@ function boxLayout(screenW: number): BoxLayout {
   return {
     compact: false, w, h: 176, portrait, px, py: -26,
     textX, textY: 26, textW: w / 2 - textX - 28, nameX: textX + 14, font: 21,
-    choiceW: 520, choiceX: w / 2 - 520 / 2 - 10, choiceGap: 18,
   };
 }
 /** Letters per second while typing. */
@@ -70,7 +66,7 @@ const TEXT_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 /**
  * Conversation box: the speaker's portrait (which talks and blinks), their
  * name, and their words typed out letter by letter with little voice blips.
- * When a node offers replies they appear as a list above the box; a long list
+ * When a node offers replies they're listed in the box under the words; a long list
  * folds its everyday questions under "Ask about…" and scrolls (see ChoiceMenu.ts).
  *
  * Click, tap, Space, Enter or E to skip the typing or move on. Replies can be
@@ -95,6 +91,9 @@ export class DialogueScene extends Phaser.Scene {
   private body!: Phaser.GameObjects.Text;
   private more!: Phaser.GameObjects.Text;
   private choiceBox!: Phaser.GameObjects.Container;
+  private frameG!: Phaser.GameObjects.Graphics;
+  /** The box's height now: its usual height, or taller while it holds a list of replies. */
+  private boxH = 0;
   private L?: BoxLayout;
 
   private fullText = '';
@@ -135,7 +134,6 @@ export class DialogueScene extends Phaser.Scene {
     this.catcher = this.add.zone(0, 0, 10, 10).setOrigin(0).setInteractive();
     this.catcher.on('pointerup', () => this.advance());
     this.L = undefined;
-    this.choiceBox = this.add.container(0, 0);
 
     const kb = this.input.keyboard!;
     for (const key of ['SPACE', 'ENTER', 'E']) kb.on(`keydown-${key}`, () => this.confirm());
@@ -180,16 +178,8 @@ export class DialogueScene extends Phaser.Scene {
   private buildBox(L: BoxLayout): void {
     const keepText = this.body?.text ?? '';
     this.root?.destroy();
-    const left = -L.w / 2;
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.45);
-    g.fillRoundedRect(left + 4, 6, L.w, L.h, 14);
-    g.fillStyle(THEME.panel, 0.95);
-    g.fillRoundedRect(left, 0, L.w, L.h, 14);
-    g.lineStyle(2, THEME.gold, 0.95);
-    g.strokeRoundedRect(left, 0, L.w, L.h, 14);
-    g.lineStyle(1, THEME.gold, 0.35);
-    g.strokeRoundedRect(left + 7, 7, L.w - 14, L.h - 14, 10);
+    this.frameG = this.add.graphics();
+    this.boxH = L.h;
 
     // Portrait in its own frame, standing proud of the box.
     const { px, py, portrait: P } = L;
@@ -223,8 +213,41 @@ export class DialogueScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
     this.tweens.add({ targets: this.more, y: '+=4', duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-    this.root = this.add.container(0, 0, [g, frame, this.portrait, this.nameBg, this.nameText, this.body, this.more]);
+    // Replies are listed inside the box, under what was said.
+    this.choiceBox = this.add.container(0, 0);
+    this.root = this.add.container(0, 0, [this.frameG, frame, this.portrait, this.nameBg, this.nameText, this.body, this.more, this.choiceBox]);
+    this.drawFrame();
     if (this.speaker) this.setSpeaker(this.speaker);
+  }
+
+  /** The box itself, at its current height. */
+  private drawFrame(): void {
+    const L = this.L!;
+    const g = this.frameG;
+    const left = -L.w / 2;
+    const h = this.boxH;
+    g.clear();
+    g.fillStyle(0x000000, 0.45);
+    g.fillRoundedRect(left + 4, 6, L.w, h, 14);
+    g.fillStyle(THEME.panel, 0.95);
+    g.fillRoundedRect(left, 0, L.w, h, 14);
+    g.lineStyle(2, THEME.gold, 0.95);
+    g.strokeRoundedRect(left, 0, L.w, h, 14);
+    g.lineStyle(1, THEME.gold, 0.35);
+    g.strokeRoundedRect(left + 7, 7, L.w - 14, h - 14, 10);
+  }
+
+  private boxScale(): number {
+    const L = this.L!;
+    const { width, height } = this.scale;
+    return L.compact ? 1 : Math.min(1, (width - 20) / L.w, (height - 20) / 420);
+  }
+
+  /** Sits the box on the bottom of the screen, growing upwards when it's taller. */
+  private place(): void {
+    const { width, height } = this.scale;
+    const scale = this.boxScale();
+    this.root.setScale(scale).setPosition(width / 2, height - (this.boxH + 10) * scale);
   }
 
   private layout(): void {
@@ -244,9 +267,7 @@ export class DialogueScene extends Phaser.Scene {
       this.showChoices(pending);
       this.subFor = keep;
     }
-    const scale = L.compact ? 1 : Math.min(1, (width - 20) / L.w, (height - 20) / 420);
-    this.root.setScale(scale).setPosition(width / 2, height - (L.h + 10) * scale);
-    this.choiceBox.setScale(scale).setPosition(width / 2 + L.choiceX * scale, this.root.y - L.choiceGap * scale);
+    this.place();
     // Darken the bottom of the screen so the box stands out from the room.
     this.shade.clear();
     this.shade.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.55, 0.55);
@@ -365,14 +386,22 @@ export class DialogueScene extends Phaser.Scene {
     return !!to && !to.choices && !to.next && !to.action && !c.action;
   }
 
-  /** How many rows of replies fit between the box and the top of the screen (the HUD lives up there). */
-  private fitRows(): number {
+  /** Where the list of replies starts in the box: under what was said, past the portrait on a phone. */
+  private listTop(): number {
     const L = this.L!;
-    const { width, height } = this.scale;
-    const scale = L.compact ? 1 : Math.min(1, (width - 20) / L.w, (height - 20) / 420);
-    const bottom = height - (L.h + 10) * scale - L.choiceGap * scale;
-    const room = bottom - (L.compact ? 90 : 70);
-    return Phaser.Math.Clamp(Math.floor(room / ((CHOICE_H + 8) * scale)), 3, MAX_ROWS);
+    const under = L.textY + Math.ceil(this.body.height) + 14;
+    return L.compact ? under : Math.max(under, L.textY + 34);
+  }
+
+  private rowH(): number {
+    return this.L!.compact ? ROW_H_TOUCH : ROW_H;
+  }
+
+  /** How many rows of replies fit, keeping the box to about half the screen at most. */
+  private fitRows(): number {
+    const scale = this.boxScale();
+    const room = (this.scale.height * 0.5) / scale - this.listTop() - 20;
+    return Phaser.Math.Clamp(Math.floor(room / this.rowH()), 3, MAX_ROWS);
   }
 
   private openView(view: 'top' | 'sub'): void {
@@ -393,106 +422,113 @@ export class DialogueScene extends Phaser.Scene {
     return (this.view === 'sub' && this.menu?.sub) || this.menu!.top;
   }
 
-  /** Draws the rows of the open list that are in view, growing upwards from just above the box. */
+  /** Draws the rows of the open list that are in view, inside the box under what was said, and fits the box round them. */
   private renderChoices(slideIn = false): void {
     this.choiceBox.removeAll(true);
     this.choiceButtons = [];
+    const L = this.L!;
     const v = this.currentView();
-    const W = this.L!.choiceW;
-    const compact = this.L!.compact;
+    const x0 = L.textX;
+    const W = L.compact ? L.textW : L.w / 2 - x0 - 30;
+    const rowH = this.rowH();
     const shown = v.scroll.slice(this.offset, this.offset + this.visible);
     const above = this.offset;
     const below = v.scroll.length - this.offset - shown.length;
+    let y = this.listTop();
+
+    // A hairline between what was said and the replies.
+    const rule = this.add.graphics();
+    rule.lineStyle(1, THEME.gold, 0.3);
+    rule.lineBetween(x0, y - 7, x0 + W, y - 7);
+    this.choiceBox.add(rule);
 
     const items: Phaser.GameObjects.Container[] = [];
-    const heights: number[] = [];
     const addArrow = (up: boolean, n: number) => {
       const t = this.add
-        .text(0, 0, `${up ? '▲' : '▼'}  ${n} more`, { fontFamily: TEXT_FONT, fontSize: '15px', color: THEME.goldText })
-        .setOrigin(0.5);
-      // A small dark tab behind it, so it reads over the map.
-      const pill = this.add.graphics();
-      const pw = t.width + 28;
-      pill.fillStyle(THEME.panel, 0.9);
-      pill.fillRoundedRect(-pw / 2, -ARROW_H / 2 + 1, pw, ARROW_H - 2, 9);
-      pill.lineStyle(1, THEME.gold, 0.5);
-      pill.strokeRoundedRect(-pw / 2, -ARROW_H / 2 + 1, pw, ARROW_H - 2, 9);
-      const c = this.add.container(0, 0, [pill, t]).setSize(W, ARROW_H).setInteractive({ useHandCursor: true });
+        .text(W / 2, 0, `${up ? '▲' : '▼'}  ${n} more`, { fontFamily: TEXT_FONT, fontSize: '13px', color: THEME.goldText })
+        .setOrigin(0.5)
+        .setAlpha(0.85);
+      const c = this.add.container(x0, y + ARROW_H / 2, [t]);
+      c.setInteractive(new Phaser.Geom.Rectangle(0, -ARROW_H / 2, W, ARROW_H), Phaser.Geom.Rectangle.Contains);
+      c.input!.cursor = 'pointer';
       c.on('pointerup', () => this.scrollBy(up ? -1 : 1));
       items.push(c);
-      heights.push(ARROW_H);
+      y += ARROW_H;
     };
     const addRow = (row: MenuRow, at: number) => {
       const choice = typeof row === 'number' ? this.choices[row] : undefined;
       const heard = !!choice && HEARD.has(heardKey(this.node.speaker, choice));
       const sub = this.menu?.sub;
+      const side = row === 'more' || row === 'back';
       const text = row === 'more' ? 'Ask about…' : row === 'back' ? 'Back' : choice!.text;
       const label = this.add
-        .text(-W / 2 + 46, 0, text, {
+        .text(28, 0, text, {
           fontFamily: TEXT_FONT,
-          fontSize: compact ? '16px' : '18px',
+          fontSize: L.compact ? '16px' : '17px',
           color: THEME.text,
-          fontStyle: row === 'more' || row === 'back' ? 'italic' : 'normal',
-          wordWrap: { width: W - (row === 'more' ? 150 : 74) },
+          fontStyle: side ? 'italic' : 'normal',
+          wordWrap: { width: W - (row === 'more' ? 140 : 56) },
         })
         .setOrigin(0, 0.5);
-      const H = Math.max(CHOICE_H, Math.ceil(label.height) + 14);
+      const H = Math.max(rowH, Math.ceil(label.height) + 10);
       const num = this.add
-        .text(-W / 2 + 22, 0, row === 'back' ? '←' : `${at + 1}`, { fontFamily: THEME.font, fontSize: '18px', color: THEME.goldText })
+        .text(10, 0, row === 'back' ? '‹' : `${at + 1}`, { fontFamily: THEME.font, fontSize: '15px', color: THEME.goldText })
         .setOrigin(0.5);
-      const parts: Phaser.GameObjects.GameObject[] = [];
       const bg = this.add.graphics();
-      parts.push(bg, num, label);
+      const parts: Phaser.GameObjects.GameObject[] = [bg, num, label];
       if (row === 'more' && sub) {
-        const fresh = sub.scroll.filter((r) => typeof r === 'number' && !HEARD.has(heardKey(this.node.speaker, this.choices[r]))).length;
-        const count = this.add
-          .text(W / 2 - 18, 0, `${sub.scroll.length} questions  ›`, {
-            fontFamily: TEXT_FONT, fontSize: '15px', color: fresh > 0 ? THEME.goldText : THEME.dimText,
-          })
-          .setOrigin(1, 0.5);
-        parts.push(count);
+        const fresh = sub.scroll.some((r) => typeof r === 'number' && !HEARD.has(heardKey(this.node.speaker, this.choices[r])));
+        parts.push(
+          this.add
+            .text(W - 6, 0, `${sub.scroll.length} questions  ›`, { fontFamily: TEXT_FONT, fontSize: '14px', color: fresh ? THEME.goldText : THEME.dimText })
+            .setOrigin(1, 0.5),
+        );
       }
-      if (heard) {
-        parts.push(this.add.text(W / 2 - 16, 0, '✓', { fontFamily: TEXT_FONT, fontSize: '15px', color: THEME.dimText }).setOrigin(1, 0.5));
-      }
-      const idle = heard ? THEME.dimText : THEME.text;
+      if (heard) parts.push(this.add.text(W - 6, 0, '✓', { fontFamily: TEXT_FONT, fontSize: '14px', color: THEME.dimText }).setOrigin(1, 0.5));
+      const idle = heard || side ? THEME.dimText : THEME.text;
       const draw = (on: boolean) => {
         bg.clear();
-        bg.fillStyle(on ? THEME.panelLight : THEME.panel, 0.95);
-        bg.fillRoundedRect(-W / 2, -H / 2, W, H, 10);
-        bg.lineStyle(2, THEME.gold, on ? 1 : row === 'more' ? 0.8 : 0.5);
-        bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 10);
+        if (on) {
+          bg.fillStyle(THEME.panelLight, 1);
+          bg.fillRoundedRect(-6, -H / 2 + 1, W + 12, H - 2, 7);
+          bg.fillStyle(THEME.gold, 1);
+          bg.fillRect(-6, -H / 2 + 6, 3, H - 12);
+        }
         label.setColor(on ? THEME.goldText : idle);
       };
-      const button = this.add.container(0, 0, parts);
-      button.setSize(W, H).setInteractive({ useHandCursor: true });
+      const button = this.add.container(x0, y + H / 2, parts);
+      button.setInteractive(new Phaser.Geom.Rectangle(-6, -H / 2, W + 12, H), Phaser.Geom.Rectangle.Contains);
+      button.input!.cursor = 'pointer';
       button.on('pointerover', () => this.select(at));
       button.on('pointerup', () => this.pick(at));
       items.push(button);
-      heights.push(H);
       this.choiceButtons[at] = { draw };
+      y += H;
     };
 
     if (above > 0) addArrow(true, above);
     shown.forEach((row, i) => addRow(row, this.offset + i));
     if (below > 0) addArrow(false, below);
+    if (v.pinned.length > 0) y += 6;
     v.pinned.forEach((row, i) => addRow(row, v.scroll.length + i));
 
-    // Stack them upwards from y = 0, with a little more space before the pinned goodbye.
-    const pinnedFrom = items.length - v.pinned.length;
-    let y = 0;
-    for (let i = items.length - 1; i >= 0; i--) {
-      y -= heights[i];
-      items[i].y = y + heights[i] / 2;
-      y -= i === pinnedFrom && pinnedFrom > 0 ? 14 : 8;
-    }
     items.forEach((item, i) => {
       this.choiceBox.add(item);
       if (!slideIn) return;
-      item.setAlpha(0).x += 24;
-      this.tweens.add({ targets: item, alpha: 1, x: 0, delay: i * 60, duration: 180, ease: 'Cubic.easeOut' });
+      item.setAlpha(0);
+      this.tweens.add({ targets: item, alpha: 1, delay: i * 40, duration: 160, ease: 'Cubic.easeOut' });
     });
+    this.fitBox(Math.max(L.h, y + 18));
     this.select(this.selected, false);
+  }
+
+  /** Grows (or shrinks) the box to `h`, keeping its bottom where it is. */
+  private fitBox(h: number): void {
+    if (h === this.boxH) return;
+    this.boxH = h;
+    this.more.setY(h - 14);
+    this.drawFrame();
+    this.place();
   }
 
   private select(i: number, sound = true): void {
@@ -569,6 +605,7 @@ export class DialogueScene extends Phaser.Scene {
     this.menu = undefined;
     this.choiceButtons = [];
     this.choiceBox.removeAll(true);
+    if (this.L) this.fitBox(this.L.h);
   }
 
   private close(): void {
