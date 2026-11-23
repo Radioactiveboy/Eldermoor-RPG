@@ -22,6 +22,7 @@ export const MUSIC_FILES = {
   battle: 'battle',
   raid: 'raid',
   ruin: 'ruin',
+  mourning: { day: 'mourning-day', night: 'mourning-night' },
 } as const;
 
 type MusicChoice = string | { day: string; night: string; from?: number; until?: number };
