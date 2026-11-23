@@ -70,7 +70,15 @@ interface NpcDef {
    * doesn't hover beside the hero while they sit; she comes over when it's time to ask.
    */
   bustles?: boolean;
+  /**
+   * One of the market crowd (see scenes/game/marketCrowd.ts): not someone to talk
+   * to, just about their business, so they don't stop for the hero either.
+   */
+  passerby?: boolean;
 }
+
+/** What a passer-by would say if spoken to; they never are (see NpcDef.passerby). */
+const NOBODY: DialogueScript = { start: 'none', nodes: {} };
 
 /** Travellers met before, who get a shorter hello next time. */
 const met = new Set<string>();
@@ -355,6 +363,14 @@ const NPCS: Record<string, NpcDef> = {
   },
   // Wat, the militia lad on the east watch after the raid, who will come along if asked (see systems/Companions.ts).
   wat: { texture: 'folk-guard', roam: 2, script: wayfarer('wat', watScript) },
+  // Adowvale folk about the market by day, overheard rather than spoken to (scenes/game/marketCrowd.ts).
+  'crowd-goodwife': { texture: 'folk-crowd-goodwife', passerby: true, roam: 6, script: () => NOBODY },
+  'crowd-labourer': { texture: 'folk-crowd-labourer', passerby: true, roam: 7, script: () => NOBODY },
+  'crowd-youth': { texture: 'folk-crowd-youth', passerby: true, roam: 7, script: () => NOBODY },
+  'crowd-boy': { texture: 'folk-crowd-boy', passerby: true, roam: 6, script: () => NOBODY },
+  'crowd-girl': { texture: 'folk-crowd-girl', passerby: true, roam: 5, script: () => NOBODY },
+  'crowd-matron': { texture: 'folk-crowd-matron', passerby: true, script: () => NOBODY },
+  'crowd-elder': { texture: 'folk-crowd-elder', passerby: true, script: () => NOBODY },
   // The village militia, walking their rounds of the square, day and night.
   ...Object.fromEntries(
     [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),
@@ -500,6 +516,11 @@ export class Npc implements Body {
   /** Here to be seen and talked to (not indoors for the night, nor gone home from the tavern). */
   get present(): boolean {
     return this.shift !== 'away' && !this.off;
+  }
+
+  /** Someone to talk to, rather than one of the market crowd going about their business. */
+  get talks(): boolean {
+    return !this.def.passerby;
   }
 
   /** Not walking anywhere they've been sent. */
@@ -719,7 +740,8 @@ export class Npc implements Body {
     // In bed, or sat at the table: staying as they are.
     if (this.tucked || this.sitting) return;
     // (A maid at work doesn't stop to stare at someone sitting down.)
-    const noticed = this.distanceTo(player.x, player.y) < NOTICE_RANGE && !(this.def.bustles && NpcWorld.sitting);
+    // (Nor does a passer-by, who has their own business to be about.)
+    const noticed = this.distanceTo(player.x, player.y) < NOTICE_RANGE && !(this.def.bustles && NpcWorld.sitting) && !this.def.passerby;
     if (paused || noticed) {
       if (noticed) this.face({ x: player.x - this.gx, y: player.y - this.gy });
       this.sync(false);

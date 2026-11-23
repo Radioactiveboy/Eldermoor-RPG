@@ -3,7 +3,7 @@ import { INN_CHIMNEY, TOWNHOUSE_CHIMNEY } from '../art/market';
 import { TREK_HOURS } from '../config';
 import { box, circle, Shape } from './Collision';
 import type { Villager } from '../systems/VillageDay';
-import { Commute, MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
+import { Commute, MapData, MapObject, NpcSpawn, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 import { BOUNTY_BOARD } from './landmarks';
 
@@ -66,6 +66,23 @@ const STALLS: Array<{
     doors: { home: WORKSHOPS.smithy.front, workshop: WORKSHOPS.smithy.front, tavern: TAVERN_DOOR },
   },
   { kind: 'tanner', tx: 7, ty: 13, facing: 'x', exit: { x: 7.5, y: 15.5 }, doors: { home: { x: 4.3, y: 17.5 }, tavern: TAVERN_DOOR } },
+];
+
+/**
+ * The village folk about the square while the market is on, each about from a
+ * little after it opens to a little before it shuts, at their own hours: a few
+ * strolling about (wherever they started, a few tiles either way), and two
+ * stopped by the well for a gossip, facing each other. Nobody to talk to, but
+ * worth listening to (see scenes/game/marketCrowd.ts).
+ */
+export const MARKET_CROWD: NpcSpawn[] = [
+  { id: 'crowd-goodwife', gx: 12.5, gy: 11.5, hours: [7.5, 16.5] },
+  { id: 'crowd-labourer', gx: 19.5, gy: 15.5, hours: [8, 17.5] },
+  { id: 'crowd-youth', gx: 16.5, gy: 19.5, hours: [9, 17] },
+  { id: 'crowd-boy', gx: 13.5, gy: 19.5, hours: [9.5, 16] },
+  { id: 'crowd-girl', gx: 10.5, gy: 19.5, hours: [9.5, 16] },
+  { id: 'crowd-matron', gx: 17.5, gy: 15.5, looking: { x: -1, y: 0 }, hours: [8, 15.5] },
+  { id: 'crowd-elder', gx: 16.5, gy: 15.5, looking: { x: 1, y: 0 }, hours: [10, 16.5] },
 ];
 
 /** Where the smith works, for the sound of the hammer through the smithy door (see world/AmbientSounds.ts). */
@@ -250,6 +267,7 @@ export function buildMarketMap(gateOpen = false): MapData {
     // Wat, on the east watch towards the Hollow, once the goblins have been (hidden before; see scenes/game/companions.ts).
     { id: 'wat', gx: 27.5, gy: 14.5 },
   );
+  data.npcs!.push(...MARKET_CROWD);
   return data;
 }
 

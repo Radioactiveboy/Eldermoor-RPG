@@ -51,6 +51,7 @@ import { boughtFeed, updateHens } from './game/hollow';
 import { readKeyboard, setupInput, updateHover, type MoveKeys } from './game/input';
 import { updateFocus, type Channel, type Interaction } from './game/interactions';
 import { updateMarketHours } from './game/market';
+import { updateMarketCrowd } from './game/marketCrowd';
 import { madeAtStation } from './game/medicine';
 import { cameAround, enteredAfterRaid, raidTestStart, startRaid } from './game/raid';
 import { cancelChannel, syncCrops, syncGathered, updateChannel } from './game/sights';
@@ -401,6 +402,7 @@ export class GameScene extends Phaser.Scene {
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
     this.raid?.update(dt, this.busy || this.inCombat);
     updateMarketHours(this);
+    updateMarketCrowd(this, dt);
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });
     this.drips?.update(dt, { x: this.player.gx, y: this.player.gy });
     this.fireGlow?.update(dt);
