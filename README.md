@@ -144,9 +144,11 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   it's ripe (3 carrots or turnips, 2 cabbages); the ground stays dug, ready to sow again
 - **Fishing**: buy Old Tobin's spare rod (6 coppers) on the far shore of the lake. With it in the satchel, stand at
   the edge of the lake, the mere, the reed pond or the willow pool on the plains, or the brothers' fish ponds outside
-  Saint Elda's, and press E to **Fish**. Wait for the float to go right under (a twitch is only a nibble), then
-  press Space, E or tap to strike; hooked, press as the sweeping marker crosses the fish (green) to reel it in, a few
-  times for a big one; three slips and it's gone. What bites depends on the water and the hour: perch and roach by
+  Saint Elda's, and press E to **Fish**. The window shows the water side-on, under a sky that follows the hour. Hold
+  Space, E or a tap to swing the rod back and let go to cast; land on the rings of a rising fish and something bites
+  twice as soon. Watch its shadow come in and nose at the bait (a twitch is only a nibble), and strike when the float
+  goes right under. Then play it: hold to reel in, and let go when the water boils and it runs, or the line snaps;
+  leave the line slack too long and it shakes the hook. Landed, it leaps out onto a catch card with its size. What bites depends on the water and the hour: perch and roach by
   day, pike at dawn and dusk, eels at night, tench in the mere, trout in the cold willow pool, carp in the brothers'
   ponds, and now and then Tobin's old boot. Every fish cooks at a hearth. Tobin will tell you where they're biting
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
@@ -408,7 +410,7 @@ src/
     InventoryScene.ts       Satchel and equipment: item grid with filter tabs and sorting, worn gear, eat/wear
     ShopScene.ts            Trading: the stall's goods and your satchel, drag to buy and sell, how-many box
     StationScene.ts         Brewing bench and hearth: drag ingredients in, the recipe book, progress, the result
-    FishingScene.ts         The float on the water, striking a bite, the reel bar
+    FishingScene.ts         The water side-on: casting, the bite, playing the fish, the catch card
     CombatScene.ts          Turn-based fights: turn order, skill hotbar and tooltips, dice, combat log
     BountyBoardScene.ts     The notice board close up: pinned notices to pick, take and claim
     SleepScene.ts           "How long to sleep?", opened from a bed

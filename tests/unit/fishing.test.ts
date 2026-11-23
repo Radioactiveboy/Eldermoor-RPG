@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { RECIPES } from '../../src/systems/Crafting';
 import {
-  biteDelay, catchTable, FISH, FishKind, fishAt, hourBand, MARKER_SPEED, markerAt, onFish, rollFish, waterNear, WaterId, WATERS,
+  biteDelay, castPower, castReach, catchTable, FISH, FishDef, fishInches, FishKind, Fight, FightEnd, hourBand, onTheRise, rollFish,
+  SLACK_LIMIT, startFight, stepFight, waterNear, WaterId, WATERS,
 } from '../../src/systems/Fishing';
 import { ITEMS } from '../../src/systems/Inventory';
 
@@ -51,33 +52,70 @@ describe('what bites where, and when', () => {
   });
 });
 
-describe('reeling in', () => {
-  it('sweeps the marker along the bar and back', () => {
-    expect(markerAt(0)).toBe(0);
-    expect(markerAt(1 / MARKER_SPEED)).toBeCloseTo(1);
-    expect(markerAt(0.5 / MARKER_SPEED)).toBeCloseTo(0.5);
-    expect(markerAt(2 / MARKER_SPEED)).toBeCloseTo(0);
+describe('casting', () => {
+  it('swings the power up to full and back while held', () => {
+    expect(castPower(0)).toBe(0);
+    expect(castPower(0.625)).toBeCloseTo(1);
+    expect(castPower(1.25)).toBeCloseTo(0);
+    expect(castReach(0)).toBeLessThan(castReach(1));
+    expect(castReach(1)).toBeLessThanOrEqual(1);
   });
 
-  it('keeps the fish on the bar', () => {
-    for (const def of Object.values(FISH)) {
-      for (let t = 0; t < 20; t += 0.1) {
-        const x = fishAt(def, t, 1.3);
-        expect(x).toBeGreaterThanOrEqual(def.zone / 2);
-        expect(x).toBeLessThanOrEqual(1 - def.zone / 2);
-      }
+  it('counts a cast onto the rising fish only when it lands close', () => {
+    expect(onTheRise(0.6, 0.64)).toBe(true);
+    expect(onTheRise(0.4, 0.64)).toBe(false);
+  });
+});
+
+/** Plays a fight out with a rule for when to reel; returns how it ended and how long it took. */
+function play(def: FishDef, reel: (f: Fight) => boolean, seed = 7): { end: FightEnd | undefined; t: number } {
+  let s = seed;
+  const rng = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const f = startFight(def, rng);
+  for (let i = 0; i < 60 * 60; i++) {
+    const end = stepFight(f, def, reel(f), 1 / 60, rng);
+    if (end) return { end, t: f.t };
+  }
+  return { end: undefined, t: f.t };
+}
+
+describe('playing a fish', () => {
+  const careful = (f: Fight) => f.mode !== 'run';
+
+  it('lands every fish for an angler who reels between runs and gives line during them', () => {
+    for (const [kind, def] of Object.entries(FISH)) {
+      for (const seed of [3, 7, 11]) expect(play(def, careful, seed).end, kind).toBe('landed');
     }
   });
 
-  it('counts a press only over the fish', () => {
-    expect(onFish(0.5, 0.55, 0.2)).toBe(true);
-    expect(onFish(0.3, 0.55, 0.2)).toBe(false);
+  it('snaps the line on anything that runs if you just keep reeling', () => {
+    for (const [kind, def] of Object.entries(FISH)) {
+      if (kind === 'boot') continue;
+      expect(play(def, () => true).end, kind).toBe('snapped');
+    }
   });
 
-  it('makes a pike harder than a roach', () => {
-    expect(FISH.pike.pulls).toBeGreaterThan(FISH.roach.pulls);
-    expect(FISH.pike.zone).toBeLessThan(FISH.roach.zone);
+  it('lets the hook fall out of a slack line', () => {
+    const r = play(FISH.roach, () => false);
+    expect(r.end).toBe('slipped');
+    expect(r.t).toBeGreaterThan(SLACK_LIMIT);
+  });
+
+  it('reels a boot straight in: it never runs', () => {
+    expect(play(FISH.boot, () => true).end).toBe('landed');
+  });
+
+  it('makes a pike a longer, harder fight than a roach', () => {
+    expect(play(FISH.pike, careful).t).toBeGreaterThan(play(FISH.roach, careful).t);
+    expect(FISH.pike.strength).toBeGreaterThan(FISH.roach.strength);
     expect(FISH.pike.bite).toBeLessThan(FISH.roach.bite);
+  });
+
+  it('sizes each catch within its kind', () => {
+    for (const def of Object.values(FISH)) {
+      expect(fishInches(def, () => 0)).toBe(def.inches[0]);
+      expect(fishInches(def, () => 0.9999)).toBe(def.inches[1]);
+    }
   });
 });
 
