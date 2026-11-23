@@ -11,6 +11,7 @@ import type { ConfirmSceneData } from '../ConfirmScene';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { pathTo } from './input';
 import { standUp } from './sitting';
+import { residenceOpen } from './garrison';
 import { workshopOpen } from './workshops';
 
 /** Walking off the end of a road at the edge of the map goes on to the next area. */
@@ -47,12 +48,12 @@ export function useDoor(g: GameScene, door: Door): void {
 
 /**
  * Doors that may be shut to the hero: the smithy and the bakery while their
- * keepers are in bed, the Crooked Tankard's cellar until Godric asks for the
+ * keepers are in bed, the Headman's house at night, the Crooked Tankard's cellar until Godric asks for the
  * rats to be cleared, and the rooms upstairs, of which only the one let to the
  * hero opens (and only while it's paid for).
  */
 export function doorAllowed(g: GameScene, door: Door): boolean {
-  if (!workshopOpen(g, door.to)) return false;
+  if (!workshopOpen(g, door.to) || !residenceOpen(g, door.to)) return false;
   if (door.id === 'cellar' && !QuestLog.has('cellar-rats') && !QuestLog.hasFlag('may-use-cellar')) {
     GameAudio.rattle();
     g.onHint?.("The trapdoor is bolted, and Godric is watching me over the bar. Not without asking him first.");

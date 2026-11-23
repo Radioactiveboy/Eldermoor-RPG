@@ -43,7 +43,9 @@ export type AreaId =
   // The Crooked Tankard in Adowvale: the taproom, the passage upstairs, a rented room, and the cellar.
   | 'tavern' | 'tavern-hall' | 'tavern-room' | 'cellar'
   // Workshops off Adowvale's square: Osric's smithy and Hilde's bakery.
-  | 'smithy' | 'bakery';
+  | 'smithy' | 'bakery'
+  // On the lane at the south end of Adowvale: the militia garrison, its jail, and the Headman's residence.
+  | 'garrison' | 'jail' | 'residence';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see

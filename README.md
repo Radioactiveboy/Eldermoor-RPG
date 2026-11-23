@@ -208,6 +208,13 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   **The smithy and the bakery** are the stone house past the inn (anvil on the sign) and the corner house (a loaf):
   go in to trade with Osric at his anvil or Hilde at her kneading trough while they're there. Their doors are barred
   while their keeper is in bed. Try `?area=smithy&hour=12`, `?area=bakery&hour=5` or `?area=tavern&hour=20`
+- **The garrison lane**: a dirt path runs south out of the square to the militia garrison, a squat stone guardhouse
+  where Sergeant Brannock keeps his table, and next to it, behind a garden wall, the Headman's house. Steps inside
+  the garrison (and a hatch in the lane outside) go down to the cells, where Hamm keeps the keys and Dickon the poacher
+  keeps the straw warm. Headman Osbert Hale sits at his desk upstairs, with his steward, maid and cook about the
+  house; the house is barred from 22:00 to 06:00. Both men have their own lines after the raid. The Headman's talk is
+  a list of topics (`HeadmanTopic` in `dialogue/residence.ts`), so quests can add their own. Try `?area=garrison`,
+  `?area=jail` or `?area=residence&hour=10`
 - **The goblin raid**: give Mother her tincture and you're told to get some sleep, with only the one answer;
   you sleep till dawn. You wake to shouting: outside, goblins (cutters, a spearman and torch-bearing
   firebrands, led by an armoured Goblin Brute with a shield) are trampling the garden and setting the roof
@@ -248,7 +255,7 @@ they only count when a new game starts (on the title screen, begin a new journey
 
 | Switch | What it does |
 | --- | --- |
-| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
+| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `garrison`, `jail` (the cells under it), `residence` (the Headman's house), `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
 | `?hour=21` | Start at that hour (0 to 23.99; 21 is 9pm) |
 | `?raid=night` | Start at 20:00 with the tincture in the satchel and Mother's errand otherwise done (talk to her to give it) |
 | `?raid=morning` | Wake on the morning of the goblin raid |
@@ -293,6 +300,7 @@ src/
                             the militia, the bounty board) and the lane north to Lord Morten's toll gate
     TavernMap.ts            The Crooked Tankard: taproom, the passage upstairs, a room to let, the cellar and its rats
     WorkshopMaps.ts         Inside Osric's smithy and Hilde's bakery
+    GarrisonMaps.ts         The militia garrison, the cells beneath it, and the Headman's house
     PlainsMap.ts            Adowvale Plains past the toll gate (120x120): grass, copses, the mere and the pond, the
                             Lord's Road to the crossroads and on to the monastery, the old white willow, game
     PlainsEvents.ts         Chance meetings on the plains: the footpads, Jory the tinker, Mags's goat, Hal the
@@ -372,6 +380,8 @@ src/
                             raid, and Speckle and Moppet
     fisherman.ts            Old Tobin on the lake shore
     market.ts               The stallholders and the militia in Adowvale's square
+    garrison.ts             Sergeant Brannock, Hamm the jailer, and Dickon the poacher
+    residence.ts            Headman Hale (talk built from topics that quests can add to) and his household
     tavern.ts               Godric, the maids and the Tankard's regulars
     plains.ts               The toll guards and the folk on the Lord's Road
     wayfarers.ts            The plains' chance meetings (footpads, tinker, goatherd, messenger)
@@ -403,6 +413,7 @@ src/
       tavern.ts             The Crooked Tankard: maids, the bar, rooms, dice, Pell's song, chatter, the cellar rats
       market.ts             Arriving in Adowvale, the militia calling the market's hours
       workshops.ts          The smithy and the bakery: barred at night, first visits, sparks and flour
+      garrison.ts           The garrison, the cells and the Headman's house: first visits, the house barred at night
       bounties.ts           The bounty board: reading it, taking a notice, kills counted, being paid
       plot.ts               The plot Iran lends: digging, sowing, watering and picking
       fishing.ts            The Fish prompt, first-catch diary lines, Tobin's rod and his boot
@@ -471,6 +482,7 @@ src/
     market.ts               Market stalls, townhouses and the inn, well, lamp posts, benches, crates, signpost
     tavern.ts               The Crooked Tankard inside: bar, kegs, stairs, trapdoor, tables
     workshops.ts            The smithy's and the bakery's furnishings, and Osric's and Hilde's work frames
+    garrison.ts             The garrison and the Headman's house outside and in: cells, bars, panelled walls
     tollgate.ts             Lord Morten's toll gate, palisade, booth and banner
     monastery.ts            Saint Elda's from outside: wall, gatehouse, chapel, bell tower, shrines, hives
     abbey.ts                Saint Elda's within: the ranges round the cloister, the herb garden, the rooms' furnishings

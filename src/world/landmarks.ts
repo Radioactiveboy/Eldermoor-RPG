@@ -33,6 +33,17 @@ export const CELLAR_RAT_SPOTS: Array<[number, number]> = [
 /** The militia's notice board in the market square (MarketMap), where bounties are posted and paid. */
 export const BOUNTY_BOARD = { id: 'bounty-board', tx: 21, ty: 13 };
 
+/**
+ * The lane at the south end of Adowvale (see MarketMap.ts addGarrisonLane): the back corners of the
+ * militia garrison and the Headman's residence, the hatch down to the jail, and the residence's garden gate.
+ */
+export const GARRISON_LANE = {
+  garrison: { tx: 5, ty: 32 },
+  hatch: { tx: 9, ty: 33 },
+  residence: { tx: 14, ty: 30 },
+  gate: { tx: 17, ty: 37 },
+};
+
 /** Where the moonpetal grows, on the stone rim of the cloister pond (tile positions, AbbeyMap). */
 export const MOONPETAL = [
   { id: 'moonpetal-0', tx: 19, ty: 14 },

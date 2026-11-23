@@ -1,14 +1,16 @@
 import Phaser from 'phaser';
+import { GARRISON, RESIDENCE, RESIDENCE_CHIMNEYS } from '../art/sizes';
 import { INN_CHIMNEY, TOWNHOUSE_CHIMNEY } from '../art/market';
 import { TREK_HOURS } from '../config';
 import { box, circle, Shape } from './Collision';
 import type { Villager } from '../systems/VillageDay';
 import { Commute, MapData, MapObject, NpcSpawn, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
-import { BOUNTY_BOARD } from './landmarks';
+import { BOUNTY_BOARD, GARRISON_LANE } from './landmarks';
 
 export const MARKET_W = 34;
-export const MARKET_H = 30;
+/** Rows 0-29 are the square and the houses round it; the rows past them are the lane to the garrison and the Headman's house. */
+export const MARKET_H = 44;
 
 /** The back corner of Lord Morten's toll gate, across the road north out of the village (see addTollGate). */
 export const TOLL_GATE = { tx: 23, ty: 0, w: 4, h: 1 };
@@ -129,7 +131,7 @@ export function buildMarketMap(gateOpen = false): MapData {
   }
 
   // Trees thick around the edges, a few dotted about the meadow east of town.
-  const inTown = (x: number, y: number) => x >= 1 && x <= 26 && y >= 1 && y <= 27;
+  const inTown = (x: number, y: number) => x >= 1 && x <= 26 && y >= 1 && y <= 40;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       if (terrain[y][x] !== Terrain.Grass) continue;
@@ -257,6 +259,7 @@ export function buildMarketMap(gateOpen = false): MapData {
   placeObject(data, { key: 'mkt-noticeboard', tx: board.tx, ty: board.ty, w: 2, h: 1, shapes: [circle(0.14, 0.5, 0.08), circle(1.86, 0.5, 0.08), box(0.1, 0.42, 1.9, 0.54)] });
   data.sights.push({ id: board.id, gx: board.tx + 1, gy: board.ty + 0.9, label: 'Read the notices', z: 62 });
   addTollGate(data, gateOpen);
+  addGarrisonLane(data);
 
   // The militia, each walking their own patch of the square.
   data.npcs!.push(
@@ -347,4 +350,82 @@ function addTollGate(data: MapData, open: boolean): void {
     sign: { heading: 'Signpost', lines: ['↑  North: toll gate, the Lord\'s Road, Adowvale Plains', '↓  South: Adowvale market square'] },
   });
   data.landmarks!.push({ gx: middle, gy: 1, name: 'The toll gate', range: 6 });
+}
+
+/**
+ * The lane past the back of the square: a dirt path leaves its south-west
+ * corner between the backs of the houses there and comes out on a lane at the
+ * far end of the village. On it stand the militia's garrison, a squat stone
+ * blockhouse with the hatch down to its jail beside it (see GarrisonMaps.ts
+ * for inside), and the Headman's residence, behind a low garden wall with a
+ * gate and roses. A militiaman keeps the garrison door.
+ */
+function addGarrisonLane(data: MapData): void {
+  const { garrison: g, residence: r, hatch, gate } = GARRISON_LANE;
+  // The path down from the square, and the lane it comes out on.
+  const path = smoothLine([{ x: 11.6, y: 21.5 }, { x: 11.9, y: 25 }, { x: 11.5, y: 29 }, { x: 12.2, y: 33 }, { x: 12, y: 36.6 }, { x: 11, y: 38.2 }]);
+  paintPath(data.terrain, path, (t) => 0.9 + 0.15 * Math.sin(t * 9));
+  const lane = smoothLine([{ x: 2.5, y: 39.2 }, { x: 7, y: 38.4 }, { x: 12, y: 38.3 }, { x: 17.5, y: 38.8 }, { x: 23, y: 38.4 }, { x: 25.5, y: 39.4 }]);
+  paintPath(data.terrain, lane, (t) => 1 + 0.2 * Math.sin(t * 13 + 1));
+  // The garrison's trodden yard, and the path round to the hatch.
+  for (let y = g.ty + GARRISON.h; y <= g.ty + GARRISON.h + 2; y++) {
+    for (let x = g.tx - 1; x <= g.tx + GARRISON.w + 1; x++) if (Math.abs(x - (g.tx + 2)) + (y - g.ty - GARRISON.h) < 5) data.terrain[y][x] = Terrain.Dirt;
+  }
+  for (let y = hatch.ty; y <= g.ty + GARRISON.h; y++) data.terrain[y][hatch.tx] = Terrain.Dirt;
+  joinDiagonals(data.terrain, Terrain.Dirt, Terrain.Grass);
+
+  // The garrison, door to the lane, and the hatch against its side wall.
+  placeObject(data, { key: 'bld-garrison', tx: g.tx, ty: g.ty, w: GARRISON.w, h: GARRISON.h });
+  const door = { tx: g.tx + GARRISON.doorTile, ty: g.ty + GARRISON.h };
+  data.doors!.push({ tx: door.tx, ty: door.ty, to: 'garrison', entry: 'door', label: 'Go inside', facing: 'back' });
+  data.entries!.garrison = { x: door.tx + 0.5, y: door.ty + 0.7 };
+  data.lights!.push({ gx: g.tx + GARRISON.doorTile + 1.12, gy: door.ty + 0.05, z: 48, radius: 110, flicker: 0.5 });
+  placeObject(data, { key: 'gar-hatch', tx: hatch.tx, ty: hatch.ty, w: 1, h: 1, flat: true });
+  data.doors!.push({ tx: hatch.tx, ty: hatch.ty, to: 'jail', entry: 'hatch', label: 'Go down through the hatch', facing: 'front' });
+  data.entries!.hatch = { x: hatch.tx + 0.5, y: hatch.ty + 1.3 };
+  data.landmarks!.push({ gx: door.tx + 0.5, gy: door.ty + 0.5, name: 'The militia garrison', range: 3.5 });
+  // A militiaman on the door, day and night.
+  data.npcs!.push({ id: 'guard-5', gx: door.tx + 1.6, gy: door.ty + 0.75, looking: { x: 0, y: 1 } });
+
+  // The Headman's residence, with its chimneys smoking, behind its garden wall.
+  placeObject(data, { key: 'bld-residence', tx: r.tx, ty: r.ty, w: RESIDENCE.w, h: RESIDENCE.h });
+  for (const c of RESIDENCE_CHIMNEYS) data.chimneys!.push({ gx: r.tx + c.gx, gy: r.ty + c.gy, z: c.z });
+  const front = r.ty + RESIDENCE.h;
+  const porch = r.tx + RESIDENCE.porch;
+  data.doors!.push({ tx: Math.floor(porch), ty: front, to: 'residence', entry: 'door', label: 'Knock and go in', facing: 'back' });
+  data.entries!.residence = { x: porch, y: front + 1.1 };
+  for (const dx of [-0.62, 0.62]) data.lights!.push({ gx: porch + dx, gy: front + 0.05, z: 38, radius: 90, flicker: 0.4 });
+  data.landmarks!.push({ gx: porch, gy: front + 1.5, name: "The Headman's house", range: 4 });
+  const wall = { shapes: [box(0, 0.36, 1, 0.64)] };
+  const side = { flipX: true, shapes: [box(0.36, 0, 0.64, 1)] };
+  const pier = { shapes: [box(0.22, 0.22, 0.78, 0.78)] };
+  for (let x = r.tx - 1; x <= r.tx + RESIDENCE.w; x++) {
+    const key = x === r.tx - 1 || x === r.tx + RESIDENCE.w || Math.abs(x + 0.5 - porch) === 1 ? 'res-pier' : 'res-gardenwall';
+    if (x === gate.tx) continue;
+    placeObject(data, { key, tx: x, ty: gate.ty, w: 1, h: 1, ...(key === 'res-pier' ? pier : wall) });
+  }
+  for (let y = front; y < gate.ty; y++) {
+    for (const x of [r.tx - 1, r.tx + RESIDENCE.w]) placeObject(data, { key: 'res-gardenwall', tx: x, ty: y, w: 1, h: 1, ...side });
+  }
+  // A flagged walk from the gate to the porch, and rose beds either side of it.
+  for (let y = front; y <= gate.ty; y++) data.terrain[y][gate.tx] = Terrain.Stone;
+  placeObject(data, { key: 'res-flowerbed', tx: r.tx, ty: front + 1, w: 2, h: 1, shapes: [box(0.08, 0.15, 1, 0.85), box(1, 0.15, 1.92, 0.85)] });
+  placeObject(data, { key: 'res-flowerbed', tx: r.tx + RESIDENCE.w - 2, ty: front + 1, w: 2, h: 1, shapes: [box(0.08, 0.15, 1, 0.85), box(1, 0.15, 1.92, 0.85)] });
+  placeObject(data, { key: 'mkt-bench', tx: r.tx + 2, ty: front + 1, w: 1, h: 1, shapes: [box(0.08, 0.35, 0.92, 0.7)] });
+  data.seats!.push({ name: 'residence-bench', gx: r.tx + 2.5, gy: front + 1.55, faceX: 0, faceY: 1, standX: r.tx + 2.5, standY: front + 2.4 });
+
+  // Lamps along the lane, and a signpost at the top of the path where it leaves the square.
+  for (const [tx, ty] of [[g.tx - 2, g.ty + GARRISON.h + 1], [gate.tx + 5, gate.ty]]) {
+    placeObject(data, { key: 'mkt-lamp', tx, ty, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.14)] });
+    data.lights!.push({ gx: tx + 0.5, gy: ty + 0.5, z: 50, radius: 150, flicker: 0.5 });
+  }
+  placeObject(data, { key: 'mkt-signpost', tx: 13, ty: 22, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
+  data.sights!.push({
+    id: 'signpost-garrison', gx: 13.5, gy: 22.5, label: 'Read the sign', z: 58,
+    sign: { heading: 'Signpost', lines: ["↓  South: the militia garrison, and the Headman's house", '↑  North: Adowvale market square'] },
+  });
+  // Barrels and a cart by the garrison, and a woodpile against the residence's end wall.
+  placeObject(data, { key: 'furn-barrels', tx: g.tx - 1, ty: g.ty + 1, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
+  placeObject(data, { key: 'mkt-crates', tx: g.tx - 1, ty: g.ty + 2, w: 1, h: 1, shapes: [box(0.1, 0.15, 0.95, 0.95)] });
+  placeObject(data, { key: 'mkt-haycart', tx: r.tx + RESIDENCE.w + 2, ty: r.ty + 2, w: 2, h: 1 });
 }

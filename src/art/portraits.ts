@@ -1715,11 +1715,71 @@ const courier = townsfolk({
   },
 });
 
+// --- The garrison and the Headman's house --------------------------------------
+
+/** Sergeant Brannock: square-jawed and grey, a clipped grey beard, an old scar, mail under the militia's blue with a gold stripe. */
+const sergeant = townsfolk({
+  skin: 0xe0aa86, hair: 0x8a827c, style: 'short', cloth: 0x2e4a7a, shirt: 0x6e6a62, mail: true,
+  iris: 0x4a5a6a, brow: 'heavy', smile: 0, width: 18, jaw: 10, old: true, beard: 0x8a827c, scar: true, tired: true,
+  over: (c) => {
+    const gold = ramp(P.gold);
+    for (let y = 84; y < S; y++) for (let x = CX - 2; x <= CX + 2; x++) c.set(x, y, tone(gold, lightness((x - CX) / 4, 0), x, y));
+  },
+});
+/** Hamm, who keeps the cells: one of the militia, helm and all. */
+const jailer = guard;
+/** Dickon the poacher: a mop of red curls, a week's stubble, freckles, and a grin he hasn't earned. */
+const prisoner = townsfolk({
+  skin: 0xe8b896, hair: 0xb4582a, style: 'curly', cloth: 0x6a5038, shirt: 0xb8a888,
+  iris: 0x5a7a4a, brow: 'arched', smile: 1, width: 16, jaw: 7, freckles: true, beard: 0xa45028, look: 1, tired: true,
+});
+/** Headman Osbert Hale: grey hair and a short grey beard, a green coat with a fur collar, and the gold chain of his office. */
+const headman = townsfolk({
+  skin: 0xe6b496, hair: 0x9a948c, style: 'short', cloth: 0x2e4a36, shirt: 0xf0ece4,
+  iris: 0x5a4a3a, brow: 'worried', smile: 0, width: 17, jaw: 8, old: true, beard: 0x9a948c,
+  over: (c) => {
+    const fur = ramp(0x8a6a4a);
+    const gold = ramp(P.gold);
+    // The fur collar across the shoulders.
+    for (let y = 78; y < 88; y++) {
+      for (let x = 0; x < S; x++) {
+        const d = Math.abs(x + 0.5 - CX);
+        if (d < 18 || d > 40 - (y - 78) * 0.4) continue;
+        c.set(x, y, tone(fur, lightness((x - CX) / 44, (y - 82) / 8) + (BAYER[(y & 3) * 4 + (x & 3)] - 0.5) * 0.3, x, y));
+      }
+    }
+    // The chain, dipping across the chest, links catching the light, and its badge.
+    for (let x = CX - 22; x <= CX + 22; x++) {
+      const y = Math.round(84 + 7 * (1 - ((x - CX) / 22) ** 2));
+      if (y >= S) continue;
+      c.set(x, y, (x & 1) ? gold[3] : gold[2]);
+      c.set(x, y + 1, gold[1]);
+    }
+    for (let y = 91; y < S; y++) for (let x = CX - 3; x <= CX + 3; x++) c.set(x, y, tone(gold, lightness((x - CX) / 5, (y - 93) / 5), x, y));
+  },
+});
+/** Aldwin the steward: very old and very upright, white hair, clean-shaven, a black coat and a white band at the throat. */
+const steward = townsfolk({
+  skin: 0xe8bc9c, hair: 0xd8d4cc, style: 'bald', cloth: 0x2a2428, shirt: 0xf0ece4,
+  iris: 0x4a5a6a, brow: 'arched', smile: 0, width: 15.5, jaw: 7, old: true, nose: 1,
+});
+/** Elsie, the Headman's maid: young, freckled, a fair plait, a grey dress and a white apron. */
+const housemaid = townsfolk({
+  skin: 0xf4cca8, hair: 0xd8b468, style: 'braid', cloth: 0x6a7488, apron: 0xf0e8d8,
+  iris: 0x4a6a9a, brow: 'worried', smile: 1, width: 15, jaw: 6, lashes: true, freckles: true, blush: [0xe86060, 0.6],
+});
+/** Marjory, the cook: broad and rosy, greying hair under a white kerchief, sleeves rolled. */
+const housecook = townsfolk({
+  skin: 0xe2a888, hair: 0x6a5e56, style: 'bun', cloth: 0x7a5a3a, apron: 0xece4d4, kerchief: 0xeee8dc,
+  iris: 0x5a4a3a, brow: 'flat', smile: 1, width: 19, jaw: 10, old: true, blush: [0xd05a4a, 0.7],
+});
+
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
   footpad, cutpurse, tinker, goatherd, courier,
+  sergeant, jailer, prisoner, headman, steward, housemaid, housecook,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */
