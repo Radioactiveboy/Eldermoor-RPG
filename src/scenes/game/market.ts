@@ -3,6 +3,7 @@ import { MILITIA_RAID_CALLS, MILITIA_WATCH, raidIsOver } from '../../dialogue/af
 import { marketOpen } from '../../systems/MarketHours';
 import { QuestLog } from '../../systems/Quests';
 import type { GameScene } from '../GameScene';
+import { enteredMarketCrowd } from './marketCrowd';
 
 /** What the militia call out about the market's hours. */
 export const MILITIA_CALLS = {
@@ -18,6 +19,7 @@ function calls(): typeof MILITIA_CALLS {
 
 /** Into the market square: after hours the militia say so, and the first time the hero takes it in. */
 export function enteredMarket(g: GameScene): void {
+  enteredMarketCrowd();
   if (!g.marketWasOpen) {
     // Turning up after hours: the militia say so.
     g.time.delayedCall(1400, () => militiaCall(g, calls().closed));
