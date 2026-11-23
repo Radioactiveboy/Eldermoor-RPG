@@ -458,5 +458,7 @@ export function generateRuin(scene: Phaser.Scene): void {
   scorchedCopy(scene, 'farm-coop', 'farm-coop-burnt', 471, { amount: 0.7, holes: 0.6, climb: 0.5, embers: true });
   scorchedCopy(scene, 'farm-trough', 'farm-trough-burnt', 472, { amount: 0.3 });
   scorchedCopy(scene, 'bld-hut', 'bld-hut-scorched', 473, { amount: 0.22, climb: 0.25 });
+  // Hilde's bakery, if the goblins get into Adowvale (see scenes/game/gate.ts).
+  scorchedCopy(scene, 'bld-bakery', 'bld-bakery-burnt', 474, { amount: 0.75, holes: 0.6, climb: 0.6, embers: true });
   for (const mask of FENCE_MASKS) scorchedCopy(scene, fenceKey(mask), `${fenceKey(mask)}-burnt`, 480 + mask, { amount: 0.55, holes: 0.35, climb: 0.4 });
 }

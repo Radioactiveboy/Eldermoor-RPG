@@ -11,6 +11,7 @@ import { HOLLOW_ACTIONS } from './hollow';
 import { MEDICINE_ACTIONS } from './medicine';
 import { MONASTERY_ACTIONS } from './monastery';
 import { RAID_ACTIONS } from './raid';
+import { GATE_ACTIONS } from './gate';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 
 /** A named story effect: what happens when a line with this action is said. */
@@ -23,6 +24,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...MONASTERY_ACTIONS,
   ...TAVERN_ACTIONS,
   ...RAID_ACTIONS,
+  ...GATE_ACTIONS,
   ...FISHING_ACTIONS,
 };
 

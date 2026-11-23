@@ -57,6 +57,9 @@ import { standUp, updateSitting } from './game/sitting';
 import { loadSave, wakingThought } from './game/sleep';
 import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
 import { checkMusings, checkRoadExits } from './game/travel';
+import { checkGateAttack, gateTestStart, wokeAfterGate } from './game/gate';
+import { absent } from '../world/GateAftermath';
+import type { GateAttack } from '../world/GateAttack';
 
 export type { Channel, Interaction } from './game/interactions';
 
@@ -76,6 +79,8 @@ export interface GameSceneData {
   raidRetreat?: boolean;
   /** Coming round in the burnt-out cottage, after the raid. */
   raidAftermath?: boolean;
+  /** The morning after the goblins took Adowvale's road, waking in the Tankard (see game/gate.ts). */
+  gateAftermath?: boolean;
 }
 
 /** Things the HUD can show the player as a speech-like hint. */
@@ -181,6 +186,8 @@ export class GameScene extends Phaser.Scene {
   private raid?: RaidDirector;
   /** In the fight the goblins can't lose. */
   raidFight = false;
+  /** The night the goblins come for Adowvale, while it's on (see game/gate.ts). */
+  gateAttack?: GateAttack;
   /** Waiting for the area's map to download (see waitForArea): nothing else is set up yet. */
   waiting = false;
 
@@ -239,6 +246,7 @@ export class GameScene extends Phaser.Scene {
         if (id in ITEMS) Inventory.add(id as ItemId, Math.max(1, Number(n) || 1));
       }
       raidTestStart(this.clock);
+      gateTestStart(this.clock);
     }
     this.area = arrivalArea(data);
     // Saves from before the wolves at home counted for anything: if they're all dead, note it.
@@ -263,7 +271,7 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.map, start.x, start.y);
     this.exitArmed = true;
     this.lastOffExit = { x: this.player.tileX, y: this.player.tileY };
-    this.npcs = (this.map.data.npcs ?? []).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking, n.hours, n));
+    this.npcs = (this.map.data.npcs ?? []).filter((n) => !absent(n.id)).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking, n.hours, n));
     const mother = this.someone('mother');
     NpcWorld.motherInBed = false;
     this.motherRoutine = mother ? new MotherRoutine(mother, this.map, () => this.seat) : undefined;
@@ -309,6 +317,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.fadeIn(450, 0, 0, 0);
 
     this.raid = undefined;
+    this.gateAttack = undefined;
     if (raidStage() === 'morning' && (this.area === 'world' || this.area === 'home')) {
       this.raid = startRaid(this);
       if (this.area === 'world') this.raid.beginOutside();
@@ -317,6 +326,7 @@ export class GameScene extends Phaser.Scene {
     if (data.knockedOut) {
       this.time.delayedCall(1200, () => this.onHint?.('I came to on the cottage floor, aching all over. That wolf is still out there.'));
     }
+    if (data.gateAftermath) wokeAfterGate(this);
     if (data.raidAftermath) {
       cameAround(this);
     } else if (data.slept !== undefined && raidStage() === 'morning') {
@@ -360,7 +370,7 @@ export class GameScene extends Phaser.Scene {
 
   /** People besides the NPCs who can say things in speech bubbles (Iran's children), for the HUD. */
   get speakers(): Speaker[] {
-    return [...(this.siblings?.speakers ?? []), ...(this.raid?.speakers ?? [])];
+    return [...(this.siblings?.speakers ?? []), ...(this.raid?.speakers ?? []), ...(this.gateAttack?.speakers ?? [])];
   }
 
   update(_time: number, deltaMs: number): void {
@@ -383,6 +393,8 @@ export class GameScene extends Phaser.Scene {
     this.motherRoutine?.update(dt, this.clock.hour, this.busy);
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
     this.raid?.update(dt, this.busy || this.inCombat);
+    this.gateAttack?.update(dt);
+    checkGateAttack(this);
     updateMarketHours(this);
     updateMarketCrowd(this, dt);
     this.ambience?.update(dt, this.cameras.main.worldView, { x: this.player.gx, y: this.player.gy });

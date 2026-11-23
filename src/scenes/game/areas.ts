@@ -20,6 +20,7 @@ import { buildMarketMap } from '../../world/MarketMap';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { enteredCave, enteredNorthWoods } from './hollow';
 import { enteredGreyfells, greyfellsOpen } from './trail';
+import { gateAftermath } from '../../world/GateAftermath';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
@@ -95,7 +96,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
   world: { build: buildHollow, test: true },
   hut: lazy(() => import('../../world/HutMap'), (m) => m.buildHutMap(raidStage() === 'over', !!QuestLog.get('speckle-and-moppet')?.completed), { test: true, enter: enteredHut }),
   cave: lazy(() => import('../../world/CaveMap'), (m) => m.buildCaveMap(), { test: true, enter: enteredCave }),
-  market: { build: () => buildMarketMap(QuestLog.hasFlag('paid-toll')), test: true, enter: enteredMarket },
+  market: { build: () => gateAftermath(buildMarketMap(QuestLog.hasFlag('paid-toll'))), test: true, enter: enteredMarket },
   tavern: lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernMap(), { test: true, enter: enteredTavern }),
   'tavern-hall': lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernHallMap(), { test: true }),
   // No ?area= for a rented room: it needs a room taken first.

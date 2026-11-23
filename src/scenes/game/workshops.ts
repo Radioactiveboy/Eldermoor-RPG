@@ -48,6 +48,7 @@ function isWorkshop(area: AreaId): area is Workshop {
  */
 export function workshopOpen(g: GameScene, to: AreaId): boolean {
   if (!isWorkshop(to)) return true;
+  if (to === 'bakery' && bakeryBurnt(g)) return false;
   const w = WORKSHOPS[to];
   if (whereabouts(w.keeper, g.clock.hour) !== 'home') return true;
   GameAudio.rattle();
@@ -115,4 +116,12 @@ function burst(g: GameScene, x: number, y: number, depth: number, colors: number
       onComplete: () => speck.destroy(),
     });
   }
+}
+
+/** The bakery door, once it's burnt: there's no going in. */
+function bakeryBurnt(g: GameScene): boolean {
+  if (!QuestLog.hasFlag('bakery-burnt')) return false;
+  GameAudio.rattle();
+  g.onHint?.("The door is charred black and the roof has fallen in behind it. There's nothing in there but ash. Hilde's oven, standing in the open.");
+  return true;
 }

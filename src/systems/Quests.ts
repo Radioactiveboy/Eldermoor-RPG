@@ -156,6 +156,20 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 300,
   },
+  'the-gate': {
+    id: 'the-gate',
+    title: 'The Night They Came',
+    kind: 'main',
+    giver: 'Myself',
+    summary:
+      "I fought the goblins keeping their camp on the Greyfells, and one more got away up the hill, blowing a horn. They know someone found " +
+      "their camp now, and it won't take them long to guess where from. Adowvale. I have to warn the militia, and be there when they come.",
+    objectives: [
+      { id: 'warn', text: "Warn the militia in Adowvale's square that the goblins will come", target: { area: 'market', x: 11.5, y: 15.5, npc: 'guard-1' } },
+      { id: 'hold', text: 'Stand with the militia on the old road into Adowvale when the goblins come, after dark', target: { area: 'market', x: 29.5, y: 17.5 } },
+    ],
+    xp: 250,
+  },
   'cellar-rats': {
     id: 'cellar-rats',
     title: 'Rats in the Cellar',

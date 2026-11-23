@@ -17,6 +17,7 @@ import { Reputation } from '../../systems/Reputation';
 import { RAID_DOOM } from '../../world/GoblinRaid';
 import { PlainsEvents } from '../../world/PlainsEvents';
 import type { CombatResult, CombatSceneData } from '../CombatScene';
+import { checkCampCleared } from './gate';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { countForBounties } from './bounties';
 import { slewWolfMother } from './monastery';
@@ -151,7 +152,7 @@ export function noise(g: GameScene): number {
 }
 
 /** A beast has spotted the player (or the player has gone after some game): it and any of its pack close by fight. */
-export function startCombat(g: GameScene, first: Creature, raid?: Creature[]): void {
+export function startCombat(g: GameScene, first: Creature, raid?: Creature[], band?: Creature[]): void {
   if (g.busy || g.inCombat) {
     first.disengage();
     return;
@@ -166,7 +167,7 @@ export function startCombat(g: GameScene, first: Creature, raid?: Creature[]): v
   // Only beasts that hunt in packs (wolves) bring the rest of the pack with them.
   const pack = FOES[first.kind].packs;
   // (The Wolf Mother and her wolves are one pack.)
-  const foes = raid ?? g.creatures.filter(
+  const foes = raid ?? band ?? g.gateAttack?.bandFor(first) ?? g.creatures.filter(
     (c) =>
       c === first ||
       (pack && c.active && FOES[c.kind].packs && isOutlaw(c.kind) === isOutlaw(first.kind) && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
@@ -194,6 +195,11 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
   if (g.raidFight) {
     // However it went, it ends the same way.
     raidDefeat(g);
+    return;
+  }
+  // The night the goblins come for Adowvale: going down, or running, loses the road (see game/gate.ts).
+  if (g.gateAttack?.active && result.outcome !== 'victory') {
+    g.gateAttack.lost();
     return;
   }
   if (result.outcome === 'defeat') {
@@ -249,6 +255,12 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
       }
     }
     if (result.slain.includes('den-mother')) slewWolfMother();
+    checkCampCleared(g);
+    if (g.gateAttack?.active) {
+      g.release();
+      g.gateAttack.won();
+      return;
+    }
     if (foes.some((c) => c.id === 'cottage-wolf')) {
       QuestLog.writeDiary(
         'A grey wolf was nosing around the cottage when I stepped out. It went for me, and I had to fight it off. ' +
