@@ -65,6 +65,9 @@ export const AREA_NAMES: Record<AreaId, string> = {
   cellar: "The Crooked Tankard's cellar",
   smithy: "Osric's smithy",
   bakery: "Hilde's bakery",
+  garrison: 'The militia garrison',
+  jail: 'The cells under the garrison',
+  residence: "The Headman's house",
 };
 
 /**

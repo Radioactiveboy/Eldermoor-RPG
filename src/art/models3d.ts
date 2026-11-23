@@ -113,6 +113,12 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   cobb: cobbModel,
   pip: pipModel,
   hetty: hettyModel,
+  sergeant: sergeantModel,
+  prisoner: prisonerModel,
+  headman: headmanModel,
+  steward: stewardModel,
+  housemaid: housemaidModel,
+  housecook: housecookModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -427,6 +433,19 @@ const TOLL_GUARD: SoldierLook = {
 /** The village militia: a kettle helm with a wide brim, a shirt of mail, a blue tabard edged in gold, and a spear. */
 export function guardModel(pose: Pose3D): Model {
   return soldierModel(pose, MILITIA);
+}
+
+/** Sergeant Brannock: the militia's blue and gold, a dark blue cloak, and a short grey beard. */
+export function sergeantModel(pose: Pose3D): Model {
+  return soldierModel(pose, {
+    ...MILITIA,
+    skin: [0xe0aa86, 0xb88262, 0xf0c4a0],
+    hair: [0x8a827c, 0x6a625c, 0xa8a09a],
+    beard: [0x8a827c, 0x6a625c, 0xa8a09a],
+    cloak: [0x1e3256, 0x14223e, 0x2e4a7a],
+    // Three gold chevrons for his rank.
+    badge: { color: P.gold, at: [[-1, 23], [0, 22.5], [1, 23], [-1, 21.5], [0, 21], [1, 21.5]] },
+  });
 }
 
 /** Lord Morten's men at the toll gate. */
@@ -1720,4 +1739,93 @@ export function hettyModel(pose: Pose3D): Model {
       ...skirt,
     ],
   }));
+}
+
+/** Dickon the poacher, on the straw in his cell: a patched brown jerkin, red hair every which way, and a week's stubble. */
+export function prisonerModel(pose: Pose3D): Model {
+  const patch: Tones = [0x8a7a5a, 0x6a5c40, 0xa4946e];
+  return regularModel(pose, {
+    coat: [0x6a5038, 0x4c3826, 0x86664a],
+    sleeves: [0xb8a888, 0x948464, 0xd4c4a4],
+    legs: [0x4e4636, 0x342e22, 0x645a46],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xe8b896, 0xc08e70, 0xf8d0b0],
+    hair: [0xb4582a, 0x8a3e1a, 0xd0703a],
+    stubble: [0xa45028, 0x7a3a1a, 0xc06838],
+    hunched: true,
+    coatPaint: (h, base) => (Math.abs(h.x - 2.2) < 1.3 && Math.abs(h.y - 17.5) < 1.5 && h.z > 2 ? patch : base),
+  });
+}
+
+/**
+ * Headman Osbert Hale: a long coat of deep green trimmed with fur at the collar,
+ * the gold chain of his office across his chest, and a grey beard kept short.
+ */
+export function headmanModel(pose: Pose3D): Model {
+  const coat: Tones = [0x2e4a36, 0x203426, 0x40624a];
+  const gold: Tones = [P.gold, 0xb08830, P.goldLight];
+  const fur: Tones = [0x8a6a4a, 0x664c32, 0xa8865e];
+  const b = pose.bob;
+  return regularModel(pose, {
+    coat,
+    legs: [0x2a2224, 0x1d1620, 0x3a3034],
+    boots: [P.leatherDark, P.barkDark, P.leather],
+    skin: [0xe6b496, 0xc08c70, 0xf6ccb0],
+    hair: [0x9a948c, 0x76706a, 0xb8b2aa],
+    beard: [0x9a948c, 0x76706a, 0xb8b2aa],
+    long: true,
+    // The chain of office, swinging low across the front of the coat, and its badge.
+    coatPaint: (h, base) => {
+      if (h.z < 1.5) return base;
+      const sag = 24.2 - b - (2.6 - Math.abs(h.x) * 0.5) * 1.3;
+      if (Math.abs(h.y - sag) < 0.7 && Math.abs(h.x) < 4.6) return gold;
+      if (Math.abs(h.x) < 0.9 && h.y < sag && h.y > sag - 2.2) return gold;
+      return base;
+    },
+    extras: (_hy, _hz, bb) => [
+      // A fur collar over the shoulders.
+      { cx: 0, cy: 25.4 - bb, cz: 0.2, rx: 6.2, ry: 1.7, rz: 4.6, material: fur, soft: true },
+    ],
+  });
+}
+
+/** Aldwin, the steward: a long black coat buttoned to the neck with a white band at the collar, white hair, clean-shaven. */
+export function stewardModel(pose: Pose3D): Model {
+  const coat: Tones = [0x2a2428, 0x1c181c, 0x3e363c];
+  const white: Tones = [0xf0ece4, 0xc8c2b8, 0xffffff];
+  const b = pose.bob;
+  return regularModel(pose, {
+    coat,
+    legs: [0x2a2224, 0x1d1620, 0x3a3034],
+    boots: [P.barkDark, P.ink, P.bark],
+    skin: [0xe8bc9c, 0xc29676, 0xf8d4b8],
+    hair: [0xd8d4cc, 0xb0aca4, 0xf0ece4],
+    long: true,
+    coatPaint: (h, base) => {
+      if (h.y > 25.2 - b && h.nz > 0.2) return white;
+      if (h.nz > 0.9 && Math.abs(h.x) < 0.5 && Math.floor(h.y) % 2 === 0 && h.y > 13) return [P.gold, 0xb08830, P.goldLight];
+      return base;
+    },
+  });
+}
+
+/** Elsie, the Headman's maid: a dove-grey dress and a white apron, fair hair in a braid. */
+export function housemaidModel(pose: Pose3D): Model {
+  return maidModel(pose, {
+    dress: [0x6a7488, 0x4e566a, 0x8690a6],
+    skin: [0xf4cca8, 0xcaa282, 0xffe2c4],
+    hair: [0xd8b468, 0xa88a46, 0xecd08a],
+    hairStyle: 'braid',
+  });
+}
+
+/** Marjory, the Headman's cook: a brown dress with linen sleeves rolled up, an apron, and greying dark hair. */
+export function housecookModel(pose: Pose3D): Model {
+  return maidModel(pose, {
+    dress: [0x7a5a3a, 0x5a4228, 0x967450],
+    sleeves: [0xe8dcc4, 0xbcae94, 0xfff8ea],
+    skin: [0xe2a888, 0xb88064, 0xf2c0a0],
+    hair: [0x6a5e56, 0x4a403a, 0x867a70],
+    hairStyle: 'braid',
+  });
 }

@@ -25,6 +25,7 @@ import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
 import { enteredWorkshop } from './workshops';
+import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 
 export interface AreaDef {
   /** Builds the area's map as things stand (gates open or shut, the farm whole or burnt). Needs load() first, if it has one. */
@@ -104,6 +105,10 @@ export const AREAS: Record<AreaId, AreaDef> = {
   cellar: lazy(() => import('../../world/TavernMap'), (m) => m.buildCellarMap(), { test: true, enter: enteredCellar }),
   smithy: lazy(() => import('../../world/WorkshopMaps'), (m) => m.buildSmithyMap(), { test: true, enter: enteredWorkshop }),
   bakery: lazy(() => import('../../world/WorkshopMaps'), (m) => m.buildBakeryMap(), { test: true, enter: enteredWorkshop }),
+  // On the lane at the south end of Adowvale: the militia's garrison, the cells under it, and the Headman's house.
+  garrison: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildGarrisonMap(), { test: true, enter: enteredGarrison }),
+  jail: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildJailMap(), { test: true, enter: enteredJail }),
+  residence: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildResidenceMap(), { test: true, enter: enteredResidence }),
   plains: lazy(() => import('../../world/PlainsMap'), (m) => m.buildPlainsMap(), {
     test: true,
     enter: firstVisit(

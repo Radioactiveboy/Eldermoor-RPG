@@ -34,6 +34,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const workshops = await import('../../src/world/WorkshopMaps');
   const { buildWatchtowerMap } = await import('../../src/world/WatchtowerMap');
   const { buildGreyfellsMap } = await import('../../src/world/GreyfellsMap');
+  const garrison = await import('../../src/world/GarrisonMaps');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
     // With the goblins' trail and the way on up to the Greyfells open, so every way out is there.
@@ -59,5 +60,8 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     cellar: tavern.buildCellarMap(),
     smithy: workshops.buildSmithyMap(),
     bakery: workshops.buildBakeryMap(),
+    garrison: garrison.buildGarrisonMap(),
+    jail: garrison.buildJailMap(),
+    residence: garrison.buildResidenceMap(),
   };
 }

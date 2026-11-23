@@ -17,3 +17,18 @@ export function itemScale(s: number): number {
 
 /** Portraits are PORTRAIT_SIZE pixels square (see portraits.ts). */
 export const PORTRAIT_SIZE = 96;
+
+/** The militia garrison in Adowvale (see garrison.ts): its footprint, wall height in pixels, and which front tile its door is on. */
+export const GARRISON = { w: 4, h: 3, height: 74, doorTile: 2 } as const;
+
+/** The Headman's residence (see garrison.ts): footprint, height to the eaves and of the roof, and the middle of its porch along x. */
+export const RESIDENCE = { w: 7, h: 4, height: 96, ridge: 54, porch: 3.5 } as const;
+
+/** Where the residence's two chimneys top out, relative to its corner, for the smoke. */
+export const RESIDENCE_CHIMNEYS = [
+  { gx: 1.3, gy: 1.5, z: RESIDENCE.height + RESIDENCE.ridge + 12 },
+  { gx: 5.9, gy: 1.5, z: RESIDENCE.height + RESIDENCE.ridge + 12 },
+];
+
+/** Height of the residence's panelled inner walls, in pixels (see garrison.ts). */
+export const PANEL_WALL_HEIGHT = 100;
