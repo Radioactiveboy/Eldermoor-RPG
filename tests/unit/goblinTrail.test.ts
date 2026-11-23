@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { lookedAtTrailSign, reachedTrailEnd } from '../../src/scenes/game/trail';
+import { greyfellsOpen, lookedAtCamp, lookedAtTrailSign, reachedTrailEnd } from '../../src/scenes/game/trail';
 import { QuestLog } from '../../src/systems/Quests';
 
 /** The Ashes quest, as far as the goblins' trail in the north woods. */
@@ -42,5 +42,42 @@ describe("following the goblins' trail", () => {
     lookedAtTrailSign('nw-quilt-scrap');
     reachedTrailEnd();
     expect(QuestLog.diary).toHaveLength(0);
+  });
+});
+
+describe('the goblin camp on the Greyfells', () => {
+  beforeEach(() => {
+    for (const step of ['trail', 'signs', 'edge']) QuestLog.complete('the-raid', step);
+  });
+
+  it('opens up the trail only once the hero has taken word to Adowvale', () => {
+    expect(greyfellsOpen()).toBe(false);
+    QuestLog.complete('the-raid', 'word');
+    expect(greyfellsOpen()).toBe(true);
+  });
+
+  it("goes from the camp's litter to the hole in the hill", () => {
+    QuestLog.complete('the-raid', 'word');
+    expect(current()).toBe('fells');
+    lookedAtCamp('gf-litter');
+    expect(current()).toBe('warren');
+    lookedAtCamp('gf-warren');
+    expect(current()).toBe('mother');
+  });
+
+  it('counts the camp as searched when the hero goes straight past it to the hole', () => {
+    QuestLog.complete('the-raid', 'word');
+    lookedAtCamp('gf-warren');
+    expect(current()).toBe('mother');
+  });
+
+  it('writes about the scratched stone once, without moving the quest on', () => {
+    QuestLog.complete('the-raid', 'word');
+    lookedAtCamp('gf-litter');
+    const before = QuestLog.diary.length;
+    lookedAtCamp('gf-stone');
+    lookedAtCamp('gf-stone');
+    expect(QuestLog.diary.length).toBe(before + 1);
+    expect(current()).toBe('warren');
   });
 });

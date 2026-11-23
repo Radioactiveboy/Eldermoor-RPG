@@ -610,7 +610,7 @@ function bones(seed: number): { canvas: PixelCanvas; anchorX: number; anchorY: n
  * heather on top, and a dark arched opening at its front corner, over the
  * one tile of the footprint that's open (2, 2) so the player can walk into it.
  */
-function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
+export function caveEntrance(S = 3, MAXH = 92, salt = 0): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
   const peak = S * 0.42;
   // Height of the mound at grid point (x, y) of the footprint, in pixels.
   const height = (x: number, y: number): number => {

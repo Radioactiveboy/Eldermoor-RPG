@@ -68,6 +68,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'goblins', draw: generateGoblins },
   { label: 'wild herbs', load: () => import('./herbs').then((m) => m.generateHerbs) },
   { label: 'the north woods', load: () => import('./northwoods').then((m) => m.generateNorthWoods) },
+  { label: 'the Greyfells', load: () => import('./greyfells').then((m) => m.generateGreyfells) },
   // After the townsfolk: it redraws the smith's and the baker's working frames.
   { label: 'the smithy and bakery', load: () => import('./workshops').then((m) => m.generateWorkshops) },
   // Last: it makes burnt copies of art drawn above.

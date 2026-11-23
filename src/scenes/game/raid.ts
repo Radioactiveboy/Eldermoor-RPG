@@ -177,12 +177,8 @@ export function enteredAfterRaid(g: GameScene): void {
   } else if (g.area === 'hut') {
     g.time.delayedCall(900, () => g.onHint?.('Dark and cold in here, and the fire out. Iran is huddled on the floor with Pip and Hetty.'));
   } else if (g.area === 'northwoods' && !QuestLog.isDone('the-raid', 'trail')) {
+    // (enteredNorthWoods has the thought and the diary line for the first visit.)
     QuestLog.complete('the-raid', 'trail');
-    QuestLog.writeDiary(
-      "Followed their tracks up past the wolves' cave and into the north woods. They made no effort to hide them: a swathe of bracken " +
-        'trodden flat, all pressed the same way. North.',
-    );
-    g.time.delayedCall(900, () => g.onHint?.("Their tracks, plain as a road through the bracken. They didn't care who followed. Or they wanted to be followed."));
   }
 }
 

@@ -32,6 +32,7 @@ const ROWS: Row[] = [
   { label: '3 cellar rats', kind: 'rat', count: 3 },
   { label: '6 cellar rats (the whole cellar)', kind: 'rat', count: 6 },
   { label: 'Goblin Cutter (the raid is scripted)', kind: 'goblin' },
+  { label: 'The goblin camp on the Greyfells (4)', kind: 'goblin', count: 2, escort: { goblintorch: 1, goblinspear: 1 } },
 ];
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;

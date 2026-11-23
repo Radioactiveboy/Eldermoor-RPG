@@ -13,7 +13,10 @@ export async function phaserMock() {
   return { default: { Math: req('phaser/src/math/index.js'), Geom: req('phaser/src/geom/index.js') } };
 }
 
-/** Each area's map as it stands with every gate open (the toll paid, Saint Elda's opened), before the raid. */
+/**
+ * Each area's map as it stands with every gate open (the toll paid, Saint Elda's opened), before the raid,
+ * except the north woods, which has the goblins' trail and the way on up to the Greyfells open.
+ */
 export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { MAP_HEIGHT, MAP_SEED, MAP_WIDTH } = await import('../../src/config');
   const { generateMap } = await import('../../src/world/MapGenerator');
@@ -30,9 +33,12 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const tavern = await import('../../src/world/TavernMap');
   const workshops = await import('../../src/world/WorkshopMaps');
   const { buildWatchtowerMap } = await import('../../src/world/WatchtowerMap');
+  const { buildGreyfellsMap } = await import('../../src/world/GreyfellsMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
-    northwoods: buildNorthWoodsMap(false),
+    // With the goblins' trail and the way on up to the Greyfells open, so every way out is there.
+    northwoods: buildNorthWoodsMap(true, true),
+    greyfells: buildGreyfellsMap(),
     watchtower: buildWatchtowerMap(),
     market: buildMarketMap(true),
     plains: buildPlainsMap(),

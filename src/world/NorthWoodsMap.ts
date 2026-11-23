@@ -32,9 +32,11 @@ const DEADFALL = { tx: 37, ty: 15 };
  * After the raid (`goblinTrail`), the goblins' track is plain to see: a swathe
  * of bracken trodden flat, running up from the Hollow and away north, a burnt
  * torch dropped in the ferns, and a scrap of Mother's quilt caught on the
- * brambles. Following it is part of the Ashes quest; beyond the north edge is for later.
+ * brambles. Following it is part of the Ashes quest. Once the hero has taken
+ * word to Adowvale (`greyfells`), the trail can be followed off the north
+ * edge, up onto the Greyfells (see GreyfellsMap.ts).
  */
-export function buildNorthWoodsMap(goblinTrail: boolean): MapData {
+export function buildNorthWoodsMap(goblinTrail: boolean, greyfells = false): MapData {
   const W = NORTH_WOODS_W;
   const H = NORTH_WOODS_H;
   const rnd = new Phaser.Math.RandomDataGenerator(['north-woods']);
@@ -305,7 +307,7 @@ export function buildNorthWoodsMap(goblinTrail: boolean): MapData {
   ];
   for (const [id, kind, x, y] of herbs) plantHerbNear(data, id, kind, x, y, [Terrain.Grass, Terrain.Sand]);
 
-  if (goblinTrail) addGoblinTrail(data, goblinWay);
+  if (goblinTrail) addGoblinTrail(data, goblinWay, greyfells);
   return data;
 }
 
@@ -316,7 +318,7 @@ export function buildNorthWoodsMap(goblinTrail: boolean): MapData {
  * trail runs on off the map; the scrap and the trail's end move the Ashes
  * quest on (see scenes/game/raid.ts).
  */
-function addGoblinTrail(data: MapData, way: Vec[]): void {
+function addGoblinTrail(data: MapData, way: Vec[], greyfells: boolean): void {
   const seen = new Set<string>();
   way.forEach((p, i) => {
     for (const [dx, dy] of [[0, 0], [i % 2 ? 1 : -1, 0]]) {
@@ -362,9 +364,18 @@ function addGoblinTrail(data: MapData, way: Vec[]): void {
     {
       id: 'goblin-trail-end',
       x0: 37, y0: 2, x1: 46, y1: 9,
-      text:
-        'Their trail runs on north into the deep woods, up towards the Greyfells, further than I can see. Dozens of them, and me half beaten. ' +
-        'Not alone, and not like this. Iran was right: Adowvale first.',
+      text: greyfells
+        ? 'Their trail climbs on north out of the trees, up onto the Greyfells. Nobody is coming to help. So be it.'
+        : 'Their trail runs on north into the deep woods, up towards the Greyfells, further than I can see. Dozens of them, and me half beaten. ' +
+          'Not alone, and not like this. Iran was right: Adowvale first.',
     },
   );
+  if (!greyfells) return;
+  // Where it leaves the map: on up the goblins' trail, onto the moor (see GreyfellsMap.ts).
+  const exit = way.reduce((best, p) => (Math.abs(p.y) < Math.abs(best.y) ? p : best));
+  for (let tx = Math.floor(exit.x) - 1; tx <= Math.floor(exit.x) + 1; tx++) {
+    for (let ty = 0; ty <= 2; ty++) if (data.props[ty][tx] === Prop.Tree || data.props[ty][tx] === Prop.Rock) data.props[ty][tx] = Prop.None;
+    data.doors!.push({ tx, ty: 0, to: 'greyfells', entry: 'northwoods', auto: true, ask: "Do you want to follow the goblins' trail up onto the Greyfells?" });
+  }
+  data.entries!.greyfells = { x: Math.floor(exit.x) + 0.5, y: 2.4 };
 }

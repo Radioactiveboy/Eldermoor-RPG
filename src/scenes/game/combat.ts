@@ -134,7 +134,7 @@ export function spawnCreatures(g: GameScene): Creature[] {
       if (!g.defeatedFoes.has(id) && g.map.isWalkable(Math.floor(gx), Math.floor(gy))) spawns.push({ ...lead, id, gx, gy });
     }
   }
-  return spawns.map((s) => new Creature(g, g.map, s.id, s.kind, s.gx, s.gy));
+  return spawns.map((s) => new Creature(g, g.map, s.id, s.kind, s.gx, s.gy, s.notice));
 }
 
 export function updateCreatures(g: GameScene, dt: number): void {

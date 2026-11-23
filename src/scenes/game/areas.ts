@@ -19,6 +19,7 @@ import { generateMap } from '../../world/MapGenerator';
 import { buildMarketMap } from '../../world/MarketMap';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { enteredCave, enteredNorthWoods } from './hollow';
+import { enteredGreyfells, greyfellsOpen } from './trail';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
@@ -110,8 +111,10 @@ export const AREAS: Record<AreaId, AreaDef> = {
         'grass, the road running off to a crossroads, and not a wall in sight.',
     ),
   }),
-  // The woods north of the Hollow; after the raid, the goblins' trail through them shows (as scenery, for now).
-  northwoods: lazy(() => import('../../world/NorthWoodsMap'), (m) => m.buildNorthWoodsMap(raidStage() === 'over'), { test: true, enter: enteredNorthWoods }),
+  // The woods north of the Hollow; after the raid, the goblins' trail through them shows, and in time leads on up onto the Greyfells.
+  northwoods: lazy(() => import('../../world/NorthWoodsMap'), (m) => m.buildNorthWoodsMap(raidStage() === 'over', greyfellsOpen()), { test: true, enter: enteredNorthWoods }),
+  // Up the goblins' trail out of the north woods: their camp, and the hole in the hill.
+  greyfells: lazy(() => import('../../world/GreyfellsMap'), (m) => m.buildGreyfellsMap(), { test: true, enter: enteredGreyfells }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

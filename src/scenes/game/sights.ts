@@ -19,7 +19,7 @@ import type { GameScene } from '../GameScene';
 import type { Channel } from './interactions';
 import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
 import { syncPlot } from './plot';
-import { lookedAtTrailSign } from './trail';
+import { lookedAtCamp, lookedAtTrailSign } from './trail';
 
 export function startChannel(g: GameScene, channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
   g.walkingTo = undefined;
@@ -154,6 +154,7 @@ export function examine(g: GameScene, sight: Sight): void {
   if (sight.thought) {
     g.onHint?.(sight.thought);
     lookedAtTrailSign(sight.id);
+    lookedAtCamp(sight.id);
     if (sight.id === 'ruin-mother-bed' && !QuestLog.isDone('the-raid', 'search')) {
       QuestLog.complete('the-raid', 'search');
       QuestLog.writeDiary(

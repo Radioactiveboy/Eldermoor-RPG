@@ -126,6 +126,13 @@ export const QUESTS: Record<string, QuestDef> = {
         text: "Take word to the militia in Adowvale's market square, as Iran said",
         target: { area: 'market', x: 11.5, y: 15.5, npc: 'guard-1' },
       },
+      {
+        id: 'fells',
+        text: "Follow the goblins' trail up out of the woods onto the Greyfells",
+        target: { area: 'greyfells', x: 23.5, y: 26 },
+      },
+      { id: 'camp', text: "Search the goblins' camp for any sign of Mother", target: { area: 'greyfells', x: 21, y: 23 } },
+      { id: 'warren', text: 'Find where the trail goes from the camp', target: { area: 'greyfells', x: 24.5, y: 7.5 } },
       { id: 'mother', text: 'Find out what the goblins did with Mother' },
     ],
     xp: 300,
