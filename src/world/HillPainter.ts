@@ -8,7 +8,7 @@ import type { BakedLayer } from './BakedLayer';
 /** How much steeper than they are the slopes are shaded. */
 const RELIEF = 2.6;
 /** Height samples painted per tile, each way. */
-const N = 24;
+const N = 16;
 /** Largest canvas painted at once (see BakedLayer). */
 const CHUNK = 2000;
 /** Tiles further back than this along a strip are cut into separate pieces, so a hill only fades near whoever it hides. */
@@ -124,7 +124,10 @@ export function paintHills(scene: Phaser.Scene, field: HillField, around: HillSu
   const paintTile = (t: Tile, targets: Canvas[]) => {
     const out = Math.max(-t.tx, -t.ty, t.tx - around.width + 1, t.ty - around.height + 1);
     const haze = Math.min(1, Math.max(0, out) / around.fade) * 0.85;
-    const e = 1 / N;
+    // Out in the mist, nobody will see fine detail: paint it coarser, and quicker.
+    const n0 = out > 1 ? Math.round(N * 0.625) : N;
+    const e = 1 / n0;
+    const width = Math.ceil(32 / n0);
     const put = (x: number, y: number, c: Rgb) => {
       for (const cv of targets) {
         const px = x - cv.x0;
@@ -137,8 +140,8 @@ export function paintHills(scene: Phaser.Scene, field: HillField, around: HillSu
         cv.data[i + 3] = 255;
       }
     };
-    for (let s = 0; s <= 2 * N - 2; s++) {
-      for (let i = Math.max(0, s - N + 1); i <= Math.min(N - 1, s); i++) {
+    for (let s = 0; s <= 2 * n0 - 2; s++) {
+      for (let i = Math.max(0, s - n0 + 1); i <= Math.min(n0 - 1, s); i++) {
         const j = s - i;
         const x = t.tx + (i + 0.5) * e;
         const y = t.ty + (j + 0.5) * e;
@@ -187,10 +190,12 @@ export function paintHills(scene: Phaser.Scene, field: HillField, around: HillSu
         }
         // The face below a column's top is the slope itself where it's steep: shade it like the top, a touch darker,
         // with the rock's bedding running across it in level bands.
+        const bedding = ramp === rock ? Math.floor(valueNoise(x * 2, y * 2, 83) * 3) : -1;
+        const faceLight = light * 3.6 - 0.3 + grain;
         const face = (z: number, py: number): Rgb => {
           const d = hash(gx * 7 + py, gy);
-          let kk = Math.max(0, Math.min(3, Math.floor(light * 3.6 - 0.3 + grain + (d - 0.5) * 1.1)));
-          if (ramp === rock && (Math.floor(z / 5) + Math.floor(valueNoise(x * 2, y * 2, 83) * 3)) % 4 === 0) kk = Math.max(0, kk - 1);
+          let kk = Math.max(0, Math.min(3, Math.floor(faceLight + (d - 0.5) * 1.1)));
+          if (bedding >= 0 && (Math.floor(z / 5) + bedding) % 4 === 0) kk = Math.max(0, kk - 1);
           return ramp[kk];
         };
 
@@ -200,9 +205,10 @@ export function paintHills(scene: Phaser.Scene, field: HillField, around: HillSu
         // Down to where the ground just in front takes over, or all the way at the tile's front edges.
         const f = gridToScreen(x + e, y + e);
         const bottom = Math.min(Math.round(p.y), Math.round(f.y - field.at(x + e, y + e)));
-        for (let dx = 0; dx < 2; dx++) {
-          put(sx + dx, ty0, top);
-          for (let py = ty0 + 1; py <= Math.max(ty0 + 1, bottom); py++) put(sx + dx, py, face(h - (py - ty0), py));
+        for (let dx = 0; dx < width; dx++) put(sx + dx, ty0, top);
+        for (let py = ty0 + 1; py <= Math.max(ty0 + 1, bottom); py++) {
+          const c = face(h - (py - ty0), py);
+          for (let dx = 0; dx < width; dx++) put(sx + dx, py, c);
         }
       }
     }
