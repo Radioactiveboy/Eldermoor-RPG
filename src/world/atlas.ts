@@ -57,6 +57,7 @@ const link = (a: AreaId, atA: Spot, b: AreaId, atB: Spot, road?: string): Link =
 export const LINKS: Link[] = [
   link('world', { x: 0.5, y: 54.5 }, 'market', { x: 33, y: 17.5 }, 'The old road'),
   link('world', { x: 33.5, y: 0.5 }, 'northwoods', { x: 30.5, y: 75 }, 'The path north'),
+  link('northwoods', { x: 13.5, y: 22.5 }, 'watchtower', { x: 0.5, y: 5.5 }),
   link('world', { x: 21.5, y: 37.5 }, 'home', { x: 0.5, y: 5.5 }),
   link('world', { x: 16.5, y: 14.5 }, 'hut', { x: 0.5, y: 3.5 }),
   link('world', { x: 27.5, y: 6.5 }, 'cave', { x: 0.5, y: 2.5 }),

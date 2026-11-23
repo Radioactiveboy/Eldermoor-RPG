@@ -197,11 +197,15 @@ export function buildNorthWoodsMap(goblinTrail: boolean): MapData {
 
   // The old watchtower on its rise, fallen to ruin: the doorway faces the path up to it.
   for (let y = TOWER.ty - 1; y <= TOWER.ty + 4; y++) for (let x = TOWER.tx - 1; x <= TOWER.tx + 4; x++) props[y][x] = Prop.None;
-  // (The doorway is choked with rubble, so the whole footprint blocks.)
+  // The whole footprint blocks; the way in is over the rubble in the doorway, from the tile in front of it.
   placeObject(data, { key: 'nw-watchtower', tx: TOWER.tx, ty: TOWER.ty, w: 3, h: 3, fades: true });
+  const doorTile = { x: TOWER.tx + 1, y: TOWER.ty + 3 };
+  data.doors!.push({ tx: doorTile.x, ty: doorTile.y, to: 'watchtower', entry: 'door', label: 'Climb inside', facing: 'front' });
+  data.entries!.watchtower = { x: doorTile.x + 0.5, y: doorTile.y + 0.75 };
+  // Round the side, away from the doorway, so the two prompts don't crowd each other.
   data.sights!.push({
-    id: 'nw-watchtower', gx: TOWER.tx + 1.5, gy: TOWER.ty + 3.05, label: 'Look at the tower', z: 40,
-    thought: 'A watchtower, from when the lords kept men up here to watch the north road. The stair has fallen in, and the doorway is choked with rubble. Rooks nest in the top now.',
+    id: 'nw-watchtower', gx: TOWER.tx + 3.1, gy: TOWER.ty + 1.3, label: 'Look at the tower', z: 40,
+    thought: 'A watchtower, from when the lords kept men up here to watch the north road. The top has fallen in, and rooks nest in what is left. The doorway is half choked with rubble, but I could climb in over it.',
   });
   // Bones in the grass by the tower: something's kills, dragged out of the thickets.
   {

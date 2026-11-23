@@ -158,6 +158,11 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   their claws make you bleed, but a level-1 hero beats one (and takes its striped pelt). After the goblin raid the
   goblins' trail shows: bracken trodden flat all the way north, a burnt-out torch, and a scrap of Mother's quilt on
   the thorns. It's scenery for now, and doesn't move the **Ashes** quest on (try `?area=northwoods&raid=after`)
+- **The old watchtower**: in the north woods, climb in over the rubble in its doorway (E). The top fell in long ago,
+  so it's open to the sky (and the rain); the stair breaks off five steps up. The last watch left their things: a
+  table with their logbook on it (read it), rusted spears, their fire ring, tally marks on the wall, and their chest,
+  which can be searched once for something worth having (a spear, an iron cap, a buckler or old pennies). Two rats
+  live in the heap of fallen stone
 - **Chance meetings on Adowvale Plains**: now and then, out on the plains, something happens along the Lord's Road.
   Footpads (Rook and Nab) step out of the grass and ask for half your purse: pay, talk your way out (if you've killed
   the Wolf Mother), or fight them. Jory the tinker has stopped to rest and will trade odds and ends. Mags the goatherd
@@ -239,7 +244,7 @@ they only count when a new game starts (on the title screen, begin a new journey
 
 | Switch | What it does |
 | --- | --- |
-| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
+| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
 | `?hour=21` | Start at that hour (0 to 23.99; 21 is 9pm) |
 | `?raid=night` | Start at 20:00 with the tincture in the satchel and Mother's errand otherwise done (talk to her to give it) |
 | `?raid=morning` | Wake on the morning of the goblin raid |
@@ -278,6 +283,8 @@ src/
     CaveMap.ts              The wolves' cave in the hill: three wolves, the drover's ewes, bone piles, the locked door
     NorthWoodsMap.ts        The north woods beyond the cave: the brook and ford, the ruined watchtower, brambles and
                             wild cats, and after the raid the goblins' trail north (scenery only)
+    WatchtowerMap.ts        Inside the old watchtower (7x7): roofless, the broken stair, the last watch's table,
+                            logbook, spears, fire ring and chest, a rooks' nest, and two rats
     MarketMap.ts            Adowvale: the market square (stalls, well, houses, the inn, smithy and bakery doors,
                             the militia, the bounty board) and the lane north to Lord Morten's toll gate
     TavernMap.ts            The Crooked Tankard: taproom, the passage upstairs, a room to let, the cellar and its rats
@@ -460,7 +467,7 @@ src/
     monastery.ts            Saint Elda's from outside: wall, gatehouse, chapel, bell tower, shrines, hives
     abbey.ts                Saint Elda's within: the ranges round the cloister, the herb garden, the rooms' furnishings
     cave.ts                 The cave mouth, rock walls, stalactites, bones, the dead ewes, the locked door
-    northwoods.ts           The watchtower, fallen trees, brambles, ford stones, the goblins' trail
+    northwoods.ts           The watchtower (and its roofless inside), fallen trees, brambles, ford stones, the goblins' trail
     ruin.ts                 After the raid: burnt walls and furniture, blood and ash, fires, burnt fences and coop
     scorch.ts               Fire damage: makes any shader or texture come out charred and holed
     herbs.ts                Wild herb patches, grown and picked

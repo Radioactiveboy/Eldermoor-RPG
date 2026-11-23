@@ -415,7 +415,7 @@ export class GameScene extends Phaser.Scene {
       this.cropTimer = 1;
     }
 
-    if (this.map.data.indoor && !this.map.data.underground) {
+    if (this.map.data.indoor && !this.map.data.underground && !this.map.data.cold) {
       this.crackleTimer -= dt;
       if (this.crackleTimer <= 0) {
         GameAudio.crackle();

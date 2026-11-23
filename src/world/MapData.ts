@@ -34,8 +34,8 @@ export enum Prop {
  */
 export type AreaId =
   | 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains' | 'monastery'
-  // The forest north of the Hollow, beyond the wolves' cave.
-  | 'northwoods'
+  // The forest north of the Hollow, beyond the wolves' cave, and inside the old watchtower there.
+  | 'northwoods' | 'watchtower'
   // Inside Saint Elda's walls: the grounds, and the rooms off them.
   | 'abbey' | 'chapel' | 'infirmary' | 'scriptorium' | 'refectory'
   // The Wolf Mother's den on the plains, and the passage beyond its crevice.
@@ -124,7 +124,7 @@ export interface Sight {
   /** A signpost: reading it shows where each arm points. */
   sign?: { heading: string; lines: string[] };
   /** Can be searched once for a random find (see systems/Loot.ts). */
-  loot?: 'bones';
+  loot?: 'bones' | 'cache';
   /** A door that won't open (yet): trying it rattles the lock, and the hero wonders what's behind it. */
   locked?: boolean;
   /** Something growing that can be picked once (the moonpetal in the cloister garden): the item, and the art it's left as. */
@@ -155,6 +155,8 @@ export interface LightSource {
   radius: number;
   /** 0 = steady, 1 = flickers like fire. */
   flicker: number;
+  /** Daylight let in (through the watchtower's open top): it fades as night falls, rather than burning all night. */
+  daylight?: boolean;
 }
 
 /** A tile of vegetables that can be picked (see systems/Farm.ts). */
@@ -326,6 +328,8 @@ export interface MapData {
   waters?: Array<{ id: WaterId; gx: number; gy: number; r: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
+  /** Indoors with no fire burning (the roofless watchtower): no crackle of one. */
+  cold?: boolean;
   /** Underground (with `indoor`): dark whatever the hour, so the hero's lantern is lit. */
   underground?: boolean;
   /** The music for the area (see audio/Audio.ts). */

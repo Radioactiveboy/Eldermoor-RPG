@@ -223,7 +223,10 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
           `${outlaws.length > 1 ? 'Their purses' : 'His purse'} held ${purse} coins, no doubt taken from travellers before me.`,
       );
     }
-    const after = AFTER_THE_FIGHT[foes[0].kind];
+    const after =
+      foes[0].kind === 'rat' && g.area !== 'cellar'
+        ? { slain: 'Rats, fat as cats. Whatever they live on up here, I would rather not know.', fled: 'It shot off into the rubble. It will be back.' }
+        : AFTER_THE_FIGHT[foes[0].kind];
     g.onHint?.(slain.length > 0 ? after.slain : after.fled);
     // The plains' night wolves: word gets about.
     if (slain.some((c) => c.id.startsWith('road-wolf-'))) {

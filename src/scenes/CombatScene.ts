@@ -300,7 +300,9 @@ export class CombatScene extends Phaser.Scene {
     data.foes.forEach((creature, i) => {
       const foe = FOES[creature.kind];
       const names = PACK_NAMES[creature.kind];
-      const name = data.foes.length === 1 || !names ? foe.name : names[i % names.length];
+      let name = data.foes.length === 1 || !names ? foe.name : names[i % names.length];
+      // Rats anywhere but the Crooked Tankard's cellar (the old watchtower's) aren't cellar rats.
+      if (name === 'Cellar Rat' && this.world.area !== 'cellar') name = data.foes.length === 1 ? 'Rat' : 'Grey Rat';
       defs.push({ ...foe, id: creature.id, name, side: 'foes', hp: foe.maxHp });
     });
     this.battle = new Battle(defs);
@@ -364,8 +366,10 @@ export class CombatScene extends Phaser.Scene {
     this.log(
       mother
         ? `${FOE_TEXT.wolfmother.start}${this.foes.length > 1 ? ' Her wolves fan out round you.' : ''}`
-        : this.foes.length > 1 && first.creature!.kind === 'rat'
-        ? FOE_TEXT.rat.start
+        : first.creature!.kind === 'rat'
+        ? this.world.area === 'cellar'
+          ? FOE_TEXT.rat.start
+          : 'Rats boil out of the rubble, squealing, teeth bared!'
         : this.foes.some((f) => f.creature!.kind === 'goblinbrute')
         ? FOE_TEXT.goblinbrute.start
         : this.foes.length > 1 && isGoblin(first.creature!.kind)

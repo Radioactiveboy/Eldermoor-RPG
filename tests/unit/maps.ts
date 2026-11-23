@@ -29,9 +29,11 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { buildHutMap } = await import('../../src/world/HutMap');
   const tavern = await import('../../src/world/TavernMap');
   const workshops = await import('../../src/world/WorkshopMaps');
+  const { buildWatchtowerMap } = await import('../../src/world/WatchtowerMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
     northwoods: buildNorthWoodsMap(false),
+    watchtower: buildWatchtowerMap(),
     market: buildMarketMap(true),
     plains: buildPlainsMap(),
     monastery: buildMonasteryMap(true),
