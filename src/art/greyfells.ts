@@ -326,5 +326,5 @@ export function generateGreyfells(scene: Phaser.Scene): void {
 }
 
 /** The crags' sizes (tiles across) and heights (pixels); each comes in {@link CRAG_VARIANTS} shapes, 'gf-crag-<size>-<n>'. */
-const GF_CRAGS: Array<[number, number]> = [[2, 52], [3, 84], [4, 112], [5, 136]];
+const GF_CRAGS: Array<[number, number]> = [[2, 36], [3, 50], [4, 64], [5, 78]];
 const CRAG_VARIANTS = 3;

@@ -393,7 +393,7 @@ export class IsoMap {
         Math.round(shade + (fog.green - shade) * f),
         Math.round(shade + (fog.blue - shade) * f),
       );
-    type Tree = { tx: number; ty: number; x: number; y: number; art: (typeof TREE_ART)[number]; tint: number; flip: boolean };
+    type Tree = { tx: number; ty: number; x: number; y: number; art: { key: string; originY: number }; tint: number; flip: boolean };
     const back: Tree[] = [];
     const front: Tree[] = [];
 
@@ -425,6 +425,19 @@ export class IsoMap {
           ground.draw(this.groundKey(tx, ty), center.x, center.y, { tint: this.underTrees(tint(f, shade)) });
         }
 
+        // Crags running on out of sight, where the map says so: one to every few tiles, set back a little from the edge.
+        const crags = this.data.outskirts;
+        if (crags && ty < crags.forestFromY) {
+          const step = crags.cragSize - 1;
+          if (t !== Terrain.Grass || ((tx % step) + step) % step !== 0 || ((ty % step) + step) % step !== 0) continue;
+          const key = crags.crags[Math.floor(tileHash(tx, ty, 6) * crags.crags.length)];
+          const art = MODEL_ART[key];
+          if (!art) continue;
+          const corner = gridToScreen(tx - 1 + tileHash(tx, ty, 3) * 0.8, ty - 1 + tileHash(tx, ty, 4) * 0.8);
+          const crag = { tx, ty, x: corner.x, y: corner.y, art: { key, originY: art.originY }, tint: tint(f * 0.85), flip: tileHash(tx, ty, 7) < 0.5 };
+          (tx >= width || ty >= height ? front : back).push(crag);
+          continue;
+        }
         // Thick forest, thickening further out, but never on the road or in the water.
         const edgeProp = props[ey][ex];
         if (t !== Terrain.Grass || edgeProp === Prop.Blocked) continue;
@@ -438,7 +451,7 @@ export class IsoMap {
     const byDepth = (a: Tree, b: Tree) => a.tx + a.ty - (b.tx + b.ty);
     const draw = (layer: BakedLayer, trees: Tree[]) => {
       for (const tree of trees.sort(byDepth)) {
-        layer.draw('shadow-large', tree.x, tree.y - 2, { tint: tree.tint });
+        if (!tree.art.key.startsWith('gf-crag')) layer.draw('shadow-large', tree.x, tree.y - 2, { tint: tree.tint });
         layer.draw(tree.art.key, tree.x, tree.y, { tint: tree.tint, flipX: tree.flip, originY: tree.art.originY });
       }
     };

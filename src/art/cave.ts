@@ -636,20 +636,33 @@ function mound(S: number, MAXH: number, salt: number, mouth: boolean, jag = 0): 
     let h = MAXH * Math.max(0, 1 - r * r) + (noise(x * 4 + salt, y * 4) - 0.5) * 14 + (S > 3 ? (noise(x * 1.6 + salt, y * 1.6) - 0.5) * 26 : 0);
     if (jag > 0) {
       // A crag: two or three heads of rock of different heights run together, broken by clefts.
+      // Each head is a steep knob of rock standing on a long, low skirt of turf and scree, so the crag
+      // rises out of the ground round it rather than sitting on it.
       h = 0;
-      for (let k = 0; k < 3; k++) {
-        const px = S * (0.25 + noise(salt + k * 3.1, 1.7) * 0.5);
-        const py = S * (0.25 + noise(salt + k * 5.3, 4.1) * 0.5);
-        const rad = S * (0.34 + noise(salt + k, 9.2) * 0.26);
-        const tall = MAXH * (k === 0 ? 1 : 0.5 + noise(salt + k, 7.7) * 0.4);
-        const d = Math.hypot(x - px, (y - py) * (0.8 + k * 0.2)) / rad;
-        h = Math.max(h, tall * Math.max(0, 1 - Math.pow(d, 1.5)));
+      for (let k = 0; k < 4; k++) {
+        const px = S * (0.3 + noise(salt + k * 3.1, 1.7) * 0.4);
+        const py = S * (0.3 + noise(salt + k * 5.3, 4.1) * 0.4);
+        const rad = S * (0.27 + noise(salt + k, 9.2) * 0.14);
+        const tall = MAXH * (k === 0 ? 1 : 0.35 + noise(salt + k, 7.7) * 0.45);
+        const d = Math.hypot(x - px, (y - py) * (0.8 + k * 0.15)) / rad;
+        const knob = 1 / (1 + Math.pow(d * 1.1, 4));
+        const skirt = Math.exp(-d * d * 0.12) * 0.4;
+        h = Math.max(h, tall * Math.max(knob, skirt));
       }
-      // Ridged noise: sharp edges and clefts in the rock.
+      // Ridged noise: sharp edges and clefts in the rock, strongest high up.
       const ridge = 1 - Math.abs(noise(x * 1.3 + salt, y * 1.3 + 11) * 2 - 1);
-      h += (ridge - 0.5) * MAXH * 0.35 * jag + (noise(x * 5 + salt, y * 5) - 0.5) * 10;
+      h += (ridge - 0.5) * Math.min(h, MAXH * 0.4) * jag + (noise(x * 5 + salt, y * 5) - 0.5) * 6;
+      // Gritstone weathers into ledges: step the rock into tiers, leaving the turf skirt smooth.
+      const tier = 10 + noise(salt, 5.5) * 8;
+      if (h > MAXH * 0.32) h = MAXH * 0.32 + Math.floor((h - MAXH * 0.32) / tier) * tier + ((h - MAXH * 0.32) % tier) * 0.25;
+      // Feather out to nothing well inside the footprint, along a ragged line rather than its square edges.
+      const ang = Math.atan2(y - S / 2, x - S / 2);
+      const reach = (S / 2) * (0.82 + (noise(Math.floor((ang + Math.PI) * 2.2) + salt, 3.3) - 0.5) * 0.2 + Math.sin(ang * 3 + salt) * 0.05);
+      const r = Math.hypot(x - S / 2, y - S / 2) / reach;
+      const fall = Math.max(0, Math.min(1, (1 - r) / 0.45));
+      h *= fall * fall * (3 - 2 * fall);
     }
-    h *= Math.min(1, edge / (jag > 0 ? 0.22 : 0.35));
+    h *= Math.min(1, edge / (jag > 0 ? 0.05 : 0.35));
     if (!mouth) return Math.max(0, h);
     // The open tile in front of the mouth, with a steep rock face round it.
     const open = Math.min(x - (S - 1), y - (S - 1));

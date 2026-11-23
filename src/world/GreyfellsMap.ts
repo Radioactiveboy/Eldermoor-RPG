@@ -110,6 +110,12 @@ export function buildGreyfellsMap(): MapData {
     decor: 0.12,
     // Open moor: browner and greyer than the Hollow's grass.
     groundShade: 0xa89c7e,
+    // Past the north and the flanks the crags run on into the hills; only the south falls away into the woods.
+    outskirts: {
+      crags: ['gf-crag-3-0', 'gf-crag-3-1', 'gf-crag-4-0', 'gf-crag-4-1', 'gf-crag-4-2', 'gf-crag-5-0', 'gf-crag-5-1', 'gf-crag-5-2'],
+      cragSize: 5,
+      forestFromY: H - 9,
+    },
     entries: { northwoods: entry },
     doors: [],
     sights: [],
@@ -167,8 +173,20 @@ export function buildGreyfellsMap(): MapData {
       ty += crag(tx, ty, size) ? size + (rnd.frac() < 0.3 ? rnd.between(1, 2) : 0) : 1;
     }
   }
-  // Tors in the heather.
-  for (let i = 0; i < 40; i++) crag(rnd.between(5, W - 8), rnd.between(8, H - 12), rnd.pick([2, 2, 3]));
+  // A few tors in the heather.
+  for (let i = 0; i < 24; i++) crag(rnd.between(5, W - 8), rnd.between(8, H - 12), rnd.pick([3, 3, 4]));
+  // Scree spilling from the crags' feet out into the heather.
+  for (let y = 0; y < H - 6; y++) {
+    for (let x = 0; x < W; x++) {
+      if (taken.has(y * W + x) || terrain[y][x] !== Terrain.Grass || props[y][x] !== Prop.None) continue;
+      const cx = x + 0.5;
+      const cy = y + 0.5;
+      if (near(trail, cx, cy, 1.5) || underHill(cx, cy)) continue;
+      let by = 0;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (taken.has((y + dy) * W + x + dx) && x + dx >= 0 && x + dx < W) by++;
+      if (by > 0 && noise(x, y, 11) < 0.12 + by * 0.025) props[y][x] = Prop.Rock;
+    }
+  }
 
   // The trail runs off the south edge, back down into the north woods.
   for (let x = 0; x < W; x++) {

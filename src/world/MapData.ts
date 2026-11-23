@@ -329,6 +329,12 @@ export interface MapData {
   musings?: Musing[];
   /** Multiplies the colour of the ground (the gloom under thick woods); white or not given leaves it as it is. */
   groundShade?: number;
+  /**
+   * What stands past the map's edge (it's only painted): thick forest if not given. With `crags`, the
+   * north, west and east run on into crags (these art keys, all `cragSize` tiles across), and only the
+   * south, below `forestFromY`, is forest.
+   */
+  outskirts?: { crags: string[]; cragSize: number; forestFromY: number };
   /** How much of the grass has flowers, tufts and pebbles on it (0..1; 0.22 if not given). */
   decor?: number;
   /** Tile rectangles (x0, y0 inclusive; x1, y1 exclusive) where the trees are apple trees. */
