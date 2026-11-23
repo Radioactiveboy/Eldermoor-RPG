@@ -1,6 +1,7 @@
 import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
+import { HERO_SCALE } from '../art/character';
 import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
 import { HERO_NAME } from '../config';
 import type { Creature } from '../entities/Creature';
@@ -1573,7 +1574,8 @@ export class CombatScene extends Phaser.Scene {
       const portrait = beast ? this.add.image(CHIP_W / 2, 50, beast.sprite.texture.key, beast.portraitFrame) : this.add.image(CHIP_W / 2, 54, 'player', 0);
       portrait.setOrigin(0.5, 1);
       if (beast) portrait.setScale(Math.min(1, (CHIP_W - 4) / portrait.width, 46 / portrait.height));
-      if (c.side === 'party') portrait.setCrop(0, 4, 32, 40);
+      // The hero's sheet is drawn HERO_SCALE times finer than he's shown (see character.ts).
+      if (c.side === 'party') portrait.setCrop(0, 4 * HERO_SCALE, 32 * HERO_SCALE, 40 * HERO_SCALE).setScale(1 / HERO_SCALE);
       const name = this.add
         .text(CHIP_W / 2, 56, c.side === 'party' ? 'You' : c.name, { fontFamily: FONT, fontSize: '12px', color: active ? THEME.goldText : THEME.text })
         .setOrigin(0.5, 0);

@@ -6,11 +6,12 @@
  */
 import { renderFrame, DIRECTIONS_8, Pose3D } from '../src/art/figure3d';
 import { dressed, GEAR_LOOKS } from '../src/art/gear';
-import { heroModel } from '../src/art/hero3d';
+import { HERO_SPEC, heroModel } from '../src/art/hero3d';
 import type { EquipSlot, ItemId } from '../src/systems/Inventory';
 import { ITEMS } from '../src/systems/Inventory';
 
-const SCALE = 4;
+/** The hero's frames are drawn HERO_SCALE times finer already (see character.ts). */
+const SCALE = 2;
 const POSES: Pose3D[] = [
   { stride: 0, bob: 0 },
   { stride: 1, bob: 0.8, flutter: 1 },
@@ -21,7 +22,7 @@ const BASE: Partial<Record<EquipSlot, ItemId>> = { body: 'tunic', feet: 'boots' 
 
 function sheet(title: string, equipped: Partial<Record<EquipSlot, ItemId>>): void {
   const gear = dressed(equipped);
-  const first = renderFrame(heroModel(POSES[0], gear), 0);
+  const first = renderFrame(heroModel(POSES[0], gear), 0, HERO_SPEC);
   const w = first.width;
   const h = first.height;
   const canvas = document.createElement('canvas');
@@ -37,7 +38,7 @@ function sheet(title: string, equipped: Partial<Record<EquipSlot, ItemId>>): voi
   for (const pose of POSES) {
     for (const d of DIRECTIONS_8) {
       tctx.clearRect(0, 0, w, h);
-      tctx.putImageData(renderFrame(heroModel(pose, gear), d.angle).toImageData(), 0, 0);
+      tctx.putImageData(renderFrame(heroModel(pose, gear), d.angle, HERO_SPEC).toImageData(), 0, 0);
       ctx.drawImage(tmp, col * w * SCALE, 0, w * SCALE, h * SCALE);
       col++;
     }

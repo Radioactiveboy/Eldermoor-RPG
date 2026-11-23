@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Tones } from './character';
-import { darker } from './character';
-import { Detail, generateFigure3D, Hit, limb, Model, Pose3D, redrawFigure3D, Solid } from './figure3d';
+import { darker, HERO_SCALE } from './character';
+import { Detail, generateFigure3D, Hit, limb, Model, personSpec, Pose3D, redrawFigure3D, Solid } from './figure3d';
 import type { GearLook } from './gear';
 import { seatedLegs } from './models3d';
 import { PALETTE as P } from './palette';
@@ -74,6 +74,10 @@ const SHIRT: Tones = [P.linen, P.linenDark, 0xf0e4c4];
 const TROUSER: Tones = [P.trouser, P.trouserDark, 0x56485a];
 const SKIN: Tones = [P.skin, P.skinShade, 0xffdcb6];
 const HAIR: Tones = [P.hair, darker(P.hair), 0x8a5030];
+/** The vest's seams and turned hem: a shade darker than the leather. */
+const SEAM: Tones = [P.leatherDark, darker(P.leatherDark), P.leather];
+/** The cloak's edge: a turned hem a shade darker, so its outline reads against the body. */
+const CLOAK_HEM: Tones = [P.cloakDark, darker(P.cloakDark), P.cloak];
 
 /** The hero in one pose, wearing (and carrying) `gear`. */
 export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
@@ -109,11 +113,14 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   // The vest's skirt to the hip, over the trousers, and the belt with its gold buckle.
   const vest = (h: Hit): Tones => {
     if (Math.abs(h.y - (15.4 - b)) < 0.6) return BELT;
+    // A stitched seam down each side, where the front panel meets the back.
+    if (Math.abs(Math.abs(h.nx) - 0.82) < 0.07 && h.y > 15.4 - b) return SEAM;
     // The linen shirt showing in a V at the collar.
     if (h.nz > 0.5 && Math.abs(h.x) < (h.y - (22 - b)) * 0.5) return SHIRT;
     return VEST;
   };
-  if (!sit) for (let y = 11.5; y <= 14.5; y += 0.5) solids.push({ cx: 0, cy: y - b * 0.5, cz: s * 0.2, rx: 4.6 + (14.5 - y) * 0.12, ry: 0.8, rz: 3.5, material: VEST });
+  // The skirt's hem is turned and stitched, a darker band along its foot.
+  if (!sit) for (let y = 11.5; y <= 14.5; y += 0.5) solids.push({ cx: 0, cy: y - b * 0.5, cz: s * 0.2, rx: 4.6 + (14.5 - y) * 0.12, ry: 0.8, rz: 3.5, material: y < 12 ? SEAM : VEST });
   else solids.push({ cx: 0, cy: 11.2, cz: 1.6, rx: 4.6, ry: 1.3, rz: 4, material: VEST });
   solids.push({ cx: 0, cy: 14.4 - b * (sit ? 1 : 0.5), cz: 0, rx: 4.5, ry: 2.6, rz: 3.4, material: vest });
   solids.push({ cx: 0, cy: 18.2 - b, cz: 0.1, rx: 4.6, ry: 3.4, rz: 3.5, material: vest });
@@ -158,7 +165,7 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
     const back = sit ? 0 : t * t * flutter * 1.3;
     solids.push({
       cx: 0, cy: y - (sit ? 0 : b * (1 - t)), cz: -2.7 - t * 0.9 - back,
-      rx: 5.5 + t * 1.9, ry: 0.8, rz: 1.5 + t * 0.5, material: cloakPaint,
+      rx: 5.5 + t * 1.9, ry: 0.8, rz: 1.5 + t * 0.5, material: y < hem + 0.6 ? CLOAK_HEM : cloakPaint,
     });
   }
   // Seated, the cloak's hem pools on the seat behind.
@@ -182,13 +189,15 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   if (look.hoodUp) {
     // A deep hood round the face, its point falling at the back of the head.
     const hood = look.hood ?? CLOAK;
+    // The rim catches the light a little more than the hood behind it.
+    const rim: Tones = [hood[0], hood[0], hood[2]];
     solids.push({ cx: 0, cy: hy + 0.9, cz: hz - 2.2, rx: 6.3, ry: 6.6, rz: 6, material: hood });
     solids.push({ cx: 0, cy: hy + 5, cz: hz - 4.6, rx: 2.4, ry: 2.4, rz: 2.2, material: hood });
     solids.push(...limb([0, hy + 4.8, hz - 5.6], [0, hy + 5.4, hz - 7.2], 1.3, 0.6, hood, 0.4));
     // Its rim framing the face, kept inside the hood's outline so it stays smooth.
     for (let i = 0; i <= 20; i++) {
       const a = -Math.PI * 0.62 + (i / 20) * Math.PI * 1.24;
-      solids.push({ cx: Math.sin(a) * 4.6, cy: hy + 0.4 + Math.cos(a) * 4.7, cz: hz + 2.4 - (1 - Math.cos(a)) * 1.2, rx: 1.6, ry: 1.6, rz: 1.8, material: hood });
+      solids.push({ cx: Math.sin(a) * 4.6, cy: hy + 0.4 + Math.cos(a) * 4.7, cz: hz + 2.4 - (1 - Math.cos(a)) * 1.2, rx: 1.6, ry: 1.6, rz: 1.8, material: rim });
     }
     // The hood's shadow across the brow.
     solids.push({ cx: 0, cy: hy + 2.6, cz: hz + 3.9, rx: 3.4, ry: 1.1, rz: 1, material: [hood[1], darker(hood[1]), hood[1]] });
@@ -199,7 +208,19 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   }
 
   const details: Detail[] = [];
-  for (const side of [-1, 1]) details.push({ x: side * 1.9, y: hy + 0.9, z: hz + 4.9, color: P.eye });
+  // The face, drawn finely (see HERO_SCALE): eyes a pixel wide and two tall at
+  // the folk's size, brows over them, and a mouth.
+  const onFace = (x: number, dy: number) => hz + 5.1 * Math.sqrt(Math.max(0, 1 - (x / 5.3) ** 2 - (dy / 5.7) ** 2)) + 0.1;
+  const mark = (x: number, dy: number, color: number) => details.push({ x, y: hy + dy, z: onFace(x, dy), color, size: 0.5 });
+  for (const side of [-1, 1]) {
+    const ex = side * 1.9;
+    mark(ex, 1.1, P.eye);
+    mark(ex, 0.6, P.eye);
+    mark(ex - side * 0.5, 1.1, 0xf4ead8);
+    for (const dx of [-0.5, 0, 0.5]) mark(ex + dx * side, 2 + dx * side * 0.3, darker(P.hair));
+  }
+  mark(-0.25, -2.1, P.skinShade);
+  mark(0.25, -2.1, P.skinShade);
   // The gold clasp at the throat, and the belt buckle.
   details.push({ x: 0, y: 25.6 - b, z: 3.4, color: P.gold });
   details.push({ x: 0.6, y: 15.4 - b * (sit ? 1 : 0.5), z: 3.5, color: P.gold });
@@ -214,12 +235,15 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   return { solids, details };
 }
 
+/** The hero's frame: HERO_SCALE times finer than the folk's (see character.ts). */
+export const HERO_SPEC = personSpec(HERO_SCALE, { creases: true });
+
 /** Draws the hero's sheet as 'player' (8 directions; idle, walk, sit and work animations). */
 export function generateHero(scene: Phaser.Scene): void {
-  generateFigure3D(scene, 'player', (pose) => heroModel(pose));
+  generateFigure3D(scene, 'player', (pose) => heroModel(pose), HERO_SPEC);
 }
 
 /** Repaints the hero in new gear, in place, wherever they're showing. */
 export function redrawHero(scene: Phaser.Scene, gear: GearLook[]): void {
-  redrawFigure3D(scene, 'player', (pose) => heroModel(pose, gear));
+  redrawFigure3D(scene, 'player', (pose) => heroModel(pose, gear), HERO_SPEC);
 }

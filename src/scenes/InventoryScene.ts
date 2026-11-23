@@ -1,5 +1,6 @@
 import { Display } from '../ui/Display';
 import Phaser from 'phaser';
+import { HERO_SCALE } from '../art/character';
 import { itemScale } from '../art/sizes';
 import { GameAudio } from '../audio/Audio';
 import { HERO_NAME } from '../config';
@@ -369,7 +370,7 @@ export class InventoryScene extends Phaser.Scene {
     stage.fillEllipse(cx, y0 + 168, 120, 30);
     stage.lineStyle(1, THEME.gold, 0.35);
     stage.strokeEllipse(cx, y0 + 168, 120, 30);
-    const hero = this.add.image(cx, y0 + 172, 'player', 0).setOrigin(0.5, 1).setScale(3.4);
+    const hero = this.add.image(cx, y0 + 172, 'player', 0).setOrigin(0.5, 1).setScale(3.4 / HERO_SCALE);
     const name = this.add.text(cx, y0 + 6, HERO_NAME, titleStyle(20)).setOrigin(0.5, 0);
     this.content.add([stage, hero, name]);
 

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FEET_Y, FRAME_H } from '../art/character';
+import { FEET_Y, FRAME_H, HERO_SCALE } from '../art/character';
 import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_RADIUS, PLAYER_SPEED } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
@@ -231,7 +231,8 @@ export class Player {
     this.sprite.play(`player-${anim}-${drawn}`, true);
     // Sneaking: hunched lower, with slow, careful steps.
     const low = this.sneaking && this.pose === 'stand';
-    this.sprite.setScale(1, low ? 0.88 : 1);
+    // The sheet is drawn HERO_SCALE times finer than he stands (see character.ts).
+    this.sprite.setScale(1 / HERO_SCALE, (low ? 0.88 : 1) / HERO_SCALE);
     // An unhurried walk of about three and a half steps a second, quicker when sprinting.
     this.sprite.anims.timeScale = low ? 0.5 : WALK_CADENCE * this.pace ** 0.6;
 
