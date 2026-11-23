@@ -16,6 +16,7 @@ import { startCombat } from './combat';
 import { fishInteraction } from './fishing';
 import { plotInteractions } from './plot';
 import { examine, pickCrop, shakeTree } from './sights';
+import { speckleInteraction } from './speckle';
 import { sitOn, standUp } from './sitting';
 import { goToBed } from './sleep';
 import { useDoor } from './travel';
@@ -92,6 +93,8 @@ export function interactionsNear(g: GameScene, gx: number, gy: number): Interact
     }
   }
   list.push(...plotInteractions(g, gx, gy));
+  const speckle = speckleInteraction(g);
+  if (speckle) list.push(speckle);
   const fish = fishInteraction(g, gx, gy);
   if (fish) list.push(fish);
   const tx = Math.floor(gx);

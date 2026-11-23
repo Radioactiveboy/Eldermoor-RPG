@@ -3686,6 +3686,104 @@ const PLOT_PAINTERS: Record<string, (c: Ctx) => void> = {
       fillInk(c, '#7a7e86', 2.5);
       shine(c, -8, 26, 4, 10, 0, 0.45);
     }),
+  'rag-doll': (c) => {
+    // Hetty's rag doll: a calico dress, yarn hair, one old stitched eye and one new button one, a smudge of soot.
+    const body = () => {
+      c.beginPath();
+      c.moveTo(50, 56);
+      c.lineTo(30, 108);
+      c.quadraticCurveTo(64, 118, 98, 108);
+      c.lineTo(78, 56);
+      c.closePath();
+    };
+    drop(c, () => {
+      body();
+      c.fillStyle = '#b05a48';
+      c.fill();
+    });
+    // Arms and legs: stuffed sausages of linen.
+    for (const [x0, y0, x1, y1] of [[52, 62, 28, 84], [76, 62, 100, 84], [52, 104, 46, 122], [76, 104, 82, 122]]) {
+      c.beginPath();
+      c.moveTo(x0, y0);
+      c.lineTo(x1, y1);
+      c.strokeStyle = INK;
+      c.lineWidth = 13;
+      c.lineCap = 'round';
+      c.stroke();
+      c.strokeStyle = '#e8d4b0';
+      c.lineWidth = 8;
+      c.stroke();
+    }
+    body();
+    c.fillStyle = lin(c, 30, 56, 98, 112, [
+      [0, '#d07a60'],
+      [1, '#8a3e30'],
+    ]);
+    c.fill();
+    clipped(c, () => {
+      // Little white flowers on the calico, and a patch sewn on.
+      c.fillStyle = 'rgba(255,240,220,0.75)';
+      for (const [x, y] of [[48, 74], [66, 70], [80, 82], [56, 92], [74, 100], [42, 102], [88, 104]]) {
+        ellipse(c, x, y, 2.2, 2.2);
+        c.fill();
+      }
+      c.fillStyle = '#5e7a96';
+      c.fillRect(60, 84, 14, 12);
+      c.strokeStyle = 'rgba(255,240,220,0.8)';
+      c.lineWidth = 1.2;
+      c.setLineDash([2, 2]);
+      c.strokeRect(60.5, 84.5, 13, 11);
+      c.setLineDash([]);
+      // Soot.
+      c.fillStyle = rad(c, 84, 96, 22, [
+        [0, 'rgba(30,20,15,0.5)'],
+        [1, 'rgba(30,20,15,0)'],
+      ]);
+      c.fillRect(0, 0, 128, 128);
+    });
+    body();
+    ink(c);
+    // The head.
+    ellipse(c, 64, 38, 22, 21);
+    fillInk(c, rad(c, 58, 32, 26, [
+      [0, '#f4e4c4'],
+      [1, '#d0b088'],
+    ]));
+    // Yarn hair.
+    c.lineCap = 'round';
+    for (let i = 0; i < 9; i++) {
+      const a = Math.PI * (1.05 + i * 0.11);
+      c.beginPath();
+      c.moveTo(64 + Math.cos(a) * 18, 38 + Math.sin(a) * 18);
+      c.quadraticCurveTo(64 + Math.cos(a) * 28, 38 + Math.sin(a) * 26, 64 + Math.cos(a) * 25 + (i % 2 ? 3 : -3), 44 + Math.sin(a) * 12 + 14);
+      c.strokeStyle = i % 2 ? '#c88a2a' : '#e0a838';
+      c.lineWidth = 4;
+      c.stroke();
+    }
+    // One old stitched eye (a cross), one new button, and a stitched smile.
+    c.strokeStyle = INK;
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(52, 34);
+    c.lineTo(58, 40);
+    c.moveTo(58, 34);
+    c.lineTo(52, 40);
+    c.stroke();
+    ellipse(c, 72, 37, 4.5, 4.5);
+    fillInk(c, '#20160f', 1.5);
+    c.fillStyle = '#6a5a50';
+    ellipse(c, 71, 36, 0.9, 0.9);
+    c.fill();
+    ellipse(c, 73.2, 38, 0.9, 0.9);
+    c.fill();
+    c.beginPath();
+    c.moveTo(56, 47);
+    c.quadraticCurveTo(64, 53, 72, 47);
+    c.strokeStyle = '#7a3028';
+    c.lineWidth = 2;
+    c.stroke();
+    shine(c, 56, 30, 7, 5, -0.4, 0.4);
+  },
   'watering-can': (c) => {
     // The spout, out to the rose.
     c.beginPath();
@@ -3847,6 +3945,7 @@ const ICONS: Array<[string, string]> = [
   ['item-cabbage-seed', 'cabbage-seed'],
   ['item-spade', 'spade'],
   ['item-watering-can', 'watering-can'],
+  ['item-rag-doll', 'rag-doll'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {
