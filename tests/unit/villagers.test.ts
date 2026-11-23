@@ -4,6 +4,7 @@ import { DIRECTIONS_8, Model, Pose3D, renderFrame } from '../../src/art/figure3d
 import { MODELS_3D } from '../../src/art/models3d';
 import { motherModel } from '../../src/art/mother3d';
 import { WAYFARER_MODELS } from '../../src/art/wayfarers3d';
+import { CROWD_MODELS } from '../../src/art/townsfolk3d';
 import type { PixelCanvas } from '../../src/art/PixelCanvas';
 import npcSource from '../../src/entities/Npc.ts?raw';
 
@@ -11,7 +12,10 @@ import npcSource from '../../src/entities/Npc.ts?raw';
 vi.mock('phaser', () => ({ default: {} }));
 
 /** Every 3D person, by the 'folk-<id>' texture they're registered as. */
-const MODELS: Record<string, (pose: Pose3D) => Model> = { ...MODELS_3D, ...WAYFARER_MODELS, mother: motherModel };
+const MODELS: Record<string, (pose: Pose3D) => Model> = {
+  ...MODELS_3D, ...WAYFARER_MODELS, mother: motherModel,
+  ...Object.fromEntries(Object.entries(CROWD_MODELS).map(([id, m]) => [`crowd-${id}`, m])),
+};
 
 /** The textures the people in the world are drawn with, read from Npc.ts's table and the maps' children. */
 function texturesInUse(): string[] {

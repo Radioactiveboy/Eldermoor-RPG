@@ -116,7 +116,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
-function dusted(h: Hit, amount = 0.14): boolean {
+export function dusted(h: Hit, amount = 0.14): boolean {
   const n = Math.sin(Math.floor(h.x * 1.3) * 12.9898 + Math.floor(h.y * 1.3) * 78.233 + Math.floor(h.z * 1.3) * 37.719) * 43758.5453;
   return n - Math.floor(n) > 1 - amount;
 }
@@ -1117,7 +1117,7 @@ export function herbwifeModel(pose: Pose3D): Model {
 }
 
 /** How one of the Crooked Tankard's maids is turned out. */
-interface MaidLook {
+export interface MaidLook {
   dress: Tones;
   /** Sleeves, if not the dress's own. */
   sleeves?: Tones;
@@ -1133,7 +1133,7 @@ interface MaidLook {
  * A tavern maid: a dress to the ankles with a white apron and bib over it, a
  * cloth tucked in at the apron strings, and her hair braided or loose.
  */
-function maidModel(pose: Pose3D, look: MaidLook): Model {
+export function maidModel(pose: Pose3D, look: MaidLook): Model {
   const { dress, skin, hair } = look;
   const sleeves = look.sleeves ?? dress;
   const apron: Tones = [0xece4d4, 0xbfb29a, 0xfffaf0];
@@ -1419,7 +1419,7 @@ export function scribeModel(pose: Pose3D): Model {
 }
 
 /** How one of the Crooked Tankard's regulars is turned out (they sit at the tables of an evening). */
-interface RegularLook {
+export interface RegularLook {
   coat: Tones;
   /** Sleeves, if not the coat's. */
   sleeves?: Material;
@@ -1443,7 +1443,7 @@ interface RegularLook {
 }
 
 /** A regular of the Crooked Tankard: a coat over breeches, seated (or standing), perhaps with a drink in hand. */
-function regularModel(pose: Pose3D, look: RegularLook): Model {
+export function regularModel(pose: Pose3D, look: RegularLook): Model {
   const { coat, legs, boots, skin, hair } = look;
   const sleeves = look.sleeves ?? coat;
   const b = pose.bob;
