@@ -28,6 +28,7 @@ export function setupInput(g: GameScene): void {
   kb.on('keydown-ENTER', () => g.interact());
   kb.on('keydown-J', () => g.openJournal());
   kb.on('keydown-M', () => g.openWorldMap());
+  kb.on('keydown-P', () => g.openParty());
   kb.on('keydown-I', () => g.openInventory('satchel'));
   kb.on('keydown-C', () => g.openInventory('equipment'));
 

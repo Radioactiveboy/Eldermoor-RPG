@@ -33,7 +33,8 @@ export type SpeakerId =
   | 'tollguard' | 'carter' | 'herbwife' | 'fisherman' | 'porter' | 'gardener' | 'silent' | 'novice'
   | 'prior' | 'anselm' | 'cook' | 'scribe' | 'leofric'
   | 'landlord' | 'nell' | 'rosie' | 'harlan' | 'fenwick' | 'sigrun' | 'ada' | 'cobb' | 'pell'
-  | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier';
+  | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier'
+  | 'wat';
 
 export interface Speaker {
   name: string;
@@ -81,4 +82,6 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   tinker: { name: 'Jory the Tinker', portrait: 'portrait-tinker', voice: { pitch: 200, spread: 0.24, wave: 'triangle' } },
   goatherd: { name: 'Mags', portrait: 'portrait-goatherd', voice: { pitch: 420, spread: 0.2, wave: 'triangle' } },
   courier: { name: 'Hal the Messenger', portrait: 'portrait-courier', voice: { pitch: 210, spread: 0.12, wave: 'sine' } },
+  // The militia lad who can come along (see systems/Companions.ts): one of the militia, so he has their face.
+  wat: { name: 'Wat of the Militia', portrait: 'portrait-guard', voice: { pitch: 230, spread: 0.22, wave: 'triangle' } },
 };

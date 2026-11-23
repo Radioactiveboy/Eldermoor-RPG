@@ -4,6 +4,7 @@ import { GameAudio } from '../audio/Audio';
 import { HERO_SCALE } from '../art/character';
 import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
 import { HERO_NAME } from '../config';
+import type { Companion } from '../entities/Companion';
 import type { Creature } from '../entities/Creature';
 import { Vec2 } from '../iso/IsoMath';
 import {
@@ -41,6 +42,15 @@ import {
   TurnStart,
   weaponEffectText,
 } from '../systems/Combat';
+import {
+  BASH_COOLDOWN,
+  chooseCompanionAction,
+  COMPANIONS,
+  companionOf,
+  combatDefOf,
+  Companions,
+  REVIVE_SHARE,
+} from '../systems/Companions';
 import { Experience } from '../systems/Experience';
 import { FightTally, lootLine } from '../systems/FightTally';
 import { Inventory, InventoryEvent, itemDef, ItemId, weaponOf } from '../systems/Inventory';
@@ -84,6 +94,8 @@ interface Actor {
   /** How far above the feet the head is, in world pixels. */
   height: number;
   creature?: Creature;
+  /** Someone fighting beside the hero (see systems/Companions.ts). */
+  companion?: Companion;
 }
 
 interface MenuOption {
@@ -232,6 +244,10 @@ export class CombatScene extends Phaser.Scene {
   private world!: GameScene;
   private battle!: Battle;
   private hero!: Actor;
+  /** Those fighting beside the hero, taking their own turns. */
+  private allies: Actor[] = [];
+  /** Damage each companion did this fight, for the card at the end. */
+  private allyDealt = new Map<string, number>();
   private foes: Actor[] = [];
   private actors: Actor[] = [];
 
@@ -298,6 +314,10 @@ export class CombatScene extends Phaser.Scene {
       height: 44,
     };
     const defs: CombatantDef[] = [this.hero.c];
+    // Companions fight too, except in a fight that's already decided (the raid).
+    const companions = data.doom ? [] : this.world.companions.filter((c) => !c.isGone && c.def.fights);
+    this.allyDealt = new Map();
+    for (const c of companions) defs.push(combatDefOf(c.id, Experience.level, Companions.hp(c.id, Experience.level)));
     data.foes.forEach((creature, i) => {
       const foe = FOES[creature.kind];
       const names = PACK_NAMES[creature.kind];
@@ -317,7 +337,15 @@ export class CombatScene extends Phaser.Scene {
       height: CREATURE_ART[creature.kind].tall ?? (CREATURE_ART[creature.kind].feetY - 3) * (CREATURE_ART[creature.kind].scale ?? 1),
       creature,
     }));
-    this.actors = [this.hero, ...this.foes];
+    this.allies = companions.map((companion) => ({
+      c: byId.get(`companion-${companion.id}`)!,
+      sprite: companion.sprite,
+      offset: companion.offset,
+      pos: () => ({ x: companion.gx, y: companion.gy }),
+      height: 44,
+      companion,
+    }));
+    this.actors = [this.hero, ...this.allies, ...this.foes];
 
     ensureAbilityIcons(this);
     this.orderBar = this.add.container(0, 0);
@@ -383,13 +411,20 @@ export class CombatScene extends Phaser.Scene {
           : 'Wolves slink out of the grass, hackles raised. You are surrounded!'
         : FOE_TEXT[first.creature!.kind].start,
     );
-    // The beasts close in, and the camera settles on the fight.
-    const spots: Vec2[] = [];
+    // Companions step up beside the hero, the beasts close in, and the camera settles on the fight.
+    const allySpots = this.allySpots(first.pos());
+    const spots: Vec2[] = [...allySpots];
     for (const f of this.foes) spots.push(this.closeInSpot(f, spots));
-    await Promise.all(this.foes.map((f, i) => f.creature!.moveTo(spots[i].x, spots[i].y, 650)));
+    const foeSpots = spots.slice(allySpots.length);
+    await Promise.all([
+      ...this.foes.map((f, i) => f.creature!.moveTo(foeSpots[i].x, foeSpots[i].y, 650)),
+      ...this.allies.map((a, i) => a.companion!.moveTo(allySpots[i].x, allySpots[i].y, 500)),
+    ]);
     const here = this.hero.pos();
     for (const f of this.foes) f.creature!.faceTowards(here.x, here.y);
+    for (const a of this.allies) a.companion!.faceTowards(first.pos().x, first.pos().y);
     this.world.player.faceTowards(first.pos().x, first.pos().y);
+    if (this.allies.length > 0) this.log(`${this.allies.map((a) => a.c.name).join(' and ')} ${this.allies.length > 1 ? 'step up beside you' : 'steps up beside you'}.`);
     this.world.frameFight(this.actors.map((a) => a.pos()));
     this.banner(
       mother ? FOE_TEXT.wolfmother.banner
@@ -419,13 +454,14 @@ export class CombatScene extends Phaser.Scene {
       const c = this.battle.current;
       const actor = this.actorOf(c);
       this.drawOrder();
-      this.banner(c.side === 'party' ? 'Your turn' : `${c.name}'s turn`, c.side === 'party');
-      await this.wait(c.side === 'party' ? 350 : 650);
+      this.banner(c === this.hero.c ? 'Your turn' : `${c.name}'s turn`, c.side === 'party');
+      await this.wait(c === this.hero.c ? 350 : 650);
       const start = this.battle.beginTurn();
       this.drawOrder();
       if (start.bled > 0) await this.bleed(actor, start.bled);
       if (this.battle.isUp(c)) {
         if (c === this.hero.c) await this.heroTurn(start);
+        else if (actor.companion) await this.companionTurn(actor, start);
         else await this.foeTurn(actor, start);
       }
       this.drawOrder();
@@ -555,6 +591,10 @@ export class CombatScene extends Phaser.Scene {
         await this.rollDie(this.hero, r.roll, signed(hero.quickness));
         if (r.success) {
           this.log(`You run for it: ${r.roll} ${signed(hero.quickness)} = ${r.total} against ${r.dc}. You get away!`);
+          // Nobody stays behind: whoever is fighting beside the hero runs too (even off the ground).
+          const with_ = this.allies.filter((a) => this.battle.isUp(a.c) || a.c.hp <= 0);
+          for (const a of with_) a.c.fled = true;
+          if (with_.length > 0) this.log(`${with_.map((a) => a.c.name).join(' and ')} ${with_.length > 1 ? 'come' : 'comes'} with you.`);
           await this.hop(this.hero.offset, 0, -6);
         } else {
           this.log(`You try to run: ${r.roll} ${signed(hero.quickness)} = ${r.total} against ${r.dc}. You're cut off!`);
@@ -631,6 +671,83 @@ export class CombatScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * A companion's turn: they choose for themselves (see chooseCompanionAction),
+   * getting up if knocked down, finishing off the nearly dead, shield-bashing
+   * the big ones, or raising a guard when badly hurt.
+   */
+  private async companionTurn(ally: Actor, start: TurnStart): Promise<void> {
+    const def = COMPANIONS[ally.companion!.id];
+    const p = def.pronoun;
+    const action = chooseCompanionAction(this.battle, ally.c, def.combat.tactic, { stood: start.stood, heroId: this.hero.c.id });
+    switch (action.type) {
+      case 'stand':
+        this.standUp(ally);
+        await this.hop(ally.offset, 0, -4);
+        this.log(`${ally.c.name} scrambles back onto ${p.their} feet.`);
+        return;
+      case 'guard':
+        this.battle.defend(ally.c);
+        GameAudio.block();
+        this.float(ally, 'On guard', '#9cd3ff');
+        await this.hop(ally.offset, 0, -4);
+        this.log(`${ally.c.name} falls back behind ${p.their} guard (armour ${this.battle.armourOf(ally.c)}).`);
+        return;
+      case 'bash': {
+        const foe = this.actorOf(action.target);
+        this.battle.cooldown(ally.c, 'bash', BASH_COOLDOWN);
+        const r = this.battle.shove(ally.c, action.target);
+        await this.rollDie(ally, r.roll, signed(ally.c.toHit));
+        GameAudio.swing(true);
+        await this.lunge(ally, foe, true);
+        const man = !!foe.creature && isOutlaw(foe.creature.kind);
+        const sum = `${r.roll} ${signed(ally.c.toHit)} = ${r.total} against ${man ? 'his' : 'its'} ${r.resistTotal}${r.steady ? ', with advantage' : ''}`;
+        if (r.success) {
+          GameAudio.hit(false, true);
+          this.knockDown(foe);
+          this.float(foe, 'Prone!', hex(STATUSES.prone.color));
+          this.log(`${ally.c.name} slams ${p.their} shield into the ${action.target.name}: ${sum}. Down ${man ? 'he' : 'it'} goes! Attacks against ${man ? 'him' : 'it'} roll with advantage.`);
+        } else {
+          GameAudio.block();
+          this.float(foe, 'Holds firm', '#d8c8a4');
+          this.log(`${ally.c.name} slams ${p.their} shield into the ${action.target.name}: ${sum}. ${man ? 'He keeps his' : 'It keeps its'} feet.`);
+        }
+        this.drawOrder();
+        return;
+      }
+      case 'attack':
+        await this.attack(ally, this.actorOf(action.target));
+        return;
+      case 'wait':
+        return;
+    }
+  }
+
+  /**
+   * Where companions stand to fight: at the hero's shoulders, on the side
+   * away from the beasts, so the hero is still the one they meet first.
+   */
+  private allySpots(towards: Vec2): Vec2[] {
+    const h = this.hero.pos();
+    const base = Math.atan2(towards.y - h.y, towards.x - h.x);
+    const map = this.world.map;
+    const spots: Vec2[] = [];
+    for (const ally of this.allies) {
+      let spot = ally.pos();
+      for (const turn of [1.3, -1.3, 1.9, -1.9, 0.8, -0.8, Math.PI]) {
+        const x = h.x + Math.cos(base + turn) * 1.25;
+        const y = h.y + Math.sin(base + turn) * 1.25;
+        const free = spots.every((t) => Math.hypot(t.x - x, t.y - y) > 1);
+        if (free && map.isWalkable(Math.floor(x), Math.floor(y))) {
+          spot = { x, y };
+          break;
+        }
+      }
+      spots.push(spot);
+    }
+    return spots;
+  }
+
   /** A beast's yelp, or a goblin's shriek, as it's hurt (footpads just grunt). */
   private cry(actor: Actor): void {
     const kind = actor.creature?.kind;
@@ -689,7 +806,8 @@ export class CombatScene extends Phaser.Scene {
   /** A bleeding wound hurts as the turn begins. */
   private async bleed(actor: Actor, amount: number): Promise<void> {
     if (actor === this.hero) this.world.stats.damage(amount);
-    this.tally.hurt(actor.c, amount);
+    // (A companion's bleeding is neither damage the hero dealt nor took.)
+    if (!actor.companion) this.tally.hurt(actor.c, amount);
     this.flash(actor);
     this.float(actor, `-${amount}`, hex(STATUSES.bleeding.color));
     this.log(`${this.nameOf(actor, true)} ${actor === this.hero ? 'bleed' : 'bleeds'} for ${amount}.`);
@@ -839,6 +957,7 @@ export class CombatScene extends Phaser.Scene {
     const r = this.battle.attack(attacker.c, target.c, opts);
     const at = target.pos();
     if (attacker.creature) attacker.creature.faceTowards(at.x, at.y);
+    else if (attacker.companion) attacker.companion.faceTowards(at.x, at.y);
     else this.world.player.faceTowards(at.x, at.y);
 
     await this.rollDie(attacker, r.roll, signed(r.total - r.roll), r.mode);
@@ -855,9 +974,11 @@ export class CombatScene extends Phaser.Scene {
     const who = this.nameOf(attacker, true);
     const whom = this.nameOf(target, false);
     const verb = style.verb ?? attacker.c.verb;
+    const spear = attacker.companion ? `${attacker.c.name}'s` : 'Your';
     const dice = r.mode === 0 ? '' : ` (${r.mode > 0 ? 'advantage' : 'disadvantage'}: rolled ${r.rolls.join(' and ')})`;
     const sum = `${r.roll} ${signed(r.total - r.roll)} = ${r.total} against armour ${r.ac}${dice}`;
     this.tally.attack(r);
+    if (attacker.companion) this.allyDealt.set(attacker.c.id, (this.allyDealt.get(attacker.c.id) ?? 0) + r.damage);
     if (r.hit) {
       GameAudio.hit(r.crit, !!style.heavy);
       if (target === this.hero) {
@@ -879,7 +1000,7 @@ export class CombatScene extends Phaser.Scene {
         });
       }
       const how = r.crit ? 'A natural 20, a critical hit!' : 'Hit!';
-      this.log(`${who} ${verb} ${whom}: ${sum}. ${how} ${r.damage} damage.${r.charged ? ' The charge puts weight behind it.' : ''}${r.set ? ` Your spear is set against its charge (+${r.set} to hit).` : ''}`);
+      this.log(`${who} ${verb} ${whom}: ${sum}. ${how} ${r.damage} damage.${r.charged ? ' The charge puts weight behind it.' : ''}${r.set ? ` ${spear} spear is set against its charge (+${r.set} to hit).` : ''}`);
       if (r.trip) {
         const save = `${r.trip.roll} ${signed(r.trip.total - r.trip.roll)} = ${r.trip.total} against ${r.trip.dc}`;
         if (r.trip.fell) {
@@ -888,7 +1009,7 @@ export class CombatScene extends Phaser.Scene {
           this.float(target, 'Prone!', hex(STATUSES.prone.color));
           this.log(`${capital(whom)} ${target === this.hero ? 'are' : 'is'} dragged to the ground (${save})!`);
         } else {
-          this.log(`${capital(whom)} ${target === this.hero ? 'keep your' : 'keeps its'} feet (${save}).`);
+          this.log(`${capital(whom)} ${target === this.hero ? 'keep your' : `keeps ${this.their(target)}`} feet (${save}).`);
         }
       }
       if (r.rend) {
@@ -914,7 +1035,7 @@ export class CombatScene extends Phaser.Scene {
       this.float(target, 'Miss', '#d8c8a4');
       void this.hop(target.offset, target === this.hero ? -6 : 6, 0);
       const how = r.roll === 1 ? 'A 1: a clumsy miss.' : 'Miss.';
-      this.log(`${who} ${verb} ${whom}: ${sum}. ${how}${r.set ? ` (Your spear was set against its charge: +${r.set} to hit.)` : ''}`);
+      this.log(`${who} ${verb} ${whom}: ${sum}. ${how}${r.set ? ` (${spear} spear was set against its charge: +${r.set} to hit.)` : ''}`);
     }
     this.drawOrder();
 
@@ -955,11 +1076,28 @@ export class CombatScene extends Phaser.Scene {
       this.log(`The ${actor.c.name} crumples to the ground and lies still. You earn ${xp} experience.`);
       this.float(actor, `+${xp} XP`, THEME.goldText);
       this.gainXp(xp, actor.c.name);
+    } else if (actor.companion) {
+      GameAudio.hurt();
+      actor.companion.setDown(true);
+      const p = COMPANIONS[actor.companion.id].pronoun;
+      this.log(`${actor.c.name} goes down hard and doesn't get up. ${capital(p.they)}'s out of the fight.`);
+      this.float(actor, 'Down!', '#d8c8a4');
+    } else if (this.battle.standing('party').length > 0) {
+      // Someone is still fighting: the hero is down, but it isn't over.
+      GameAudio.death();
+      this.hero.sprite.setTint(0x777777);
+      this.log(`Your legs give way and you go down. ${this.battle.standing('party').map((c) => c.name).join(' and ')} fight${this.battle.standing('party').length > 1 ? '' : 's'} on over you...`);
     } else {
       GameAudio.death();
       this.log('Your legs give way and the world goes dark...');
     }
     this.drawOrder();
+  }
+
+  /** "its" for a beast, "his" for a footpad, and a companion's own word. */
+  private their(actor: Actor): string {
+    if (actor.companion) return COMPANIONS[actor.companion.id].pronoun.their;
+    return actor.creature && isArmed(actor.creature.kind) && !isGoblin(actor.creature.kind) ? 'his' : 'its';
   }
 
   /** Knocked off their feet: a beast sprawls (shown hurt and sunk a little). */
@@ -975,12 +1113,14 @@ export class CombatScene extends Phaser.Scene {
 
   private standUp(actor: Actor): void {
     if (actor.creature) actor.creature.setFrame(CREATURE_FRAME.snarl);
+    actor.companion?.setDown(false);
     void this.nudge(actor.offset, 0, 0, 120);
   }
 
   /** "You" / "you" for the hero, "The Grey Wolf" / "the Grey Wolf" for a beast. */
   private nameOf(actor: Actor, start: boolean): string {
     if (actor === this.hero) return start ? 'You' : 'you';
+    if (actor.companion) return actor.c.name;
     return `${start ? 'The' : 'the'} ${actor.c.name}`;
   }
 
@@ -989,6 +1129,7 @@ export class CombatScene extends Phaser.Scene {
     this.hintText.setText('');
     const slain = this.foes.filter((f) => f.c.hp <= 0).map((f) => f.c.id);
     const fled = this.foes.filter((f) => f.c.fled).map((f) => f.c.id);
+    this.settleAllies(outcome);
     if (outcome === 'victory' && slain.length === 0) {
       // Everything ran off (game that bolted, a wolf that lost its nerve).
       this.banner(this.foes.length > 1 ? 'They got away!' : 'It got away!', true);
@@ -1007,6 +1148,10 @@ export class CombatScene extends Phaser.Scene {
     this.hero.sprite.clearTint();
     this.hero.offset.x = this.hero.offset.y = 0;
     for (const f of this.foes) f.offset.x = f.offset.y = 0;
+    for (const a of this.allies) {
+      a.offset.x = a.offset.y = 0;
+      a.companion!.setDown(false);
+    }
     this.tweens.add({
       targets: [this.orderBar, this.logBox, this.menuBox, this.hotbar, this.tooltip, this.hintText, this.menuTitle],
       alpha: 0,
@@ -1024,6 +1169,33 @@ export class CombatScene extends Phaser.Scene {
         else this.showSummary(outcome, slain.length);
       },
     });
+  }
+
+  /**
+   * After the fight: each companion's health goes back to the party's
+   * reckoning (see systems/Companions.ts). Anyone knocked down in a fight that
+   * was won (or run from) gets up with a little health; after one that was
+   * lost, they come round with half. If the hero went down but the others won
+   * it, the hero is hauled back up too.
+   */
+  private settleAllies(outcome: Outcome): void {
+    for (const a of this.allies) {
+      const id = companionOf(a.c)!;
+      const max = a.c.maxHp;
+      const hp = outcome === 'defeat' ? Math.max(a.c.hp, Math.ceil(max * 0.5)) : a.c.hp > 0 ? a.c.hp : Math.ceil(max * REVIVE_SHARE);
+      Companions.setHp(id, hp, Experience.level);
+      if (a.c.hp <= 0 && outcome !== 'defeat') a.companion!.say(COMPANIONS[id].barks.revived, 4);
+      else if (outcome === 'victory' && Math.random() < 0.6) {
+        const won = COMPANIONS[id].barks.won;
+        a.companion!.say(won[Math.floor(Math.random() * won.length)], 4);
+      }
+    }
+    if (outcome === 'victory' && this.hero.c.hp <= 0) {
+      const stats = this.world.stats;
+      stats.heal(Math.max(1, Math.ceil(stats.maxHealth * 0.1)) - stats.health);
+      const helper = this.allies.find((a) => a.c.hp > 0) ?? this.allies[0];
+      this.log(`${helper?.c.name ?? 'Someone'} hauls you back to your feet. You're alive. Just.`);
+    }
   }
 
   /**
@@ -1045,6 +1217,10 @@ export class CombatScene extends Phaser.Scene {
     if (swings > 0) rows.push(['Blows landed', `${t.hits} of ${swings}${t.crits > 0 ? `, ${t.crits} critical` : ''}`]);
     rows.push(['Experience', t.xp > 0 ? `+${t.xp}` : 'none']);
     if (t.levels.length > 0) rows.push(['Level', `${t.levels[t.levels.length - 1]}!`]);
+    for (const a of this.allies) {
+      const dealt = this.allyDealt.get(a.c.id) ?? 0;
+      rows.push([a.c.name, `${dealt} damage dealt, ${a.c.hp <= 0 ? 'knocked down' : `${Companions.hp(a.companion!.id, Experience.level)}/${a.c.maxHp} health`}`]);
+    }
     if (outcome === 'victory' && slain > 0) rows.push(['Taken', loot.length > 0 ? loot.join(', ') : 'nothing worth keeping']);
 
     const { width, height } = this.scale;
@@ -1574,14 +1750,19 @@ export class CombatScene extends Phaser.Scene {
       bg.fillRoundedRect(0, 0, CHIP_W, CHIP_H, 8);
       bg.lineStyle(active ? 3 : 1.5, c.side === 'party' ? 0x8fbf6a : THEME.gold, active ? 1 : 0.5);
       bg.strokeRoundedRect(0, 0, CHIP_W, CHIP_H, 8);
-      const beast = c.side === 'party' ? undefined : this.actorOf(c).creature!;
-      const portrait = beast ? this.add.image(CHIP_W / 2, 50, beast.sprite.texture.key, beast.portraitFrame) : this.add.image(CHIP_W / 2, 54, 'player', 0);
+      const who = this.actorOf(c);
+      const beast = c.side === 'party' ? undefined : who.creature!;
+      const ally = who.companion;
+      const portrait = beast
+        ? this.add.image(CHIP_W / 2, 50, beast.sprite.texture.key, beast.portraitFrame)
+        : this.add.image(CHIP_W / 2, 54, ally ? ally.def.texture : 'player', 0);
       portrait.setOrigin(0.5, 1);
       if (beast) portrait.setScale(Math.min(1, (CHIP_W - 4) / portrait.width, 46 / portrait.height));
-      // The hero's sheet is drawn HERO_SCALE times finer than he's shown (see character.ts).
-      if (c.side === 'party') portrait.setCrop(0, 4 * HERO_SCALE, 32 * HERO_SCALE, 40 * HERO_SCALE).setScale(1 / HERO_SCALE);
+      // The hero's sheet is drawn HERO_SCALE times finer than he's shown (see character.ts); the folk's at their own size.
+      if (ally) portrait.setCrop(0, 4, 32, 40);
+      else if (c.side === 'party') portrait.setCrop(0, 4 * HERO_SCALE, 32 * HERO_SCALE, 40 * HERO_SCALE).setScale(1 / HERO_SCALE);
       const name = this.add
-        .text(CHIP_W / 2, 56, c.side === 'party' ? 'You' : c.name, { fontFamily: FONT, fontSize: '12px', color: active ? THEME.goldText : THEME.text })
+        .text(CHIP_W / 2, 56, c === this.hero.c ? 'You' : c.name, { fontFamily: FONT, fontSize: '12px', color: active ? THEME.goldText : THEME.text })
         .setOrigin(0.5, 0);
       if (name.width > CHIP_W - 6) name.setScale((CHIP_W - 6) / name.width);
       const bar = this.add.graphics();

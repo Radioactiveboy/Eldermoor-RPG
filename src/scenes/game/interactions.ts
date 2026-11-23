@@ -13,6 +13,7 @@ import { QuestLog } from '../../systems/Quests';
 import { Bed, CropPatch, Door, Prop, Seat, Sight } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import { startCombat } from './combat';
+import { companionInteractions } from './companions';
 import { fishInteraction } from './fishing';
 import { plotInteractions } from './plot';
 import { examine, pickCrop, shakeTree } from './sights';
@@ -72,6 +73,7 @@ export function interactionsNear(g: GameScene, gx: number, gy: number): Interact
     return list;
   }
   for (const npc of g.npcs) if (npc.present) list.push(npcInteraction(g, npc));
+  list.push(...companionInteractions(g));
   for (const beast of g.creatures) if (beast.huntable) list.push(huntInteraction(g, beast));
   if (g.roadEvents) list.push(...g.roadEvents.interactions());
   for (const door of g.map.data.doors ?? []) if (!door.auto) list.push(doorInteraction(g, door));
@@ -220,7 +222,8 @@ export function updateFocus(g: GameScene): void {
   for (const i of interactionsNear(g, g.player.gx, g.player.gy)) {
     const d = Math.hypot(g.player.gx - i.gx, g.player.gy - i.gy);
     // People come first: someone standing by a tree is more likely to be wanted than the tree.
-    const rank = i.key.startsWith('npc:') ? d - 1 : d;
+    // Whoever is following is always close by, so they come last, or they'd hide every door and stool.
+    const rank = i.key.startsWith('npc:') ? d - 1 : i.key.startsWith('companion:') ? d + 2 : d;
     if (d <= i.range && rank < bestDist) {
       best = i;
       bestDist = rank;
