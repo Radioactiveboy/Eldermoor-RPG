@@ -1,7 +1,7 @@
 import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { diaryStamp, QuestLog, QuestState } from '../systems/Quests';
+import { diaryStamp, QUEST_KINDS, QuestLog, QuestState } from '../systems/Quests';
 import { THEME } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
 
@@ -139,6 +139,19 @@ class PageWriter {
     }
   }
 
+  /** A heading for one kind of quest in the quest list, with a faded note at the right and a rule under it. */
+  groupHeading(title: string, aside: string): void {
+    const t = this.scene.add.text(MARGIN, this.y, title, { fontFamily: THEME.font, fontSize: '17px', color: RUBRIC, fontStyle: 'bold' });
+    const n = this.scene.add
+      .text(MARGIN + TEXT_W, this.y + t.height - 4, aside, { fontFamily: BODY_FONT, fontSize: '12px', color: INK_FADED, fontStyle: 'italic' })
+      .setOrigin(1, 1);
+    const g = this.scene.add.graphics();
+    g.lineStyle(1, 0x8a7458, 0.6);
+    g.lineBetween(MARGIN, this.y + t.height + 1, MARGIN + TEXT_W, this.y + t.height + 1);
+    this.container.add([t, n, g]);
+    this.y += t.height + 8;
+  }
+
   /**
    * A line in the quest list: a tick box, the quest's title, a faded note under it, and the page its
    * details are on at the right, like a book's table of contents. Clicking it turns to that page.
@@ -274,9 +287,19 @@ export class JournalScene extends Phaser.Scene {
     const game = this.scene.get('Game') as GameScene;
     const pages: Page[] = [];
     this.anchors.clear();
-    const active = QuestLog.active;
-    // The quest list and the quests' own pages go: those under way, then those finished, newest first.
-    const finished = QuestLog.all.filter((q) => q.completed).reverse();
+    // Quests go by kind (main, side, bounties), and within a kind those under way come first, then those
+    // finished, newest first. The task list, the quest list and the quests' own pages all keep this order.
+    const byKind = QUEST_KINDS.map(({ kind, heading, one }) => {
+      const ofKind = QuestLog.all.filter((q) => q.def.kind === kind);
+      return {
+        heading,
+        one,
+        active: ofKind.filter((q) => !q.completed),
+        finished: ofKind.filter((q) => q.completed).reverse(),
+      };
+    });
+    const active = byKind.flatMap((k) => k.active);
+    const kindName = (q: QuestState) => QUEST_KINDS.find((k) => k.kind === q.def.kind)?.one ?? 'quest';
     const anchor = (q: QuestState) => `quest:${q.def.id}`;
 
     // Tasks: the next step of every quest under way.
@@ -321,30 +344,35 @@ export class JournalScene extends Phaser.Scene {
     if (QuestLog.all.length === 0) {
       list.push({ draw: (w) => w.para('No quests yet. Adventure has a way of finding people, though.', { italic: true }) });
     }
-    const listed = (title: string, quests: readonly QuestState[], done: boolean) => {
+    for (const group of byKind) {
+      const quests = [...group.active, ...group.finished];
       quests.forEach((q, i) => {
+        const done = q.completed;
         const line: Block = (w) => {
           const page = this.anchors.get(anchor(q));
-          w.entry(q.def.title, done ? undefined : `from ${q.def.giver}`, done, page === undefined ? undefined : page + 1, () => {
+          // Under the Bounties heading, each bounty's "Bounty:" goes without saying.
+          const title = q.def.kind === 'bounty' ? q.def.title.replace(/^Bounty:\s*/, '') : q.def.title;
+          w.entry(title, done ? undefined : `from ${q.def.giver}`, done, page === undefined ? undefined : page + 1, () => {
             const target = this.anchors.get(anchor(q));
             if (target !== undefined) this.goToPage(target);
           });
         };
-        // A list's title always comes with its first quest, so it's never left alone at the foot of a page.
+        // A kind's heading always comes with its first quest, so it's never left alone at the foot of a page.
+        const counts = [group.active.length && `${group.active.length} under way`, group.finished.length && `${group.finished.length} done`]
+          .filter(Boolean)
+          .join(' · ');
         list.push({
           draw:
             i > 0
               ? line
               : (w) => {
                   w.space(4);
-                  w.subheading(`${title} (${quests.length})`, INK_FADED);
+                  w.groupHeading(group.heading, counts);
                   line(w);
                 },
         });
       });
-    };
-    listed('In progress', active, false);
-    listed('Completed', finished, true);
+    }
     if (QuestLog.all.length > 0) {
       const touch = this.sys.game.device.input.touch;
       list.push({
@@ -357,13 +385,17 @@ export class JournalScene extends Phaser.Scene {
     this.paginate(pages, 'quests', list, 'Quests, continued');
 
     // Each quest's own page: who asked, what it's about, and the steps so far.
-    for (const quest of [...active, ...finished]) {
+    for (const quest of byKind.flatMap((k) => [...k.active, ...k.finished])) {
       const steps: Piece[] = [
         {
           anchor: anchor(quest),
           draw: (w) => {
             w.heading(quest.def.title);
-            w.para(`Asked of me by ${quest.def.giver}, on day ${quest.day}.`, { italic: true, color: INK_FADED, size: 14 });
+            const asked =
+              quest.def.giver === 'Myself'
+                ? `A ${kindName(quest)} I set myself, on day ${quest.day}.`
+                : `A ${kindName(quest)}, asked of me by ${quest.def.giver} on day ${quest.day}.`;
+            w.para(asked, { italic: true, color: INK_FADED, size: 14 });
             w.para(quest.def.summary);
             w.space(4);
           },
