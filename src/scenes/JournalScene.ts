@@ -1,7 +1,7 @@
 import { Display } from '../ui/Display';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
-import { DiaryEntry, diaryStamp, QuestLog, QuestState } from '../systems/Quests';
+import { diaryStamp, QuestLog, QuestState } from '../systems/Quests';
 import { THEME } from '../ui/Widgets';
 import type { GameScene } from './GameScene';
 
@@ -27,10 +27,23 @@ const BODY_FONT = 'Merriweather, Georgia, "Times New Roman", serif';
 
 type Section = 'tasks' | 'quests' | 'diary';
 
+/** Draws one piece of a page (a heading, a quest, a diary entry) at the writer's current line. */
+type Block = (page: PageWriter) => void;
+
 interface Page {
   section: Section;
-  draw: (page: PageWriter) => void;
+  draw: Block;
 }
+
+/** Something to set down in a section: pages break between blocks, never inside one. */
+interface Piece {
+  draw: Block;
+  /** Remembers the page this piece lands on, so the quest list can point to it. */
+  anchor?: string;
+}
+
+/** The lowest a page's writing may reach, leaving room for the page number and the corner arrows. */
+const PAGE_BOTTOM = PAGE_H - 50;
 
 const SECTIONS: Array<{ id: Section; label: string; color: number }> = [
   { id: 'tasks', label: 'Tasks', color: 0x8e2f22 },
@@ -49,7 +62,14 @@ class PageWriter {
 
   heading(text: string): void {
     const t = this.scene.add
-      .text(PAGE_W / 2, this.y, text, { fontFamily: THEME.font, fontSize: '24px', color: RUBRIC, fontStyle: 'bold' })
+      .text(PAGE_W / 2, this.y, text, {
+        fontFamily: THEME.font,
+        fontSize: '24px',
+        color: RUBRIC,
+        fontStyle: 'bold',
+        align: 'center',
+        wordWrap: { width: TEXT_W },
+      })
       .setOrigin(0.5, 0);
     this.container.add(t);
     this.y += t.height + 4;
@@ -119,6 +139,64 @@ class PageWriter {
     }
   }
 
+  /**
+   * A line in the quest list: a tick box, the quest's title, a faded note under it, and the page its
+   * details are on at the right, like a book's table of contents. Clicking it turns to that page.
+   */
+  entry(title: string, note: string | undefined, done: boolean, pageNo: number | undefined, onClick?: () => void): void {
+    const g = this.scene.add.graphics();
+    const bx = MARGIN + 2;
+    const by = this.y + 3;
+    g.lineStyle(1.5, 0x3a2717, 0.9);
+    g.strokeRect(bx, by, 13, 13);
+    if (done) {
+      g.lineStyle(2.5, 0x8e2f22, 1);
+      g.beginPath();
+      g.moveTo(bx + 2, by + 7);
+      g.lineTo(bx + 5, by + 11);
+      g.lineTo(bx + 14, by - 1);
+      g.strokePath();
+    }
+    this.container.add(g);
+    const color = done ? INK_FADED : INK;
+    const top = this.y;
+    const t = this.scene.add.text(MARGIN + 24, this.y, title, {
+      fontFamily: BODY_FONT,
+      fontSize: '15px',
+      color,
+      lineSpacing: 2,
+      wordWrap: { width: TEXT_W - 24 - 30 },
+    });
+    this.container.add(t);
+    this.y += t.height + 2;
+    if (note) {
+      const n = this.scene.add.text(MARGIN + 24, this.y, note, {
+        fontFamily: BODY_FONT,
+        fontSize: '12px',
+        color: INK_FADED,
+        fontStyle: 'italic',
+        wordWrap: { width: TEXT_W - 24 - 30 },
+      });
+      this.container.add(n);
+      this.y += n.height + 2;
+    }
+    if (pageNo !== undefined) {
+      const num = this.scene.add
+        .text(MARGIN + TEXT_W, top + 1, `${pageNo}`, { fontFamily: BODY_FONT, fontSize: '13px', color: INK_FADED, fontStyle: 'italic' })
+        .setOrigin(1, 0);
+      this.container.add(num);
+    }
+    if (onClick) {
+      // The whole line is the link, so it's easy to hit on a phone.
+      const hit = this.scene.add.zone(MARGIN - 4, top - 3, TEXT_W + 8, this.y - top + 6).setOrigin(0).setInteractive({ useHandCursor: true });
+      hit.on('pointerover', () => t.setColor(RUBRIC));
+      hit.on('pointerout', () => t.setColor(color));
+      hit.on('pointerup', onClick);
+      this.container.add(hit);
+    }
+    this.y += 7;
+  }
+
   space(px: number): void {
     this.y += px;
   }
@@ -139,6 +217,8 @@ export class JournalScene extends Phaser.Scene {
   private prevArrow!: Phaser.GameObjects.Text;
   private nextArrow!: Phaser.GameObjects.Text;
   private pages: Page[] = [];
+  /** The page each quest's own page starts on, for the quest list (see Piece.anchor). */
+  private readonly anchors = new Map<string, number>();
   /** Index of the first page in view. */
   private first = 0;
   private single = false;
@@ -193,109 +273,166 @@ export class JournalScene extends Phaser.Scene {
   private buildPages(): Page[] {
     const game = this.scene.get('Game') as GameScene;
     const pages: Page[] = [];
+    this.anchors.clear();
     const active = QuestLog.active;
+    // The quest list and the quests' own pages go: those under way, then those finished, newest first.
+    const finished = QuestLog.all.filter((q) => q.completed).reverse();
+    const anchor = (q: QuestState) => `quest:${q.def.id}`;
 
-    pages.push({
-      section: 'tasks',
-      draw: (w) => {
-        w.heading('Current Tasks');
-        w.para(`Day ${game.clock.day}, ${game.clock.clockText}`, { italic: true, color: INK_FADED, size: 14 });
-        if (active.length === 0) {
+    // Tasks: the next step of every quest under way.
+    const tasks: Piece[] = [
+      {
+        draw: (w) => {
+          w.heading('Current Tasks');
+          w.para(`Day ${game.clock.day}, ${game.clock.clockText}`, { italic: true, color: INK_FADED, size: 14 });
+        },
+      },
+    ];
+    if (active.length === 0) {
+      tasks.push({
+        draw: (w) => {
           if (QuestLog.all.length > 0) {
             w.para('Every errand done, for now. Mother is mending, and the shire is mine to wander.', { italic: true });
             return;
           }
           w.para('Nothing written here yet.', { italic: true });
           w.checkbox('Speak with Mother. She is resting by the hearth.', false);
-          return;
-        }
-        for (const quest of active) {
+        },
+      });
+    }
+    for (const quest of active) {
+      tasks.push({
+        draw: (w) => {
           const step = QuestLog.current(quest);
           w.subheading(quest.def.title, RUBRIC);
           if (step) w.checkbox(step.text, false);
           w.space(6);
-        }
-        if (QuestLog.get('mother-medicine') && !QuestLog.get('mother-medicine')!.completed) {
-          w.space(10);
-          w.para('Mother is counting on me. I must not dawdle.', { italic: true, color: INK_FADED });
-        }
-      },
-    });
-
-    pages.push({
-      section: 'quests',
-      draw: (w) => {
-        w.heading('Quests');
-        const all = QuestLog.all;
-        if (all.length === 0) {
-          w.para('No quests yet. Adventure has a way of finding people, though.', { italic: true });
-          return;
-        }
-        const list = (title: string, quests: readonly QuestState[], done: boolean) => {
-          if (quests.length === 0) return;
-          w.subheading(title, INK_FADED);
-          for (const q of quests) {
-            w.checkbox(`${q.def.title}  (from ${q.def.giver})`, done);
-          }
-          w.space(8);
-        };
-        list('In progress', all.filter((q) => !q.completed), false);
-        list('Completed', all.filter((q) => q.completed), true);
-        w.para('Turn the page for the details of each.', { italic: true, color: INK_FADED, size: 14 });
-      },
-    });
-
-    for (const quest of QuestLog.all) {
-      pages.push({
-        section: 'quests',
-        draw: (w) => {
-          w.heading(quest.def.title);
-          w.para(`Asked of me by ${quest.def.giver}, on day ${quest.day}.`, { italic: true, color: INK_FADED, size: 14 });
-          w.para(quest.def.summary);
-          w.space(4);
-          for (const o of QuestLog.visibleObjectives(quest)) w.checkbox(o.text, o.done);
         },
       });
     }
+    const mother = QuestLog.get('mother-medicine');
+    if (mother && !mother.completed) {
+      tasks.push({ draw: (w) => w.para('Mother is counting on me. I must not dawdle.', { italic: true, color: INK_FADED }) });
+    }
+    this.paginate(pages, 'tasks', tasks, 'Current Tasks, continued');
 
-    // Diary entries, oldest first, packed onto as many pages as they need.
-    const groups: Array<readonly DiaryEntry[]> = [];
-    let rest = QuestLog.diary;
-    do {
-      const n = Math.max(1, this.entriesThatFit(rest, groups.length === 0));
-      groups.push(rest.slice(0, n));
-      rest = rest.slice(n);
-    } while (rest.length > 0);
-    groups.forEach((group, i) => {
-      pages.push({
-        section: 'diary',
+    // Quests: a contents list, one line a quest, each pointing to the quest's own page.
+    const list: Piece[] = [{ draw: (w) => w.heading('Quests') }];
+    if (QuestLog.all.length === 0) {
+      list.push({ draw: (w) => w.para('No quests yet. Adventure has a way of finding people, though.', { italic: true }) });
+    }
+    const listed = (title: string, quests: readonly QuestState[], done: boolean) => {
+      quests.forEach((q, i) => {
+        const line: Block = (w) => {
+          const page = this.anchors.get(anchor(q));
+          w.entry(q.def.title, done ? undefined : `from ${q.def.giver}`, done, page === undefined ? undefined : page + 1, () => {
+            const target = this.anchors.get(anchor(q));
+            if (target !== undefined) this.goToPage(target);
+          });
+        };
+        // A list's title always comes with its first quest, so it's never left alone at the foot of a page.
+        list.push({
+          draw:
+            i > 0
+              ? line
+              : (w) => {
+                  w.space(4);
+                  w.subheading(`${title} (${quests.length})`, INK_FADED);
+                  line(w);
+                },
+        });
+      });
+    };
+    listed('In progress', active, false);
+    listed('Completed', finished, true);
+    if (QuestLog.all.length > 0) {
+      const touch = this.sys.game.device.input.touch;
+      list.push({
         draw: (w) => {
-          if (i === 0) w.heading('Diary');
-          if (group.length === 0) w.para('The pages are blank.', { italic: true });
-          for (const entry of group) {
-            w.subheading(diaryStamp(entry), RUBRIC);
-            w.para(entry.text, { italic: true });
-            w.space(6);
-          }
+          w.space(4);
+          w.para(`${touch ? 'Tap' : 'Click'} a quest to turn to its page.`, { italic: true, color: INK_FADED, size: 13 });
         },
       });
-    });
+    }
+    this.paginate(pages, 'quests', list, 'Quests, continued');
+
+    // Each quest's own page: who asked, what it's about, and the steps so far.
+    for (const quest of [...active, ...finished]) {
+      const steps: Piece[] = [
+        {
+          anchor: anchor(quest),
+          draw: (w) => {
+            w.heading(quest.def.title);
+            w.para(`Asked of me by ${quest.def.giver}, on day ${quest.day}.`, { italic: true, color: INK_FADED, size: 14 });
+            w.para(quest.def.summary);
+            w.space(4);
+          },
+        },
+      ];
+      for (const o of QuestLog.visibleObjectives(quest)) steps.push({ draw: (w) => w.checkbox(o.text, o.done) });
+      this.paginate(pages, 'quests', steps, `${quest.def.title}, continued`);
+    }
+
+    // Diary entries, oldest first.
+    const diary: Piece[] = [{ draw: (w) => w.heading('Diary') }];
+    if (QuestLog.diary.length === 0) diary.push({ draw: (w) => w.para('The pages are blank.', { italic: true }) });
+    for (const entry of QuestLog.diary) {
+      diary.push({
+        draw: (w) => {
+          w.subheading(diaryStamp(entry), RUBRIC);
+          w.para(entry.text, { italic: true });
+          w.space(6);
+        },
+      });
+    }
+    this.paginate(pages, 'diary', diary);
 
     if (pages.length % 2 === 1) pages.push({ section: 'diary', draw: () => undefined });
     return pages;
   }
 
-  /** How many diary entries fit on one page, going by a rough estimate of their height. */
-  private entriesThatFit(entries: readonly DiaryEntry[], first: boolean): number {
-    let room = PAGE_H - MARGIN * 2 - 24 - (first ? 56 : 0);
-    let n = 0;
-    for (const e of entries) {
-      const needed = 30 + Math.ceil(e.text.length / 36) * 22 + 14;
-      if (n > 0 && needed > room) break;
-      room -= needed;
-      n++;
+  /**
+   * Sets a section's pieces down page by page, measuring each one as it is really drawn and starting a
+   * new page whenever the next would run past the foot of this one. A page that carries on from the
+   * one before opens with a faded note saying so.
+   */
+  private paginate(pages: Page[], section: Section, pieces: readonly Piece[], continued?: string): void {
+    const note: Block | undefined = continued
+      ? (w) => w.para(continued, { italic: true, color: INK_FADED, size: 13 })
+      : undefined;
+    let blocks: Block[] = [];
+    let y = MARGIN;
+    const flush = () => {
+      const these = blocks;
+      pages.push({ section, draw: (w) => these.forEach((b) => b(w)) });
+    };
+    for (const piece of pieces) {
+      const h = this.measure(piece.draw);
+      if (blocks.length > 0 && y + h > PAGE_BOTTOM) {
+        flush();
+        blocks = [];
+        y = MARGIN;
+        if (note) {
+          blocks.push(note);
+          y += this.measure(note);
+        }
+      }
+      if (piece.anchor) this.anchors.set(piece.anchor, pages.length);
+      blocks.push(piece.draw);
+      y += h;
     }
-    return n;
+    flush();
+  }
+
+  /** How far down the page a block reaches, found by drawing it off to one side and throwing it away. */
+  private measure(block: Block): number {
+    const scratch = this.add.container(-10000, -10000);
+    const w = new PageWriter(this, scratch);
+    w.y = 0;
+    block(w);
+    const h = w.y;
+    scratch.destroy();
+    return h;
   }
 
   // ------------------------------------------------------------ the book itself
@@ -353,7 +490,8 @@ export class JournalScene extends Phaser.Scene {
     this.views = pageXs.map((px) => this.add.container(px, -PAGE_H / 2));
 
     // Ribbon bookmark hanging out of the bottom.
-    const rx = single ? pageXs[0] + PAGE_W - 52 : 0;
+    // On a single page it hangs down the outer margin, clear of the writing.
+    const rx = single ? pageXs[0] + PAGE_W - 6 : 0;
     const ribbon = this.add.graphics();
     ribbon.fillStyle(0x9a2a2a, 1);
     ribbon.fillRect(rx - 4, -PAGE_H / 2 - 6, 8, PAGE_H + 40);
@@ -509,7 +647,11 @@ export class JournalScene extends Phaser.Scene {
 
   private jumpTo(section: Section): void {
     const index = this.pages.findIndex((p) => p.section === section);
-    if (index < 0) return;
+    if (index >= 0) this.goToPage(index);
+  }
+
+  /** Turns straight to the view that shows page `index`. */
+  private goToPage(index: number): void {
     const target = index - (index % this.perView);
     if (target !== this.first) this.turn((target - this.first) / this.perView);
   }
