@@ -597,40 +597,90 @@ function makePanelWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', 
 }
 
 /** The long table in the hall, three tiles along x: a white runner, pewter plates and two candlesticks. */
-function longTable(): IsoModel {
+/**
+ * One tile of the long dining table, so each piece sorts with the chairs
+ * beside it: 0 is the end nearest the hall's side wall, 1 the middle, 2 the
+ * far end. Legs at the ends, a linen runner the whole length, pewter plates
+ * for both sides, candlesticks near each end and apples in the middle.
+ */
+function tablePiece(i: 0 | 1 | 2): IsoModel {
   const m = new IsoModel();
   const wood = { top: 0x5a3420, left: 0x4a2a18, right: 0x3a2012 };
-  for (const [x, y] of [[0.15, 0.15], [2.75, 0.15], [0.15, 0.75], [2.75, 0.75], [1.45, 0.15], [1.45, 0.75]]) m.box(x, y, 0, 0.1, 0.1, 22, wood);
-  m.box(0.05, 0.08, 22, 2.9, 0.84, 3, wood);
-  m.quad({ x: 0.05, y: 0.33, z: 25.1 }, { x: 2.9, y: 0, z: 0 }, { x: 0, y: 0.34, z: 0 }, (_u, v) => (v < 0.08 || v > 0.92 ? 0xc8b48a : 0xf4eedc));
-  for (const px of [0.5, 1.5, 2.5]) {
-    for (const py of [0.22, 0.78]) m.cylinder(px, py, 25, 0.13, 1, () => 0x8a8a92, (u, v) => (Math.hypot(u - 0.5, v - 0.5) < 0.3 ? 0x9a9aa4 : 0xb0b0ba));
-  }
-  for (const cx of [1, 2]) {
+  const x0 = i === 0 ? 0.05 : 0;
+  const x1 = i === 2 ? 0.95 : 1;
+  for (const lx of i === 0 ? [0.15] : i === 2 ? [0.75] : []) for (const ly of [0.15, 0.75]) m.box(lx, ly, 0, 0.1, 0.1, 22, wood);
+  m.box(x0, 0.08, 22, x1 - x0, 0.84, 3, wood);
+  m.quad({ x: x0, y: 0.33, z: 25.1 }, { x: x1 - x0, y: 0, z: 0 }, { x: 0, y: 0.34, z: 0 }, (_u, v) => (v < 0.08 || v > 0.92 ? 0xc8b48a : 0xf4eedc));
+  for (const py of [0.22, 0.78]) m.cylinder(0.5, py, 25, 0.13, 1, () => 0x8a8a92, (u, v) => (Math.hypot(u - 0.5, v - 0.5) < 0.3 ? 0x9a9aa4 : 0xb0b0ba));
+  if (i === 1) {
+    m.cylinder(0.5, 0.5, 25, 0.18, 4, () => 0x8a6a4a, 0x6a4a2a);
+    for (const [ax, ay] of [[0.44, 0.44], [0.56, 0.5], [0.48, 0.58]]) m.cylinder(ax, ay, 28, 0.06, 3, (u) => (u < 0.4 ? 0xe8604a : 0xa83a2a), 0xc84a3a);
+  } else {
+    const cx = i === 0 ? 0.88 : 0.12;
     m.cylinder(cx, 0.5, 25, 0.06, 12, (u) => (u < 0.4 ? P.goldLight : P.gold), P.gold);
     m.box(cx - 0.03, 0.47, 37, 0.06, 0.06, 7, { top: P.flowerWhite, left: P.flowerWhite, right: P.linen });
     m.box(cx - 0.03, 0.47, 44, 0.06, 0.06, 3, { top: P.fireYellow, left: P.fireYellow, right: P.fireOrange });
   }
-  // A bowl of apples in the middle.
-  m.cylinder(1.5, 0.5, 25, 0.18, 4, () => 0x8a6a4a, 0x6a4a2a);
-  for (const [ax, ay] of [[1.44, 0.44], [1.56, 0.5], [1.48, 0.58]]) m.cylinder(ax, ay, 28, 0.06, 3, (u) => (u < 0.4 ? 0xe8604a : 0xa83a2a), 0xc84a3a);
   return m;
 }
 
-/** A high-backed oak chair, its back to the room's back wall (y = 0), facing +y. */
-function chair(grand: boolean): IsoModel {
+/**
+ * A high-backed oak chair. As drawn it has its back to the room's back wall
+ * (y = 0) and faces +y; `turned` puts the back on the near side (y = 1), so it
+ * faces -y, towards the back wall. Mirroring either (flipX) swaps x and y: the
+ * plain one then faces +x, the turned one -x.
+ */
+function chair(grand: boolean, turned = false): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
   const seat = grand ? 0x7a2a2a : 0x2e5a3e;
-  for (const [x, y] of [[0.22, 0.25], [0.7, 0.25], [0.22, 0.72], [0.7, 0.72]]) m.box(x, y, 0, 0.08, 0.08, 14, wood);
-  m.box(0.2, 0.22, 14, 0.6, 0.6, 3, { top: seat, left: darken(seat), right: darken(seat, 0.6) });
+  for (const [x, y] of [[0.22, 0.22], [0.7, 0.22], [0.22, 0.7], [0.7, 0.7]]) m.box(x, y, 0, 0.08, 0.08, 14, wood);
+  m.box(0.2, 0.2, 14, 0.6, 0.6, 3, { top: seat, left: darken(seat), right: darken(seat, 0.6) });
   const back = grand ? 52 : 38;
-  m.box(0.2, 0.2, 14, 0.6, 0.08, back - 14, {
-    top: OAK_LIGHT,
-    left: (u, v) => (u < 0.12 || u > 0.88 || v < 0.1 ? OAK_DARK : grand && v < 0.4 && Math.abs(u - 0.5) < 0.12 ? P.gold : seat),
-    right: OAK_DARK,
+  const by = turned ? 0.72 : 0.2;
+  const face = (u: number, v: number) => (u < 0.12 || u > 0.88 || v < 0.1 ? OAK_DARK : grand && v < 0.4 && Math.abs(u - 0.5) < 0.12 ? P.gold : seat);
+  m.box(0.2, by, 14, 0.6, 0.08, back - 14, turned
+    // Seen from behind: plain oak with a carved rail.
+    ? { top: OAK_LIGHT, left: (u, v) => (u < 0.12 || u > 0.88 || v < 0.1 || Math.abs(v - 0.45) < 0.04 ? OAK_DARK : OAK), right: OAK_DARK }
+    : { top: OAK_LIGHT, left: face, right: OAK_DARK });
+  if (grand) for (const x of [0.2, 0.72]) m.box(x, by, back, 0.08, 0.08, 6, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
+  return m;
+}
+
+/** A Turkey carpet in red, blue and gold, `w` by `h` tiles, laid under the table or the desk. */
+function carpet(w: number, h: number): IsoModel {
+  const m = new IsoModel();
+  m.quad({ x: 0.1, y: 0.1, z: 0 }, { x: w - 0.2, y: 0, z: 0 }, { x: 0, y: h - 0.2, z: 0 }, (u, v) => {
+    const eu = Math.min(u, 1 - u) * (w - 0.2);
+    const ev = Math.min(v, 1 - v) * (h - 0.2);
+    const e = Math.min(eu, ev);
+    if (e < 0.04) return (Math.floor(u * w * 10) + Math.floor(v * h * 10)) % 2 ? 0xe8dcc0 : null;
+    if (e < 0.18) return Math.floor((eu < ev ? v * h : u * w) * 4) % 2 ? 0x2a3a6a : 0x7a2420;
+    if (e < 0.22) return P.gold;
+    const d = Math.abs(u - 0.5) * w * 0.5 + Math.abs(v - 0.5) * h * 0.5;
+    if (Math.abs(d - 0.7) < 0.06 || Math.abs(d - 0.3) < 0.05) return P.gold;
+    if (d < 0.3) return 0x2a3a6a;
+    return (Math.floor(u * w * 3) + Math.floor(v * h * 3)) % 2 ? 0x8a2a24 : 0x9a3028;
   });
-  if (grand) for (const x of [0.2, 0.72]) m.box(x, 0.2, back, 0.08, 0.08, 6, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
+  return m;
+}
+
+/** The kitchen corner's work bench along the side wall (two tiles in y): a chopping board, a loaf, onions and a jug, with sacks and a crock underneath. */
+function kitchenBench(): IsoModel {
+  const m = new IsoModel();
+  const wood = { top: P.plankLight, left: P.plank, right: P.plankDark };
+  for (const [x, y] of [[0.1, 0.08], [0.1, 1.82], [0.78, 0.08], [0.78, 1.82]]) m.box(x, y, 0, 0.08, 0.08, 20, wood);
+  m.box(0.05, 0.05, 6, 0.85, 1.9, 2, wood);
+  m.box(0.05, 0.05, 20, 0.85, 1.9, 4, { top: (_u, v) => ((v * 12) % 1 < 0.06 ? P.plank : P.plankLight), left: P.plank, right: P.plankDark });
+  // A chopping board with a loaf and a knife, onions, a jug.
+  m.box(0.25, 0.25, 24, 0.5, 0.6, 1.5, { top: 0xc8a070, left: 0xa88050, right: 0x886030 });
+  m.cylinder(0.5, 0.45, 25.5, 0.16, 6, (u) => (u < 0.4 ? 0xd8a058 : 0xa8702c), 0xc88a40);
+  m.box(0.45, 0.68, 25.5, 0.06, 0.16, 0.6, { top: 0xd8dce4, left: 0xb8bcc8, right: 0x8a8e9a });
+  for (const [ox, oy] of [[0.35, 1.1], [0.55, 1.18], [0.42, 1.3]]) m.cylinder(ox, oy, 24, 0.07, 4, (u) => (u < 0.4 ? 0xe8d8a8 : 0xb89868), 0xd8c088);
+  m.cylinder(0.5, 1.6, 24, 0.12, 12, (u) => (u < 0.4 ? 0xc89070 : 0x9a6248), 0x5a3420);
+  // Sacks and a crock underneath.
+  m.cylinder(0.45, 0.5, 8, 0.22, 10, (u) => (u < 0.4 ? 0xd8c8a0 : 0xa89870), 0xc8b890);
+  m.cylinder(0.45, 1.3, 8, 0.2, 9, (u) => (u < 0.4 ? 0xb07a4a : 0x80502a), 0x6a4020);
   return m;
 }
 
@@ -699,9 +749,13 @@ export function generateGarrison(scene: Phaser.Scene): void {
   put(scene, 'gar-cellbits', cellBits());
   put(scene, 'gar-desk', writingTable(false));
   put(scene, 'res-desk', writingTable(true));
-  put(scene, 'res-table', longTable());
+  for (const i of [0, 1, 2] as const) put(scene, `res-table-${i}`, tablePiece(i));
   put(scene, 'res-chair', chair(false));
+  put(scene, 'res-chair-turned', chair(false, true));
   put(scene, 'res-chair-grand', chair(true));
+  put(scene, 'res-carpet-dining', carpet(5, 3), false);
+  put(scene, 'res-carpet-study', carpet(4, 3), false);
+  put(scene, 'res-kitchen-bench', kitchenBench());
   put(scene, 'res-armour', armour());
   put(scene, 'res-dresser', dresser());
   const kinds: PanelWallKind[] = ['plain', 'window', 'portrait', 'tapestry', 'door', 'sconce'];

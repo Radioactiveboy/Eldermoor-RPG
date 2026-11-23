@@ -397,6 +397,7 @@ const NPCS: Record<string, NpcDef> = {
   // The Headman's house: the Headman at his desk (spoken to across it), and his household.
   headman: {
     texture: 'folk-headman',
+    sits: true,
     talkRange: 2.6,
     script: () => {
       const first = !met.has('headman');

@@ -199,11 +199,14 @@ export function buildJailMap(): MapData {
  * Elsie the maid is forever tidying.
  */
 export function buildResidenceMap(): MapData {
-  const W = 14;
-  const H = 11;
-  const door = { x: 1.2, y: 9.5 };
-  const back = ['plain-0', 'plain-1', 'plain-0', 'sconce-0', 'plain-1', 'plain-0', 'portrait-0', 'tapestry-0', 'portrait-1', 'plain-0', 'plain-1', 'sconce-1', 'plain-0', 'plain-1'];
-  const side = ['plain-0', 'portrait-1', 'plain-1', 'window-0', 'plain-0', 'sconce-0', 'plain-1', 'window-1', 'plain-0', 'door-0', 'plain-1'];
+  const W = 16;
+  const H = 8;
+  const door = { x: 1.2, y: 6.5 };
+  // The back wall from the kitchen corner: the dresser and the hearth behind the dining table, the
+  // Hales on the wall either side of the harvest tapestry, then the Headman's study under the window.
+  const back = ['plain-0', 'plain-1', 'plain-0', 'sconce-0', 'plain-1', 'plain-0', 'portrait-0', 'tapestry-0', 'portrait-1', 'sconce-1', 'plain-0', 'plain-1', 'window-0', 'window-1', 'plain-0', 'plain-1'];
+  // The side wall: the kitchen corner, a window, a past Headman, the front door.
+  const side = ['plain-0', 'sconce-0', 'window-0', 'plain-1', 'portrait-1', 'plain-0', 'door-0', 'sconce-1'];
   const data: MapData = {
     ...emptyRoom(W, H, Terrain.Floor),
     spawn: door,
@@ -215,27 +218,30 @@ export function buildResidenceMap(): MapData {
       corner: 'pwall-corner',
       height: PANEL_WALL_HEIGHT,
     },
-    doors: [{ tx: 0, ty: 9, to: 'market', entry: 'residence', label: 'Go outside' }],
+    doors: [{ tx: 0, ty: 6, to: 'market', entry: 'residence', label: 'Go outside' }],
     entries: { door },
     landmarks: [
-      { gx: 11, gy: 2, name: "The Headman's desk", range: 3 },
-      { gx: 11.5, gy: 8.5, name: 'The kitchen', range: 2.5 },
+      { gx: 13, gy: 2, name: "The Headman's desk", range: 3 },
+      { gx: 1.5, gy: 2, name: 'The kitchen', range: 2 },
+      { gx: 6, gy: 4.5, name: 'The dining table', range: 2.5 },
     ],
     lights: [
       { gx: 5, gy: 0.9, z: 14, radius: 300, flicker: 1 },
       { gx: 3.5, gy: 0.2, z: 64, radius: 90, flicker: 0.5 },
-      { gx: 11.5, gy: 0.2, z: 64, radius: 90, flicker: 0.5 },
-      { gx: 0.2, gy: 5.5, z: 64, radius: 90, flicker: 0.5 },
-      { gx: 5, gy: 4.5, z: 44, radius: 130, flicker: 0.6 },
-      { gx: 10.5, gy: 2.6, z: 34, radius: 110, flicker: 0.5 },
-      { gx: 13.5, gy: 7.5, z: 24, radius: 150, flicker: 0.6 },
+      { gx: 9.5, gy: 0.2, z: 64, radius: 90, flicker: 0.5 },
+      { gx: 0.2, gy: 1.5, z: 64, radius: 90, flicker: 0.5 },
+      { gx: 0.2, gy: 7.5, z: 64, radius: 90, flicker: 0.5 },
+      { gx: 4.9, gy: 4.5, z: 44, radius: 130, flicker: 0.6 },
+      { gx: 7.1, gy: 4.5, z: 44, radius: 130, flicker: 0.6 },
+      { gx: 12.3, gy: 2.4, z: 34, radius: 110, flicker: 0.5 },
+      { gx: 0.6, gy: 1.4, z: 10, radius: 120, flicker: 0.9 },
     ],
     npcs: [
-      // The Headman at his desk from first light till late; his household about him.
-      { id: 'headman', gx: 11, gy: 1.55, looking: { x: 0, y: 1 }, hours: [7, 22] },
-      { id: 'steward', gx: 2.5, gy: 8.5, looking: { x: -1, y: 1 }, hours: [6, 23] },
-      { id: 'housemaid', gx: 7.5, gy: 6.5, hours: [6, 22] },
-      { id: 'housecook', gx: 11.5, gy: 9.5, hours: [5, 21] },
+      // The Headman in his chair at the desk from first light till late; his household about him.
+      { id: 'headman', gx: 13.2, gy: 1.35, looking: { x: 0, y: 1 }, hours: [7, 22] },
+      { id: 'steward', gx: 1.6, gy: 5.4, looking: { x: 1, y: 0 }, hours: [6, 23] },
+      { id: 'housemaid', gx: 8.5, gy: 6, hours: [6, 22] },
+      { id: 'housecook', gx: 1.5, gy: 2.4, looking: { x: -1, y: 0 }, hours: [5, 21] },
     ],
     seats: [],
     sights: [
@@ -250,44 +256,53 @@ export function buildResidenceMap(): MapData {
         thought: 'A harvest in Adowvale, stitched in wool: sheaves standing in the fields, the church tower, and a tiny cottage in the Hollow with smoke going up from its chimney. I look at that one for a long time.',
       },
       {
-        id: 'residence-armour', gx: 1.5, gy: 6.5, label: 'Look at the armour', z: 60,
+        id: 'residence-armour', gx: 0.5, gy: 4.5, label: 'Look at the armour', z: 60,
         thought: 'Old mail, a great helm and a kite shield in green and gold, polished till they shine. Nobody has worn them in a hundred years. Elsie dusts them every morning, she says, "in case."',
       },
     ],
     chores: [
-      { x: 4.5, y: 5.5, face: { x: 0, y: -1 } },
-      { x: 7.5, y: 2.6, face: { x: 0, y: -1 } },
-      { x: 2.5, y: 2.5, face: { x: 0, y: -1 } },
-      { x: 9.5, y: 5.5, face: { x: 1, y: 0 } },
-      { x: 3.5, y: 6.6, face: { x: -1, y: 0 } },
-      { x: 6.5, y: 8.5, face: { x: 0, y: 1 } },
+      { x: 4.5, y: 2.5, face: { x: 0, y: 1 } },
+      { x: 7.5, y: 2.5, face: { x: 0, y: -1 } },
+      { x: 8.4, y: 4.5, face: { x: -1, y: 0 } },
+      { x: 2.5, y: 1.4, face: { x: 0, y: -1 } },
+      { x: 11, y: 1.4, face: { x: 0, y: -1 } },
+      { x: 1.5, y: 4.5, face: { x: -1, y: 0 } },
+      { x: 6, y: 6.4, face: { x: 0, y: -1 } },
     ],
   };
   const add = (key: string, tx: number, ty: number, extra: Partial<MapObject> = {}) => placeObject(data, { key, tx, ty, w: 1, h: 1, ...extra });
-  // The hall: the hearth on the back wall, a rug before it, and the long table down the middle.
-  add('abbey-bookcase', 0, 0, { w: 2 });
+  const chairShape = { shapes: [box(0.2, 0.2, 0.8, 0.8)] };
+  // The kitchen corner: barrels and sacks, the pot over its fire, the work bench along the wall.
+  add('furn-barrels', 0, 0, barrels);
+  add('mkt-sacks', 1, 0, { shapes: [circle(0.45, 0.4, 0.3), circle(0.45, 0.7, 0.18)] });
+  add('abbey-cauldron', 0, 1, { shapes: [circle(0.5, 0.5, 0.34)] });
+  add('res-kitchen-bench', 0, 2, { h: 2, shapes: [box(0.05, 0.05, 0.9, 1), box(0.05, 1, 0.9, 1.95)] });
+  // The hall: the dresser and the hearth on the back wall, and the long table on its carpet, laid for eight.
   add('res-dresser', 2, 0, { shapes: [box(0.05, 0.1, 0.95, 0.6)] });
   add('furn-hearth', 4, 0, { w: 2, anim: 'hearth-fire' });
-  add('furn-rug', 3, 2, { w: 4, h: 3, flat: true });
-  add('res-table', 3, 4, { w: 3, shapes: [box(0.15, 0.12, 1, 0.9), box(1, 0.12, 2, 0.9), box(2, 0.12, 2.9, 0.9)] });
-  for (let x = 3; x < 6; x++) add('res-chair', x, 3, { shapes: [box(0.2, 0.2, 0.8, 0.8)] });
-  add('res-chair-grand', 2, 4, { flipX: true, shapes: [box(0.2, 0.2, 0.8, 0.8)] });
-  // The Headman's end: his desk and chair, his books, the village's charter chest.
-  add('abbey-bookcase', 9, 0, { w: 2 });
-  add('abbey-bookcase', 12, 0, { w: 2 });
-  add('res-chair-grand', 11, 1, { blocks: [], shapes: [] });
-  add('res-desk', 10, 2, table2);
-  add('furn-chest', 13, 2, { flipX: true, shapes: [box(0.15, 0.1, 0.75, 0.9)] });
-  // By the door: the old armour, and a seat for callers kept waiting.
-  add('res-armour', 0, 6, { shapes: [circle(0.5, 0.5, 0.3)] });
-  add('furn-doormat', 0, 9, { flat: true });
-  add('mkt-bench', 0, 7, { flipX: true, shapes: [box(0.35, 0.08, 0.7, 0.92)] });
-  data.seats!.push({ name: 'residence-hall-bench', gx: 0.55, gy: 7.5, faceX: 1, faceY: 0, standX: 1.5, standY: 7.5 });
-  // The kitchen end, out from the side: a second fire for the pots, a work table, stores.
-  add('abbey-cauldron', 13, 7, { shapes: [circle(0.5, 0.5, 0.34)] });
-  add('furn-table', 11, 7, table2);
-  add('furn-barrels', 13, 9, barrels);
-  add('mkt-sacks', 13, 10, { shapes: [circle(0.45, 0.4, 0.3), circle(0.45, 0.7, 0.18)] });
-  add('mkt-crates', 12, 10, crate);
+  add('res-carpet-dining', 3, 3, { w: 5, h: 3, flat: true });
+  for (let i = 0; i < 3; i++) add(`res-table-${i}`, 4 + i, 4, { shapes: [box(i === 0 ? 0.1 : 0, 0.1, i === 2 ? 0.9 : 1, 0.9)] });
+  for (let x = 4; x < 7; x++) {
+    add('res-chair', x, 3, chairShape);
+    add('res-chair-turned', x, 5, chairShape);
+  }
+  // The Headman's place at the head of the table, his back to the kitchen; a plainer chair at the foot.
+  add('res-chair-grand', 3, 4, { flipX: true, ...chairShape });
+  add('res-chair-turned', 7, 4, { flipX: true, ...chairShape });
+  // The study: shelves of the village's books either side of the window, the desk, and chairs for callers.
+  add('res-carpet-study', 11, 1, { w: 4, h: 3, flat: true });
+  add('abbey-bookcase', 10, 0, { w: 2 });
+  add('abbey-bookcase', 14, 0, { w: 2 });
+  add('furn-chest', 9, 0, { shapes: [box(0.15, 0.1, 0.85, 0.75)] });
+  // His chair sits between two tiles, square behind the desk; the desk keeps callers out from behind it.
+  add('res-chair-grand', 12.5, 1, { blocks: [], shapes: [] });
+  add('res-desk', 12, 2, { ...table2, blocks: [[0, 0], [1, 0], [0, -1], [1, -1]] });
+  add('res-chair-turned', 12, 3, chairShape);
+  add('res-chair-turned', 13, 3, chairShape);
+  // By the front door: the old armour, and a bench for callers kept waiting.
+  add('res-armour', 0, 4, { shapes: [circle(0.5, 0.5, 0.3)] });
+  add('mkt-bench', 0, 5, { flipX: true, shapes: [box(0.35, 0.08, 0.7, 0.92)] });
+  add('furn-doormat', 0, 6, { flat: true });
+  data.seats!.push({ name: 'residence-hall-bench', gx: 0.55, gy: 5.5, faceX: 1, faceY: 0, standX: 1.5, standY: 5.5 });
   return data;
 }

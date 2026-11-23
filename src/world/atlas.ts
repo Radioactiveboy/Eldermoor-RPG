@@ -68,7 +68,7 @@ export const LINKS: Link[] = [
   link('market', { x: 7.5, y: 35.5 }, 'garrison', { x: 0.5, y: 6.5 }),
   link('garrison', { x: 8.5, y: 5.5 }, 'jail', { x: 1.5, y: 1.5 }),
   link('market', { x: 9.5, y: 33.5 }, 'jail', { x: 13.5, y: 1.5 }),
-  link('market', { x: 17.5, y: 34.5 }, 'residence', { x: 0.5, y: 9.5 }),
+  link('market', { x: 17.5, y: 34.5 }, 'residence', { x: 0.5, y: 6.5 }),
   link('tavern', { x: 4.5, y: 1.5 }, 'tavern-hall', { x: 0.5, y: 1.5 }),
   link('tavern', { x: 6.5, y: 2.5 }, 'cellar', { x: 1.5, y: 1.5 }),
   link('tavern-hall', { x: 2.5, y: 0.5 }, 'tavern-room', { x: 0.5, y: 3.5 }),
