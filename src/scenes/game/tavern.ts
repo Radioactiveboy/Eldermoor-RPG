@@ -6,7 +6,11 @@
 import { GameAudio } from '../../audio/Audio';
 import { PLAYER_RADIUS } from '../../config';
 import { SpeakerId } from '../../dialogue/Dialogue';
-import { DICE_STAKE, HARLAN_DRINK, PELL_SONG, RAT_REWARD, SONG_PRICE, TAVERN_CHATTER, TAVERN_MUTTERS, TAVERN_TOASTS } from '../../dialogue/tavern';
+import { raidIsOver } from '../../dialogue/afterRaid';
+import {
+  DICE_STAKE, HARLAN_DRINK, PELL_SONG, RAT_REWARD, SONG_PRICE, TAVERN_CHATTER, TAVERN_MUTTERS, TAVERN_RAID_CHATTER, TAVERN_RAID_MUTTERS,
+  TAVERN_RAID_TOASTS, TAVERN_TOASTS,
+} from '../../dialogue/tavern';
 import { NpcWorld } from '../../entities/Npc';
 import { Vec2 } from '../../iso/IsoMath';
 import { Inventory, itemDef, ItemId } from '../../systems/Inventory';
@@ -251,7 +255,12 @@ export function updateChatter(g: GameScene, dt: number): void {
   g.chatterTimer -= dt;
   if (g.chatterTimer > 0) return;
   const gap = () => CHATTER_GAP[0] + Math.random() * (CHATTER_GAP[1] - CHATTER_GAP[0]);
-  const exchanges = TAVERN_CHATTER.filter((ex) => ex.every(([id]) => g.someone(id)?.idle));
+  // Since the goblins came, there's only one thing anybody talks about.
+  const raid = raidIsOver();
+  const chatter = raid ? TAVERN_RAID_CHATTER : TAVERN_CHATTER;
+  const mutters = raid ? TAVERN_RAID_MUTTERS : TAVERN_MUTTERS;
+  const toasts = raid ? TAVERN_RAID_TOASTS : TAVERN_TOASTS;
+  const exchanges = chatter.filter((ex) => ex.every(([id]) => g.someone(id)?.idle));
   if (exchanges.length > 0 && Math.random() < 0.55) {
     const ex = exchanges[Math.floor(Math.random() * exchanges.length)];
     ex.forEach(([id, text], i) => g.time.delayedCall(i * LINE_GAP * 1000, () => g.someone(id)?.say(text, LINE_GAP + 0.3)));
@@ -263,12 +272,12 @@ export function updateChatter(g: GameScene, dt: number): void {
   const patrons = about.filter((n) => !['landlord', 'nell', 'rosie'].includes(n.id));
   if (patrons.length >= 4 && Math.random() < 0.35) {
     const who = patrons[Math.floor(Math.random() * patrons.length)];
-    who.say(TAVERN_TOASTS[Math.floor(Math.random() * TAVERN_TOASTS.length)], 3);
+    who.say(toasts[Math.floor(Math.random() * toasts.length)], 3);
     return;
   }
-  const talkers = about.filter((n) => TAVERN_MUTTERS[n.id as SpeakerId]);
+  const talkers = about.filter((n) => mutters[n.id as SpeakerId]);
   const who = talkers[Math.floor(Math.random() * talkers.length)];
-  const lines = who && TAVERN_MUTTERS[who.id as SpeakerId]!;
+  const lines = who && mutters[who.id as SpeakerId]!;
   if (who && lines) who.say(lines[Math.floor(Math.random() * lines.length)], 3.5);
 }
 

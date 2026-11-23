@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import type { DialogueScript } from '../dialogue/Dialogue';
+import { raidAware, raidIsOver } from '../dialogue/afterRaid';
 import { MedicineStage, MOTHER_ASLEEP, MOTHER_DOZING, MOTHER_INTRO, motherScript } from '../dialogue/mother';
 import { BAKER, GUARD, militiaScript, SMITH, TANNER } from '../dialogue/market';
 import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/travellers';
@@ -124,6 +125,7 @@ function landlord(hour: number): DialogueScript {
       goat: Reputation.last('goat'),
       courier: Reputation.last('courier'),
       bounties: Bounties.timesClaimed(),
+      raidOver: raidIsOver(),
     }),
     medicine: QuestLog.has('mother-medicine') && !QuestLog.get('mother-medicine')!.completed,
     toldBench: QuestLog.hasFlag('may-use-cellar'),
@@ -628,7 +630,12 @@ export class Npc implements Body {
     return !!this.def.sits || this.sitting;
   }
 
+  /** What they have to say, as it stands after the goblins' raid, if that's been (see dialogue/afterRaid.ts). */
   script(): DialogueScript {
+    return raidAware(this.id, this.ordinaryScript());
+  }
+
+  private ordinaryScript(): DialogueScript {
     if (this.shift !== 'open' && this.def.offDuty) {
       const start = this.shift === 'arriving' ? 'opening' : this.bound === 'home' ? 'closing' : `to-${this.bound}`;
       return { ...this.def.offDuty, start: this.def.offDuty.nodes[start] ? start : 'closing' };

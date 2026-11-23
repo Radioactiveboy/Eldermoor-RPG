@@ -235,7 +235,10 @@ export function landlordNews(flags: {
   footpads?: RoadOutcome; goat?: RoadOutcome; courier?: RoadOutcome;
   /** Militia bounties the hero has claimed. */
   bounties?: number;
+  /** The goblins have burnt the farm in the Hollow (see dialogue/afterRaid.ts): there's no other news. */
+  raidOver?: boolean;
 }): string[] {
+  if (flags.raidOver) return RAID_NEWS;
   const news = [
     "The bridge at Harrowford's still down. Half my barley comes that way. You'll be paying more for your ale by midsummer, mark me.",
     "Fenwick, the wool man there, says Master Coombe has lost two ewes off the old road. Wolves, he reckons. Coombe reckons it's the drover's fault. Coombe would.",
@@ -265,6 +268,15 @@ export function landlordNews(flags: {
   if ((flags.bounties ?? 0) >= 2) news.push("The sergeant says you've been taking the militia's notices. Good. The lads would rather walk round the square than go looking for boar.");
   return news;
 }
+
+/** What Godric has heard since the goblins came: nobody in the Tankard talks of anything else. */
+const RAID_NEWS = [
+  "The sergeant's barred the gates at dusk and doubled the watch. First time since my father's day. The lads on the gate are drinking here after, and they're not sleeping.",
+  "Fenwick says shepherds on the fells have seen fires in the north woods at night. Lots of little fires. He's going south the moment the bridge is up.",
+  "Lord Morten's been sent to for men. He's sent back asking who's to pay for them. I've told the sergeant he can have the Tankard's takings if it comes to it. Don't tell Rosie.",
+  "Harlan's been on about his grandad again. Goblins under the hill, a door to keep them down. A week ago I'd have laughed. I didn't laugh.",
+  "Iran's shut up in his hut with his little ones and won't come out. Hilde's been sending bread down with the carter. Somebody ought to look in on him.",
+];
 
 /** A tavern maid. At a table, she takes an order; anywhere else, she has a word and tells you to sit down. */
 export function maidScript(who: 'nell' | 'rosie', seated: boolean, coins: number): DialogueScript {
@@ -633,6 +645,31 @@ export const TAVERN_CHATTER: Array<Array<[SpeakerId, string]>> = [
   [['cobb', 'Godric, there is a hair in my ale.'], ['landlord', "That's the hops. Very fine hops, those."]],
   [['ada', 'Pell! Play something we can dance to.'], ['pell', 'Madam, I only play things you can weep to.']],
 ];
+
+/** What the regulars say to each other since the goblins came. */
+export const TAVERN_RAID_CHATTER: Array<Array<[SpeakerId, string]>> = [
+  [['cobb', 'Hundreds of them, I heard. Hundreds.'], ['ada', 'You heard it from yourself, Cobb.'], ['cobb', "...Well, it's still a lot."]],
+  [['harlan', 'My grandad said they would come back.'], ['landlord', 'Your grandad said a lot of things, Harlan.'], ['harlan', 'He was right about this one.']],
+  [['rosie', 'Godric, is the door barred?'], ['landlord', 'Barred and bolted, love. Third time you have asked.']],
+  [['fenwick', 'I am leaving the moment that bridge is mended.'], ['sigrun', 'Goblins swim.'], ['fenwick', '...Do they?'], ['sigrun', 'No.']],
+  [['pell', 'Perhaps a little song, to lift the—'], ['landlord', 'No, Pell.']],
+  [['nell', 'More stew for the militia table.'], ['landlord', "They've had four bowls."], ['nell', "They're frightened, Godric. Fear's hungry."]],
+  [['ada', 'Nobody wants a game tonight.'], ['cobb', "I'll play you, Ada."], ['ada', "...Bless you, Cobb. You'll lose, mind."]],
+];
+
+/** And what they mutter to themselves, since the goblins came. */
+export const TAVERN_RAID_MUTTERS: Partial<Record<SpeakerId, string[]>> = {
+  harlan: ['Goblins. In my day... no. In my grandad\'s day.', 'Hrmph. Told you. Told all of you.'],
+  landlord: ['Who left that door on the latch? Bar it!', 'Poor lad. Poor woman.'],
+  nell: ['Mind your backs. Mind the door.', 'Two ales for the militia table.'],
+  rosie: ['What was that? ...Oh. Just the wind.'],
+  pell: ['♪ ...No. No, not tonight. ♪'],
+  cobb: ['Hundreds of them...'],
+  sigrun: ['...', 'North.'],
+};
+
+/** What the crowd raises a cup to, since the goblins came. */
+export const TAVERN_RAID_TOASTS = ['To the Hollow.', "To the lad's mother. Bring her home.", 'To the militia!', 'To barred doors!'];
 
 /** Things said out loud now and then by whoever's about, to nobody in particular. */
 export const TAVERN_MUTTERS: Partial<Record<SpeakerId, string[]>> = {
