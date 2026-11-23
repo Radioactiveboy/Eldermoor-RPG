@@ -9,6 +9,7 @@ import { Aftermath, crowsAbout, smoulder } from './Aftermath';
 import { raidStage } from './GoblinRaid';
 import type { IsoMap } from './IsoMap';
 import { Prop, Terrain } from './MapData';
+import { puddleAt } from './Puddles';
 
 /** Drawn over everything in the world (but under the HUD, which is its own scene). */
 const SKY_DEPTH = 90000;
@@ -680,13 +681,13 @@ export class Ambience {
       for (let tx = 1; tx < width - 1; tx++) {
         const t = terrain[ty][tx];
         if ((t !== Terrain.Dirt && t !== Terrain.Soil) || props[ty][tx] !== Prop.None) continue;
-        const h = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
-        if (h % 7 !== 0) continue;
-        const c = gridToScreen(tx + 0.5 + ((h >> 4) % 5) / 10 - 0.2, ty + 0.5 + ((h >> 8) % 5) / 10 - 0.2);
+        const spot = puddleAt(tx, ty);
+        if (!spot) continue;
+        const c = gridToScreen(spot.x, spot.y);
         const image = this.scene.add
-          .image(Math.round(c.x), Math.round(c.y), `puddle-${(h >> 12) % 3}`)
+          .image(Math.round(c.x), Math.round(c.y), `puddle-${spot.kind}`)
           .setDepth(GROUND_FX_DEPTH + 0.005)
-          .setFlipX(((h >> 14) & 1) === 1)
+          .setFlipX(spot.flip)
           .setVisible(false);
         this.puddles.push(image);
         if (this.puddles.length >= 220) return;
