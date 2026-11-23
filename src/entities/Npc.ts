@@ -11,6 +11,7 @@ import { fishermanScript } from '../dialogue/fisherman';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
 import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, MAID_CHORES, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
+import { watScript } from '../dialogue/companions';
 import { courierScript, footpadScript, goatherdScript, SHAREABLE_FOOD, tinkerScript, Wayfarers } from '../dialogue/wayfarers';
 import { ROOM_COUNT, Tavern } from '../systems/Tavern';
 import { TOLL } from '../world/MarketMap';
@@ -360,6 +361,8 @@ const NPCS: Record<string, NpcDef> = {
       return courierScript(Wayfarers.courierFed, food && itemDef(food).name.toLowerCase(), first);
     }),
   },
+  // Wat, the militia lad on the east watch after the raid, who will come along if asked (see systems/Companions.ts).
+  wat: { texture: 'folk-guard', roam: 2, script: wayfarer('wat', watScript) },
   // Adowvale folk about the market by day, overheard rather than spoken to (scenes/game/marketCrowd.ts).
   'crowd-goodwife': { texture: 'folk-crowd-goodwife', passerby: true, roam: 6, script: () => NOBODY },
   'crowd-labourer': { texture: 'folk-crowd-labourer', passerby: true, roam: 7, script: () => NOBODY },

@@ -4,6 +4,7 @@
  * isn't in a state to take it, rather than breaking a conversation or a fight.
  */
 import Phaser from 'phaser';
+import { COMPANIONS, CompanionId, Companions } from '../../systems/Companions';
 import { Experience } from '../../systems/Experience';
 import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
@@ -11,6 +12,7 @@ import { Weather } from '../../systems/Weather';
 import { AreaId } from '../../world/MapData';
 import type { CombatScene } from '../CombatScene';
 import type { GameScene, GameSceneData } from '../GameScene';
+import { companionAction } from './companions';
 
 /** Scenes left running when the panel jumps somewhere: the world, its HUD, and the panel itself. */
 const KEEP = new Set(['Game', 'UI', 'Debug']);
@@ -97,6 +99,27 @@ export function heal(game: Phaser.Game): string {
   g.stats.heal(g.stats.maxHealth);
   g.stats.restoreStamina(g.stats.maxStamina);
   return 'Health and stamina full.';
+}
+
+/**
+ * Someone comes along at once, wherever the hero is, without asking or paying
+ * (or, if they're already along, is sent home). The story flag they wait for
+ * is set too, so they stay willing.
+ */
+export function toggleCompanion(game: Phaser.Game, id: CompanionId): string {
+  const g = liveGame(game);
+  if (!g) return 'Start a game first.';
+  if (g.inCombat) return 'Not in a fight.';
+  const def = COMPANIONS[id];
+  if (Companions.isWith(id)) {
+    companionAction(g, `companion:leave:${id}`);
+    return `${def.short} sent home.`;
+  }
+  if (def.needs) QuestLog.setFlag(def.needs);
+  if (Companions.full) return `The party is full (${Companions.party.join(', ')}). Send someone home first.`;
+  Companions.recruited.add(id);
+  companionAction(g, `companion:join:${id}`);
+  return `${def.short} is with you.`;
 }
 
 /** Every foe in the fight going on drops (see CombatScene.killAll). */

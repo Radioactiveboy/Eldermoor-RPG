@@ -10,6 +10,7 @@ import { SNEAK, SPRINT_NOTICE } from '../../config';
 import { Creature } from '../../entities/Creature';
 import { Npc } from '../../entities/Npc';
 import { Bounties } from '../../systems/Bounties';
+import { COMPANIONS, Companions } from '../../systems/Companions';
 import { FoeKind, FOES, isOutlaw } from '../../systems/Combat';
 import { Inventory, ItemId } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
@@ -21,6 +22,7 @@ import type { GameScene, GameSceneData } from '../GameScene';
 import { countForBounties } from './bounties';
 import { slewWolfMother } from './monastery';
 import { raidDefeat } from './raid';
+import { regroup } from './companions';
 import { cancelChannel, give } from './sights';
 import { standUp } from './sitting';
 import { checkCellarClear } from './tavern';
@@ -190,6 +192,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
   const respawns = new Set((g.map.data.creatures ?? []).filter((s) => s.respawns).map((s) => s.id));
   for (const id of [...result.slain, ...result.fled]) if (!respawns.has(id)) g.defeatedFoes.add(id);
   g.fitCamera();
+  regroup(g);
   g.roadEvents?.fightOver(result.outcome);
   if (g.raidFight) {
     // However it went, it ends the same way.
@@ -198,11 +201,15 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
   }
   if (result.outcome === 'defeat') {
     const by = foes[0]?.kind === 'wolfmother' ? 'The Wolf Mother' : `A ${foes[0]?.name.toLowerCase() ?? 'beast'}`;
+    // Whoever was fighting beside the hero got them home.
+    const carrier = Companions.fighters[0];
     QuestLog.writeDiary(
       `${by} got the better of me${foes.length > 1 ? ', and the rest of them with it' : ''}. I do not remember the end of it. ` +
-        'I came to on the cottage floor with my head ringing and every bone aching. Next time I will be readier.',
+        (carrier
+          ? `${COMPANIONS[carrier].short} must have carried me home: I came to on the cottage floor with my head ringing and every bone aching. Next time I will be readier.`
+          : 'I came to on the cottage floor with my head ringing and every bone aching. Next time I will be readier.'),
     );
-    knockedOut(g);
+    knockedOut(g, carrier && COMPANIONS[carrier].short);
     return;
   }
   GameAudio.playMusic(g.map.data.music ?? 'world');
@@ -259,8 +266,18 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
   g.release();
 }
 
+/** Who carried the hero home after their last beating, for the thought on coming round. */
+let knockedOutBy: string | undefined;
+
+export function takeKnockedOutBy(): string | undefined {
+  const by = knockedOutBy;
+  knockedOutBy = undefined;
+  return by;
+}
+
 /** Beaten: black out, and come round at home with a little health. */
-export function knockedOut(g: GameScene): void {
+export function knockedOut(g: GameScene, carriedBy?: string): void {
+  knockedOutBy = carriedBy;
   g.stats.heal(g.stats.maxHealth * 0.35);
   g.stats.restoreStamina(g.stats.maxStamina);
   g.cameras.main.fadeOut(1200, 0, 0, 0);
