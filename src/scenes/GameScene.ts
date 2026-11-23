@@ -44,6 +44,7 @@ import type { InventoryTab } from './InventoryScene';
 import type { PartySceneData } from './PartyScene';
 import type { StationSceneData } from './StationScene';
 import { areaReady, AREAS, arrivalArea, buildArea, loadArea, prefetchArea } from './game/areas';
+import { companionsArrived, resetChatter, updateChatter } from './game/chatter';
 import { npcHidden, offerCompanion, sendHome, spawnCompanions, updateCompanions } from './game/companions';
 import { CAVE_WOLVES, COMBAT_DUCK, spawnCreatures, takeKnockedOutBy, startCombat, startRoadEvents, updateCreatures } from './game/combat';
 import { runDialogueAction } from './game/dialogueActions';
@@ -244,6 +245,7 @@ export class GameScene extends Phaser.Scene {
       Weather.reset();
       Needs.reset();
       Companions.reset();
+      resetChatter();
       this.defeatedFoes.clear();
       this.visited.clear();
       // Handy for testing: open the game with ?hour=21 to start at 9pm.
@@ -283,6 +285,7 @@ export class GameScene extends Phaser.Scene {
     // (Someone travelling with the hero isn't also waiting where they were met.)
     this.npcs = (this.map.data.npcs ?? []).filter((n) => !npcHidden(n.id) && !absent(n.id)).map((n) => new Npc(this, this.map, n.id, n.gx, n.gy, n.commute, this.clock.hour, n.looking, n.hours, n));
     this.companions = spawnCompanions(this);
+    companionsArrived(this);
     // A night's sleep sets everyone right.
     if (data.slept !== undefined) Companions.rested();
     const mother = this.someone('mother');
@@ -408,6 +411,7 @@ export class GameScene extends Phaser.Scene {
     const moved = this.player.update(dt, input, wantsSprint ? SPRINT_MULTIPLIER : wantsSneak ? SNEAK.speed : 1);
     this.sprinting = wantsSprint && moved;
     updateCompanions(this, dt, dt > 0 ? Math.hypot(this.player.gx - before.x, this.player.gy - before.y) / dt : 0);
+    updateChatter(this, dt);
     this.motherRoutine?.update(dt, this.clock.hour, this.busy);
     for (const npc of this.npcs) npc.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy, this.clock.hour);
     this.raid?.update(dt, this.busy || this.inCombat);
