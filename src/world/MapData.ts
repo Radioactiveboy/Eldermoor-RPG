@@ -253,6 +253,8 @@ export interface Landmark {
 
 /** A stretch of ground where the hero has a thought on stepping into it, e.g. where a road runs on off the map. */
 export interface Musing {
+  /** Names it, for a quest step that's done by standing there (see scenes/game/raid.ts). */
+  id?: string;
   x0: number;
   y0: number;
   x1: number;

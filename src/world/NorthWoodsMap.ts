@@ -32,7 +32,7 @@ const DEADFALL = { tx: 37, ty: 15 };
  * After the raid (`goblinTrail`), the goblins' track is plain to see: a swathe
  * of bracken trodden flat, running up from the Hollow and away north, a burnt
  * torch dropped in the ferns, and a scrap of Mother's quilt caught on the
- * brambles. It's only scenery for now: following it is for later.
+ * brambles. Following it is part of the Ashes quest; beyond the north edge is for later.
  */
 export function buildNorthWoodsMap(goblinTrail: boolean): MapData {
   const W = NORTH_WOODS_W;
@@ -313,7 +313,8 @@ export function buildNorthWoodsMap(goblinTrail: boolean): MapData {
  * What the goblins left on their way home with Mother: the bracken trodden
  * flat along their way, a torch one of them dropped, and a scrap of her quilt
  * torn off on the brambles. The hero has a thought at each, and where the
- * trail runs on off the map; none of it moves the story on.
+ * trail runs on off the map; the scrap and the trail's end move the Ashes
+ * quest on (see scenes/game/raid.ts).
  */
 function addGoblinTrail(data: MapData, way: Vec[]): void {
   const seen = new Set<string>();
@@ -359,8 +360,11 @@ function addGoblinTrail(data: MapData, way: Vec[]): void {
       text: 'The bracken is trodden flat in a wide swathe, all of it pressed the same way: north. Dozens of them came through here.',
     },
     {
+      id: 'goblin-trail-end',
       x0: 37, y0: 2, x1: 46, y1: 9,
-      text: 'Their trail runs on north into the deep woods, further than I can see. Not alone, and not like this. I need to be stronger before I follow it.',
+      text:
+        'Their trail runs on north into the deep woods, up towards the Greyfells, further than I can see. Dozens of them, and me half beaten. ' +
+        'Not alone, and not like this. Iran was right: Adowvale first.',
     },
   );
 }

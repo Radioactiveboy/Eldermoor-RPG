@@ -176,6 +176,13 @@ export function enteredAfterRaid(g: GameScene): void {
     }
   } else if (g.area === 'hut') {
     g.time.delayedCall(900, () => g.onHint?.('Dark and cold in here, and the fire out. Iran is huddled on the floor with Pip and Hetty.'));
+  } else if (g.area === 'northwoods' && !QuestLog.isDone('the-raid', 'trail')) {
+    QuestLog.complete('the-raid', 'trail');
+    QuestLog.writeDiary(
+      "Followed their tracks up past the wolves' cave and into the north woods. They made no effort to hide them: a swathe of bracken " +
+        'trodden flat, all pressed the same way. North.',
+    );
+    g.time.delayedCall(900, () => g.onHint?.("Their tracks, plain as a road through the bracken. They didn't care who followed. Or they wanted to be followed."));
   }
 }
 
@@ -190,6 +197,15 @@ export const RAID_ACTIONS: Record<string, DialogueAction> = {
       'Found Iran on the floor of his hut with Pip and Hetty, the fire out and the shutters closed. They are alive, thank the gods. ' +
         'He saw the big goblin, the one in iron, carry something out of our door wrapped in a quilt, and the whole band went off north, ' +
         'up past the cave and into the trees. Mother. It has to have been Mother.',
+    );
+  },
+  // Telling the militia in the square what happened (afterRaid.ts, the guards' 'raid-mother').
+  'told-militia': () => {
+    if (QuestLog.isDone('the-raid', 'word')) return;
+    QuestLog.complete('the-raid', 'word');
+    QuestLog.writeDiary(
+      "Told the militia in the square. They'd seen the smoke at first light, and the sergeant kept them on the gate. They're frightened, " +
+        "all of them. He's sent to Lord Morten for men, and Morten has sent back asking who's to pay. Nobody is coming. Not yet.",
     );
   },
 };

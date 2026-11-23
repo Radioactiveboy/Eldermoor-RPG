@@ -124,6 +124,7 @@ const RAID_TALK: Record<string, RaidTalk> = {
     nodes: {
       'raid-mother': {
         speaker: 'guard',
+        action: 'told-militia',
         lines: [
           'Took her? Alive? ...Then there\'s hope, isn\'t there. Goblins don\'t carry off the dead.',
           "Which way did they go? Did anyone see?",

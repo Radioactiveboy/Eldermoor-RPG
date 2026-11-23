@@ -114,6 +114,18 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'search', text: 'Search what is left of the cottage' },
       { id: 'outside', text: 'Go outside and look for Mother' },
       { id: 'iran', text: "See if Farmer Iran and his children are safe" },
+      {
+        id: 'trail',
+        text: "Follow the goblins' trail north, past the wolves' cave and into the woods",
+        target: { area: 'northwoods', x: 30.5, y: 72 },
+      },
+      { id: 'signs', text: 'Look along the trail for any sign of Mother', target: { area: 'northwoods', x: 33.5, y: 32.5 } },
+      { id: 'edge', text: 'See where the trail leads', target: { area: 'northwoods', x: 41, y: 6 } },
+      {
+        id: 'word',
+        text: "Take word to the militia in Adowvale's market square, as Iran said",
+        target: { area: 'market', x: 11.5, y: 15.5, npc: 'guard-1' },
+      },
       { id: 'mother', text: 'Find out what the goblins did with Mother' },
     ],
     xp: 300,
