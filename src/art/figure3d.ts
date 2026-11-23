@@ -47,6 +47,8 @@ export interface Detail {
   y: number;
   z: number;
   color: number;
+  /** Across, in body units (1 if left out): a finely drawn figure can take marks smaller than a pixel of the folk's. */
+  size?: number;
 }
 
 export interface Model {
@@ -126,6 +128,7 @@ export function limb(
 export interface FrameSpec {
   w: number;
   h: number;
+  /** The ground falls on the middle of this pixel row (it may be a half row, for a scaled frame). */
   feetY: number;
   /** Body-space height under which the light falls off towards the ground. */
   groundShade?: number;
@@ -135,21 +138,38 @@ export interface FrameSpec {
    * parts read apart at small sizes.
    */
   creases?: boolean;
+  /**
+   * Pixels per body-space unit (1 if left out). At 2 the figure is drawn with
+   * twice the detail in a frame twice as big, to be shown at half size (the
+   * hero, see hero3d.ts): the model and its materials don't change.
+   */
+  scale?: number;
 }
 
 /** The folk's frame (see character.ts). */
 const PERSON: FrameSpec = { w: FRAME_W, h: FRAME_H, feetY: FEET_Y };
-/** How far in front of the frame the rays start, in pixels: further than any solid reaches. */
+
+/** The folk's frame drawn `scale` times as finely: the ground on the same spot once shown at 1 / scale. */
+export function personSpec(scale: number, extra: Partial<FrameSpec> = {}): FrameSpec {
+  return { w: FRAME_W * scale, h: FRAME_H * scale, feetY: (FEET_Y + 0.5) * scale - 0.5, scale, ...extra };
+}
+/** How far in front of the frame the rays start, in body units: further than any solid reaches. */
 const NEAR = 120;
 
 /**
  * Renders one frame: casts a ray through each pixel into the turned model,
  * finds the nearest solid, lights it and snaps the light to the colour's tones.
+ *
+ * Each solid only tests the pixels its outline can cover (a box round its
+ * widest radius), keeping the nearest hit per pixel, and only the winning hit
+ * is lit and painted: the cost goes with the solids' area rather than the
+ * frame's, which matters for the finely drawn hero.
  */
 export function renderFrame(model: Model, angleDeg: number, spec: FrameSpec = PERSON): PixelCanvas {
-  const { w: FRAME_W, h: FRAME_H, feetY: FEET_Y } = spec;
+  const { w: W, h: H, feetY } = spec;
+  const k = spec.scale ?? 1;
   const ground = spec.groundShade ?? 4;
-  const c = new PixelCanvas(FRAME_W, FRAME_H);
+  const c = new PixelCanvas(W, H);
   const a = (angleDeg * Math.PI) / 180;
   const cosA = Math.cos(a);
   const sinA = Math.sin(a);
@@ -161,62 +181,76 @@ export function renderFrame(model: Model, angleDeg: number, spec: FrameSpec = PE
   const toBody = (v: Vec3): Vec3 => [v[0] * cosA - v[2] * sinA, v[1], v[0] * sinA + v[2] * cosA];
   const toWorld = (v: Vec3): Vec3 => [v[0] * cosA + v[2] * sinA, v[1], -v[0] * sinA + v[2] * cosA];
   const dirB = toBody(dir);
-  const depth = new Float32Array(FRAME_W * FRAME_H).fill(Infinity);
+  const depth = new Float32Array(W * H).fill(Infinity);
+  const winner = new Int32Array(W * H).fill(-1);
 
-  // Where on screen each solid can fall (a box round its widest radius), so
-  // each pixel only tests the few solids that might cover it.
-  const bounds = model.solids.map((s) => {
+  // A pixel's ray starts at (u, v) on the view plane, in body units: the ray's
+  // origin in body space is linear in u and v, so it's a start plus steps.
+  const o0 = toBody([-dir[0] * NEAR, -dir[1] * NEAR, -dir[2] * NEAR]);
+  const ou = toBody([1, 0, 0]);
+  const ov = toBody(up);
+  const uOf = (px: number) => (px + 0.5 - W / 2) / k;
+  const vOf = (py: number) => (feetY + 0.5 - (py + 0.5)) / k;
+
+  model.solids.forEach((s, index) => {
+    // Where on screen the solid can fall: a box round its widest radius.
     const w = toWorld([s.cx, s.cy, s.cz]);
-    const r = Math.max(s.rx, s.ry, s.rz) + 1;
-    const sx = w[0] + FRAME_W / 2;
-    const sy = FEET_Y - (w[0] * up[0] + w[1] * up[1] + w[2] * up[2]);
-    return { s, x0: sx - r, x1: sx + r, y0: sy - r, y1: sy + r };
-  });
-
-  for (let py = 0; py < FRAME_H; py++) {
-    const row = bounds.filter((bb) => py >= bb.y0 && py <= bb.y1);
-    if (row.length === 0) continue;
-    for (let px = 0; px < FRAME_W; px++) {
-      const u = px + 0.5 - FRAME_W / 2;
-      const v = FEET_Y + 0.5 - (py + 0.5);
-      const origin: Vec3 = [u - dir[0] * NEAR + up[0] * v, up[1] * v - dir[1] * NEAR, up[2] * v - dir[2] * NEAR];
-      const o = toBody(origin);
-      let best = Infinity;
-      let hitSolid: Solid | undefined;
-      for (const bb of row) {
-        if (px < bb.x0 || px > bb.x1) continue;
-        const s = bb.s;
-        const t = rayEllipsoid(o, dirB, s);
-        if (t < best) {
-          best = t;
-          hitSolid = s;
+    const r = (Math.max(s.rx, s.ry, s.rz) + 1) * k;
+    const sx = w[0] * k + W / 2;
+    const sy = feetY - (w[0] * up[0] + w[1] * up[1] + w[2] * up[2]) * k;
+    const x0 = Math.max(0, Math.ceil(sx - r));
+    const x1 = Math.min(W - 1, Math.floor(sx + r));
+    const y0 = Math.max(0, Math.ceil(sy - r));
+    const y1 = Math.min(H - 1, Math.floor(sy + r));
+    for (let py = y0; py <= y1; py++) {
+      const v = vOf(py);
+      for (let px = x0; px <= x1; px++) {
+        const u = uOf(px);
+        const t = rayEllipsoid(o0[0] + ou[0] * u + ov[0] * v, o0[1] + ou[1] * u + ov[1] * v, o0[2] + ou[2] * u + ov[2] * v, dirB, s);
+        const i = py * W + px;
+        if (t < depth[i]) {
+          depth[i] = t;
+          winner[i] = index;
         }
       }
-      if (!hitSolid) continue;
-      depth[py * FRAME_W + px] = best;
-      const hx = o[0] + dirB[0] * best;
-      const hy = o[1] + dirB[1] * best;
-      const hz = o[2] + dirB[2] * best;
-      const s = hitSolid;
+    }
+  });
+
+  for (let py = 0; py < H; py++) {
+    const v = vOf(py);
+    for (let px = 0; px < W; px++) {
+      const i = py * W + px;
+      if (winner[i] < 0) continue;
+      const s = model.solids[winner[i]];
+      const u = uOf(px);
+      const t = depth[i];
+      const hx = o0[0] + ou[0] * u + ov[0] * v + dirB[0] * t;
+      const hy = o0[1] + ou[1] * u + ov[1] * v + dirB[1] * t;
+      const hz = o0[2] + ou[2] * u + ov[2] * v + dirB[2] * t;
       const n = normalize((hx - s.cx) / (s.rx * s.rx), (hy - s.cy) / (s.ry * s.ry), (hz - s.cz) / (s.rz * s.rz));
       const hit: Hit = { x: hx, y: hy, z: hz, nx: n[0], ny: n[1], nz: n[2] };
       const tones = typeof s.material === 'function' ? s.material(hit) : s.material;
-      const nw = toWorld(n);
-      c.set(px, py, light(tones, nw, hy, dir, s.soft, ground));
+      c.set(px, py, light(tones, toWorld(n), hy, dir, s.soft, ground));
     }
   }
 
-  if (spec.creases) crease(c, depth, FRAME_W, FRAME_H);
-  // Eyes and other marks, where nothing nearer hides them.
+  if (spec.creases) crease(c, depth, W, H);
+  // Eyes and other marks, where nothing nearer hides them: a pixel square at the
+  // folk's size, and as many pixels across as the frame is finer (or `size` units).
   for (const d of model.details) {
     const w = toWorld([d.x, d.y, d.z]);
-    // Project: screen x is world x; screen up is the point along `up`.
-    const px = Math.floor(w[0] + FRAME_W / 2);
-    const vUp = w[0] * up[0] + w[1] * up[1] + w[2] * up[2];
-    const py = Math.floor(FEET_Y + 0.5 - vUp);
-    if (!c.inside(px, py)) continue;
     const along = -(w[0] * dir[0] + w[1] * dir[1] + w[2] * dir[2]);
-    if (NEAR - along <= depth[py * FRAME_W + px] + 0.9) c.set(px, py, d.color);
+    const vUp = w[0] * up[0] + w[1] * up[1] + w[2] * up[2];
+    const n = Math.max(1, Math.round((d.size ?? 1) * k));
+    // Screen x is world x; screen up is the point along `up`.
+    const fx = Math.floor(w[0] * k + W / 2 - (n - 1) / 2);
+    const fy = Math.floor(feetY + 0.5 - vUp * k - (n - 1) / 2);
+    for (let py = fy; py < fy + n; py++) {
+      for (let px = fx; px < fx + n; px++) {
+        if (!c.inside(px, py)) continue;
+        if (NEAR - along <= depth[py * W + px] + 0.9) c.set(px, py, d.color);
+      }
+    }
   }
   return c;
 }
@@ -273,10 +307,10 @@ function normalize(x: number, y: number, z: number): Vec3 {
 }
 
 /** Distance along the ray to where it first meets the ellipsoid, or Infinity. */
-function rayEllipsoid(o: Vec3, d: Vec3, s: Solid): number {
-  const ox = (o[0] - s.cx) / s.rx;
-  const oy = (o[1] - s.cy) / s.ry;
-  const oz = (o[2] - s.cz) / s.rz;
+function rayEllipsoid(x: number, y: number, z: number, d: Vec3, s: Solid): number {
+  const ox = (x - s.cx) / s.rx;
+  const oy = (y - s.cy) / s.ry;
+  const oz = (z - s.cz) / s.rz;
   const dx = d[0] / s.rx;
   const dy = d[1] / s.ry;
   const dz = d[2] / s.rz;
@@ -290,13 +324,13 @@ function rayEllipsoid(o: Vec3, d: Vec3, s: Solid): number {
 }
 
 /** Every frame of a 3D figure: rows = 8 directions, cols as character.ts (4 idle, 4 walk, 2 sit). */
-export function drawFigureSheet(build: (pose: Pose3D) => Model): PixelCanvas {
-  const sheet = new PixelCanvas(FRAME_W * POSES.length, FRAME_H * DIRECTIONS_8.length);
+export function drawFigureSheet(build: (pose: Pose3D) => Model, spec: FrameSpec = PERSON): PixelCanvas {
+  const sheet = new PixelCanvas(spec.w * POSES.length, spec.h * DIRECTIONS_8.length);
   DIRECTIONS_8.forEach((d, row) => {
     POSES.forEach((pose, col) => {
-      const frame = renderFrame(build(pose), d.angle);
+      const frame = renderFrame(build(pose), d.angle, spec);
       frame.outline();
-      sheet.blit(frame, col * FRAME_W, row * FRAME_H);
+      sheet.blit(frame, col * spec.w, row * spec.h);
     });
   });
   return sheet;
@@ -306,14 +340,16 @@ export function drawFigureSheet(build: (pose: Pose3D) => Model): PixelCanvas {
  * Builds a 3D figure's sprite sheet (see {@link drawFigureSheet}) and registers
  * '<key>-idle-<dir>', '-walk-', '-sit-' and '-work-' (the seated frames, bobbing
  * quickly: crouched at a task) for all eight directions (see Npc.sync, which
- * then doesn't mirror).
+ * then doesn't mirror). A finer `spec` (see FrameSpec.scale) makes bigger
+ * frames, to be shown scaled down by the sprite.
  */
-export function generateFigure3D(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model): void {
+export function generateFigure3D(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model, spec: FrameSpec = PERSON): void {
   const cols = POSES.length;
-  const tex = drawFigureSheet(build).toTexture(scene, key);
+  const { w, h } = spec;
+  const tex = drawFigureSheet(build, spec).toTexture(scene, key);
   let i = 0;
   for (let row = 0; row < DIRECTIONS_8.length; row++) {
-    for (let col = 0; col < cols; col++) tex.add(i++, 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
+    for (let col = 0; col < cols; col++) tex.add(i++, 0, col * w, row * h, w, h);
   }
   DIRECTIONS_8.forEach((d, row) => {
     const frames = (from: number, n: number) => Array.from({ length: n }, (_, k) => ({ key, frame: row * cols + from + k }));
@@ -329,9 +365,9 @@ export function generateFigure3D(scene: Phaser.Scene, key: string, build: (pose:
  * place: every sprite and image already showing it changes with it, and its
  * frames and animations stay as they were (the hero changing clothes).
  */
-export function redrawFigure3D(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model): void {
+export function redrawFigure3D(scene: Phaser.Scene, key: string, build: (pose: Pose3D) => Model, spec: FrameSpec = PERSON): void {
   const tex = scene.textures.get(key) as Phaser.Textures.CanvasTexture;
-  tex.context.putImageData(drawFigureSheet(build).toImageData(), 0, 0);
+  tex.context.putImageData(drawFigureSheet(build, spec).toImageData(), 0, 0);
   tex.refresh();
 }
 

@@ -10,6 +10,13 @@ export const FRAME_H = 48;
 /** Pixel row the feet stand on, for the sprite origin. */
 export const FEET_Y = 45;
 
+/**
+ * The hero is drawn this many times more finely than the folk (frames
+ * FRAME_W * HERO_SCALE by FRAME_H * HERO_SCALE), and shown scaled down by as
+ * much, so he stands the same size with the detail of the trees and buildings.
+ */
+export const HERO_SCALE = 2;
+
 /** Frames a second of the idle (breathing) animation: a breath every couple of seconds. */
 export const IDLE_FRAME_RATE = 1.8;
 
