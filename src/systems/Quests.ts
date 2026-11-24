@@ -240,6 +240,63 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 320,
   },
+  // Putting the Hollow right (systems/Homestead.ts, scenes/game/homestead.ts): the cottage first, then better than it was, and Iran's stead.
+  'hearth-and-home': {
+    id: 'hearth-and-home',
+    title: 'Hearth and Home',
+    giver: 'Headman Osbert Hale',
+    kind: 'side',
+    summary:
+      'The Headman has written the cottage and the land in the village book in my name, and says there are men ready to put a roof on it ' +
+      'whenever I am. I am ready. The burnt timbers have to come out first, then Osric will tell me what it wants: oak, reed for the thatch, ' +
+      'nails and stone. I can cut and gather most of it myself, or buy it in Adowvale. It will never be the house she lived in. But it can be a home.',
+    objectives: [
+      { id: 'talk', text: 'Tell the Headman you are ready to rebuild', target: { area: 'residence', x: 13.2, y: 1.35, npc: 'headman' } },
+      { id: 'clear', text: 'Drag the burnt timbers out of the cottage', target: { area: 'world', x: 19.5, y: 39.5 } },
+      { id: 'osric', text: 'Ask Osric what the cottage will need', target: { area: 'smithy', x: 3.5, y: 2.88, npc: 'smith' } },
+      { id: 'walls', text: 'Bring 12 oak timber, 16 bundles of reed and 2 kegs of nails to the builder\'s pile at the cottage', target: { area: 'world', x: 22.5, y: 34.5 } },
+      { id: 'raise', text: "Let Osric's work party raise the walls and the roof (three days)", target: { area: 'world', x: 19.5, y: 39.5 } },
+      { id: 'hearth', text: 'Bring 6 dressed stone, 4 oak timber and 40 coins for the joiner to the builder\'s pile', target: { area: 'world', x: 22.5, y: 34.5 } },
+      { id: 'furnish', text: 'Let them build the hearth and fit out the room (two days)', target: { area: 'world', x: 19.5, y: 39.5 } },
+      { id: 'sleep', text: 'Sleep under your own roof again', target: { area: 'home', x: 6.5, y: 4.9 } },
+    ],
+    xp: 260,
+  },
+  'hollow-made-good': {
+    id: 'hollow-made-good',
+    title: 'The Hollow Made Good',
+    giver: 'Osric the Smith',
+    kind: 'side',
+    summary:
+      'The cottage stands again, and Osric has left his plans for the Hollow pinned up by the builder\'s pile: a well, a herb garden, ' +
+      'a workshop, a paddock, a wall round the yard, a slate roof. One at a time, as I find the coin and the stuff for them. ' +
+      'Better than it was, he says. She would have liked that.',
+    objectives: [
+      { id: 'plans', text: "Look over Osric's plans at the builder's pile", target: { area: 'world', x: 22.5, y: 34.5 } },
+      { id: 'first', text: 'Build the first improvement on the Hollow', target: { area: 'world', x: 22.5, y: 34.5 } },
+      { id: 'three', text: 'Build three improvements on the Hollow', target: { area: 'world', x: 22.5, y: 34.5 } },
+      { id: 'all', text: "Build everything on Osric's plans", target: { area: 'world', x: 22.5, y: 34.5 } },
+    ],
+    xp: 300,
+  },
+  'irans-stead': {
+    id: 'irans-stead',
+    title: "Iran's Stead",
+    giver: 'Farmer Iran',
+    kind: 'side',
+    summary:
+      'The goblins burnt Iran\'s coop, scorched his hut and smashed his fences, and he has no money to put any of it right. He will not take ' +
+      'charity, he says, so I am calling it rent for the plot. Whatever I give him goes on timber and the cooper\'s boys\' hire, ' +
+      'a piece at a time: the coop, then the hut, then the pen, then, if it ever comes to it, a little barn.',
+    objectives: [
+      { id: 'talk', text: 'Offer to help Iran put his stead right', target: { area: 'hut', x: 5, y: 4 } },
+      { id: 'coop', text: 'Give Iran 40 coins in all, for a new hen coop', target: { area: 'hut', x: 5, y: 4 } },
+      { id: 'hut', text: 'Give Iran 90 coins in all, to mend and thatch his hut', target: { area: 'hut', x: 5, y: 4 } },
+      { id: 'pen', text: 'Give Iran 150 coins in all, for new fences and hens', target: { area: 'hut', x: 5, y: 4 } },
+      { id: 'barn', text: 'Give Iran 220 coins in all, for a little barn', target: { area: 'hut', x: 5, y: 4 } },
+    ],
+    xp: 180,
+  },
   'speckle-and-moppet': {
     id: 'speckle-and-moppet',
     title: 'Speckle and Moppet',

@@ -1,6 +1,7 @@
 import { HERO_NAME } from '../config';
 import { QuestLog } from '../systems/Quests';
 import { ASHES_STALE, ashesOver, ashesState, ashesTalk } from './afterAshes';
+import { homesteadAware } from './homestead';
 import type { DialogueChoice, DialogueNode, DialogueScript, SpeakerId } from './Dialogue';
 
 /**
@@ -60,7 +61,8 @@ export function raidAware(id: string, script: DialogueScript): DialogueScript {
     // nor offers to help fetch her home; and the night at the gate is old news, told in what they say now.
     const after = talk ? applyRaidTalk(script, { ...talk, first: undefined }) : script;
     const now = ashesTalk(ashesState())[talkerOf(id)];
-    return applyRaidTalk(after, { ...(now ?? { speaker: 'silent' }), drop: [...ASHES_STALE, ...(now?.drop ?? [])] });
+    // And on top, putting the Hollow right (dialogue/homestead.ts).
+    return homesteadAware(id, applyRaidTalk(after, { ...(now ?? { speaker: 'silent' }), drop: [...ASHES_STALE, ...(now?.drop ?? [])] }));
   }
   const after = talk ? applyRaidTalk(script, talk) : script;
   // And once the goblins have come for Adowvale itself, what they say about that night.

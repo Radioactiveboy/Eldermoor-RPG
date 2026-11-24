@@ -49,6 +49,9 @@ import { npcHidden, offerCompanion, sendHome, spawnCompanions, updateCompanions 
 import { CAVE_WOLVES, COMBAT_DUCK, spawnCreatures, takeKnockedOutBy, startCombat, startRoadEvents, updateCreatures } from './game/combat';
 import { runDialogueAction } from './game/dialogueActions';
 import { boughtFeed, updateHens } from './game/hollow';
+import { checkHomestead } from './game/homestead';
+import { Homestead } from '../systems/Homestead';
+import { Goat } from '../entities/Goat';
 import { readKeyboard, setupInput, updateHover, type MoveKeys } from './game/input';
 import { updateFocus, type Channel, type Interaction } from './game/interactions';
 import { updateMarketHours } from './game/market';
@@ -122,6 +125,8 @@ export class GameScene extends Phaser.Scene {
   roadEvents?: PlainsEvents;
   /** Farmer Iran's hens, pottering about their run. */
   hens: Hen[] = [];
+  /** Goats in the Hollow's paddock, once it's built. */
+  goats: Goat[] = [];
   cluckTimer = 0;
   /** Iran's children, chattering away indoors. */
   siblings?: Siblings;
@@ -248,6 +253,7 @@ export class GameScene extends Phaser.Scene {
       Weather.reset();
       Needs.reset();
       Companions.reset();
+      Homestead.reset();
       resetChatter();
       this.defeatedFoes.clear();
       this.visited.clear();
@@ -281,6 +287,9 @@ export class GameScene extends Phaser.Scene {
     Weather.readSwitch(window.location.search);
     // The raid's morning stays dry and clear, as it was written.
     Weather.calm = raidStage() === 'morning' ? 'clear' : undefined;
+    // Putting the Hollow right goes on by the clock (see systems/Homestead.ts): anything finished while away is finished now.
+    Homestead.clock = () => this.clock.elapsedHours;
+    checkHomestead(this);
     this.map = new IsoMap(this, buildArea(this.area));
     const start = data.load?.position ?? ((data.entry && this.map.data.entries?.[data.entry]) || this.map.data.spawn);
     this.player = new Player(this, this.map, start.x, start.y);
@@ -306,6 +315,7 @@ export class GameScene extends Phaser.Scene {
     this.roadEvents = this.area === 'plains' ? startRoadEvents(this) : undefined;
     const hens = this.map.data.hens;
     this.hens = (hens?.flock ?? []).map((h) => new Hen(this, this.map, hens!.pen, h.kind, h.gx, h.gy));
+    this.goats = (this.map.data.goats ?? []).map((p) => new Goat(this, this.map, p.gx, p.gy));
     const children = (this.map.data.children ?? []).map((c) => new Child(this, this.map, c.id, c.gx, c.gy));
     // What they chatter about depends on the raid, and on Speckle and Moppet after it (see game/speckle.ts).
     const lines = siblingLines();
@@ -441,6 +451,7 @@ export class GameScene extends Phaser.Scene {
     this.roadEvents?.update(dt);
     this.map.updateFading(this.player.sprite.x, this.player.sprite.y, this.player.sprite.depth, dt);
     updateHens(this, dt);
+    for (const goat of this.goats) goat.update(dt, this.busy);
     this.siblings?.update(dt, { x: this.player.gx, y: this.player.gy }, this.busy);
     updateSpeckle(this);
     checkRoadExits(this);
@@ -454,6 +465,7 @@ export class GameScene extends Phaser.Scene {
     if (this.cropTimer <= 0) {
       syncCrops(this);
       syncGathered(this);
+      checkHomestead(this);
       this.cropTimer = 1;
     }
 
