@@ -8,6 +8,7 @@ import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { paintHills } from './HillPainter';
 import { HILL_BLOCKS } from './greyfellsHills';
 import { BakedLayer } from './BakedLayer';
+import { closingIn, Round } from './Avoidance';
 import { circle, circleHits, FULL_TILE, isBehind, offsetShape, Shape } from './Collision';
 import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
 
@@ -32,6 +33,11 @@ export interface Body {
   gx: number;
   gy: number;
   radius: number;
+}
+
+/** The hero, as the people about see them: in the way while on their feet, not while sat down or at work. */
+export interface Hero extends Body {
+  readonly solid: boolean;
 }
 
 const TERRAIN_TEXTURE: Record<Terrain, string> = {
@@ -85,6 +91,11 @@ export class IsoMap {
   private readonly fading: Array<{ sprite: Phaser.GameObjects.Sprite; bounds: Phaser.Geom.Rectangle }> = [];
   /** People and animals walking about; characters bump into them. */
   readonly bodies = new Set<Body>();
+  /**
+   * The hero, for the people walking about to keep out of their way (see
+   * world/Avoidance.ts). Not one of the bodies: the beasts mustn't stop short of them.
+   */
+  hero?: Hero;
   /** Collision outlines on each tile, in grid space. Undefined means open ground. */
   private readonly shapes: Array<Shape[] | undefined> = [];
   /** Slim objects (fences) that characters can stand right beside, for sorting them in front or behind. */
@@ -119,6 +130,21 @@ export class IsoMap {
     return this.groundWalkable(tx, ty) && this.data.props[ty][tx] === Prop.None;
   }
 
+  /** The hero, if they're standing somewhere others should walk round. */
+  get heroInTheWay(): Round | undefined {
+    return this.hero?.solid ? this.hero : undefined;
+  }
+
+  /**
+   * For the people walking about, planning a way: walkable, and not where the
+   * hero is standing, so that they plan round them rather than through them.
+   */
+  walkableAroundHero(tx: number, ty: number): boolean {
+    if (!this.isWalkable(tx, ty)) return false;
+    const hero = this.heroInTheWay;
+    return !hero || Math.floor(hero.gx) !== tx || Math.floor(hero.gy) !== ty;
+  }
+
   /** Whether a tile's ground bears weight: its terrain, or planks laid over the water (a pier). */
   private groundWalkable(tx: number, ty: number): boolean {
     return TERRAIN_WALKABLE[this.data.terrain[ty][tx]] || this.decks.has(ty * this.data.width + tx);
@@ -150,6 +176,34 @@ export class IsoMap {
         if (b !== ignore && (b.gx - x) ** 2 + (b.gy - y) ** 2 < (b.radius + r) ** 2) return true;
       }
     }
+    return false;
+  }
+
+  /**
+   * Like {@link blocked}, for a step from `from` to (x, y). The difference: people
+   * and those standing at their posts (the bodies and occupied tiles) only get
+   * in the way of a step that takes you further into them. So if someone ends
+   * up on top of you (walking into you, or arriving at their post where you
+   * stand), you can always step away rather than being stuck where you are.
+   */
+  blockedMove(from: Vec2, x: number, y: number, r: number, ignore?: Body): boolean {
+    if (x - r < 0 || y - r < 0 || x + r >= this.width || y + r >= this.height) return true;
+    const to = { x, y };
+    for (let ty = Math.floor(y - r); ty <= Math.floor(y + r); ty++) {
+      for (let tx = Math.floor(x - r); tx <= Math.floor(x + r); tx++) {
+        const i = ty * this.width + tx;
+        const shapes = this.shapes[i];
+        if (shapes) for (const s of shapes) if (circleHits(s, x, y, r)) return true;
+        const tile = offsetShape(FULL_TILE[0], tx, ty);
+        if (this.occupied.has(i) && circleHits(tile, x, y, r)) {
+          // Already standing in it: only stepping out, away from its middle, is allowed.
+          const stuckIn = circleHits(tile, from.x, from.y, r);
+          const away = Math.hypot(x - tx - 0.5, y - ty - 0.5) > Math.hypot(from.x - tx - 0.5, from.y - ty - 0.5);
+          if (!stuckIn || !away) return true;
+        }
+      }
+    }
+    for (const b of this.bodies) if (b !== ignore && closingIn(from, to, r, b)) return true;
     return false;
   }
 

@@ -33,8 +33,11 @@ import { QuestLog } from '../systems/Quests';
 import { Bounties } from '../systems/Bounties';
 import { Reputation } from '../systems/Reputation';
 import type { Body, IsoMap } from '../world/IsoMap';
+import { HERO_ROOM, stepAround, underfoot } from '../world/Avoidance';
 import type { Commute, MapData, NpcSpawn } from '../world/MapData';
 
+/** How long someone on their way somewhere waits for the hero to step aside before going on regardless. */
+const HELD_UP_SECONDS = 1.5;
 /** How close (in tiles) the player must be to talk. */
 export const TALK_RANGE = 1.7;
 /** Travellers stop and turn to the player when they come this close. */
@@ -552,6 +555,8 @@ export class Npc implements Body {
   /** Points to walk through, with the road index each one is at (-1 off the road). */
   private route: Array<{ point: Vec2; index: number }> = [];
   private wait = 0;
+  /** Seconds spent waiting for the hero to get out of the way, on a walk they must finish. */
+  private heldUp = 0;
   /** Where a roaming NPC started, which it never strays far from. */
   private readonly origin: Vec2;
   /** A trader's walk between their stall and their front door, and where they are in their day. */
@@ -690,7 +695,7 @@ export class Npc implements Body {
   goTo(target: Vec2, then?: () => void): void {
     const from = { x: Math.floor(this.gx), y: Math.floor(this.gy) };
     const to = { x: Math.floor(target.x), y: Math.floor(target.y) };
-    const tiles = findPath(from, to, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 3000) ?? [];
+    const tiles = findPath(from, to, this.map.width, this.map.height, (x, y) => this.map.walkableAroundHero(x, y), 3000) ?? [];
     const route = tiles.map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 }));
     if (route.length > 0) route.pop();
     route.push(target);
@@ -917,24 +922,31 @@ export class Npc implements Body {
       this.sync(false);
       return;
     }
+    // Making for where the hero is standing: that spot will do from here, on to the next.
+    this.skipUnderfoot(this.route, (r) => r.point);
+    if (this.route.length === 0) {
+      this.wait = 0.8 + Math.random();
+      this.sync(false);
+      return;
+    }
     const next = this.route[0].point;
     const dx = next.x - this.gx;
     const dy = next.y - this.gy;
     const dist = Math.hypot(dx, dy);
     const step = Math.min(dist, WALK_SPEED * dt);
-    const nx = this.gx + (dx / dist) * step;
-    const ny = this.gy + (dy / dist) * step;
-    if (this.map.blocked(nx, ny, this.radius, true, this)) {
+    // Round the hero if they're in the way, as the hero would go round them.
+    const to = stepAround({ x: this.gx, y: this.gy }, next, step, this.radius, this.map.heroInTheWay, (p) => !this.map.blocked(p.x, p.y, this.radius, true, this));
+    if (!to || this.map.blocked(to.x, to.y, this.radius, true, this)) {
       // Someone else on the road: wait a moment, then think again.
       this.route = [];
       this.wait = 0.8 + Math.random();
       this.sync(false);
       return;
     }
-    this.gx = nx;
-    this.gy = ny;
+    this.gx = to.x;
+    this.gy = to.y;
     this.face({ x: dx, y: dy });
-    if (dist - step < 0.02) {
+    if (Math.hypot(next.x - this.gx, next.y - this.gy) < 0.02) {
       const reached = this.route.shift()!.index;
       if (reached >= 0) this.roadIndex = reached;
     }
@@ -1064,7 +1076,7 @@ export class Npc implements Body {
   private doorToDoor(from: Vec2, to: Vec2): Array<{ point: Vec2; index: number }> {
     const a = { x: Math.floor(from.x), y: Math.floor(from.y) };
     const b = { x: Math.floor(to.x), y: Math.floor(to.y) };
-    const tiles = findPath(a, b, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 4000) ?? [];
+    const tiles = findPath(a, b, this.map.width, this.map.height, (x, y) => this.map.walkableAroundHero(x, y), 4000) ?? [];
     return [...tiles.map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 })), to].map((point) => ({ point, index: -1 }));
   }
 
@@ -1077,31 +1089,59 @@ export class Npc implements Body {
     const ground = reverse ? from : to;
     const a = { x: Math.floor(exit.x), y: Math.floor(exit.y) };
     const b = { x: Math.floor(ground.x), y: Math.floor(ground.y) };
-    const tiles = findPath(reverse ? b : a, reverse ? a : b, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 4000) ?? [];
+    const tiles = findPath(reverse ? b : a, reverse ? a : b, this.map.width, this.map.height, (x, y) => this.map.walkableAroundHero(x, y), 4000) ?? [];
     const middle = tiles.map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 }));
     const points = reverse ? [...middle, exit, to] : [exit, ...middle, to];
     return points.map((point) => ({ point, index: -1 }));
   }
 
-  /** Walk on along the route (or the given points), through anything in the way. False once it's walked. */
+  /**
+   * Walk on along the route (or the given points), through anything in the way
+   * but the hero, whom they step round (or wait for). False once it's walked.
+   */
   private walkRoute(dt: number, points?: Vec2[]): boolean {
-    const next = points ? points[0] : this.route[0]?.point;
+    const list: Array<Vec2 | { point: Vec2 }> = points ?? this.route;
+    const pointOf = (e: Vec2 | { point: Vec2 }) => ('point' in e ? e.point : e);
+    this.skipUnderfoot(list, pointOf, true);
+    const next = list[0] && pointOf(list[0]);
     if (!next) return false;
     const dx = next.x - this.gx;
     const dy = next.y - this.gy;
     const dist = Math.hypot(dx, dy);
     const step = Math.min(dist, WALK_SPEED * dt);
     if (dist > 0) {
-      this.gx += (dx / dist) * step;
-      this.gy += (dy / dist) * step;
+      const hero = this.map.heroInTheWay;
+      // (Bound for the very spot the hero is stood on: no way round that, only waiting.)
+      const to = hero && underfoot(next, this.radius, hero, HERO_ROOM)
+        ? undefined
+        : stepAround({ x: this.gx, y: this.gy }, next, step, this.radius, hero, (p) => !this.map.blocked(p.x, p.y, this.radius, false));
+      if (!to && this.heldUp < HELD_UP_SECONDS) {
+        // The hero is in the doorway (or wherever they're bound): give them a moment to move.
+        this.heldUp += dt;
+        this.sync(false);
+        return true;
+      }
+      // Waited long enough, or no hero in the way: on they go (the hero can always step clear).
+      const at = to ?? { x: this.gx + (dx / dist) * step, y: this.gy + (dy / dist) * step };
+      this.heldUp = 0;
+      this.gx = at.x;
+      this.gy = at.y;
       this.face({ x: dx, y: dy });
     }
-    if (dist - step < 0.02) {
-      if (points) points.shift();
-      else this.route.shift();
-    }
+    if (Math.hypot(next.x - this.gx, next.y - this.gy) < 0.02) list.shift();
     this.sync(true);
     return true;
+  }
+
+  /**
+   * Drop waypoints the hero is standing on, so nobody circles round them
+   * trying to reach the spot. The last one is kept on a walk that must end
+   * somewhere in particular (`keepLast`): a door, a stall, a table to serve.
+   */
+  private skipUnderfoot<T>(list: T[], pointOf: (e: T) => Vec2, keepLast = false): void {
+    const hero = this.map.heroInTheWay;
+    if (!hero) return;
+    while (list.length > (keepLast ? 1 : 0) && underfoot(pointOf(list[0]), this.radius, hero, HERO_ROOM)) list.shift();
   }
 
   /** Show or hide them, fading at the front door. */
@@ -1174,7 +1214,7 @@ export class Npc implements Body {
     const from = { x: Math.floor(this.gx), y: Math.floor(this.gy) };
     const options = spots.filter((s) => Math.hypot(s.x - this.gx, s.y - this.gy) > 1.5);
     const spot = options[Math.floor(Math.random() * options.length)];
-    const path = spot && findPath(from, { x: Math.floor(spot.x), y: Math.floor(spot.y) }, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 3000);
+    const path = spot && findPath(from, { x: Math.floor(spot.x), y: Math.floor(spot.y) }, this.map.width, this.map.height, (x, y) => this.map.walkableAroundHero(x, y), 3000);
     if (!spot || !path) {
       this.wait = 2;
       return;
@@ -1201,7 +1241,7 @@ export class Npc implements Body {
       const tx = Math.floor(this.origin.x + (Math.random() * 2 - 1) * radius);
       const ty = Math.floor(this.origin.y + (Math.random() * 2 - 1) * radius);
       if (!this.map.isWalkable(tx, ty) || (tx === from.x && ty === from.y)) continue;
-      const path = findPath(from, { x: tx, y: ty }, this.map.width, this.map.height, (x, y) => this.map.isWalkable(x, y), 2000);
+      const path = findPath(from, { x: tx, y: ty }, this.map.width, this.map.height, (x, y) => this.map.walkableAroundHero(x, y), 2000);
       if (!path || path.length === 0 || path.length > radius * 3) continue;
       this.route = path.map((p) => ({ point: { x: p.x + 0.5, y: p.y + 0.5 }, index: -1 }));
       break;
