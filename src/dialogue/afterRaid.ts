@@ -1,5 +1,6 @@
 import { HERO_NAME } from '../config';
 import { QuestLog } from '../systems/Quests';
+import { ASHES_STALE, ashesOver, ashesState, ashesTalk } from './afterAshes';
 import type { DialogueChoice, DialogueNode, DialogueScript, SpeakerId } from './Dialogue';
 
 /**
@@ -54,6 +55,13 @@ export const toldOfRaid = (speaker: SpeakerId) => `raid-told:${speaker}`;
 export function raidAware(id: string, script: DialogueScript): DialogueScript {
   if (!raidIsOver()) return script;
   const talk = RAID_TALK[talkerOf(id)];
+  if (ashesOver()) {
+    // Mother is buried (dialogue/afterAshes.ts): what changed after the raid still stands, but nobody opens with it any more,
+    // nor offers to help fetch her home; and the night at the gate is old news, told in what they say now.
+    const after = talk ? applyRaidTalk(script, { ...talk, first: undefined }) : script;
+    const now = ashesTalk(ashesState())[talkerOf(id)];
+    return applyRaidTalk(after, { ...(now ?? { speaker: 'silent' }), drop: [...ASHES_STALE, ...(now?.drop ?? [])] });
+  }
   const after = talk ? applyRaidTalk(script, talk) : script;
   // And once the goblins have come for Adowvale itself, what they say about that night.
   const night = QuestLog.hasFlag('gate-fell') ? GATE_FELL_TALK : QuestLog.hasFlag('gate-held') ? GATE_HELD_TALK : undefined;
@@ -62,7 +70,7 @@ export function raidAware(id: string, script: DialogueScript): DialogueScript {
 }
 
 /** Whose talk an NPC has: the four militiamen share theirs, as do the two toll guards. */
-function talkerOf(id: string): string {
+export function talkerOf(id: string): string {
   return id.replace(/-\d+$/, '');
 }
 

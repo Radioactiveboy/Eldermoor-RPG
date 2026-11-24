@@ -3,6 +3,7 @@ import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import { sheetScale } from '../art/fine3d';
 import type { DialogueScript, SpeakerId } from '../dialogue/Dialogue';
 import { raidAware, raidIsOver, toldOfRaid } from '../dialogue/afterRaid';
+import { ashesOver, coombeAtTankardScript, hildeAtTankardScript, IRAN_AFTER_ASHES } from '../dialogue/afterAshes';
 import { goblinPrisonerScript, jailerScript, prisonerScript, sergeantScript } from '../dialogue/garrison';
 import { HOUSEMAID_CHORES, headmanScript, housecookScript, housemaidScript, stewardScript } from '../dialogue/residence';
 import { MedicineStage, MOTHER_ASLEEP, MOTHER_DOZING, MOTHER_INTRO, motherScript } from '../dialogue/mother';
@@ -291,7 +292,7 @@ const NPCS: Record<string, NpcDef> = {
     },
   },
   // After the raid: Iran crouched in the corner of his hut with his children, too frightened to go out.
-  'iran-hiding': { texture: 'folk-iran', sits: true, script: () => IRAN_HIDING },
+  'iran-hiding': { texture: 'folk-iran', sits: true, script: () => (ashesOver() && QuestLog.isDone('the-raid', 'iran') ? IRAN_AFTER_ASHES : IRAN_HIDING) },
   // Old Tobin, on his stool on the far shore of the lake, watching his float.
   fisherman: {
     texture: 'folk-fisherman',
@@ -413,7 +414,7 @@ const NPCS: Record<string, NpcDef> = {
       return sergeantScript({
         first,
         raidOver: raidIsOver(),
-        toldRaid: onceAfterRaid('sergeant'),
+        toldRaid: ashesOver() || onceAfterRaid('sergeant'),
         standing: Reputation.level('militia'),
         bounties: Bounties.timesClaimed(),
         slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
@@ -436,6 +437,14 @@ const NPCS: Record<string, NpcDef> = {
   // In the goblins' pen in the warren under the Greyfells (world/WarrenMap.ts): Hilde, if they took her from Adowvale, or else Coombe the shepherd, sat on the floor.
   'hilde-captive': { texture: 'folk-baker', talkRange: 2.4, script: hildeCaptiveScript },
   coombe: { texture: 'folk-coombe', sits: true, talkRange: 2.4, script: coombeScript },
+  // Once Ashes is over, whoever the hero let out of the pen is staying at the Crooked Tankard (world/TavernMap.ts, freedAtTankard).
+  'hilde-tankard': { texture: 'folk-baker', sits: true, talkRange: 2.6, script: wayfarer('hilde-tankard', hildeAtTankardScript) },
+  'coombe-tankard': {
+    texture: 'folk-coombe',
+    sits: true,
+    talkRange: 2.4,
+    script: wayfarer('coombe-tankard', (first) => coombeAtTankardScript(first, QuestLog.hasFlag('coombe-thanked'))),
+  },
   // Mother at the bottom of the warren (world/BroodHallMap.ts), drawn lying on her furs (so tucked out of sight, see scenes/game/warren.ts).
   'mother-dying': { texture: 'folk-mother', talkRange: 2.2, script: motherDyingScript },
   // The brood hall's shaman, crouched before the orb: nobody to talk to.
@@ -452,7 +461,7 @@ const NPCS: Record<string, NpcDef> = {
       return headmanScript({
         first,
         raidOver: raidIsOver(),
-        toldRaid: onceAfterRaid('headman'),
+        toldRaid: ashesOver() || onceAfterRaid('headman'),
         medicine: !!medicine && !medicine.completed,
         paidToll: QuestLog.hasFlag('paid-toll'),
         slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
