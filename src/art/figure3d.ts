@@ -39,6 +39,12 @@ export interface Solid {
   material: Material;
   /** Lit more evenly, so shadow doesn't muddy it (a face). */
   soft?: boolean;
+  /**
+   * Turned: the three directions (unit length, square to one another, in body
+   * space) that rx, ry and rz run along, for something flat that doesn't lie
+   * along the body's own axes (a sword's blade). Left out, they're x, y and z.
+   */
+  axes?: [[number, number, number], [number, number, number], [number, number, number]];
 }
 
 /** A small mark painted on top where it can be seen (eyes, buttons), in body space. */
@@ -227,7 +233,19 @@ export function renderFrame(model: Model, angleDeg: number, spec: FrameSpec = PE
       const hx = o0[0] + ou[0] * u + ov[0] * v + dirB[0] * t;
       const hy = o0[1] + ou[1] * u + ov[1] * v + dirB[1] * t;
       const hz = o0[2] + ou[2] * u + ov[2] * v + dirB[2] * t;
-      const n = normalize((hx - s.cx) / (s.rx * s.rx), (hy - s.cy) / (s.ry * s.ry), (hz - s.cz) / (s.rz * s.rz));
+      let n: Vec3;
+      if (s.axes) {
+        const [ax, ay, az] = s.axes;
+        const px0 = hx - s.cx;
+        const py0 = hy - s.cy;
+        const pz0 = hz - s.cz;
+        const lx = (px0 * ax[0] + py0 * ax[1] + pz0 * ax[2]) / (s.rx * s.rx);
+        const ly = (px0 * ay[0] + py0 * ay[1] + pz0 * ay[2]) / (s.ry * s.ry);
+        const lz = (px0 * az[0] + py0 * az[1] + pz0 * az[2]) / (s.rz * s.rz);
+        n = normalize(lx * ax[0] + ly * ay[0] + lz * az[0], lx * ax[1] + ly * ay[1] + lz * az[1], lx * ax[2] + ly * ay[2] + lz * az[2]);
+      } else {
+        n = normalize((hx - s.cx) / (s.rx * s.rx), (hy - s.cy) / (s.ry * s.ry), (hz - s.cz) / (s.rz * s.rz));
+      }
       const hit: Hit = { x: hx, y: hy, z: hz, nx: n[0], ny: n[1], nz: n[2] };
       const tones = typeof s.material === 'function' ? s.material(hit) : s.material;
       c.set(px, py, light(tones, toWorld(n), hy, dir, s.soft, ground));
@@ -308,12 +326,24 @@ function normalize(x: number, y: number, z: number): Vec3 {
 
 /** Distance along the ray to where it first meets the ellipsoid, or Infinity. */
 function rayEllipsoid(x: number, y: number, z: number, d: Vec3, s: Solid): number {
-  const ox = (x - s.cx) / s.rx;
-  const oy = (y - s.cy) / s.ry;
-  const oz = (z - s.cz) / s.rz;
-  const dx = d[0] / s.rx;
-  const dy = d[1] / s.ry;
-  const dz = d[2] / s.rz;
+  let ox = x - s.cx;
+  let oy = y - s.cy;
+  let oz = z - s.cz;
+  let dx = d[0];
+  let dy = d[1];
+  let dz = d[2];
+  if (s.axes) {
+    // Into the solid's own frame, where it lies along the axes again.
+    const [ax, ay, az] = s.axes;
+    [ox, oy, oz] = [ox * ax[0] + oy * ax[1] + oz * ax[2], ox * ay[0] + oy * ay[1] + oz * ay[2], ox * az[0] + oy * az[1] + oz * az[2]];
+    [dx, dy, dz] = [dx * ax[0] + dy * ax[1] + dz * ax[2], dx * ay[0] + dy * ay[1] + dz * ay[2], dx * az[0] + dy * az[1] + dz * az[2]];
+  }
+  ox /= s.rx;
+  oy /= s.ry;
+  oz /= s.rz;
+  dx /= s.rx;
+  dy /= s.ry;
+  dz /= s.rz;
   const A = dx * dx + dy * dy + dz * dz;
   const B = 2 * (ox * dx + oy * dy + oz * dz);
   const C = ox * ox + oy * oy + oz * oz - 1;

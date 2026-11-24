@@ -163,16 +163,71 @@ const huntingKnife = heldWeapon((f, d) => [
   ...limb(along(f.hand, d, 1.6), along(f.hand, d, 5.8), 0.6, 0.25, STEEL, 0.3),
 ]);
 
-/** Good village steel: a crossguard, a long tapering blade, a brass pommel. */
-const shortSword = heldWeapon((f, d) => {
-  const guard = along(f.hand, d, 1.5);
-  return [
-    { ...pointAt(along(f.hand, d, -1.7)), rx: 0.8, ry: 0.8, rz: 0.8, material: [P.gold, 0xa8802a, P.goldLight] },
-    ...limb(along(f.hand, d, -1.2), guard, 0.55, 0.55, GRIP, 0.3),
-    ...limb([guard[0] - 1.7, guard[1], guard[2]], [guard[0] + 1.7, guard[1], guard[2]], 0.5, 0.5, IRON, 0.3),
-    ...limb(along(f.hand, d, 1.8), along(f.hand, d, 11.5), 0.7, 0.3, STEEL, 0.3),
-  ];
-});
+/**
+ * Which way the sword points: held ready in front of him, the blade rising
+ * forward and a little out from the fist, so it stands clear of his body and
+ * face from every side (seated, it stands point-down by his knee, his hand on the hilt).
+ */
+function swordDir(f: HeroFrame): V3 {
+  return f.pose.sit ? norm([-0.15, -0.95, 0.25]) : norm([-0.35, 0.86, 0.28]);
+}
+
+/** Square to `d`, as near the body's left-right as it can be. */
+function across(d: V3): V3 {
+  const k = d[0];
+  return norm([1 - k * d[0], -k * d[1], -k * d[2]]);
+}
+
+function cross(a: V3, b: V3): V3 {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+
+/** Bright, polished steel, so the blade catches the eye against cloak and ground alike. */
+const BRIGHT_STEEL: Tones = [0xcfd6de, 0x8a94a0, 0xffffff];
+
+/**
+ * Good village steel, held ready in the right hand: a brass pommel, a leather
+ * grip through the fist, a brass-tipped crossguard, and a broad, flat blade
+ * with a fuller down its middle, tapering to the point. The blade is turned
+ * half towards the front, so it shows its width from every side.
+ */
+const shortSword: GearLook = {
+  adjust: (l) => ({ ...l, wielding: true }),
+  model: (f) => {
+    const d = swordDir(f);
+    const side = across(d);
+    const fore = cross(side, d);
+    // The way the blade's width (and the crossguard) runs, and the way its flat faces.
+    const w = norm([side[0] + fore[0], side[1] + fore[1], side[2] + fore[2]]);
+    const flat = cross(w, d);
+    const guard = along(f.hand, d, 2);
+    const brass: Tones = [P.gold, 0xa8802a, P.goldLight];
+    const LENGTH = 12.5;
+    const blade = (h: Hit): Tones => {
+      const q = (h.x - guard[0]) * w[0] + (h.y - guard[1]) * w[1] + (h.z - guard[2]) * w[2];
+      const t = (h.x - guard[0]) * d[0] + (h.y - guard[1]) * d[1] + (h.z - guard[2]) * d[2];
+      // The fuller: a darker groove down the middle, stopping short of the point.
+      return Math.abs(q) < 0.4 && t < LENGTH * 0.7 ? STEEL : BRIGHT_STEEL;
+    };
+    const solids: Solid[] = [
+      // The grip runs through the fist, the pommel showing below it.
+      { ...pointAt(along(f.hand, d, -3.1)), rx: 1.05, ry: 1.05, rz: 1.05, material: brass },
+      ...limb(along(f.hand, d, -2.4), guard, 0.7, 0.7, GRIP, 0.3),
+      // The crossguard, in the blade's own plane, brass at its tips.
+      ...limb(along(guard, w, -2.9), along(guard, w, 2.9), 0.65, 0.65, IRON, 0.3),
+      { ...pointAt(along(guard, w, -3.1)), rx: 0.8, ry: 0.8, rz: 0.8, material: brass },
+      { ...pointAt(along(guard, w, 3.1)), rx: 0.8, ry: 0.8, rz: 0.8, material: brass },
+    ];
+    // The blade: flat slips laid along it, broad from the shoulder and drawn in to the point.
+    for (let t = 0.6; t <= LENGTH - 1; t += 0.5) {
+      const u = t / LENGTH;
+      const half = u < 0.7 ? 1.6 - u * 0.3 : 1.39 * (1 - (u - 0.7) / 0.32);
+      solids.push({ ...pointAt(along(guard, d, t)), rx: Math.max(0.3, half), ry: 1.1, rz: 0.6, axes: [w, d, flat], material: blade, soft: true });
+    }
+    solids.push(fist(f.hand));
+    return { solids };
+  },
+};
 
 /** A short ash haft with a bearded iron head, hanging head-down. */
 const hatchet = heldWeapon((f, d) => {

@@ -22,6 +22,11 @@ export interface HeroLook {
   holding: boolean;
   /** The hood's cloth, if it isn't the cloak's own green (a wool hood worn up instead). */
   hood?: Tones;
+  /**
+   * The right forearm brought forward at the waist, the fist closed round a
+   * hilt held ready in front of him (a sword), rather than swinging.
+   */
+  wielding?: boolean;
   /** The left forearm raised a little across the body, carrying a shield, rather than swinging. */
   shield: boolean;
 }
@@ -133,19 +138,25 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   for (const side of [-1, 1]) {
     const holding = look.holding && side === -1;
     const shield = look.shield && side === 1;
-    const swing = sit || holding || shield ? 0 : -s * side * 2;
+    const wielding = !!look.wielding && side === -1;
+    const swing = sit || holding || shield || wielding ? 0 : -s * side * 2;
+    // The sword arm gives a little with each step rather than swinging.
+    const give = wielding ? s * 0.3 : 0;
     solids.push({ cx: side * 4.7, cy: 24.4 - b, cz: 0.2, rx: 2.3, ry: 2.2, rz: 2.3, material: SHIRT });
     const elbow: [number, number, number] = sit
       ? [side * 5.6, 19.6 - b, 2]
-      : holding ? [side * 5.9, 20.4 - b, 1] : shield ? [side * 6.3, 20.2 - b, 0.6] : [side * 6, 20.2 - b, 0.3 + swing * 0.5];
+      : wielding ? [side * 6.7, 19.9 - b, -0.2]
+        : holding ? [side * 5.9, 20.4 - b, 1] : shield ? [side * 6.3, 20.2 - b, 0.6] : [side * 6, 20.2 - b, 0.3 + swing * 0.5];
     const wrist: [number, number, number] = sit
-      ? holding ? [side * 5.4, 14.4, 4] : [side * 3.6, 12.4, 4.6]
-      : holding ? [side * 6.6, 18.4 - b, 2.6] : shield ? [side * 5.2, 17.6 - b, 3.6] : [side * 6.2, 17.2 - b, 0.8 + swing];
+      ? wielding ? [side * 6.4, 15.4, 4.4] : holding ? [side * 5.4, 14.4, 4] : [side * 3.6, 12.4, 4.6]
+      : wielding ? [side * 7.6, 18.9 - b, 2.7 + give]
+        : holding ? [side * 6.6, 18.4 - b, 2.6] : shield ? [side * 5.2, 17.6 - b, 3.6] : [side * 6.2, 17.2 - b, 0.8 + swing];
     solids.push(...limb([side * 5.2, 24 - b, 0.2], elbow, 1.8, 1.6, SHIRT));
     const forearm = limb(elbow, wrist, 1.6, 1.5, SHIRT);
     // The bracer: the last third of the forearm in leather.
     forearm.forEach((f, i) => solids.push(i > forearm.length * 0.6 ? { ...f, rx: 1.7, ry: 1.7, rz: 1.7, material: VEST } : f));
-    const h: [number, number, number] = [wrist[0], wrist[1] - 1.1, wrist[2] + 0.3];
+    // The hand hangs below the wrist, or carries on forward from a forearm held out.
+    const h: [number, number, number] = wielding && !sit ? [wrist[0], wrist[1] - 0.1, wrist[2] + 1.2] : [wrist[0], wrist[1] - 1.1, wrist[2] + 0.3];
     solids.push({ cx: h[0], cy: h[1], cz: h[2], rx: 1.5, ry: 1.5, rz: 1.6, material: SKIN });
     if (side === -1) hand = h;
     else offHand = h;
