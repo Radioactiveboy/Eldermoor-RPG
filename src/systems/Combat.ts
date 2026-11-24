@@ -27,7 +27,7 @@ export function diceText(d: Dice): string {
  * owner's next turn starts. `by` is who put it there, for effects that only
  * help the one who caused them (a marked foe is only marked for its hunter).
  */
-export type StatusId = 'guarded' | 'prone' | 'dazed' | 'marked' | 'bleeding' | 'rallied' | 'anointed' | 'stout';
+export type StatusId = 'guarded' | 'prone' | 'dazed' | 'marked' | 'bleeding' | 'rallied' | 'anointed' | 'stout' | 'windup' | 'enraged';
 
 export interface Status {
   id: StatusId;
@@ -37,6 +37,8 @@ export interface Status {
   by?: string;
   /** Wolfsbane: which kind of foe it bites. */
   family?: string;
+  /** Winding up a blow: who it is meant for. */
+  target?: string;
 }
 
 export interface StatusDef {
@@ -61,6 +63,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   // From brews at Old Maud's bench (see FightBoon), lasting the rest of the fight.
   anointed: { name: 'Wolfsbane', tag: 'BNE', color: 0x9a6ad0, good: true, describe: 'The blade is oiled with wolfsbane: extra damage against wolves.' },
   stout: { name: 'Stout', tag: 'STT', color: 0xb89a5a, good: true, describe: 'Braced by a draught of sage and nettle: more armour.' },
+  // The Goblin Brute's (see FoeTrait 'smash' and 'enrage').
+  windup: { name: 'Winding up', tag: 'WND', color: 0xe0602a, good: false, describe: 'Club raised high: next turn it comes down for double damage and knocks its target flat. Knock him down first, or raise your guard.' },
+  enraged: { name: 'Enraged', tag: 'RGE', color: 0xc0281e, good: true, describe: `Berserk with pain: +${2} to hit and +1d6 damage, and shrugs off being dazed.` },
 };
 
 /**
@@ -105,7 +110,24 @@ export type FoeTrait =
   /** Rallies the rest of its pack (+2 to hit for 2 turns), every `cooldown` turns. */
   | { kind: 'howl'; cooldown: number }
   /** Heavy and sure-footed: resists being shoved with advantage. */
-  | { kind: 'steady' };
+  | { kind: 'steady' }
+  /**
+   * Every `cooldown` turns, raises its weapon for a crushing blow (the 'windup'
+   * status, there for all to see), and brings it down on its next turn: damage
+   * dice rolled twice, and the target knocked flat unless they beat `dc` with
+   * d20 + quickness. Knocked down meanwhile, it loses the blow.
+   */
+  | { kind: 'smash'; cooldown: number; dc: number }
+  /**
+   * Every `cooldown` turns, beats the ground so it shakes under the whole party:
+   * each must beat `dc` with d20 + quickness or take `damage` and be knocked
+   * prone (half damage, and on their feet, if they make it). No armour helps.
+   */
+  | { kind: 'quake'; cooldown: number; dc: number; damage: Dice }
+  /** Once, when brought below `below` of its health: shakes off a daze or a fall and fights on enraged (see STATUSES). */
+  | { kind: 'enrage'; below: number }
+  /** Has it in for the hero above all: goes for them first, unless someone else is about to drop. */
+  | { kind: 'grudge' };
 
 /**
  * What a weapon does beyond its damage, read by Battle.attack when the hero
@@ -190,6 +212,9 @@ export const DEFEND_AC_BONUS = 4;
 export const MARK_TO_HIT = 2;
 export const MARK_DAMAGE: Dice = { count: 1, sides: 4, bonus: 0 };
 export const RALLY_TO_HIT = 2;
+/** Enraged: to hit, and extra damage. */
+export const ENRAGE_TO_HIT = 2;
+export const ENRAGE_DAMAGE: Dice = { count: 1, sides: 6, bonus: 0 };
 /** Running away: beat this (plus 2 for each extra foe still standing) with d20 + quickness. */
 export const FLEE_DC = 10;
 
@@ -233,6 +258,18 @@ export interface AttackResult {
   cleaved?: boolean;
   /** A cudgel's hit left the foe dazed. */
   dazed?: boolean;
+}
+
+/** One of the party, as the ground shook under them. */
+export interface QuakeResult {
+  target: Combatant;
+  roll: number;
+  total: number;
+  dc: number;
+  /** Kept their feet: half damage, and still standing. */
+  kept: boolean;
+  damage: number;
+  killed: boolean;
 }
 
 export interface FleeResult {
@@ -353,6 +390,9 @@ export class Battle {
 
   /** Puts an effect on someone. Getting it again renews it (the longer of the two lasts). */
   addStatus(c: Combatant, id: StatusId, turns: number, extra: Partial<Status> = {}): void {
+    // Knocked flat, a blow being wound up is lost; and nothing dazes a berserker.
+    if (id === 'prone') this.removeStatus(c, 'windup');
+    if (id === 'dazed' && this.has(c, 'enraged')) return;
     const had = this.status(c, id);
     if (had) Object.assign(had, extra, { turns: Math.max(had.turns, turns) });
     else c.statuses.push({ id, turns, ...extra });
@@ -443,6 +483,7 @@ export class Battle {
       attacker.toHit +
       this.packBonus(attacker) +
       (this.has(attacker, 'rallied') ? RALLY_TO_HIT : 0) +
+      (this.has(attacker, 'enraged') ? ENRAGE_TO_HIT : 0) +
       (this.marks(attacker, target) ? MARK_TO_HIT : 0) +
       this.setBonus(attacker, target) +
       (opts.toHit ?? 0)
@@ -493,6 +534,7 @@ export class Battle {
       const times = (crit ? 2 : 1) * (opts.times ?? 1);
       let damage = this.rollDice(attacker.damage, times);
       if (this.marks(attacker, target)) damage += this.rollDice(MARK_DAMAGE, crit ? 2 : 1);
+      if (this.has(attacker, 'enraged')) damage += this.rollDice(ENRAGE_DAMAGE, crit ? 2 : 1);
       const bane = this.status(attacker, 'anointed');
       if (bane && target.family && bane.family === target.family) {
         const extra = this.rollDice({ count: 1, sides: bane.value ?? 6, bonus: 0 }, crit ? 2 : 1);
@@ -537,6 +579,65 @@ export class Battle {
     return result;
   }
 
+  /** Raises a crushing blow for next turn, meant for `target` (see FoeTrait 'smash'). */
+  windUp(c: Combatant, target: Combatant): void {
+    const smash = this.trait(c, 'smash');
+    if (smash) this.cooldown(c, 'smash', smash.cooldown);
+    // Lasts through the end of this turn, and is spent at the start of the next.
+    this.addStatus(c, 'windup', 2, { target: target.id });
+  }
+
+  /** Brings a wound-up blow down: an attack with its damage rolled twice, that knocks the target flat unless they keep their feet. */
+  smash(c: Combatant, target: Combatant): AttackResult {
+    const smash = this.trait(c, 'smash');
+    this.removeStatus(c, 'windup');
+    const r = this.attack(c, target, { times: 2 });
+    if (r.hit && !r.killed && smash && !this.has(target, 'prone')) {
+      const save = this.d(20);
+      const saveTotal = save + target.quickness;
+      const fell = save !== 20 && (save === 1 || saveTotal < smash.dc);
+      if (fell) this.addStatus(target, 'prone', 1);
+      r.trip = { roll: save, total: saveTotal, dc: smash.dc, fell };
+    }
+    return r;
+  }
+
+  /** The ground shakes under everyone on the other side (see FoeTrait 'quake'). */
+  quake(c: Combatant): QuakeResult[] {
+    const quake = this.trait(c, 'quake');
+    if (!quake) return [];
+    this.cooldown(c, 'quake', quake.cooldown);
+    const results: QuakeResult[] = [];
+    for (const target of this.standing(c.side === 'foes' ? 'party' : 'foes')) {
+      const roll = this.d(20);
+      const total = roll + target.quickness;
+      const fated = this.fate?.decide(c, target);
+      const kept = fated ? fated === 'miss' : roll === 20 || (roll !== 1 && total >= quake.dc);
+      let damage = this.rollDice(quake.damage);
+      if (kept) damage = Math.max(1, Math.floor(damage / 2));
+      if (this.has(c, 'enraged')) damage += kept ? 0 : this.rollDice(ENRAGE_DAMAGE);
+      target.hp = Math.max(0, target.hp - damage);
+      const killed = target.hp === 0;
+      if (!kept && !killed) this.addStatus(target, 'prone', 1);
+      results.push({ target, roll, total, dc: quake.dc, kept, damage, killed });
+    }
+    return results;
+  }
+
+  /** Whether the beast flies into its rage now (see FoeTrait 'enrage'). */
+  shouldEnrage(c: Combatant): boolean {
+    const enrage = this.trait(c, 'enrage');
+    return !!enrage && c.hp > 0 && c.hp <= c.maxHp * enrage.below && this.ready(c, 'enrage');
+  }
+
+  /** Flies into a rage: on its feet, clear-headed, and enraged for the rest of the fight. */
+  enrage(c: Combatant): void {
+    c.cooldowns.enrage = Infinity;
+    this.removeStatus(c, 'prone');
+    this.removeStatus(c, 'dazed');
+    this.addStatus(c, 'enraged', Infinity);
+  }
+
   defend(c: Combatant): void {
     this.addStatus(c, 'guarded', 1);
   }
@@ -575,22 +676,71 @@ export class Battle {
   }
 }
 
-export type FoeAction = { type: 'attack'; target: Combatant } | { type: 'flee' } | { type: 'stand' } | { type: 'wait' };
+export type FoeAction =
+  | { type: 'attack'; target: Combatant }
+  /** Raise a crushing blow for next turn (see FoeTrait 'smash'). */
+  | { type: 'windup'; target: Combatant }
+  /** Bring the wound-up blow down. */
+  | { type: 'smash'; target: Combatant }
+  /** Shake the ground under the whole party (see FoeTrait 'quake'). */
+  | { type: 'quake' }
+  | { type: 'flee' }
+  | { type: 'stand' }
+  | { type: 'wait' };
+
+/** What a fighter's blow does on average. */
+export function averageDamage(c: Combatant | CombatantDef): number {
+  return c.damage.count * ((c.damage.sides + 1) / 2) + c.damage.bonus;
+}
 
 /**
- * How a beast fights: it goes for whoever is weakest, and when badly hurt it
- * may lose its nerve and bolt (more likely if it's the last of its pack). A
- * beast knocked down spends its turn getting up.
+ * Who a beast goes for. One it can likely finish with this blow comes first
+ * (the most dangerous of them, if there are several). Otherwise it picks at
+ * random, leaning towards the hero (twice as likely as a companion, as they
+ * lead the fight; far more for a foe with a grudge) and towards whoever is
+ * most hurt, by share of their health, so a companion with less health than
+ * the hero isn't hounded the whole fight just for that.
+ */
+export function chooseFoeTarget(battle: Battle, foe: Combatant, rng: Rng = Math.random, heroId = 'hero'): Combatant {
+  const targets = battle.standing('party');
+  if (targets.length === 1) return targets[0];
+  const finishable = targets.filter((t) => t.hp <= averageDamage(foe));
+  if (finishable.length > 0) return finishable.reduce((a, b) => (averageDamage(b) > averageDamage(a) ? b : a));
+  const grudge = !!battle.trait(foe, 'grudge');
+  const weight = (t: Combatant) => (t.id === heroId ? (grudge ? 6 : 2) : 1) * (2 - t.hp / t.maxHp);
+  const total = targets.reduce((sum, t) => sum + weight(t), 0);
+  let pick = rng() * total;
+  for (const t of targets) {
+    pick -= weight(t);
+    if (pick < 0) return t;
+  }
+  return targets[targets.length - 1];
+}
+
+/**
+ * How a beast fights: it goes for one of the party (see chooseFoeTarget), and
+ * when badly hurt it may lose its nerve and bolt (more likely if it's the last
+ * of its pack). A beast knocked down spends its turn getting up. A Brute with
+ * a blow wound up brings it down; when his quake or smash is ready he uses it.
  */
 export function chooseFoeAction(battle: Battle, foe: Combatant, stood: boolean, rng: Rng = Math.random): FoeAction {
   if (stood) return { type: 'stand' };
   const targets = battle.standing('party');
   if (targets.length === 0) return { type: 'wait' };
+  const windup = battle.status(foe, 'windup');
+  if (windup) {
+    const meant = targets.find((t) => t.id === windup.target);
+    return { type: 'smash', target: meant ?? chooseFoeTarget(battle, foe, rng) };
+  }
   const hurt = foe.hp / foe.maxHp;
   const alone = battle.standing('foes').length === 1;
   if (foe.skittish && rng() < foe.skittish * (hurt < 1 ? 2 : 1)) return { type: 'flee' };
   if (!foe.stubborn && hurt <= 0.3 && rng() < (alone ? 0.45 : 0.2)) return { type: 'flee' };
-  const target = targets.reduce((a, b) => (b.hp < a.hp ? b : a));
+  // Worth shaking the ground when it catches more than one, or the one left is still on their feet.
+  const quake = battle.trait(foe, 'quake');
+  if (quake && battle.ready(foe, 'quake') && targets.some((t) => !battle.has(t, 'prone'))) return { type: 'quake' };
+  const target = chooseFoeTarget(battle, foe, rng);
+  if (battle.trait(foe, 'smash') && battle.ready(foe, 'smash') && target.hp > averageDamage(foe)) return { type: 'windup', target };
   return { type: 'attack', target };
 }
 
@@ -770,21 +920,46 @@ export const FOES = {
     goblin: true,
     traits: [{ kind: 'rend', damage: 1, turns: 2 }],
   },
+  // He has it in for the hero, from the Hollow on. Beyond his howl he has three tricks of his own (see FoeTrait):
+  // a crushing blow he winds up a turn ahead (knock him down, or raise your guard), a stamp that shakes the
+  // whole party off their feet, and a rage once he's brought to half health. Tuned with `npm run sim -- --brute`:
+  // at level 11 in the best kit, with Sigrun and Wat beside you, you win but lose about a third of your health
+  // (about half with Sigrun alone); alone, you win about 7 times in 10. (In the raid he's weaker: RAID_BRUTE.)
   goblinbrute: {
     name: 'Goblin Brute',
-    maxHp: 72,
+    maxHp: 140,
     ac: 16,
-    toHit: 6,
-    damage: { count: 2, sides: 6, bonus: 3 },
+    toHit: 11,
+    damage: { count: 2, sides: 10, bonus: 7 },
     quickness: 1,
     verb: 'brings its club down on',
-    xp: 220,
+    xp: 320,
     packs: true,
     goblin: true,
     stubborn: true,
-    traits: [{ kind: 'howl', cooldown: 3 }, { kind: 'steady' }],
+    traits: [
+      { kind: 'grudge' },
+      { kind: 'smash', cooldown: 3, dc: 14 },
+      { kind: 'quake', cooldown: 3, dc: 13, damage: { count: 2, sides: 8, bonus: 3 } },
+      { kind: 'enrage', below: 0.5 },
+      { kind: 'howl', cooldown: 3 },
+      { kind: 'steady' },
+    ],
   },
 } satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean; goblin?: boolean }>;
+
+/**
+ * The Brute as he is in the raid on the Hollow (see world/GoblinRaid.ts), a
+ * fight the hero can't win and that turns on its third round: he leaves the
+ * work to his band and keeps his tricks for the brood hall, so the hero isn't
+ * knocked flat before the story has them overwhelmed.
+ */
+export const RAID_BRUTE: Partial<CombatantDef> = {
+  maxHp: 72,
+  toHit: 6,
+  damage: { count: 2, sides: 6, bonus: 3 },
+  traits: [{ kind: 'grudge' }, { kind: 'howl', cooldown: 3 }, { kind: 'steady' }],
+};
 
 /** Footpads and their like: men, not beasts (they swing rather than bite, and only fight beside their own). */
 export function isOutlaw(kind: FoeKind): boolean {

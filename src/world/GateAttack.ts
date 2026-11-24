@@ -1,10 +1,13 @@
 import type Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import type { Creature } from '../entities/Creature';
+import type { Npc } from '../entities/Npc';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
 import type { FoeKind } from '../systems/Combat';
 import { CutScene } from '../ui/CutScene';
 import type { Speaker } from '../ui/SpeechBubbles';
+import { GateSkirmish } from './GateSkirmish';
+import { GoblinCry } from './GoblinCry';
 import { gateWaves } from './GateNight';
 import type { IsoMap } from './IsoMap';
 
@@ -33,33 +36,6 @@ const CRIES = ['Burn it! Burn the man-village!', 'Where is it? Where is the whel
 /** What the militia shout. */
 export const MILITIA_SHOUTS = ['GOBLINS! On the road!', 'Hold the line! HOLD!', 'Ring the bell! Wake the village!', 'Torches! Get the torches!', "Garrick, your spear's on backwards!"];
 
-/** A goblin's voice: a bubble over its head when it shrieks something. */
-class Cry implements Speaker {
-  speech?: string;
-  private left = 0;
-  constructor(readonly creature: Creature) {}
-
-  get promptPoint(): { x: number; y: number } {
-    const s = this.creature.sprite;
-    return { x: s.x, y: s.y - s.displayHeight * s.originY + 4 };
-  }
-
-  get speechPoint(): { x: number; y: number } {
-    return this.promptPoint;
-  }
-
-  say(text: string, seconds = 2.6): void {
-    this.speech = text;
-    this.left = seconds;
-  }
-
-  update(dt: number): void {
-    if (!this.speech) return;
-    this.left -= dt;
-    if (this.left <= 0) this.speech = undefined;
-  }
-}
-
 /** What the attack needs from the game scene. */
 export interface GateHooks {
   scene: Phaser.Scene;
@@ -76,13 +52,19 @@ export interface GateHooks {
   walkTo: (to: Vec2) => void;
   /** Someone of the militia says something, in a bubble over their head (if any of them is about). */
   militia: (text: string) => void;
+  /** The militia on hand in the square, to fight goblins of their own. */
+  guards: () => Npc[];
+  /** A goblin that fights the militia, for show: on the map, but never in the hero's fights. */
+  addGoblin: (id: string, kind: FoeKind, gx: number, gy: number) => Creature;
   /** It's over: the goblins beaten off (true), or the hero beaten (false). */
   done: (held: boolean) => void;
 }
 
 export class GateAttack {
   private readonly h: GateHooks;
-  private readonly cries: Cry[] = [];
+  private readonly cries: GoblinCry[] = [];
+  /** The militia's own fights with the goblins, all round the hero's. */
+  private readonly skirmish: GateSkirmish;
   private readonly waves: FoeKind[][];
   private wave = -1;
   private band: Creature[] = [];
@@ -94,10 +76,11 @@ export class GateAttack {
   constructor(hooks: GateHooks, warned: boolean) {
     this.h = hooks;
     this.waves = gateWaves(warned);
+    this.skirmish = new GateSkirmish({ scene: hooks.scene, map: hooks.map, guards: hooks.guards, addGoblin: hooks.addGoblin });
   }
 
   get speakers(): Speaker[] {
-    return this.cries;
+    return [...this.cries, ...this.skirmish.speakers];
   }
 
   /** The horn on the road, and the first band coming up it. */
@@ -120,6 +103,8 @@ export class GateAttack {
     const road = gridToScreen(GATE_ROAD.x - 2, GATE_ROAD.y);
     this.h.scene.time.delayedCall(1200, () => void cut.pan(road.x, road.y - 20, 1600));
     this.h.scene.time.delayedCall(2200, () => this.spawnWave());
+    // The militia run to their posts either side of the road, and goblins come at them too.
+    this.h.scene.time.delayedCall(2800, () => this.skirmish.begin());
     this.h.scene.time.delayedCall(3600, () => {
       this.h.militia(MILITIA_SHOUTS[0]);
       cut.caption('GOBLINS! On the road! Ring the bell!', 'The militia', 2200);
@@ -139,11 +124,12 @@ export class GateAttack {
 
   update(dt: number): void {
     for (const c of this.cries) c.update(dt);
+    this.skirmish.update(dt);
     if (!this.active) return;
     this.shoutTimer -= dt;
     if (this.shoutTimer > 0) return;
     this.shoutTimer = 1.8 + Math.random() * 2.2;
-    const alive = this.cries.filter((c) => c.creature.active);
+    const alive = [...this.cries.filter((c) => c.creature.active), ...this.skirmish.goblinCries];
     if (alive.length > 0 && Math.random() < 0.65) {
       alive[Math.floor(Math.random() * alive.length)].say(CRIES[Math.floor(Math.random() * CRIES.length)]);
       GameAudio.shriek(false);
@@ -161,7 +147,7 @@ export class GateAttack {
       const gy = GATE_ROAD.y - 0.7 + (i % 3) * 0.7;
       const c = this.h.addCreature(`gate-${this.wave}-${i}`, kind, gx, gy);
       c.engage();
-      this.cries.push(new Cry(c));
+      this.cries.push(new GoblinCry(c));
       return c;
     });
     GameAudio.shriek(true);
@@ -191,6 +177,7 @@ export class GateAttack {
       return;
     }
     this.active = false;
+    this.skirmish.rout();
     this.h.militia('They\'re running! They\'re RUNNING!');
     this.h.scene.time.delayedCall(1200, () => this.h.done(true));
   }
@@ -199,6 +186,7 @@ export class GateAttack {
   lost(): void {
     if (!this.active) return;
     this.active = false;
+    this.skirmish.stop();
     this.h.done(false);
   }
 }

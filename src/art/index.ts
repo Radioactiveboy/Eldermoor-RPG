@@ -56,6 +56,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'wayfarers', draw: generateWayfarers },
   { label: 'the market crowd', load: () => import('./townsfolk3d').then((m) => m.generateCrowd) },
   { label: 'faces', load: () => import('./portraits').then((m) => m.generatePortraits) },
+  { label: 'the orb', load: () => import('./orbPortrait').then((m) => m.generateOrbPortrait) },
   { label: 'the satchel', load: () => import('./items').then((m) => m.generateItemIcons) },
   { label: 'the hearth and bench', draw: generateStationArt },
   { label: 'small creatures', load: () => import('./critters').then((m) => m.generateCritters) },

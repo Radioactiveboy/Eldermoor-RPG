@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { DialogueChoice, DialogueNode, DialogueScript, Speaker, SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
 import { arrangeChoices, ChoiceMenu, MenuRow, MenuView, scrollToShow } from '../dialogue/ChoiceMenu';
-import { PORTRAIT_SIZE } from '../art/sizes';
+import { ORB_PORTRAIT, PORTRAIT_SIZE } from '../art/sizes';
 import { Affiliations } from '../dialogue/Affiliations';
 import { THEME } from '../ui/Widgets';
 
@@ -87,6 +87,10 @@ export class DialogueScene extends Phaser.Scene {
   /** Invisible full-screen catcher, so a click anywhere moves the conversation on. */
   private catcher!: Phaser.GameObjects.Zone;
   private portrait!: Phaser.GameObjects.Image;
+  /** Over the portrait, for the orb only: its stirred loop, faded in while it speaks. */
+  private portraitStir!: Phaser.GameObjects.Image;
+  /** How big the portrait is drawn, in the box's pixels. */
+  private portraitSize = 0;
   private nameText!: Phaser.GameObjects.Text;
   private nameBg!: Phaser.GameObjects.Graphics;
   /** Who the speaker belongs to, under the portrait (on a phone, over their name), once the hero knows. */
@@ -168,6 +172,18 @@ export class DialogueScene extends Phaser.Scene {
     const dt = deltaMs / 1000;
     this.updateTyping(dt);
 
+    // The orb's portrait never stops turning, and stirs while the voice in it speaks.
+    if (this.speaker?.portrait === ORB_PORTRAIT.key) {
+      const f = Math.floor((this.time.now / 1000) * ORB_PORTRAIT.fps) % ORB_PORTRAIT.frames;
+      this.portrait.setFrame(f);
+      this.portraitStir.setFrame(ORB_PORTRAIT.frames + f);
+      const want = this.typing ? 1 : 0;
+      const a = this.portraitStir.alpha;
+      this.portraitStir.setAlpha(a + (want - a) * Math.min(1, dt * (want > a ? 5 : 2)));
+      this.more.setVisible(!this.typing && this.choices.length === 0 && !this.closing);
+      return;
+    }
+
     // Portrait: mouth flaps while letters appear, and she blinks now and then.
     this.blinkTimer -= dt;
     let frame = 0;
@@ -197,10 +213,15 @@ export class DialogueScene extends Phaser.Scene {
     frame.fillRoundedRect(px, py, P, P, 10);
     frame.lineStyle(3, THEME.gold, 1);
     frame.strokeRoundedRect(px, py, P, P, 10);
+    this.portraitSize = P - P / 9;
     this.portrait = this.add
       .image(px + P / 2, py + P - Math.round(P / 18), 'portrait-mother', 0)
       .setOrigin(0.5, 1)
-      .setScale((P - P / 9) / PORTRAIT_SIZE);
+      .setScale(this.portraitSize / PORTRAIT_SIZE);
+    this.portraitStir = this.add
+      .image(this.portrait.x, this.portrait.y, 'portrait-mother', 0)
+      .setOrigin(0.5, 1)
+      .setVisible(false);
 
     this.nameBg = this.add.graphics();
     this.nameText = this.add
@@ -226,7 +247,7 @@ export class DialogueScene extends Phaser.Scene {
 
     // Replies are listed inside the box, under what was said.
     this.choiceBox = this.add.container(0, 0);
-    this.root = this.add.container(0, 0, [this.frameG, frame, this.portrait, this.factionBg, this.factionText, this.nameBg, this.nameText, this.body, this.more, this.choiceBox]);
+    this.root = this.add.container(0, 0, [this.frameG, frame, this.portrait, this.portraitStir, this.factionBg, this.factionText, this.nameBg, this.nameText, this.body, this.more, this.choiceBox]);
     this.drawFrame();
     if (this.speaker) this.setSpeaker(this.speaker, this.node ? this.node.speaker : undefined);
   }
@@ -309,6 +330,14 @@ export class DialogueScene extends Phaser.Scene {
   private setSpeaker(speaker: Speaker, id?: SpeakerId): void {
     this.speaker = speaker;
     this.portrait.setTexture(speaker.portrait, 0);
+    // Most portraits are PORTRAIT_SIZE square; the orb's is painted bigger, so size by the frame.
+    this.portrait.setScale(this.portraitSize / this.portrait.frame.width);
+    const orb = speaker.portrait === ORB_PORTRAIT.key;
+    this.portraitStir.setVisible(orb);
+    if (orb) {
+      this.portraitStir.setTexture(speaker.portrait, ORB_PORTRAIT.frames).setScale(this.portrait.scale);
+      this.portraitStir.setAlpha(0);
+    }
     this.nameText.setText(speaker.name);
     const w = this.nameText.width + 28;
     this.nameBg.clear();

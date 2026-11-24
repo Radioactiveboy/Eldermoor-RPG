@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
+import { sheetScale } from '../art/fine3d';
 import type { DialogueScript, SpeakerId } from '../dialogue/Dialogue';
 import { raidAware, raidIsOver, toldOfRaid } from '../dialogue/afterRaid';
 import { goblinPrisonerScript, jailerScript, prisonerScript, sergeantScript } from '../dialogue/garrison';
@@ -365,7 +366,7 @@ const NPCS: Record<string, NpcDef> = {
     }),
   },
   // Wat, the militia lad on the east watch after the raid, who will come along if asked (see systems/Companions.ts).
-  wat: { texture: 'folk-guard', roam: 2, script: wayfarer('wat', watScript) },
+  wat: { texture: 'folk-wat', roam: 2, script: wayfarer('wat', watScript) },
   // Adowvale folk about the market by day, overheard rather than spoken to (scenes/game/marketCrowd.ts).
   'crowd-goodwife': { texture: 'folk-crowd-goodwife', passerby: true, roam: 6, script: () => NOBODY },
   'crowd-labourer': { texture: 'folk-crowd-labourer', passerby: true, roam: 7, script: () => NOBODY },
@@ -517,6 +518,13 @@ export class Npc implements Body {
   /** Sat down for now (Mother at the table), whether or not they always sit. */
   sitting = false;
   /**
+   * Moved about by a script (the militia fighting at the gate, see world/GateSkirmish.ts) rather than
+   * going about by themselves: they stay where they're put, and aren't to be talked to, until let go.
+   */
+  scripted = false;
+  /** Screen-pixel nudge for the sprite, for a lunge or a flinch while scripted. */
+  readonly offset = { x: 0, y: 0 };
+  /**
    * Out of sight but still there to talk to (Mother lying in her bed, which is
    * drawn with her in it): `prompt` is where the talk prompt goes instead.
    */
@@ -550,7 +558,8 @@ export class Npc implements Body {
     if (looking) this.face(looking);
     this.restFacing = this.facing;
     this.shadow = scene.add.image(0, 0, 'shadow');
-    this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
+    // Some are drawn finer than they stand, like the hero (see art/fine3d.ts).
+    this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H).setScale(1 / sheetScale(scene, def.texture));
     if (def.wander && map.data.road?.length) {
       this.road = map.data.road;
       this.roadIndex = this.home = this.nearestRoadIndex(gx, gy);
@@ -597,7 +606,7 @@ export class Npc implements Body {
 
   /** Someone to talk to, rather than one of the market crowd going about their business. */
   get talks(): boolean {
-    return !this.def.passerby;
+    return !this.def.passerby && !this.scripted;
   }
 
   /** Not walking anywhere they've been sent. */
@@ -666,6 +675,14 @@ export class Npc implements Body {
     this.gx = gx;
     this.gy = gy;
     this.sync(false);
+  }
+
+  /** For a script moving them itself: stand (or be mid-stride) at a spot, facing a point. */
+  pose(gx: number, gy: number, faceAt: Vec2, moving: boolean): void {
+    this.gx = gx;
+    this.gy = gy;
+    this.face({ x: faceAt.x - gx, y: faceAt.y - gy });
+    this.sync(moving);
   }
 
   /** Face a grid direction and stay so (sat at the table, looking at it). */
@@ -789,6 +806,7 @@ export class Npc implements Body {
       this.speechLeft -= dt;
       if (this.speechLeft <= 0) this.speech = undefined;
     }
+    if (this.scripted) return;
     if (this.commute) {
       this.keepHours(dt, paused, player);
       return;
@@ -1140,7 +1158,7 @@ export class Npc implements Body {
   private sync(moving: boolean): void {
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
-    this.sprite.setPosition(p.x, p.y);
+    this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
     // Seated, drawn in front of the seat (as the player is).
     const d = (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.seated ? 2 : 0);
     this.shadow.setDepth(d - 0.5);

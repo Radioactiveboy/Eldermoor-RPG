@@ -18,6 +18,12 @@ export function itemScale(s: number): number {
 /** Portraits are PORTRAIT_SIZE pixels square (see portraits.ts). */
 export const PORTRAIT_SIZE = 96;
 
+/**
+ * The orb's portrait (see orbPortrait.ts) is painted smooth, bigger than the others, and always moving:
+ * a loop of `frames` frames played at `fps`, then the same loop "stirred" (frames + i) for while it speaks.
+ */
+export const ORB_PORTRAIT = { key: 'portrait-orb', size: 160, frames: 24, fps: 10 } as const;
+
 /** The militia garrison in Adowvale (see garrison.ts): its footprint, wall height in pixels, and which front tile its door is on. */
 export const GARRISON = { w: 4, h: 3, height: 74, doorTile: 2 } as const;
 

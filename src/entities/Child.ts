@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { FEET_Y, FRAME_H } from '../art/character';
+import { sheetScale } from '../art/fine3d';
 import { DIRECTIONS_8 } from '../art/figure3d';
 import type { ChildLine } from '../dialogue/iran';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
@@ -36,7 +37,7 @@ export class Child implements Speaker {
     this.gx = gx;
     this.gy = gy;
     this.shadow = scene.add.image(0, 0, 'shadow').setScale(0.8);
-    this.sprite = scene.add.sprite(0, 0, `folk-${id}`, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
+    this.sprite = scene.add.sprite(0, 0, `folk-${id}`, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H).setScale(1 / sheetScale(scene, `folk-${id}`));
     map.setOccupied(Math.floor(gx), Math.floor(gy), true);
     const p = gridToScreen(gx, gy);
     this.shadow.setPosition(p.x, p.y).setDepth(depthAt(gx, gy) - 0.5);

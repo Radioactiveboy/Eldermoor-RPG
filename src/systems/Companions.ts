@@ -123,7 +123,7 @@ export const COMPANIONS: Record<CompanionId, CompanionDef> = {
     pronoun: { they: 'he', their: 'his', them: 'him' },
     speaker: 'wat',
     npc: 'wat',
-    texture: 'folk-guard',
+    texture: 'folk-wat',
     home: { area: 'market', place: "Adowvale's square" },
     fights: true,
     blurb: 'A militia lad, keen and green. His spear catches a charge, and he stands by you.',
@@ -204,7 +204,8 @@ export type CompanionAction =
  * What a companion does on their turn. A companion knocked down spends it
  * getting up. Otherwise:
  * - a veteran (Sigrun) finishes off a foe she can likely kill with one blow;
- *   failing that, every few turns she shield-bashes the toughest foe still
+ *   failing that, she shield-bashes a foe winding up a crushing blow, or
+ *   every few turns the toughest foe still
  *   on its feet; failing that, she hits whatever is hurting the hero most.
  * - a shieldmate (Wat) raises his guard when badly hurt (and someone else is
  *   still fighting), and otherwise goes for whatever the hero is fighting:
@@ -227,6 +228,9 @@ export function chooseCompanionAction(
     const avgHit = me.damage.count * ((me.damage.sides + 1) / 2) + me.damage.bonus;
     const finish = foes.filter((f) => f.hp <= avgHit).sort((a, b) => b.hp - a.hp)[0];
     if (finish) return { type: 'attack', target: finish };
+    // A blow being wound up is stopped by knocking the one swinging it flat.
+    const winding = foes.find((f) => battle.has(f, 'windup'));
+    if (winding && battle.ready(me, 'bash')) return { type: 'bash', target: winding };
     if (battle.ready(me, 'bash') && !battle.has(toughest, 'prone') && toughest.hp > avgHit * 2) return { type: 'bash', target: toughest };
     return { type: 'attack', target: toughest };
   }
