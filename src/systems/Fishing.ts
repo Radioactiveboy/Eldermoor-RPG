@@ -10,8 +10,8 @@ import type { ItemId } from './Inventory';
  * between its runs and give it line while it runs (see stepFight).
  */
 
-export type WaterId = 'lake' | 'mere' | 'reed-pond' | 'willow-pool' | 'monastery-ponds';
-export type FishKind = 'perch' | 'roach' | 'pike' | 'eel' | 'tench' | 'carp' | 'trout' | 'boot';
+export type WaterId = 'lake' | 'mere' | 'reed-pond' | 'willow-pool' | 'monastery-ponds' | 'river';
+export type FishKind = 'perch' | 'roach' | 'pike' | 'eel' | 'tench' | 'carp' | 'trout' | 'barbel' | 'grayling' | 'boot';
 
 /** What Tobin asks for his spare rod. */
 export const ROD_PRICE = 6;
@@ -67,6 +67,15 @@ export const FISH: Record<FishKind, FishDef> = {
     item: 'pike', name: 'a pike', bite: 0.7, strength: 0.9, stamina: 5.5, calm: [1, 2], run: 1.4,
     shape: { len: 56, girth: 13, color: 0x5e7a3a, fin: 0x8a6a2a }, inches: [22, 40], note: 'All teeth and temper. Not Old Grandfather, but a cousin.',
   },
+  // Only in the river Wend: the barbel grubbing along the gravel bottom, and the grayling in the faster water.
+  barbel: {
+    item: 'barbel', name: 'a barbel', bite: 0.8, strength: 0.8, stamina: 5.2, calm: [1.1, 2.2], run: 1.5,
+    shape: { len: 46, girth: 12, color: 0x8a7a4a, fin: 0xb0603a }, inches: [14, 30], note: 'Bronze and whiskered, built to hug the riverbed. It ran like a horse.',
+  },
+  grayling: {
+    item: 'grayling', name: 'a grayling', bite: 0.75, strength: 0.45, stamina: 3.4, calm: [1.2, 2.2], run: 0.9,
+    shape: { len: 32, girth: 10, color: 0x8a96a2, fin: 0x8a4a7a }, inches: [9, 16], note: 'The lady of the stream: silver-grey, with a great purple sail of a back fin. Smells of thyme.',
+  },
   // Tobin's boot. It doesn't fight at all.
   boot: {
     item: 'old-boot', name: 'an old boot', bite: 1.2, strength: 0.05, stamina: 1.6, calm: [99, 99], run: 0,
@@ -104,6 +113,11 @@ export const WATERS: Record<WaterId, WaterDef> = {
   'willow-pool': { name: 'the willow pool', fish: { trout: w(4, 4, 3, 0.5), roach: w(1, 1, 1, 1), eel: w(0.3, 0, 0.5, 2) } },
   // The brothers' fish ponds outside Saint Elda's, stocked with carp.
   'monastery-ponds': { name: "the brothers' fish ponds", fish: { carp: w(3, 5, 3, 1), roach: w(3, 3, 3, 2), tench: w(1, 1, 1, 0.5) } },
+  // The river Wend at Adowvale Jetty: grayling in the run by day, barbel off the gravel at either end of it, pike in the slack by the reeds, eels at night.
+  river: {
+    name: 'the river Wend',
+    fish: { grayling: w(2, 3, 2, 0.2), barbel: w(2.5, 0.8, 2.5, 1.5), roach: w(3, 4, 3, 1), perch: w(2, 2, 2, 0.3), pike: w(0.8, 0.2, 0.8, 0.1), eel: w(0.3, 0, 0.6, 3), boot: w(0.2, 0.2, 0.2, 0.2) },
+  },
 };
 
 /** What can bite here at this hour, and how likely each is (only the ones that can). */

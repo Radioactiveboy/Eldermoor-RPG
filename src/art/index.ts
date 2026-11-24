@@ -81,6 +81,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'the smithy and bakery', load: () => import('./workshops').then((m) => m.generateWorkshops) },
   { label: "the garrison and the Headman's house", load: () => import('./garrison').then((m) => m.generateGarrison) },
   // Last: it makes burnt copies of art drawn above.
+  { label: 'the river front', load: () => import('./jetty').then((m) => m.generateJetty) },
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },
 ];
 

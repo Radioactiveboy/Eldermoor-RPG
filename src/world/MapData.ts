@@ -52,7 +52,9 @@ export type AreaId =
   // Workshops off Adowvale's square: Osric's smithy and Hilde's bakery.
   | 'smithy' | 'bakery'
   // On the lane at the south end of Adowvale: the militia garrison, its jail, and the Headman's residence.
-  | 'garrison' | 'jail' | 'residence';
+  | 'garrison' | 'jail' | 'residence'
+  // Down the lane past the garrison: Adowvale's landing on the river Wend, with its pier, boats and fishing huts.
+  | 'jetty';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -85,6 +87,11 @@ export interface MapObject {
    * turns see-through while the hero is behind it.
    */
   fades?: boolean;
+  /**
+   * Afloat (a boat at its moorings): it rides up and down on the water, this many
+   * pixels either way, at its own slow pace (see IsoMap.placeObject).
+   */
+  bob?: number;
 }
 
 /**
@@ -349,6 +356,16 @@ export interface MapData {
   orchards?: Array<{ x0: number; y0: number; x1: number; y1: number }>;
   /** Road tiles in order from one end to the other, for travellers to wander along. */
   road?: Array<{ x: number; y: number }>;
+  /**
+   * Planking laid over water (a pier, a landing stage): tiles that can be walked on though their
+   * ground is water. The planks themselves are drawn as flat objects; the water still shows round them.
+   */
+  decks?: Array<[number, number]>;
+  /**
+   * A river running through the map: which way it flows (in tiles, along the grid), and how fast,
+   * for the current drifting by and whatever floats on it (see world/RiverLife.ts).
+   */
+  river?: { flow: { x: number; y: number }; speed: number };
   /** Water that can be fished (see systems/Fishing.ts): which water, and roughly where it is. */
   waters?: Array<{ id: WaterId; gx: number; gy: number; r: number }>;
   /** Indoors: no minimap, and lit by the fire rather than the sky. */

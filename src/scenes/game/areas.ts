@@ -23,6 +23,7 @@ import { enteredGreyfells, greyfellsOpen } from './trail';
 import { buryingMother, carryingMother, enteredBroodHall, enteredWarren, outOfWarren, penPrisoner } from './warren';
 import { gateAftermath } from '../../world/GateAftermath';
 import { enteredMarket } from './market';
+import { enteredJetty } from './jetty';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
 import { ashesOver, ashesState } from '../../dialogue/afterAshes';
@@ -134,6 +135,8 @@ export const AREAS: Record<AreaId, AreaDef> = {
   }),
   warren: lazy(() => import('../../world/WarrenMap'), (m) => m.buildWarrenMap({ prisoner: penPrisoner(), roused: carryingMother() }), { test: true, enter: enteredWarren }),
   broodhall: lazy(() => import('../../world/BroodHallMap'), (m) => m.buildBroodHallMap({ motherDead: QuestLog.hasFlag('mother-dead'), orbTaken: QuestLog.hasFlag('orb-taken') }), { test: true, enter: enteredBroodHall }),
+  // Down the lane past the garrison: the landing on the river Wend.
+  jetty: lazy(() => import('../../world/JettyMap'), (m) => m.buildJettyMap(), { test: true, enter: enteredJetty }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

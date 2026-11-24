@@ -15,6 +15,7 @@ import { RAID_ACTIONS } from './raid';
 import { GATE_ACTIONS } from './gate';
 import { TRAIL_ACTIONS } from './trail';
 import { WARREN_ACTIONS } from './broodhall';
+import { sailTo } from './voyages';
 import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
@@ -37,7 +38,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...BEACON_ACTIONS,
 };
 
-/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `beacon-pay:<coins>`, or a named one. */
+/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `beacon-pay:<coins>`, `voyage:<area>` (see voyages.ts), or a named one. */
 export function runDialogueAction(g: GameScene, action: string): void {
   if (action.startsWith('shop:') && action.slice(5) in SHOPS) {
     g.pendingShop = action.slice(5) as ShopId;
@@ -60,6 +61,10 @@ export function runDialogueAction(g: GameScene, action: string): void {
   if (beaconPayAction(g, action)) return;
   if (action.startsWith('rent:')) {
     rentRoom(g, Number(action.slice(5)));
+    return;
+  }
+  if (action.startsWith('voyage:')) {
+    sailTo(g, action.slice(7));
     return;
   }
   const run = Object.hasOwn(ACTIONS, action) ? ACTIONS[action] : undefined;

@@ -160,7 +160,8 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   goes right under. Then play it: hold to reel in, and let go when the water boils and it runs, or the line snaps;
   leave the line slack too long and it shakes the hook. Landed, it leaps out onto a catch card with its size. What bites depends on the water and the hour: perch and roach by
   day, pike at dawn and dusk, eels at night, tench in the mere, trout in the cold willow pool, carp in the brothers'
-  ponds, and now and then Tobin's old boot. Every fish cooks at a hearth. Tobin will tell you where they're biting
+  ponds, barbel and grayling in the river Wend off Adowvale Jetty (and roach, perch, pike and eels there too), and
+  now and then Tobin's old boot. Every fish cooks at a hearth. Tobin will tell you where they're biting
 - **Hunting**: on the plains, walk up to a deer or a hare and press E (**Hunt**). Sprinting near
   game sends it running, and in a fight it may bolt rather than stand
 - **The north woods**: from the sheep track by the wolves' cave, a narrow path climbs north behind the hill and
@@ -235,6 +236,18 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   house; the house is barred from 22:00 to 06:00. Both men have their own lines after the raid. The Headman's talk is
   a list of topics (`HeadmanTopic` in `dialogue/residence.ts`), so quests can add their own. Try `?area=garrison`,
   `?area=jail` or `?area=residence&hour=10`
+- **Adowvale Jetty**: past the garrison a lane runs on south out of the village (a signpost at its head), down
+  through the trees to the river Wend. A cobbled quay with a crane, crates and bollards; a timber pier on its piles
+  with lanterns, a bench at the end, and the **Grey Heron** tied up alongside, a single-masted river boat with her
+  sail furled, rowing boats round her; fishing huts, a smokehouse, a boathouse and slipway, nets and eel traps
+  drying, a shingle beach of drawn-up boats, and a reed bank with lilies, an old willow, a shrine to the Lady of the
+  Wend and a heron on the eyot out in the stream. The river runs: streaks of current drift downstream over shallows
+  that shelve from gravel to deep water, gulls sit on the posts (and take off crying if you come close) and wheel
+  over the water, and a family of mallards paddles about the reeds. Three new folk, drawn finely like the companions:
+  **Maren Tull**, skipper of the Grey Heron; **Old Ebb**, mending his nets outside his hut; and **Wren**, his
+  granddaughter, who sells smoked fish at the smokehouse and buys your river catch. Maren is the hook for travel by
+  boat: she won't sail yet (the river's shut below Harrowford), but passages are listed in `systems/Voyages.ts` and
+  she offers each, at its fare, once its story flag is set. You can fish off the pier and the banks. Try `?area=jetty`
 - **The goblin raid**: give Mother her tincture and you're told to get some sleep, with only the one answer;
   you sleep till dawn. You wake to shouting: outside, goblins (cutters, a spearman and torch-bearing
   firebrands, led by an armoured Goblin Brute with a shield) are trampling the garden and setting the roof
@@ -275,7 +288,7 @@ they only count when a new game starts (on the title screen, begin a new journey
 
 | Switch | What it does |
 | --- | --- |
-| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `beacon` (inside the beacon on Corbie Tor), `beacon-top` (its roof), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `garrison`, `jail` (the cells under it), `residence` (the Headman's house), `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
+| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `beacon` (inside the beacon on Corbie Tor), `beacon-top` (its roof), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `garrison`, `jail` (the cells under it), `residence` (the Headman's house), `jetty` (Adowvale Jetty, on the river), `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
 | `?hour=21` | Start at that hour (0 to 23.99; 21 is 9pm) |
 | `?raid=night` | Start at 20:00 with the tincture in the satchel and Mother's errand otherwise done (talk to her to give it) |
 | `?raid=morning` | Wake on the morning of the goblin raid |
@@ -323,6 +336,9 @@ src/
     TavernMap.ts            The Crooked Tankard: taproom, the passage upstairs, a room to let, the cellar and its rats
     WorkshopMaps.ts         Inside Osric's smithy and Hilde's bakery
     GarrisonMaps.ts         The militia garrison, the cells beneath it, and the Headman's house
+    JettyMap.ts             Adowvale Jetty on the river Wend: the quay, the pier (walkable decks over the water), the
+                            Grey Heron and the rowing boats, huts, smokehouse, boathouse, reeds and the eyot
+    RiverLife.ts            On a river (MapData.river): the shallows' wash, the current drifting, gulls and ducks
     PlainsMap.ts            Adowvale Plains past the toll gate (120x120): grass, copses, the mere and the pond, the
                             Lord's Road to the crossroads and on to the monastery, the old white willow, game
     PlainsEvents.ts         Chance meetings on the plains: the footpads, Jory the tinker, Mags's goat, Hal the
@@ -371,6 +387,7 @@ src/
     Needs.ts                Optional hunger and rest: how fast they fall, what meals and sleep restore, the penalties
     Inventory.ts            Item definitions, the satchel's slots and what's worn
     Loot.ts                 Random finds from searching a pile of bones
+    Voyages.ts              Passages on the Grey Heron from Adowvale Jetty (none open yet): where, fare, hours, flag
     Shops.ts                The traders: stock, what they buy, prices that move with supply, the day and your standing
     MarketHours.ts          When the market trades (stalls open, packing up, shut)
     VillageDay.ts           Where Hilde, Osric and Tamsin are at each hour: stall, workshop, the Tankard or home
@@ -404,6 +421,7 @@ src/
     market.ts               The stallholders and the militia in Adowvale's square
     garrison.ts             Sergeant Brannock, Hamm the jailer, and Dickon the poacher
     residence.ts            Headman Hale (talk built from topics that quests can add to) and his household
+    jetty.ts                Maren Tull the skipper, Old Ebb the fisherman, and Wren at the smokehouse
     tavern.ts               Godric, the maids and the Tankard's regulars
     plains.ts               The toll guards and the folk on the Lord's Road
     wayfarers.ts            The plains' chance meetings (footpads, tinker, goatherd, messenger)
@@ -436,6 +454,8 @@ src/
       market.ts             Arriving in Adowvale, the militia calling the market's hours
       workshops.ts          The smithy and the bakery: barred at night, first visits, sparks and flour
       garrison.ts           The garrison, the cells and the Headman's house: first visits, the house barred at night
+      jetty.ts              Arriving at Adowvale Jetty
+      voyages.ts            Sailing on the Grey Heron (the voyage:<area> dialogue action)
       bounties.ts           The bounty board: reading it, taking a notice, kills counted, being paid
       plot.ts               The plot Iran lends: digging, sowing, watering and picking
       fishing.ts            The Fish prompt, first-catch diary lines, Tobin's rod and his boot
@@ -506,6 +526,9 @@ src/
     tavern.ts               The Crooked Tankard inside: bar, kegs, stairs, trapdoor, tables
     workshops.ts            The smithy's and the bakery's furnishings, and Osric's and Hilde's work frames
     garrison.ts             The garrison and the Headman's house outside and in: cells, bars, panelled walls
+    jetty.ts                The river front: pier decks, quay, the Grey Heron and rowing boats, huts, smokehouse,
+                            boathouse, nets, reeds, lilies, the heron; gulls, ducks and the current's streak
+    jettyfolk3d.ts          Maren, Old Ebb and Wren, drawn finely (FINE_SPEC)
     tollgate.ts             Lord Morten's toll gate, palisade, booth and banner
     monastery.ts            Saint Elda's from outside: wall, gatehouse, chapel, bell tower, shrines, hives
     abbey.ts                Saint Elda's within: the ranges round the cloister, the herb garden, the rooms' furnishings

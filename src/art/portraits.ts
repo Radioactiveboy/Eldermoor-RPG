@@ -1895,6 +1895,46 @@ const snikkit = townsfolk({
   },
 });
 
+/** Maren Tull, skipper of the Grey Heron: sun-browned and level-eyed, a blue knitted cap over a black plait, a red kerchief at the throat, a gold ring in her ear. */
+const maren = townsfolk({
+  skin: 0xc8906a, hair: 0x2e2220, style: 'braid', cloth: 0x2e4a48, shirt: 0xd8ceb4, cap: 0x3a527e,
+  iris: 0x4a6a5a, brow: 'flat', smile: 0, width: 16.5, jaw: 8, earring: true, look: -1,
+  over: (c) => {
+    // The kerchief knotted at the throat, its ends falling over the gansey.
+    const red = ramp(0xb03a2c);
+    for (let y = 74; y < 84; y++) {
+      for (let x = CX - 12; x <= CX + 12; x++) {
+        const d = Math.abs(x + 0.5 - CX);
+        if (d > 12 - (y - 74) * 0.9) continue;
+        c.set(x, y, tone(red, lightness((x - CX) / 14, (y - 78) / 8) + (BAYER[(y & 3) * 4 + (x & 3)] - 0.5) * 0.2, x, y));
+      }
+    }
+    for (let y = 80; y < S; y++) for (let x = CX + 2; x < CX + 6; x++) c.set(x + Math.floor((y - 80) / 4), y, tone(red, lightness(0.2, (y - 88) / 10), x, y));
+  },
+});
+/** Old Ebb, who has fished the Wend for sixty years: bald and brown, a long white beard, bushy brows, an ochre smock and a clay pipe. */
+const ebb = townsfolk({
+  skin: 0xb8805a, hair: 0xd4d0c8, style: 'bald', cloth: 0xa88a4e, shirt: 0x8a8e94,
+  iris: 0x5a7a8a, brow: 'heavy', smile: 1, width: 18, jaw: 9, old: true, beard: 0xd4d0c8, moustache: 0xe4e0d8, nose: 2, look: 1,
+  over: (c) => {
+    // The clay pipe from the corner of his mouth, the bowl turned up.
+    const clay = ramp(0xe8e0cc);
+    for (let i = 0; i < 12; i++) {
+      const x = CX + 6 + i;
+      const y = EYE_Y + 18 + Math.round(i * 0.35);
+      c.set(x, y, clay[3]);
+      c.set(x, y + 1, clay[1]);
+    }
+    for (let y = EYE_Y + 15; y < EYE_Y + 23; y++) for (let x = CX + 17; x < CX + 22; x++) c.set(x, y, tone(clay, lightness((x - CX - 19) / 4, (y - EYE_Y - 19) / 5), x, y));
+    for (let x = CX + 18; x < CX + 21; x++) c.set(x, EYE_Y + 15, 0x3a2a20);
+    c.set(CX + 19, EYE_Y + 14, 0xe87a32);
+  },
+});
+/** Wren, Ebb's granddaughter: copper curls escaping a green kerchief, freckles, a gap-toothed grin, a sooty apron. */
+const wren = townsfolk({
+  skin: 0xf0c8a4, hair: 0xb8562a, style: 'curly', cloth: 0x8a4a32, apron: 0xc8bca0, kerchief: 0x4a7a5a,
+  iris: 0x6a8a4a, brow: 'worried', smile: 1, width: 14.5, jaw: 6, freckles: true, blush: [0xe86a5a, 0.6], lashes: true, look: 1,
+});
 // --- The brigands in the beacon on Corbie Tor ------------------------------------
 
 /** A gold flame on a blue tabard at the chest: the old beacon watch's colours. */
@@ -2016,6 +2056,7 @@ const PAINTERS: Record<string, Painter> = {
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
   footpad, cutpurse, tinker, goatherd, courier,
   sergeant, jailer, prisoner, headman, steward, housemaid, housecook, snikkit,
+  maren, ebb, wren,
   corwin, garth, teg, linnet,
 };
 

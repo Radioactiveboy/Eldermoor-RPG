@@ -6,7 +6,7 @@ import { box, circle, Shape } from './Collision';
 import type { Villager } from '../systems/VillageDay';
 import { Commute, MapData, MapObject, NpcSpawn, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
-import { BOUNTY_BOARD, GARRISON_LANE } from './landmarks';
+import { BOUNTY_BOARD, GARRISON_LANE, JETTY_LANE } from './landmarks';
 
 export const MARKET_W = 34;
 /** Rows 0-29 are the square and the houses round it; the rows past them are the lane to the garrison and the Headman's house. */
@@ -270,6 +270,7 @@ export function buildMarketMap(gateOpen = false): MapData {
   data.sights.push({ id: board.id, gx: board.tx + 1, gy: board.ty + 0.9, label: 'Read the notices', z: 62 });
   addTollGate(data, gateOpen);
   addGarrisonLane(data);
+  addJettyLane(data);
   addPalisade(data);
 
   // The militia, each walking their own patch of the square.
@@ -499,4 +500,32 @@ function addGarrisonLane(data: MapData): void {
   placeObject(data, { key: 'furn-barrels', tx: g.tx - 1, ty: g.ty + 1, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
   placeObject(data, { key: 'mkt-crates', tx: g.tx - 1, ty: g.ty + 2, w: 1, h: 1, shapes: [box(0.1, 0.15, 0.95, 0.95)] });
   placeObject(data, { key: 'mkt-haycart', tx: r.tx + RESIDENCE.w + 2, ty: r.ty + 2, w: 2, h: 1 });
+}
+
+/**
+ * The lane on down to the river: from where the path from the square meets
+ * the garrison lane, it carries straight on south between the trees and off
+ * the bottom of the map, to Adowvale Jetty (see JettyMap.ts), with a signpost
+ * at the top. (The palisade round the village leaves a gap for it.)
+ */
+function addJettyLane(data: MapData): void {
+  const H = data.height;
+  // Clear the trees either side of the lane.
+  for (let y = 39; y < H; y++) {
+    for (let x = JETTY_LANE.x0 - 2; x <= JETTY_LANE.x1 + 3; x++) if (data.props[y][x] === Prop.Tree || data.props[y][x] === Prop.Rock) data.props[y][x] = Prop.None;
+  }
+  const lane = smoothLine([{ x: 11.6, y: 38.2 }, { x: 12.2, y: 40.5 }, { x: 11.8, y: 42.5 }, { x: 12, y: H + 1 }]);
+  paintPath(data.terrain, lane, (t) => 0.95 + 0.15 * Math.sin(t * 7 + 1));
+  for (let y = 39; y < H; y++) for (let x = JETTY_LANE.x0; x <= JETTY_LANE.x1; x++) data.terrain[y][x] = Terrain.Dirt;
+  joinDiagonals(data.terrain, Terrain.Dirt, Terrain.Grass);
+  for (let x = JETTY_LANE.x0; x <= JETTY_LANE.x1; x++) {
+    data.doors!.push({ tx: x, ty: H - 1, to: 'jetty', entry: 'market', auto: true, ask: 'Do you want to go down the lane to Adowvale Jetty, on the river?' });
+  }
+  data.entries!.jetty = { x: (JETTY_LANE.x0 + JETTY_LANE.x1 + 1) / 2, y: H - 2.2 };
+  placeObject(data, { key: 'mkt-signpost', tx: 14, ty: 40, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
+  data.sights!.push({
+    id: 'signpost-jetty', gx: 14.5, gy: 40.5, label: 'Read the sign', z: 58,
+    sign: { heading: 'Signpost', lines: ['↓  South: Adowvale Jetty and the river Wend', "↑  North: the garrison, the Headman's house and the market square"] },
+  });
+  data.landmarks!.push({ gx: 12, gy: H - 1, name: 'The lane down to the jetty', range: 3.5 });
 }

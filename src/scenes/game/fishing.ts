@@ -31,7 +31,7 @@ export function fishInteraction(g: GameScene, gx: number, gy: number): Interacti
   let best: { x: number; y: number; d: number } | undefined;
   for (let y = ty - 2; y <= ty + 2; y++) {
     for (let x = tx - 2; x <= tx + 2; x++) {
-      if (!g.map.inBounds(x, y) || g.map.data.terrain[y][x] !== Terrain.Water) continue;
+      if (!g.map.inBounds(x, y) || g.map.data.terrain[y][x] !== Terrain.Water || g.map.isDeck(x, y)) continue;
       const d = Math.hypot(x + 0.5 - gx, y + 0.5 - gy);
       if (!best || d < best.d) best = { x, y, d };
     }
@@ -80,6 +80,8 @@ export function caughtFish(g: GameScene, water: WaterId, fish: FishKind): void {
     tench: `Caught a tench in ${WATERS[water].name}: fat, olive-green and slimy.`,
     carp: "Caught one of the brothers' golden carp. I shall not mention it to Brother Aldo.",
     trout: 'Caught a speckled brown trout in the cold pool under the Greyfells. The prettiest fish I have ever seen.',
+    barbel: 'Landed a barbel off the jetty: bronze, whiskered, and it nearly had the rod out of my hands. Old Hob says they live on the bottom like pigs.',
+    grayling: 'Caught a grayling in the Wend, silver with a great violet fin like a sail. Hob was right: it smells of thyme.',
   };
   const line = lines[fish];
   if (line) QuestLog.writeDiary(line);

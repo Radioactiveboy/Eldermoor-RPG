@@ -48,6 +48,7 @@ export type SpeakerId =
   | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier'
   | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook'
   | 'wat' | 'snikkit' | 'coombe' | 'orb'
+  | 'maren' | 'ebb' | 'wren'
   | 'corwin' | 'garth' | 'teg' | 'linnet';
 
 export interface Speaker {
@@ -104,6 +105,10 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   prisoner: { name: 'Dickon the Poacher', portrait: 'portrait-prisoner', voice: { pitch: 175, spread: 0.24, wave: 'triangle' } },
   // The goblin the militia caught after the raid, in the cell at the foot of the jail steps.
   snikkit: { name: 'Snikkit the Goblin', portrait: 'portrait-snikkit', voice: { pitch: 290, spread: 0.32, wave: 'square' } },
+  // Down at Adowvale Jetty, on the river Wend.
+  maren: { name: 'Maren Tull', portrait: 'portrait-maren', voice: { pitch: 205, spread: 0.08, wave: 'triangle' } },
+  ebb: { name: 'Old Ebb', portrait: 'portrait-ebb', voice: { pitch: 112, spread: 0.2, wave: 'triangle' } },
+  wren: { name: 'Wren', portrait: 'portrait-wren', voice: { pitch: 430, spread: 0.24, wave: 'triangle' } },
   headman: { name: 'Headman Osbert Hale', portrait: 'portrait-headman', voice: { pitch: 135, spread: 0.08, wave: 'sine' } },
   steward: { name: 'Aldwin the Steward', portrait: 'portrait-steward', voice: { pitch: 145, spread: 0.04, wave: 'sine' } },
   housemaid: { name: 'Elsie', portrait: 'portrait-housemaid', voice: { pitch: 380, spread: 0.2, wave: 'triangle' } },

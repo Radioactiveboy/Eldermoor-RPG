@@ -96,6 +96,21 @@ export const SHOPS = {
     buyRate: 0.4,
     keeps: { ale: 3 },
   },
+  // Wren, at the smokehouse on Adowvale Jetty (world/JettyMap.ts): smoked eel and fish off the river, and she'll take your catch.
+  smokehouse: {
+    name: 'Ebb\'s Smokehouse',
+    keeper: 'wren',
+    greeting: "Smoked eel, smoked pike, and anything else Grandad's caught. Don't squeeze them, they're not apples.",
+    refuse: "That's not a fish! I only do fish. And eels. Eels are fish. Grandad says.",
+    thanks: ['Thank you! Eat it with bread, it\'s best with bread.', "Pleasure doing business! That's what Maren says.", "Come back tomorrow, there'll be more. There's always more."],
+    stock: [['smoked-eel', 8], ['baked-pike', 2], ['eel', 4], ['roach', 6], ['perch', 4], ['bread', 3]],
+    buys: ['Food'],
+    faction: 'adowvale',
+    buyRate: 0.5,
+    // River fish to smoke: she pays well for them.
+    wants: { eel: 0.8, barbel: 0.75, grayling: 0.75, pike: 0.7 },
+    keeps: { 'smoked-eel': 3 },
+  },
   // Jory, a travelling tinker met now and then on the Lord's Road (see world/PlainsEvents.ts): odds and ends, and he'll buy most anything, cheaply.
   tinker: {
     name: "Jory's Pack",

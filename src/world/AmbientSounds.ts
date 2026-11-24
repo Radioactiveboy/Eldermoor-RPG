@@ -67,6 +67,8 @@ const PLACES: Record<AreaId, Place> = {
   beacon: { fire: 0.55, wind: 0.2, echo: 0.35 },
   'beacon-top': { open: true, wind: 0.85, wild: 0.4 },
   market: { open: true, wind: 0.35, wild: 0.4 },
+  // Open to the river: a breeze off the water, gulls and waterfowl, the stream lapping at the piles.
+  jetty: { open: true, wind: 0.55, wild: 0.8 },
   monastery: { open: true, wind: 0.5, wild: 0.9, bell: 0.45 },
   abbey: { open: true, wind: 0.35, wild: 0.6, bell: 0.85, echo: 0.2 },
   home: { fire: 0.75, echo: 0.1 },

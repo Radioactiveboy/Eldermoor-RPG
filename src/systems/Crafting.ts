@@ -256,6 +256,30 @@ export const RECIPES: Recipe[] = [
     stages: ['Gutting', 'Grilling'],
     xp: 10,
   },
+  {
+    id: 'baked-barbel',
+    station: 'cooking',
+    needs: [['barbel', 1]],
+    makes: 'baked-barbel',
+    yields: 1,
+    seconds: 5,
+    known: true,
+    hint: 'A whiskered barbel, baked in the embers.',
+    stages: ['Gutting', 'Baking'],
+    xp: 10,
+  },
+  {
+    id: 'grilled-grayling',
+    station: 'cooking',
+    needs: [['grayling', 1]],
+    makes: 'grilled-grayling',
+    yields: 1,
+    seconds: 3.5,
+    known: true,
+    hint: 'A grayling, grilled with salt.',
+    stages: ['Scaling', 'Grilling'],
+    xp: 10,
+  },
 ];
 
 /** How many slots each station's window has for ingredients. */

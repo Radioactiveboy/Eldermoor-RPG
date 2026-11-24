@@ -10,6 +10,7 @@ import { raidStage } from './GoblinRaid';
 import type { IsoMap } from './IsoMap';
 import { Prop, Terrain } from './MapData';
 import { puddleAt } from './Puddles';
+import { RiverLife } from './RiverLife';
 
 /** Drawn over everything in the world (but under the HUD, which is its own scene). */
 const SKY_DEPTH = 90000;
@@ -120,6 +121,8 @@ export class Ambience {
   /** A thin, even haze under the banks of mist. */
   private haze?: Phaser.GameObjects.Rectangle;
   private time = 0;
+  /** The current, gulls and ducks on a river (see MapData.river). */
+  private readonly river?: RiverLife;
   private flockTimer = 4;
   private rippleTimer = 2;
   private sparrowTimer = 3;
@@ -144,6 +147,7 @@ export class Ambience {
       this.treeKeys.set(t.image, t.image.texture.key);
     }
     for (let i = 0; i < 3; i++) this.clouds.push(this.makeCloud(true));
+    if (map.data.river) this.river = new RiverLife(scene, map, clock);
   }
 
   /** Where the sun is up enough for birds and butterflies (and it isn't raining much). */
@@ -167,6 +171,7 @@ export class Ambience {
     this.updateFoam();
     this.updateRipples(dt, view);
     this.updateFlyers(dt, view);
+    this.river?.update(dt, view, player);
     this.updateSparrows(dt, view, player);
     this.updateButterflies(dt, view);
     this.updateFireflies(dt, view);
@@ -188,10 +193,11 @@ export class Ambience {
   /** Glints on the open water, and foam where it meets the shore. */
   private dressWater(): void {
     const { width, height, terrain } = this.map.data;
-    const isWater = (x: number, y: number) => x < 0 || y < 0 || x >= width || y >= height || terrain[y][x] === Terrain.Water;
+    // Under a pier's planks (MapData.decks) counts as shore: no glints on the boards, nor fish rising through them.
+    const isWater = (x: number, y: number) => x < 0 || y < 0 || x >= width || y >= height || (terrain[y][x] === Terrain.Water && !this.map.isDeck(x, y));
     for (let ty = 0; ty < height; ty++) {
       for (let tx = 0; tx < width; tx++) {
-        if (terrain[ty][tx] !== Terrain.Water) continue;
+        if (!isWater(tx, ty)) continue;
         const c = gridToScreen(tx + 0.5, ty + 0.5);
         this.water.push({ x: tx + 0.5, y: ty + 0.5 });
         // Not on the edge, where the shore's soft line cuts into the tile.
@@ -802,7 +808,7 @@ export class Ambience {
     const g = screenToGrid(x, y);
     const tx = Math.floor(g.x);
     const ty = Math.floor(g.y);
-    return this.map.inBounds(tx, ty) && this.map.data.terrain[ty][tx] === Terrain.Water;
+    return this.map.inBounds(tx, ty) && this.map.data.terrain[ty][tx] === Terrain.Water && !this.map.isDeck(tx, ty);
   }
 
   // ------------------------------------------------------------ crows
