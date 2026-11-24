@@ -14,13 +14,17 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 // 'tavern-room' has no ?area= switch (it needs a room taken first), so it isn't here.
 const ALL_AREAS = [
   'home', 'world', 'market', 'cave', 'hut', 'plains', 'northwoods', 'watchtower', 'greyfells', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
-  'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery', 'garrison', 'jail', 'residence',
+  'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery', 'garrison', 'jail', 'residence', 'warren', 'broodhall',
 ];
 const AREAS = process.env.SMOKE_AREAS ? process.env.SMOKE_AREAS.split(',') : ALL_AREAS;
 /** How many areas load at once. */
 const PARALLEL = Number(process.env.SMOKE_PARALLEL ?? 3);
-/** How long an area gets to reach the game, and how long it then runs before it counts as fine. */
-const LOAD_TIMEOUT = 60_000;
+/**
+ * How long each step of loading an area gets (the title screen, then the game), and how long it then runs
+ * before it counts as fine. CI's software-rendered browsers, three at once, take over a minute to draw all
+ * the art, so a minute was cutting it fine: a different area or two missed it on most runs.
+ */
+const LOAD_TIMEOUT = 120_000;
 const SETTLE_MS = 3_000;
 
 const TYPES = {
