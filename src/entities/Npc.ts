@@ -403,10 +403,12 @@ const NPCS: Record<string, NpcDef> = {
   'crowd-matron': { texture: 'folk-crowd-matron', passerby: true, script: () => NOBODY },
   'crowd-elder': { texture: 'folk-crowd-elder', passerby: true, script: () => NOBODY },
   // The village militia, walking their rounds of the square, day and night; the fifth keeps the garrison door.
-  ...Object.fromEntries(
-    [1, 2, 3, 4].map((n) => [`guard-${n}`, { texture: 'folk-guard', script: guardScript, roam: 5 }]),
-  ),
-  'guard-5': { texture: 'folk-guard', script: guardScript },
+  // Each is his own man (art/militia3d.ts): a spearman, an archer, the new recruit and a swordsman on the square, the old veteran on the door.
+  'guard-1': { texture: 'folk-militia-spear', script: guardScript, roam: 5 },
+  'guard-2': { texture: 'folk-militia-archer', script: guardScript, roam: 5 },
+  'guard-3': { texture: 'folk-militia-recruit', script: guardScript, roam: 5 },
+  'guard-4': { texture: 'folk-militia-sword', script: guardScript, roam: 5 },
+  'guard-5': { texture: 'folk-militia-veteran', script: guardScript },
   // The garrison: Sergeant Brannock at his table, Hamm on the cells below, and Dickon the poacher in one of them.
   sergeant: {
     texture: 'folk-sergeant',
@@ -426,7 +428,7 @@ const NPCS: Record<string, NpcDef> = {
       });
     },
   },
-  jailer: { texture: 'folk-guard', script: wayfarer('jailer', (first) => jailerScript(raidIsOver(), first)) },
+  jailer: { texture: 'folk-jailer', script: wayfarer('jailer', (first) => jailerScript(raidIsOver(), first)) },
   prisoner: { texture: 'folk-prisoner', sits: true, talkRange: 3, script: wayfarer('prisoner', (first) => prisonerScript(raidIsOver(), first)) },
   // Snikkit, the goblin the militia caught after the raid, in the cell at the foot of the steps (only there once the raid is over).
   snikkit: {
