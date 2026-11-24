@@ -32,6 +32,11 @@ const WAYS: Record<FoeKind, { shy: boolean; notice: number; leash: number; speed
   goblinspear: { shy: false, notice: 0, leash: 2.5, speed: 1.7 },
   goblintorch: { shy: false, notice: 0, leash: 3, speed: 2 },
   goblinbrute: { shy: false, notice: 0, leash: 1.5, speed: 1.3 },
+  // The brigands in the beacon tower only fight when it comes to it in talk (see scenes/game/beacon.ts).
+  brigandcaptain: { shy: false, notice: 0, leash: 1, speed: 1.4 },
+  brigandbrute: { shy: false, notice: 0, leash: 1, speed: 1.2 },
+  brigandcutter: { shy: false, notice: 0, leash: 1, speed: 1.6 },
+  brigandarcher: { shy: false, notice: 0, leash: 1, speed: 1.6 },
 };
 /** Shy game bolts when the player sprints within this many tiles of it. */
 const STARTLE_RANGE = 6;
@@ -100,8 +105,8 @@ export class Creature implements Body {
     const scale = art.scale ?? 1;
     this.cols = art.cols ?? BEAST_COLS;
     const small = kind === 'hare' || kind === 'rat' || kind === 'wildcat';
-    const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin');
-    const big = kind === 'goblinbrute';
+    const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin') || kind.startsWith('brigand');
+    const big = kind === 'goblinbrute' || kind === 'brigandbrute';
     this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : big ? 1.5 : upright ? 1 : 1.4) * scale, (small ? 0.6 : big ? 1.3 : 1) * scale);
     // A sheet drawn finer than it's shown (the goblins') is scaled down by as much.
     this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale / (art.res ?? 1));

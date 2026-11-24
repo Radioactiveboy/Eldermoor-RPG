@@ -220,6 +220,26 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 70,
   },
+  // The Headman's errand once Mother is home and buried (scenes/game/beacon.ts, dialogue/beacon.ts).
+  'the-beacon': {
+    id: 'the-beacon',
+    title: 'The Beacon on Corbie Tor',
+    giver: 'Headman Osbert Hale',
+    kind: 'side',
+    summary:
+      'Headman Hale wants the old signal beacon on Corbie Tor opened up again, after what came down off the Greyfells. Its watch was stood ' +
+      'down twelve years ago and it has stood empty since, though the carters talk of smoke from it some nights. I am to go up and see what ' +
+      'state it is in, the door, the stair and the brazier on top, and come back and tell him. And I am not to light it.',
+    objectives: [
+      { id: 'talk', text: 'Hear the Headman out', target: { area: 'residence', x: 13.2, y: 1.35, npc: 'headman' } },
+      { id: 'find', text: 'Find the old beacon on Corbie Tor, in the far north of the plains', target: { area: 'plains', x: 90, y: 12 } },
+      { id: 'inside', text: 'Go inside the beacon', target: { area: 'plains', x: 90, y: 9 } },
+      { id: 'brigands', text: 'Deal with the brigands holding the beacon: pay them, bargain, or fight', target: { area: 'beacon', x: 2.4, y: 1.75, npc: 'corwin' } },
+      { id: 'brazier', text: 'Climb to the top of the tower and look over the brazier', target: { area: 'beacon-top', x: 3.5, y: 4.5 } },
+      { id: 'return', text: 'Tell Headman Hale what you found', target: { area: 'residence', x: 13.2, y: 1.35, npc: 'headman' } },
+    ],
+    xp: 320,
+  },
   'speckle-and-moppet': {
     id: 'speckle-and-moppet',
     title: 'Speckle and Moppet',

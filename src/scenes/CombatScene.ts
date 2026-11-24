@@ -229,6 +229,26 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     banner: 'The Goblin Brute!',
     flee: 'backs off, snarling.',
   },
+  brigandcaptain: {
+    start: 'Corwin draws his falchion. "Garth. Teg. Linnet." Up on the stair, a bowstring creaks. The brigands spread out round you.',
+    banner: 'The brigands of Corbie Tor!',
+    flee: 'backs to the door, sword up, and is gone into the grass.',
+  },
+  brigandbrute: {
+    start: 'Big Garth hefts his maul and grins through his beard.',
+    banner: 'Brigands!',
+    flee: 'drops his maul and lumbers off out of the door!',
+  },
+  brigandcutter: {
+    start: 'Teg comes at you low, a hatchet in each hand.',
+    banner: 'Brigands!',
+    flee: 'slips away out of the door without a sound!',
+  },
+  brigandarcher: {
+    start: 'An arrow thrums past your ear from the stair.',
+    banner: 'Brigands!',
+    flee: 'scrambles away up the stair and out of sight!',
+  },
 };
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
@@ -412,6 +432,8 @@ export class CombatScene extends Phaser.Scene {
         ? FOE_TEXT.goblinbrute.start
         : this.foes.length > 1 && isGoblin(first.creature!.kind)
         ? 'Goblins swarm round you, shrieking and cackling!'
+        : this.foes.some((f) => f.creature!.kind === 'brigandcaptain')
+        ? FOE_TEXT.brigandcaptain.start
         : this.foes.length > 1 && isOutlaw(first.creature!.kind)
         ? FOE_TEXT.footpad.start
         : this.foes.length > 1

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { box, circle } from './Collision';
+import { box, circle, Shape } from './Collision';
 import { CreatureSpawn, MapData, placeObject, Prop, Terrain } from './MapData';
 import type { HerbKind } from '../systems/Herbs';
 import { plantHerbNear } from './HerbPatches';
@@ -27,6 +27,8 @@ const DEN = { x: 98, y: 27 + NORTH };
 const WILLOW_POOL = { x: 44, y: 15, r: 3.4 };
 /** The back corner of the old white willow's 3x3 footprint, on the pool's south-east bank; its trunk is in the middle tile. */
 const WILLOW = { tx: 47, ty: 16 };
+/** The back corner of the beacon tower's 4x4 footprint on Corbie Tor, up in the far north-east of the upland; its door faces down the path. */
+export const BEACON = { tx: 88, ty: 5 };
 
 /**
  * Adowvale Plains, beyond Lord Morten's toll gate north of the village: the
@@ -41,9 +43,11 @@ const WILLOW = { tx: 47, ty: 16 };
  * Wolf Mother lairs (see DenMap.ts); two of her wolves watch the track. Up the
  * north road, the plains rise into rough upland below the Greyfells, where a
  * brook comes down into a still pool and an old white willow leans over it:
- * the bark Mother's tincture needs.
+ * the bark Mother's tincture needs. Away to the north-east, up a sheep path off
+ * the north road, the old signal beacon stands on Corbie Tor (see BeaconMap.ts):
+ * smoke rises from its top while someone keeps a fire inside (`beaconKept`).
  */
-export function buildPlainsMap(): MapData {
+export function buildPlainsMap(beaconKept = true): MapData {
   const W = PLAINS_W;
   const H = PLAINS_H;
   const rnd = new Phaser.Math.RandomDataGenerator(['adowvale-plains']);
@@ -303,6 +307,85 @@ export function buildPlainsMap(): MapData {
   data.musings!.push({
     x0: WILLOW.tx - 4, y0: WILLOW.ty - 3, x1: WILLOW.tx + 7, y1: WILLOW.ty + 7,
     text: 'A willow, older than any tree I have seen, its boughs trailing in the water. White willow, by the silver under its leaves.',
+  });
+
+  // The old beacon on Corbie Tor: a sheep path climbs off the north road, past a waymark cairn, to the
+  // knoll the tower stands on, with the warden's woodpile and the shell of his hut beside it.
+  const door = { tx: BEACON.tx + 2, ty: BEACON.ty + 3 };
+  const beaconPath = smoothLine([
+    { x: 66.8, y: 10.5 },
+    { x: 72, y: 12.2 },
+    { x: 78.5, y: 11 },
+    { x: 84.5, y: 12.6 },
+    { x: door.tx + 0.2, y: door.ty + 3 },
+    { x: door.tx, y: door.ty + 1.4 },
+  ]);
+  for (const p of beaconPath) {
+    for (let y = Math.floor(p.y - 1.6); y <= p.y + 1.6; y++) for (let x = Math.floor(p.x - 1.6); x <= p.x + 1.6; x++) if (props[y]?.[x] !== undefined) props[y][x] = Prop.None;
+  }
+  // The top of the knoll is clear of trees: only boulders and heather up there.
+  for (let y = BEACON.ty - 3; y <= BEACON.ty + 8; y++) {
+    for (let x = BEACON.tx - 5; x <= BEACON.tx + 8; x++) if (props[y]?.[x] !== undefined && Math.hypot(x - BEACON.tx - 2, (y - BEACON.ty - 2) * 1.2) < 7.5) props[y][x] = Prop.None;
+  }
+  paintPath(terrain, beaconPath, (t) => 0.62 + 0.1 * Math.sin(t * 21.7 + 0.3));
+  for (let y = BEACON.ty; y < BEACON.ty + 4; y++) for (let x = BEACON.tx; x < BEACON.tx + 4; x++) terrain[y][x] = Terrain.Grass;
+  // Round, so it stands on less than its whole footprint: each tile it covers gets the part of it the shaft stands on.
+  const tower: Shape[] = [];
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+      for (let sy = 0; sy <= 8; sy++) {
+        for (let sx = 0; sx <= 8; sx++) {
+          if (Math.hypot(x + sx / 8 - 2, y + sy / 8 - 2) > 1.78) continue;
+          x0 = Math.min(x0, sx / 8); y0 = Math.min(y0, sy / 8); x1 = Math.max(x1, sx / 8); y1 = Math.max(y1, sy / 8);
+        }
+      }
+      if (x1 - x0 > 0.05 && y1 - y0 > 0.05) tower.push(box(x + x0, y + y0, x + x1, y + y1));
+    }
+  }
+  placeObject(data, { key: beaconKept ? 'bcn-tower' : 'bcn-tower-cold', tx: BEACON.tx, ty: BEACON.ty, w: 4, h: 4, shapes: tower, fades: true });
+  data.doors!.push({ tx: door.tx, ty: door.ty, to: 'beacon', entry: 'door', label: 'Go inside', facing: 'wall' });
+  data.entries!.beacon = { x: door.tx, y: door.ty + 1.7 };
+  // The smoke of the brigands' fire, coming up through the hatch on the roof.
+  if (beaconKept) (data.chimneys ??= []).push({ gx: BEACON.tx + 2.4, gy: BEACON.ty + 2, z: 330 });
+  data.landmarks!.push({ gx: BEACON.tx + 2, gy: BEACON.ty + 2, name: 'The beacon on Corbie Tor', range: 9 });
+  const knoll: Array<[string, number, number, number, number]> = [
+    ['bcn-woodpile', BEACON.tx + 5, BEACON.ty + 2, 3, 1],
+    ['bcn-ruin', BEACON.tx - 4, BEACON.ty + 1, 3, 2],
+    ['bcn-cairn', 69, 11, 1, 1],
+  ];
+  for (const [key, tx, ty, w, h] of knoll) {
+    for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) props[y][x] = Prop.None;
+    placeObject(data, { key, tx, ty, w, h });
+  }
+  // Grey boulders about the top of the tor.
+  for (const [dx, dy] of [[5, -2], [6, -2], [5, -1], [-2, 5], [6, 5], [-3, -1], [8, 2]] as const) props[BEACON.ty + dy][BEACON.tx + dx] = Prop.Rock;
+  const heather: Array<[number, number]> = [[-3, 4], [-1, 6], [5, 4], [7, 1], [-2, 0], [4, -2], [1, -2], [7, 6], [-4, 3]];
+  heather.forEach(([dx, dy], i) => {
+    const tx = BEACON.tx + dx;
+    const ty = BEACON.ty + dy;
+    if (props[ty]?.[tx] === Prop.None) placeObject(data, { key: `bcn-heather-${i % 3}`, tx, ty, w: 1, h: 1, flat: true });
+  });
+  data.sights!.push(
+    {
+      id: 'beacon-cairn', gx: 69.5, gy: 11.6, label: 'Look at the cairn', z: 50,
+      thought: 'A waymark, stones piled shoulder-high, a slab on top with a flame cut into it. It points up the path, at the tower on the tor.',
+    },
+    {
+      id: 'beacon-woodpile', gx: BEACON.tx + 6.5, gy: BEACON.ty + 3.2, label: 'Look at the woodpile', z: 34,
+      thought: 'Split logs stacked under a rotten canvas, gone grey with years of weather. Somebody has been pulling the dry ones out from underneath.',
+    },
+    {
+      id: 'beacon-ruin', gx: BEACON.tx - 2.5, gy: BEACON.ty + 3.2, label: 'Look at the hut', z: 30,
+      thought: 'A hut once, by the tower. The warden lived here, I suppose, when there was a warden. Nettles grow where the hearth was.',
+    },
+  );
+  data.musings!.push({
+    id: 'beacon-knoll',
+    x0: 74, y0: 9, x1: 80, y1: 14,
+    text: beaconKept
+      ? 'The tower on the tor, up ahead. A thread of smoke from the top of it. Somebody is up there.'
+      : 'The tower on the tor, up ahead, standing grey against the fells. No smoke now.',
   });
 
   // Game, spread about the grass away from the gate. It comes back on every visit.

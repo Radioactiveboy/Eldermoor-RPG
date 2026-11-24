@@ -20,6 +20,7 @@ import type { Channel } from './interactions';
 import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
 import { syncPlot } from './plot';
 import { lookedAtCamp, lookedAtTrailSign } from './trail';
+import { lookedAtBrazier } from './beacon';
 
 export function startChannel(g: GameScene, channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
   g.walkingTo = undefined;
@@ -124,6 +125,10 @@ export function examine(g: GameScene, sight: Sight): void {
   g.player.faceTowards(sight.gx, sight.gy);
   if (sight.id === BOUNTY_BOARD.id) {
     readBountyBoard(g);
+    return;
+  }
+  if (sight.id === 'bct-brazier') {
+    lookedAtBrazier(g);
     return;
   }
   if (sight.id === MOPPET_SIGHT.id) {

@@ -79,6 +79,8 @@ export const LINKS: Link[] = [
   link('plains', { x: 119, y: 80.5 }, 'monastery', { x: 0.5, y: 44.5 }, "The Lord's Road"),
   link('plains', { x: 101.5, y: 60.5 }, 'den', { x: 0.5, y: 3.5 }),
   link('den', { x: 24.5, y: 0.5 }, 'deepden', { x: 0.5, y: 5.5 }),
+  link('plains', { x: 90.5, y: 8.5 }, 'beacon', { x: 0.5, y: 7.5 }),
+  link('beacon', { x: 5.5, y: 1.5 }, 'beacon-top', { x: 1.5, y: 5.5 }),
   link('monastery', { x: 32, y: 8.5 }, 'abbey', { x: 22, y: 39 }, "Saint Elda's gate"),
   link('abbey', { x: 7.5, y: 5.5 }, 'chapel', { x: 0.5, y: 8.5 }),
   link('abbey', { x: 33.5, y: 5.5 }, 'infirmary', { x: 0.5, y: 4.5 }),
