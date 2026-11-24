@@ -2290,7 +2290,7 @@ function blackRoseBadge(c: PixelCanvas): void {
 /** Captain Vosk, who keeps the Fen Gate: a hard face going grey, cropped hair and stubble, a scar, mail under a black tabard with a red rose. */
 const vosk = townsfolk({
   skin: 0xd0a084, hair: 0x3a3236, style: 'short', cloth: 0x2a2628, shirt: 0x6a6a76, mail: true,
-  iris: 0x7a8a8a, brow: 'stern', smile: 0, width: 17, jaw: 9, scar: true, tired: true, look: 1, beard: 0x5a5458,
+  iris: 0x7a8a8a, brow: 'stern', smile: 0, width: 17, jaw: 9, scar: true, tired: true, look: 1,
   over: (c) => {
     blackRoseBadge(c);
     // Grey at the temples.

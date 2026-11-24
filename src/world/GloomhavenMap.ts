@@ -31,8 +31,11 @@ export function gloomBank(x: number): number {
 
 /** Where the far bank comes down to the water: rows from here on are the far shore (all reeds and drowned trees). */
 function farBank(x: number): number {
-  return 56.4 + 1.2 * Math.sin(x * 0.21 + 1.3) + 0.6 * Math.sin(x * 0.53);
+  return 80.4 + 1.6 * Math.sin(x * 0.21 + 1.3) + 0.8 * Math.sin(x * 0.53);
 }
+
+/** A reedy eyot out in the river, east of the pier: centre and radii, in tiles. */
+const EYOT = { x: 45, y: 64, rx: 4.2, ry: 2.6 };
 
 /** Standing pools inside the walls: centre and radii, in tiles. */
 const POOLS: Array<{ x: number; y: number; rx: number; ry: number }> = [
@@ -69,6 +72,13 @@ export function buildGloomhavenMap(): MapData {
       if (cy >= near && cy < far) terrain[y][x] = Terrain.Water;
       else if (cy < near && cy >= near - 2.2) terrain[y][x] = Terrain.Dirt;
       else if (cy >= far && cy < far + 0.8) terrain[y][x] = Terrain.Dirt;
+    }
+  }
+  // ---- The eyot: a mudbank in mid-river, all reeds and a drowned tree or two ----
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const d = Math.hypot((x + 0.5 - EYOT.x) / EYOT.rx, (y + 0.5 - EYOT.y) / EYOT.ry) + 0.15 * Math.sin(x * 1.7 + y * 2.3);
+      if (d < 1) terrain[y][x] = d < 0.6 ? Terrain.Grass : Terrain.Dirt;
     }
   }
   // ---- The pools ----
@@ -612,7 +622,8 @@ function addMarsh(data: MapData, rnd: Phaser.Math.RandomDataGenerator, set: Sett
     for (let x = 0; x < W; x++) {
       if (!free(x, y) || isWater(x, y)) continue;
       const roll = rnd.frac();
-      const outside = y < GLOOM_WALL.north - 1 || y > farBank(x) + 1;
+      const eyot = Math.hypot((x + 0.5 - EYOT.x) / EYOT.rx, (y + 0.5 - EYOT.y) / EYOT.ry) < 0.8;
+      const outside = y < GLOOM_WALL.north - 1 || y > farBank(x) + 1 || eyot;
       const town = inTown(x, y) && terrain[y][x] === Terrain.Grass;
       const edge = x < 2 || x > W - 3;
       const chance = outside ? (Math.abs(x - 37.5) < 3 ? 0 : 0.2) : edge ? 0.12 : town ? 0.035 : 0;
@@ -621,7 +632,8 @@ function addMarsh(data: MapData, rnd: Phaser.Math.RandomDataGenerator, set: Sett
     }
   }
   // Will-o'-the-wisp: a cold light out over the far bank some nights.
-  data.lights!.push({ gx: 14, gy: 58, z: 12, radius: 60, flicker: 0.9 });
+  data.lights!.push({ gx: 14, gy: 82, z: 12, radius: 60, flicker: 0.9 });
+  data.landmarks!.push({ gx: EYOT.x, gy: EYOT.y, name: 'Heron Eyot', range: 5 });
   data.musings!.push({
     x0: 3, y0: 17, x1: 14, y1: 23,
     text: 'The boards are slick and they give underfoot. The water either side is black and still, and it is not as shallow as it looks.',
