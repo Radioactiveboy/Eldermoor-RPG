@@ -36,6 +36,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { buildGreyfellsMap } = await import('../../src/world/GreyfellsMap');
   const garrison = await import('../../src/world/GarrisonMaps');
   const { buildJettyMap } = await import('../../src/world/JettyMap');
+  const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   const { buildWarrenMap } = await import('../../src/world/WarrenMap');
   const { buildBroodHallMap } = await import('../../src/world/BroodHallMap');
   const beacon = await import('../../src/world/BeaconMap');
@@ -70,6 +71,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     jail: garrison.buildJailMap(true),
     residence: garrison.buildResidenceMap(),
     jetty: buildJettyMap(),
+    gloomhaven: buildGloomhavenMap(),
     warren: buildWarrenMap({ prisoner: 'hilde' }),
     broodhall: buildBroodHallMap(),
   };

@@ -54,6 +54,7 @@ export const AREA_NAMES: Record<AreaId, string> = {
   'beacon-top': 'The top of the beacon',
   greyfells: 'Greyfells Clearing',
   jetty: 'Adowvale Jetty',
+  gloomhaven: 'Gloomhaven',
   warren: "The goblins' warren",
   broodhall: 'The brood hall',
   monastery: "Saint Elda's Monastery",

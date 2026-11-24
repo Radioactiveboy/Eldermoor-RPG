@@ -13,6 +13,10 @@ import { FeedStage, IRAN_HIDING, iranScript } from '../dialogue/iran';
 import { CARTER, HERBWIFE, tollGuardScript, tollRoadTalk } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
 import { ebbScript, JettyNews, marenScript, wrenScript } from '../dialogue/jetty';
+import {
+  brakkScript, crayScript, fitchScript, gutterScript, luskScript, osseryScript, crabbeScript, tallowScript, voskScript, wispScript,
+} from '../dialogue/gloomhaven';
+import { CRAY_FARE, wispPinched } from '../scenes/game/gloomhaven';
 import { openVoyages } from '../systems/Voyages';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
@@ -508,7 +512,34 @@ const NPCS: Record<string, NpcDef> = {
       return wrenScript(first, jettyNews('wren'));
     },
   },
+  // Gloomhaven (world/GloomhavenMap.ts): the gate men at the Fen Gate, the three keepers at their counters, Gutter Jack on the
+  // bench by the well, Wisp about the square, and Cray on the pier.
+  vosk: { texture: 'folk-vosk', talkRange: 2.2, script: firstTime('vosk', voskScript) },
+  brakk: { texture: 'folk-brakk', talkRange: 2.2, script: firstTime('brakk', brakkScript) },
+  fitch: { texture: 'folk-fitch', talkRange: 2.4, script: firstTime('fitch', fitchScript) },
+  crabbe: { texture: 'folk-crabbe', talkRange: 2.2, script: firstTime('crabbe', crabbeScript) },
+  ossery: { texture: 'folk-ossery', talkRange: 2.6, script: firstTime('ossery', osseryScript) },
+  tallow: { texture: 'folk-tallow', talkRange: 2.6, script: firstTime('tallow', tallowScript) },
+  lusk: { texture: 'folk-lusk', talkRange: 2.4, script: firstTime('lusk', luskScript) },
+  gutter: {
+    texture: 'folk-gutter', sits: true,
+    script: firstTime('gutter', (first) => gutterScript(first, Inventory.count('ale') > 0, QuestLog.hasFlag('gutter-told'))),
+  },
+  wisp: {
+    texture: 'folk-wisp', roam: 4, talkRange: 2.2,
+    script: firstTime('wisp', (first) => wispScript(first, wispPinched(), QuestLog.hasFlag('wisp-returned'))),
+  },
+  cray: { texture: 'folk-cray', talkRange: 2.4, script: firstTime('cray', (first) => crayScript(first, CRAY_FARE, Inventory.coins)) },
 };
+
+/** A conversation that opens differently the first time (and marks them met). */
+function firstTime(id: string, script: (first: boolean) => DialogueScript): () => DialogueScript {
+  return () => {
+    const first = !met.has(id);
+    met.add(id);
+    return script(first);
+  };
+}
 
 /** What the jetty folk have heard: the raid (said once, the first time after it), and whether Mother is dead. */
 function jettyNews(id: SpeakerId): JettyNews {
