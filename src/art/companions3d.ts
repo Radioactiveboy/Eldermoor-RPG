@@ -3,6 +3,7 @@ import { Detail, Hit, limb, Model, Pose3D, Solid } from './figure3d';
 import { fineFace, shade } from './fine3d';
 import { JETTY_FOLK } from './jettyfolk3d';
 import { captiveGoblinModel, shamanGoblinModel } from './goblins3d';
+import { MILITIA_FOLK } from './militia3d';
 import { seatedLegs } from './models3d';
 import { PALETTE as P } from './palette';
 
@@ -408,4 +409,6 @@ export const FINE_FOLK: Record<string, (pose: Pose3D) => Model> = {
   shaman: shamanGoblinModel,
   // The jetty's folk: Maren the skipper, Old Hob and Wren.
   ...JETTY_FOLK,
+  // Adowvale's militia, each his own man, with Sergeant Brannock and Hamm the jailer (see militia3d.ts).
+  ...MILITIA_FOLK,
 };
