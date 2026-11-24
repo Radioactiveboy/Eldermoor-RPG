@@ -1,4 +1,5 @@
 import { Display } from '../ui/Display';
+import { pinchZoom } from '../ui/PinchZoom';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { sheetScale } from '../art/fine3d';
@@ -376,9 +377,12 @@ export class CombatScene extends Phaser.Scene {
     kb.on('keydown-L', () => this.toggleLog());
     kb.on('keydown-PAGE_UP', () => this.scrollLog(120));
     kb.on('keydown-PAGE_DOWN', () => this.scrollLog(-120));
+    // The wheel scrolls the fight's log when it's open, and otherwise zooms the world in and out, as a pinch does.
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       if (this.logPanel) this.scrollLog(-dy);
+      else this.world.zoomBy(dy > 0 ? 0.9 : 1.1);
     });
+    pinchZoom(this, () => !this.logPanel, (factor) => this.world.zoomBy(factor));
     const levelled = Experience.onChange((e) => {
       if (e.type === 'levelled') this.tally.levelled(e.level);
     });
@@ -930,31 +934,45 @@ export class CombatScene extends Phaser.Scene {
     arrow.fillTriangle(-12, -16, 12, -16, 0, 0).strokeTriangle(-12, -16, 12, -16, 0, 0);
     const bob = this.tweens.add({ targets: arrow, scale: { from: 1, to: 0.8 }, duration: 300, yoyo: true, repeat: -1 });
     const labels: Phaser.GameObjects.Text[] = [];
-    const zoom = this.world.cameras.main.zoom / Display.zoom;
+    const zones: Phaser.GameObjects.Zone[] = [];
+    let picked: Actor | undefined;
     foes.forEach((f, i) => {
-      const actor = this.actorOf(f);
-      const head = this.headOf(actor);
-      const h = actor.height * zoom + 14;
-      const zone = this.add.zone(head.x, head.y + h / 2, Math.max(56, h * 1.4), h).setInteractive({ useHandCursor: true });
+      const zone = this.add.zone(0, 0, 1, 1).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => this.select(i));
       zone.on('pointerup', () => this.pick(i));
+      zones.push(zone);
       this.targetZones.push(zone);
       if (attacking) {
         labels.push(
           this.add
-            .text(head.x, head.y - 22, `${chance(f)}%`, { fontFamily: FONT, fontSize: '15px', color: THEME.goldText, stroke: '#000000', strokeThickness: 4, fontStyle: 'bold' })
+            .text(0, 0, `${chance(f)}%`, { fontFamily: FONT, fontSize: '15px', color: THEME.goldText, stroke: '#000000', strokeThickness: 4, fontStyle: 'bold' })
             .setOrigin(0.5, 1),
         );
       }
     });
+    // The camera can be zoomed (or still settling) while choosing, so the zones, labels and arrow follow the beasts each frame.
+    const place = () => {
+      const zoom = this.world.cameras.main.zoom / Display.zoom;
+      foes.forEach((f, i) => {
+        const actor = this.actorOf(f);
+        const head = this.headOf(actor);
+        const h = actor.height * zoom + 14;
+        zones[i].setPosition(head.x, head.y + h / 2).setSize(Math.max(56, h * 1.4), h);
+        labels[i]?.setPosition(head.x, head.y - 22);
+      });
+      if (picked) arrow.setPosition(this.headOf(picked).x, this.headOf(picked).y + 4);
+    };
+    place();
+    this.events.on(Phaser.Scenes.Events.UPDATE, place);
     this.menuOnSelect = (o) => {
-      const foe = this.foes.find((f) => f.c.id === o.id);
-      arrow.setVisible(!!foe);
-      if (foe) arrow.setPosition(this.headOf(foe).x, this.headOf(foe).y + 4);
+      picked = this.foes.find((f) => f.c.id === o.id);
+      arrow.setVisible(!!picked);
+      place();
       labels.forEach((l, k) => l.setAlpha(foes[k].id === o.id ? 1 : 0.6));
     };
     const verb = { strike: 'Strike', heavy: 'Heavy blow on', stagger: 'Stagger', shove: 'Shove', mark: 'Mark' }[a.id as string] ?? a.name;
     const id = await this.showMenu(`${verb} which?`, options);
+    this.events.off(Phaser.Scenes.Events.UPDATE, place);
     bob.stop();
     arrow.destroy();
     labels.forEach((l) => l.destroy());
