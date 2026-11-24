@@ -386,6 +386,7 @@ export function beaconTopics(stage: BeaconStage | undefined, outcome: BeaconOutc
             speaker: 'headman',
             lines: [
               `And the brazier is sound, and not lit. Good. Here: ${BEACON_REWARD} coins, as I said. The village owes you, and I don't forget what the village owes.`,
+              "And go and get some sleep, before you fall over on my good rug. Tell Godric at the Tankard the room is on the village tonight.",
             ],
             action: 'beacon-reward',
             next: 'ask',

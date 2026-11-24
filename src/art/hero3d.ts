@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Tones } from './character';
 import { darker, HERO_SCALE } from './character';
+import { bendUpper, FightArm, fightLegs, fightSpec, generateFightFrames, offArm, redrawFightFrames, weaponArm } from './fight3d';
 import { Detail, generateFigure3D, Hit, limb, Model, personSpec, Pose3D, redrawFigure3D, Solid } from './figure3d';
 import type { GearLook } from './gear';
 import { seatedLegs } from './models3d';
@@ -67,6 +68,8 @@ export interface HeroFrame {
   legs: HeroLeg[];
   /** Units the upper body sinks in this pose (pose.bob). */
   b: number;
+  /** In a fight (see fight3d.ts), which way what's in the right hand points, as the swing has it. */
+  aim?: [number, number, number];
 }
 
 /** The hero's own boots, for gear that puts them back on (see gear.ts). */
@@ -91,11 +94,20 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   const s = pose.stride;
   const sit = !!pose.sit;
   const flutter = pose.flutter ?? 0;
+  const fight = sit ? undefined : pose.fight;
   const solids: Solid[] = [];
 
   // Legs: dark trousers to the ankle, and bare feet (gear.ts puts boots on them).
   const legs: HeroLeg[] = [];
-  if (sit) {
+  if (fight) {
+    // Squared up to fight, knees bent (see fight3d.ts).
+    for (const l of fightLegs(fight)) {
+      solids.push(...limb(l.hip, l.knee, 1.9, 1.75, TROUSER));
+      solids.push(...limb(l.knee, [l.ankle[0], l.ankle[1] - 0.2, l.ankle[2]], 1.75, 1.6, TROUSER));
+      solids.push({ cx: l.foot[0], cy: l.foot[1] - 0.2, cz: l.foot[2], rx: 1.45, ry: 1, rz: 2.2, material: SKIN });
+      legs.push({ side: l.side, hip: l.hip, knee: l.knee, ankle: l.ankle, foot: l.foot });
+    }
+  } else if (sit) {
     solids.push(...seatedLegs(2.2, TROUSER, SKIN, 1.9).map((p) => (p.material === SKIN ? { ...p, rx: 1.45, ry: 1, rz: 2.2, cy: 1 } : p)));
     for (const side of [-1, 1]) {
       const x = side * 2.2;
@@ -114,6 +126,9 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
       legs.push({ side, hip, knee: [x, 8 + lift * 0.5, swing * 1.2], ankle, foot });
     }
   }
+
+  // Everything from here up is the upper body, which a fighting stance leans and turns as one.
+  const legsEnd = solids.length;
 
   // The vest's skirt to the hip, over the trousers, and the belt with its gold buckle.
   const vest = (h: Hit): Tones => {
@@ -135,7 +150,26 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   let hand: [number, number, number] = [-6.2, 16.6 - b, 1];
   let offHand: [number, number, number] = [6.2, 16.6 - b, 1];
   const arms: HeroLimb[] = [];
+  // In a fight, the arms go where the swing puts them (see fight3d.ts).
+  let fightArms: FightArm[] | undefined;
+  if (fight) {
+    const grip = look.holding ? 'pole' : 'blade';
+    const main = weaponArm(fight, grip);
+    fightArms = [main, offArm(fight, grip, look.shield, main)];
+  }
   for (const side of [-1, 1]) {
+    const fa = fightArms?.[side === -1 ? 0 : 1];
+    if (fa) {
+      solids.push({ cx: side * 4.7, cy: 24.4, cz: 0.2, rx: 2.3, ry: 2.2, rz: 2.3, material: SHIRT });
+      solids.push(...limb(fa.shoulder, fa.elbow, 1.8, 1.6, SHIRT));
+      const forearm = limb(fa.elbow, fa.wrist, 1.6, 1.5, SHIRT);
+      forearm.forEach((f, i) => solids.push(i > forearm.length * 0.6 ? { ...f, rx: 1.7, ry: 1.7, rz: 1.7, material: VEST } : f));
+      solids.push({ cx: fa.hand[0], cy: fa.hand[1], cz: fa.hand[2], rx: 1.5, ry: 1.5, rz: 1.6, material: SKIN });
+      if (side === -1) hand = fa.hand;
+      else offHand = fa.hand;
+      arms.push({ side, top: fa.shoulder, mid: fa.elbow, end: fa.wrist });
+      continue;
+    }
     const holding = look.holding && side === -1;
     const shield = look.shield && side === 1;
     const wielding = !!look.wielding && side === -1;
@@ -237,24 +271,37 @@ export function heroModel(pose: Pose3D, gear: GearLook[] = []): Model {
   details.push({ x: 0.6, y: 15.4 - b * (sit ? 1 : 0.5), z: 3.5, color: P.gold });
   details.push({ x: 1.4, y: 15.4 - b * (sit ? 1 : 0.5), z: 3.4, color: P.goldLight });
 
-  const frame: HeroFrame = { pose, look, hy, hz, hand, offHand, arms, legs, b };
+  const frame: HeroFrame = { pose, look, hy, hz, hand, offHand, arms, legs, b, aim: fightArms?.[0].aim };
+  // Footwear stays on the legs when the stance turns the upper body.
+  const onLegs = new Set<number>();
   for (const g of gear) {
     const extra = g.model(frame);
+    if (fight && extra.solids.length > 0 && Math.max(...extra.solids.map((x) => x.cy)) < 11) extra.solids.forEach((_, i) => onLegs.add(solids.length + i));
     solids.push(...extra.solids);
     details.push(...(extra.details ?? []));
   }
+  if (fight) return bendUpper({ solids, details }, legsEnd, fight, (_, i) => onLegs.has(i));
   return { solids, details };
 }
 
 /** The hero's frame: HERO_SCALE times finer than the folk's (see character.ts). */
 export const HERO_SPEC = personSpec(HERO_SCALE, { creases: true });
 
+/** The hero's fight frames: bigger, for the swing to fit (see fight3d.ts). */
+export const HERO_FIGHT_SPEC = fightSpec(HERO_SCALE);
+
 /** Draws the hero's sheet as 'player' (8 directions; idle, walk, sit and work animations). */
 export function generateHero(scene: Phaser.Scene): void {
   generateFigure3D(scene, 'player', (pose) => heroModel(pose), HERO_SPEC);
 }
 
-/** Repaints the hero in new gear, in place, wherever they're showing. */
+/** Draws the hero's fight frames as 'player@fight', and the 'player-ready-<dir>', '-attack-', '-hit-', '-guard-' and '-down-' animations. */
+export function generateHeroFight(scene: Phaser.Scene, gear: GearLook[] = []): void {
+  generateFightFrames(scene, 'player', (pose) => heroModel(pose, gear), HERO_FIGHT_SPEC);
+}
+
+/** Repaints the hero in new gear, in place, wherever they're showing (the fight frames a little after). */
 export function redrawHero(scene: Phaser.Scene, gear: GearLook[]): void {
   redrawFigure3D(scene, 'player', (pose) => heroModel(pose, gear), HERO_SPEC);
+  redrawFightFrames(scene, 'player', (pose) => heroModel(pose, gear), HERO_FIGHT_SPEC);
 }

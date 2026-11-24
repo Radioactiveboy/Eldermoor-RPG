@@ -67,6 +67,7 @@ import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/ta
 import { checkMusings, checkRoadExits } from './game/travel';
 import { checkGateAttack, gateTestStart, wokeAfterGate } from './game/gate';
 import { warrenTestStart, wokeAfterBurial } from './game/warren';
+import { wokeAfterWhisper } from './game/whisper';
 import { absent } from '../world/GateAftermath';
 import type { GateAttack } from '../world/GateAttack';
 
@@ -92,6 +93,8 @@ export interface GameSceneData {
   gateAftermath?: boolean;
   /** Waking in the Tankard two days after Mother's burial, the prologue over (see game/warren.ts). */
   prologueOver?: boolean;
+  /** Waking after the orb's whisper, the night after the beacon (see game/whisper.ts). */
+  whispered?: boolean;
 }
 
 /** Things the HUD can show the player as a speech-like hint. */
@@ -364,6 +367,8 @@ export class GameScene extends Phaser.Scene {
       cameAround(this);
     } else if (data.prologueOver) {
       wokeAfterBurial(this);
+    } else if (data.whispered) {
+      wokeAfterWhisper(this);
     } else if (data.slept !== undefined && raidStage() === 'morning') {
       this.time.delayedCall(900, () => this.onHint?.('Shouting. Screaming, outside, and the smell of smoke. What in the world is going on out there?'));
       this.time.delayedCall(5200, () => this.onHint?.("Mother is still asleep. I'd better go and see."));

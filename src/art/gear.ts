@@ -52,6 +52,7 @@ function fist(at: V3): Solid {
  * lies forward across the knees).
  */
 function heldDir(f: HeroFrame): V3 {
+  if (f.aim) return f.aim;
   return f.pose.sit ? norm([-0.35, -0.25, 1]) : norm([-0.4, -0.85, 0.45]);
 }
 
@@ -73,12 +74,13 @@ function heldWeapon(build: (f: HeroFrame, d: V3) => Solid[]): GearLook {
 /** A long ash staff in the right hand: knotted, a worn knob at the top, a leather grip and an iron-shod foot. */
 const walkingStaff: GearLook = {
   adjust: (l) => ({ ...l, holding: true }),
-  model: ({ pose, hand }) => {
+  model: ({ pose, hand, aim }) => {
     const [x, y, z] = hand;
     const sit = !!pose.sit;
-    // Planted a little ahead, leaning back to the shoulder; seated, propped against it.
-    const foot: [number, number, number] = sit ? [x, 0.4, z + 0.8] : [x, 0.4, z + 1.2 - pose.stride * 0.6];
-    const top: [number, number, number] = sit ? [x - 1, 34, z - 3] : [x, 39 - pose.bob, z - 0.8];
+    // Planted a little ahead, leaning back to the shoulder; seated, propped against it;
+    // in a fight, gripped a third of the way up and swung (see fight3d.ts).
+    const foot: [number, number, number] = aim ? along(hand, aim, -12) : sit ? [x, 0.4, z + 0.8] : [x, 0.4, z + 1.2 - pose.stride * 0.6];
+    const top: [number, number, number] = aim ? along(hand, aim, 21) : sit ? [x - 1, 34, z - 3] : [x, 39 - pose.bob, z - 0.8];
     const wood = (h: Hit): Tones => (Math.abs(h.y - 21) < 0.5 || Math.abs(h.y - 33) < 0.5 ? ASH_KNOT : ASH);
     const shaft = limb(foot, top, 0.65, 0.65, wood, 0.4).map((p) => ({ ...p, soft: true }));
     // Where along the shaft a height falls, for the grip.
@@ -86,12 +88,12 @@ const walkingStaff: GearLook = {
       const t = (py - foot[1]) / (top[1] - foot[1]);
       return [foot[0] + (top[0] - foot[0]) * t, py, foot[2] + (top[2] - foot[2]) * t];
     };
-    const grip = limb(at(y + 1.2), at(y + 3.6), 0.85, 0.85, GRIP, 0.4);
+    const grip = aim ? limb(along(hand, aim, 1.2), along(hand, aim, 3.6), 0.85, 0.85, GRIP, 0.4) : limb(at(y + 1.2), at(y + 3.6), 0.85, 0.85, GRIP, 0.4);
     const solids: Solid[] = [
       ...shaft,
       ...grip,
       { cx: top[0], cy: top[1] + 0.6, cz: top[2], rx: 1.15, ry: 1.2, rz: 1.15, material: ASH, soft: true },
-      { cx: foot[0], cy: 0.5, cz: foot[2], rx: 0.75, ry: 0.6, rz: 0.75, material: IRON },
+      { cx: foot[0], cy: aim ? foot[1] : 0.5, cz: foot[2], rx: 0.75, ry: 0.6, rz: 0.75, material: IRON },
       // The hand closed round the shaft, over it.
       { cx: x, cy: y, cz: z, rx: 1.55, ry: 1.5, rz: 1.65, material: [P.skin, P.skinShade, 0xffdcb6] },
     ];
@@ -131,11 +133,12 @@ const strawHat: GearLook = {
 /** A long ash spear carried upright like the staff, its leaf-shaped head standing over the hero's hood. */
 const spear: GearLook = {
   adjust: (l) => ({ ...l, holding: true }),
-  model: ({ pose, hand }) => {
+  model: ({ pose, hand, aim }) => {
     const [x, , z] = hand;
     const sit = !!pose.sit;
-    const foot: V3 = sit ? [x, 0.4, z + 0.8] : [x, 0.4, z + 1.2 - pose.stride * 0.6];
-    const top: V3 = sit ? [x - 1.2, 40, z - 3.4] : [x, 43.2 - pose.bob, z - 1];
+    // In a fight, levelled at the foe and thrust (see fight3d.ts).
+    const foot: V3 = aim ? along(hand, aim, -10) : sit ? [x, 0.4, z + 0.8] : [x, 0.4, z + 1.2 - pose.stride * 0.6];
+    const top: V3 = aim ? along(hand, aim, 21) : sit ? [x - 1.2, 40, z - 3.4] : [x, 43.2 - pose.bob, z - 1];
     const up = norm([top[0] - foot[0], top[1] - foot[1], top[2] - foot[2]]);
     const len = Math.hypot(top[0] - foot[0], top[1] - foot[1], top[2] - foot[2]);
     const socket = along(foot, up, len - 5.2);
@@ -169,6 +172,8 @@ const huntingKnife = heldWeapon((f, d) => [
  * face from every side (seated, it stands point-down by his knee, his hand on the hilt).
  */
 function swordDir(f: HeroFrame): V3 {
+  // In a fight, wherever the swing has it (see fight3d.ts).
+  if (f.aim) return f.aim;
   return f.pose.sit ? norm([-0.15, -0.95, 0.25]) : norm([-0.35, 0.86, 0.28]);
 }
 
@@ -389,6 +394,8 @@ const ridingBoots: GearLook = {
       const bottom: V3 = [l.ankle[0], l.foot[1] + 1.2, l.ankle[2]];
       const top: V3 = pose.sit
         ? [l.knee[0], l.knee[1] - 1.2, l.knee[2] + 0.1]
+        : pose.fight
+        ? along(l.ankle, [l.knee[0] - l.ankle[0], l.knee[1] - l.ankle[1], l.knee[2] - l.ankle[2]], 0.82)
         : [l.hip[0], 10.4 - pose.bob * 0.2, l.ankle[2] + (l.hip[2] - l.ankle[2]) * 0.75];
       solids.push(...limb(bottom, top, 2.05, 2.15, oiled, 0.4));
       solids.push({ cx: top[0], cy: top[1] + 0.2, cz: top[2], rx: 2.4, ry: 0.9, rz: 2.4, material: cuff });

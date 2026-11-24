@@ -1176,6 +1176,46 @@ class AudioEngine {
     this.noise(t + 0.1, 0.6, 'highpass', 6000, 9000, 0.7, 0.05);
   }
 
+  /**
+   * The orb waking (see OrbWhisperScene): a low, uneasy hum under a breath of
+   * hiss, swelling and fading over `seconds`.
+   */
+  whisper(seconds = 2.4): void {
+    if (!this.unlocked) return;
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    for (const [f, detune] of [[55, -7], [82.4, 6], [110, 0]] as const) {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f, t);
+      o.frequency.linearRampToValueAtTime(f * 0.97, t + seconds);
+      o.detune.value = detune;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + seconds * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + seconds);
+      o.connect(g).connect(this.sfxBus);
+      o.start(t);
+      o.stop(t + seconds + 0.05);
+    }
+    // A breath of hiss, looped (the noise buffer is shorter than a long swell).
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 2.5;
+    f.frequency.setValueAtTime(2600, t);
+    f.frequency.exponentialRampToValueAtTime(900, t + seconds);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + seconds * 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + seconds);
+    src.connect(f).connect(g).connect(this.sfxBus);
+    src.start(t);
+    src.stop(t + seconds + 0.05);
+  }
+
   /** A dull "no": that won't work. */
   fizzle(): void {
     this.blip(220, 140, 0.18, 0.18);

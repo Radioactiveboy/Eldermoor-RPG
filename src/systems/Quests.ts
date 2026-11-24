@@ -180,6 +180,21 @@ export const QUESTS: Record<string, QuestDef> = {
     objectives: [{ id: 'who', text: 'Find out who spoke through the orb, and set the goblins on Adowvale' }],
     xp: 500,
   },
+  // Heard through the orb the night after the beacon (scenes/game/whisper.ts, dialogue/orbWhisper.ts).
+  'the-marsh-road': {
+    id: 'the-marsh-road',
+    title: 'The Road to Gloomhaven',
+    kind: 'main',
+    giver: 'Myself',
+    summary:
+      'The orb woke in the night. Two voices on the other side of it, and neither one meant for me: the cold one from the brood hall, and ' +
+      'another, older, that was afraid of it. "The boy lives still," the cold one said. "We must send them to Gloomhaven then, on the ' +
+      'marshes." Gloomhaven is a marsh town out past the edge of the shire, much bigger than Adowvale, and full of the sort of people the ' +
+      'carters lower their voices about. Whoever is behind the glass is sending knives there to wait for me. And they said the fen closed ' +
+      'over Father.',
+    objectives: [{ id: 'way', text: 'Find the way to Gloomhaven, a town on the marshes beyond the shire of Adowvale' }],
+    xp: 400,
+  },
   'the-pen': {
     id: 'the-pen',
     title: 'In the Pen',
