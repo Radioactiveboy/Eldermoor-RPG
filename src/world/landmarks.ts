@@ -134,7 +134,7 @@ export const JETTY_LANE = { x0: 11, x1: 12 };
  * in the north wall.
  */
 export const GLOOM_W = 60;
-export const GLOOM_H = 62;
+export const GLOOM_H = 88;
 /** The wall: the rows and columns its north, west and east runs stand on (they run down to the river). */
 export const GLOOM_WALL = { north: 4, west: 3, east: 56 };
 /** The gatehouse in the north wall: its back corner and footprint, and the columns of the way through it. */
