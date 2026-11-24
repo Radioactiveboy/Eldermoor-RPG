@@ -41,6 +41,11 @@ export interface Link {
   at: Partial<Record<AreaId, Spot>>;
   /** The road's name, for a road between two regions. */
   road?: string;
+  /**
+   * By boat rather than through a door: a passage on the river (see systems/Voyages.ts), taken by talking to
+   * whoever sails it, so neither end has a door; drawn as a dotted way over the water.
+   */
+  boat?: boolean;
 }
 
 export const REGIONS: Region[] = [
@@ -49,6 +54,8 @@ export const REGIONS: Region[] = [
   { id: 'greyfells', tiles: { w: 48, h: 56 }, box: { x: 27.7, y: -56.4, w: 19.2, h: 22.4 }, look: 'plains', label: { x: 34, y: 44 } },
   { id: 'market', tiles: { w: 34, h: 44 }, box: { x: -60, y: 18.5, w: 17, h: 22 }, look: 'village' },
   { id: 'jetty', tiles: { w: 52, h: 62 }, box: { x: -64.25, y: 40.5, w: 26, h: 31 }, look: 'fields', label: { x: 40, y: 8 } },
+  // Downriver from the jetty, days by boat: the marsh town.
+  { id: 'gloomhaven', tiles: { w: 60, h: 62 }, box: { x: -28, y: 64, w: 30, h: 31 }, look: 'village', label: { x: 44, y: 10 } },
   { id: 'plains', tiles: { w: 120, h: 150 }, box: { x: -67.6, y: -34.2, w: 40, h: 50 }, look: 'plains', label: { x: 40, y: 108 } },
   { id: 'monastery', tiles: { w: 64, h: 60 }, box: { x: -24.9, y: -22.2, w: 22, h: 20 }, look: 'grounds', label: { x: 36, y: 42 } },
   { id: 'abbey', tiles: { w: 46, h: 40 }, box: { x: -20.6, y: -34.2, w: 14, h: 12 }, look: 'cloister' },
@@ -72,6 +79,8 @@ export const LINKS: Link[] = [
   link('market', { x: 15.5, y: 4.5 }, 'smithy', { x: 0.5, y: 5.5 }),
   link('market', { x: 7.5, y: 35.5 }, 'garrison', { x: 0.5, y: 6.5 }),
   link('market', { x: 12, y: 43.5 }, 'jetty', { x: 20.5, y: 0.5 }, 'The jetty lane'),
+  // Down the Wend by boat, from the end of Adowvale's pier to the end of Gloomhaven's.
+  { ...link('jetty', { x: 23.5, y: 31.5 }, 'gloomhaven', { x: 30.5, y: 54.5 }, 'The river Wend'), boat: true },
   link('garrison', { x: 8.5, y: 5.5 }, 'jail', { x: 1.5, y: 1.5 }),
   link('market', { x: 9.5, y: 33.5 }, 'jail', { x: 13.5, y: 1.5 }),
   link('market', { x: 17.5, y: 34.5 }, 'residence', { x: 0.5, y: 6.5 }),

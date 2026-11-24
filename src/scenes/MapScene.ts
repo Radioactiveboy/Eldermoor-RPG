@@ -401,6 +401,11 @@ export class MapScene extends Phaser.Scene {
       const sway = Math.min(18, len * 0.12);
       const path = [a, bend(0.3, sway * rnd.realInRange(-1, 1)), bend(0.65, sway * rnd.realInRange(-1, 1)), b];
       if (ka && kb) {
+        // A passage by boat: a dotted way down the river, with no country along it.
+        if (l.boat) {
+          drawn.push(ink.road(g, path, 1.6, true));
+          continue;
+        }
         drawn.push(ink.road(g, path, 2));
         // Country along the way, set back from the road.
         if (len > 60) {

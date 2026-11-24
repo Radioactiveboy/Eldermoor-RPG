@@ -137,8 +137,8 @@ export class Ambience {
     this.map = map;
     this.clock = clock;
     generateWeatherArt(scene);
-    this.sky = Weather.at(clock.elapsedHours);
-    this.wet = Weather.wetness(clock.elapsedHours);
+    this.sky = this.fenSky(Weather.at(clock.elapsedHours));
+    this.wet = this.fenWet(Weather.wetness(clock.elapsedHours));
     this.dressWater();
     this.layPuddles();
     this.findReflections();
@@ -148,6 +148,19 @@ export class Ambience {
     }
     for (let i = 0; i < 3; i++) this.clouds.push(this.makeCloud(true));
     if (map.data.river) this.river = new RiverLife(scene, map, clock);
+  }
+
+  /** On a marsh (MapData.fen) the mist never lifts: thinner while it rains, thick again after. */
+  private fenSky(sky: Sky): Sky {
+    const fen = this.map.data.fen;
+    if (!fen) return sky;
+    return { ...sky, mist: Math.max(sky.mist, fen * (1 - Math.min(0.6, sky.rain))) };
+  }
+
+  /** And the ground never dries out: puddles on the mud whatever the weather. */
+  private fenWet(wet: number): number {
+    const fen = this.map.data.fen;
+    return fen ? Math.max(wet, fen * 0.8) : wet;
   }
 
   /** Where the sun is up enough for birds and butterflies (and it isn't raining much). */
@@ -596,11 +609,11 @@ export class Ambience {
   /** What the sky's doing (every frame: it's cheap) and how wet the ground is (now and then: it changes slowly). */
   private updateSky(dt: number): void {
     const hours = this.clock.elapsedHours;
-    this.sky = Weather.at(hours);
+    this.sky = this.fenSky(Weather.at(hours));
     this.wetTimer -= dt;
     if (this.wetTimer <= 0) {
       this.wetTimer = 0.5;
-      this.wet = Weather.wetness(hours);
+      this.wet = this.fenWet(Weather.wetness(hours));
     }
   }
 

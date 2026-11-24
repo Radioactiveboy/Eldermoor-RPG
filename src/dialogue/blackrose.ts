@@ -745,7 +745,7 @@ export const ROSE_CHATTER: Array<Array<[SpeakerId, string]>> = [
 /** What they mutter to nobody in particular. */
 export const ROSE_MUTTERS: Partial<Record<SpeakerId, string[]>> = {
   thorne: ['(She polishes the same tankard.)', 'Feet.', "Grubb. The door."],
-  midge: ['Pots, pots, pots...', 'Mind your feet, mister!', "Who's spilt this? Again?"],
+  midge: ['Pots, pots, pots...', "Nobody goes in the cellar. Nobody. Mrs Thorne says.", 'Mind your feet, mister!', "Who's spilt this? Again?"],
   hollis: ['...et ne nos inducas...', 'Is this empty? This is empty.', 'Seven. There were seven.'],
   sedge: ['(Puff.) Hah.', 'Tide turns at midnight.', 'Frogs, listen to the frogs...'],
   silas: ['Come on, come on...', 'Bones, bones, be kind.', 'Who wants to lose some money?'],

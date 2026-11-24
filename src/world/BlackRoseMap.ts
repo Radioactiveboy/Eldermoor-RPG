@@ -277,7 +277,13 @@ export function buildBlackRoseBackMap(): MapData {
   add('br-bucket', 6, 5, { shapes: [circle(0.5, 0.5, 0.18)] });
   add('br-puddle-1', 5, 5, { flat: true });
   add('br-rug', 2, 1, { w: 3, h: 2, flat: true });
+  // The way down to the cellar, and under it, they say, to the river under the Staithe: barred from below.
+  add('tav-trapdoor', 5, 3, { flat: true });
   data.sights!.push(
+    {
+      id: 'rose-trapdoor', gx: 5.5, gy: 3.5, label: 'Try the trapdoor', z: 4, locked: true,
+      thought: 'Iron-bound, and barred from underneath. Cold air comes up through the cracks, and it smells of the river. Somewhere far below, water slaps against stone.',
+    },
     { id: 'rose-glow-crate', gx: 7.5, gy: 0.5, label: 'Look', z: 40, thought: 'A crate nailed down tight, sealed in red wax with a rose stamped in it. A cold green light leaks out between the slats, and the air round it is colder than the rest of the room. It feels like the orb did, under the hill.' },
     { id: 'rose-chart', gx: 1.5, gy: 0.1, label: 'Look', z: 56, thought: 'A chart of the river and the fens beyond Gloomhaven, the channels drawn in blue ink. Three places out in the marsh are marked in red. One of them is ringed twice, and someone has written beside it: "the old church".' },
     { id: 'rose-crates', gx: 0.5, gy: 0.5, label: 'Look', z: 30, thought: 'Crates stencilled SALT FISH. They do not smell of fish. They do not smell of anything, which is somehow worse.' },

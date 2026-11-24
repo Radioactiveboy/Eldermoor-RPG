@@ -25,6 +25,13 @@ describe('the world map layout', () => {
         expect(n, `${area} -> ${d.to}`).toBeDefined();
       }
       for (const n of neighbours(area)) {
+        // (A passage by boat has no door at either end: it's at the landing.)
+        if (LINKS.some((l) => l.boat && [l.a, l.b].includes(area) && [l.a, l.b].includes(n.to))) {
+          const at = n.at;
+          expect(map.entries?.heron ?? map.entries?.gloomhaven, `${area} has a landing`).toBeDefined();
+          expect(at.x >= 0 && at.y >= 0 && at.x <= map.width && at.y <= map.height, `${area} -> ${n.to} spot`).toBe(true);
+          continue;
+        }
         // The link's spot is beside one of the doors that way (a road's end can be several tiles wide).
         const doors = (map.doors ?? []).filter((d) => d.to === n.to);
         expect(doors.length, `${area} has a door to ${n.to}`).toBeGreaterThan(0);
