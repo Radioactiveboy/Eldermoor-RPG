@@ -92,6 +92,12 @@ export interface MapObject {
    * pixels either way, at its own slow pace (see IsoMap.placeObject).
    */
   bob?: number;
+  /**
+   * A fence or palisade: where it runs along the map's edge, the forest painted
+   * past the edge still grows right up to it (see IsoMap.renderOutskirts),
+   * rather than stopping as it does behind a building.
+   */
+  fence?: boolean;
 }
 
 /**

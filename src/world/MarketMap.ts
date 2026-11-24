@@ -341,7 +341,7 @@ function addTollGate(data: MapData, open: boolean): void {
   // The palisade either side, running off into the trees.
   for (let x = 19; x <= 30; x++) {
     if (x >= tx && x < tx + TOLL_GATE.w) continue;
-    placeObject(data, { key: 'toll-palisade', tx: x, ty, w: 1, h: 1, shapes: [box(0, 0.38, 1, 0.62)] });
+    placeObject(data, { key: 'toll-palisade', tx: x, ty, w: 1, h: 1, fence: true, shapes: [box(0, 0.38, 1, 0.62)] });
   }
   placeObject(data, { key: 'toll-booth', tx: 28, ty: 1, w: 1, h: 1, shapes: [box(0.1, 0.1, 0.9, 0.9)] });
   placeObject(data, { key: 'toll-banner', tx: 21, ty: 1, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
@@ -374,9 +374,9 @@ function addTollGate(data: MapData, open: boolean): void {
  */
 function addPalisade(data: MapData): void {
   const { north, west, south, east } = STOCKADE;
-  const along = { shapes: [box(0, 0.38, 1, 0.62)] };
-  const across = { flipX: true, shapes: [box(0.38, 0, 0.62, 1)] };
-  const post = { shapes: [circle(0.5, 0.5, 0.2)] };
+  const along = { fence: true, shapes: [box(0, 0.38, 1, 0.62)] };
+  const across = { fence: true, flipX: true, shapes: [box(0.38, 0, 0.62, 1)] };
+  const post = { fence: true, shapes: [circle(0.5, 0.5, 0.2)] };
   // Every few tiles a stouter post, and the stakes between in a few different cuts.
   const stake = (tx: number, ty: number, flip: boolean, n: number) => {
     if (n % 8 === 7) placeObject(data, { key: 'palisade-post', tx, ty, w: 1, h: 1, ...post });
