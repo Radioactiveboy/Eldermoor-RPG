@@ -113,7 +113,7 @@ export const TAVERN_BED = { tx: 3, ty: 1, gx: 2.5, gy: 1.6 };
 
 /** Adowvale Jetty, the landing on the river Wend below the village (JettyMap): its size, and where the path comes down from Adowvale. */
 export const JETTY_W = 52;
-export const JETTY_H = 46;
+export const JETTY_H = 62;
 export const JETTY_PATH_X = 20;
 /**
  * The pier: its stem, two planks wide (columns x0 and x1), runs out from the quay to the cross-head, whose

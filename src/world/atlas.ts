@@ -48,7 +48,7 @@ export const REGIONS: Region[] = [
   { id: 'northwoods', tiles: { w: 60, h: 76 }, box: { x: 19.5, y: -34, w: 24, h: 30 }, look: 'woods', label: { x: 30, y: 64 } },
   { id: 'greyfells', tiles: { w: 48, h: 56 }, box: { x: 27.7, y: -56.4, w: 19.2, h: 22.4 }, look: 'plains', label: { x: 34, y: 44 } },
   { id: 'market', tiles: { w: 34, h: 44 }, box: { x: -60, y: 18.5, w: 17, h: 22 }, look: 'village' },
-  { id: 'jetty', tiles: { w: 52, h: 46 }, box: { x: -64.25, y: 40.5, w: 26, h: 23 }, look: 'fields', label: { x: 40, y: 8 } },
+  { id: 'jetty', tiles: { w: 52, h: 62 }, box: { x: -64.25, y: 40.5, w: 26, h: 31 }, look: 'fields', label: { x: 40, y: 8 } },
   { id: 'plains', tiles: { w: 120, h: 150 }, box: { x: -67.6, y: -34.2, w: 40, h: 50 }, look: 'plains', label: { x: 40, y: 108 } },
   { id: 'monastery', tiles: { w: 64, h: 60 }, box: { x: -24.9, y: -22.2, w: 22, h: 20 }, look: 'grounds', label: { x: 36, y: 42 } },
   { id: 'abbey', tiles: { w: 46, h: 40 }, box: { x: -20.6, y: -34.2, w: 14, h: 12 }, look: 'cloister' },

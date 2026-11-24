@@ -18,14 +18,14 @@ export function nearBank(x: number): number {
 
 /** Where the far bank comes down to the water at column x: rows from here on are the far shore. */
 export function farBank(x: number): number {
-  return 38.5 + 1.6 * Math.sin(x * 0.17 + 0.8) + 0.7 * Math.sin(x * 0.43 + 2);
+  return 53.5 + 1.8 * Math.sin(x * 0.17 + 0.8) + 0.7 * Math.sin(x * 0.43 + 2);
 }
 
 /** The stone quay along the front: its first and last columns, and the row the water starts on. */
 const QUAY = { x0: 13, x1: 31, edge: 20 };
 
 /** The reedy islet out in the stream, east of the pier. */
-const ISLET = { x: 41, y: 29.5, rx: 2.6, ry: 1.6 };
+const ISLET = { x: 40, y: 41.5, rx: 3.2, ry: 2 };
 
 /**
  * Adowvale Jetty: the village's landing on the river Wend, down the lane past
@@ -383,7 +383,7 @@ function addBanks(data: MapData, rnd: Phaser.Math.RandomDataGenerator, set: Sett
       // Reeds along the soft banks: thick to the east and on the islet, here and there on the far side, none at the quay or the shingle.
       const east = x > QUAY.x1 + 1 && y < 30;
       const islet = Math.hypot(x + 0.5 - ISLET.x, y + 0.5 - ISLET.y) < 4;
-      const far = y > 30;
+      const far = y > 46;
       const chance = east ? 0.75 : islet ? 0.7 : far ? 0.35 : 0;
       // In clumps, with open water between.
       const clump = Math.sin(x * 0.7 + y * 1.3) + Math.sin(x * 0.31 - y * 0.5);
@@ -391,7 +391,7 @@ function addBanks(data: MapData, rnd: Phaser.Math.RandomDataGenerator, set: Sett
     }
   }
   // Lilies in the slack water below the reed bank and round the islet.
-  for (const [x, y] of [[36, 21], [38, 22], [40, 21], [43, 20], [39, 26], [44, 31], [37, 30], [46, 22], [34, 23]]) {
+  for (const [x, y] of [[36, 21], [38, 22], [40, 21], [43, 20], [37, 40], [43, 43], [36, 43], [44, 39], [46, 22], [34, 23]]) {
     if (isWater(x, y) && props[y][x] === Prop.None) placeObject(data, { key: `jt-lilies-${(x + y) % 2}`, tx: x, ty: y, w: 1, h: 1, blocks: [] });
   }
   // The islet's own tree and the heron fishing off it.
