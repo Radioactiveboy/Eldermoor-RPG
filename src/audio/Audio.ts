@@ -927,6 +927,23 @@ class AudioEngine {
     this.noise(t, 0.08, 'highpass', 3000, 2000, 0.8, 0.3);
   }
 
+  /**
+   * A scuffle a little way off (the militia fighting goblins at the gate, see world/GateSkirmish.ts):
+   * the same recordings as the hero's own fight, but quieter and muffled, so they sit behind it.
+   */
+  scuffle(sound: 'clash' | 'hit' | 'hurt' | 'death'): void {
+    if (!this.unlocked) return;
+    const s = this.sfx!;
+    const far = { lowpass: 2600, rate: [0.9, 1.08] as [number, number] };
+    if (sound === 'clash') s.play(Math.random() < 0.4 ? SFX.clash : SFX.block, { ...far, gain: 0.3 });
+    else if (sound === 'hit') s.play(SFX.hit, { ...far, gain: 0.32 });
+    else if (sound === 'hurt') s.play(SFX.manHurt, { ...far, gain: 0.28 });
+    else {
+      s.play(SFX.goblinDeath, { ...far, gain: 0.3, rate: [1.3, 1.45] });
+      s.play(SFX.thud, { gain: 0.35, lowpass: 900, delay: 0.4, rate: [0.7, 0.8] });
+    }
+  }
+
   /** The hero crying out as a blow lands. */
   hurt(): void {
     if (!this.unlocked) return;
