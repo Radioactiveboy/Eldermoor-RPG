@@ -80,7 +80,11 @@ export class Creature implements Body {
   /** The animation playing ('walk', 'sniff', 'idle'), or the frame it's held on. */
   private showing: { anim: string } | { frame: number } = { anim: 'sniff' };
 
-  constructor(scene: Phaser.Scene, map: IsoMap, id: string, kind: FoeKind, gx: number, gy: number, notice?: number) {
+  /** Curled up asleep (goblins in their sleeping holes): lies still until it notices the hero, then is up and at them. */
+  private sleeping = false;
+  private snores?: Phaser.GameObjects.Text;
+
+  constructor(scene: Phaser.Scene, map: IsoMap, id: string, kind: FoeKind, gx: number, gy: number, notice?: number, asleep = false) {
     this.scene = scene;
     this.map = map;
     this.id = id;
@@ -101,7 +105,33 @@ export class Creature implements Body {
     if (!this.eight) this.sprite.setFlipX(Math.random() < 0.5);
     this.timer = 1 + Math.random() * 3;
     map.bodies.add(this);
+    if (asleep) this.fallAsleep();
     this.sync();
+  }
+
+  /** Lie down on its side, with now and then a snore drifting up. */
+  private fallAsleep(): void {
+    this.sleeping = true;
+    this.setFrame(0);
+    this.sprite.setAngle(this.sprite.flipX ? 78 : -78);
+    this.snores = this.scene.add.text(0, 0, 'z', { fontFamily: 'serif', fontSize: '13px', color: '#dfe6f0', fontStyle: 'italic' }).setOrigin(0.5).setAlpha(0);
+    const drift = () => {
+      if (!this.sleeping || !this.snores) return;
+      const p = gridToScreen(this.gx, this.gy);
+      this.snores.setPosition(p.x + 6, p.y - 16).setAlpha(0.9).setText(Math.random() < 0.5 ? 'z' : 'Z');
+      this.snores.setDepth(this.sprite.depth + 1);
+      this.scene.tweens.add({ targets: this.snores, y: p.y - 40, x: p.x + 14, alpha: 0, duration: 1800, onComplete: () => this.scene.time.delayedCall(600 + Math.random() * 1600, drift) });
+    };
+    this.scene.time.delayedCall(Math.random() * 2000, drift);
+  }
+
+  /** Up off the floor. */
+  private wake(): void {
+    if (!this.sleeping) return;
+    this.sleeping = false;
+    this.sprite.setAngle(0);
+    this.snores?.destroy();
+    this.snores = undefined;
   }
 
   get active(): boolean {
@@ -145,12 +175,17 @@ export class Creature implements Body {
       return false;
     }
     if (player && this.prowling && this.distanceTo(player.x, player.y) < this.ways.notice * noise) {
+      this.wake();
       this.state = 'alert';
       this.path = [];
       this.faceTowards(player.x, player.y);
       this.setFrame(CREATURE_FRAME.snarl);
       this.sync();
       return true;
+    }
+    if (this.sleeping) {
+      this.sync();
+      return false;
     }
     if (player && running && this.huntable && this.distanceTo(player.x, player.y) < STARTLE_RANGE) this.startle(player);
 
@@ -167,6 +202,7 @@ export class Creature implements Body {
 
   /** Stop wandering and stand ready to fight. */
   engage(): void {
+    this.wake();
     this.state = 'fight';
     this.path = [];
     this.setFrame(CREATURE_FRAME.snarl);
@@ -191,6 +227,7 @@ export class Creature implements Body {
 
   /** Taken off the map altogether (a pack that has moved on). */
   destroy(): void {
+    this.wake();
     this.state = 'gone';
     this.map.bodies.delete(this);
     this.sprite.destroy();

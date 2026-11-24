@@ -35,7 +35,7 @@ export type SpeakerId =
   | 'landlord' | 'nell' | 'rosie' | 'harlan' | 'fenwick' | 'sigrun' | 'ada' | 'cobb' | 'pell'
   | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier'
   | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook'
-  | 'wat' | 'snikkit';
+  | 'wat' | 'snikkit' | 'coombe' | 'orb';
 
 export interface Speaker {
   name: string;
@@ -55,6 +55,8 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   tanner: { name: 'Tamsin the Tanner', portrait: 'portrait-tanner', voice: { pitch: 280, spread: 0.18, wave: 'square' } },
   guard: { name: 'Militiaman', portrait: 'portrait-guard', voice: { pitch: 190, spread: 0.1, wave: 'sawtooth' } },
   iran: { name: 'Farmer Iran', portrait: 'portrait-iran', voice: { pitch: 150, spread: 0.14, wave: 'triangle' } },
+  orb: { name: 'A voice in the orb', portrait: 'portrait-orb', voice: { pitch: 80, spread: 0.3, wave: 'sawtooth' } },
+  coombe: { name: 'Coombe the Shepherd', portrait: 'portrait-coombe', voice: { pitch: 128, spread: 0.16, wave: 'triangle' } },
   tollguard: { name: 'Toll Guard', portrait: 'portrait-tollguard', voice: { pitch: 140, spread: 0.08, wave: 'sawtooth' } },
   carter: { name: 'Odo the Carter', portrait: 'portrait-carter', voice: { pitch: 175, spread: 0.18, wave: 'triangle' } },
   herbwife: { name: 'Ness the Herb-gatherer', portrait: 'portrait-herbwife', voice: { pitch: 310, spread: 0.12, wave: 'sine' } },

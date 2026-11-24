@@ -217,8 +217,13 @@ export function buildGreyfellsMap(): MapData {
   const warrenBlocks: Array<[number, number]> = [];
   for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (!(x === 3 && y === 3)) warrenBlocks.push([x, y]);
   placeObject(data, { key: 'gf-warren', tx: WARREN.tx, ty: WARREN.ty, w: 4, h: 4, blocks: warrenBlocks });
-  // The mouth tile itself is too low and dark to go into, for now.
-  props[WARREN.ty + 3][WARREN.tx + 3] = Prop.Blocked;
+  // The mouth itself: down into the goblins' warren (WarrenMap), once the night they come for Adowvale is over (see game/warren.ts).
+  props[WARREN.ty + 3][WARREN.tx + 3] = Prop.None;
+  data.doors!.push({
+    id: 'warren', tx: WARREN.tx + 3, ty: WARREN.ty + 3, to: 'warren', entry: 'mouth', label: 'Go into the hole', facing: 'front',
+    ask: 'Do you want to go down into the hole? Whatever is down there, there is a great deal of it.',
+  });
+  data.entries!.warren = { x: WARREN.tx + 3.5, y: WARREN.ty + 4.6 };
   data.sights!.push({
     id: 'gf-warren', gx: WARREN.tx + 3.5, gy: WARREN.ty + 4.2, label: 'Look into the hole', z: 30,
     thought:

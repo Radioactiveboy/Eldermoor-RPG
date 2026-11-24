@@ -39,6 +39,8 @@ export type AreaId =
   | 'northwoods' | 'watchtower'
   // The open moor above the north woods, where the goblins camped on their way home with Mother.
   | 'greyfells'
+  // Under the Greyfells: the goblins' warren, and the brood hall at the bottom of it.
+  | 'warren' | 'broodhall'
   // Inside Saint Elda's walls: the grounds, and the rooms off them.
   | 'abbey' | 'chapel' | 'infirmary' | 'scriptorium' | 'refectory'
   // The Wolf Mother's den on the plains, and the passage beyond its crevice.
@@ -250,6 +252,8 @@ export interface CreatureSpawn {
    * in their camp on the Greyfells, who keep watch; the raiders only fight when the story says).
    */
   notice?: number;
+  /** Asleep where it lies until it notices the hero (`notice` is then how close they can creep). */
+  asleep?: boolean;
 }
 
 /** A named spot, shown under the area's name when the player is near it (see ui/LocationLabel.ts). */

@@ -63,6 +63,7 @@ import { loadSave, wakingThought } from './game/sleep';
 import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
 import { checkMusings, checkRoadExits } from './game/travel';
 import { checkGateAttack, gateTestStart, wokeAfterGate } from './game/gate';
+import { warrenTestStart } from './game/warren';
 import { absent } from '../world/GateAftermath';
 import type { GateAttack } from '../world/GateAttack';
 
@@ -258,6 +259,7 @@ export class GameScene extends Phaser.Scene {
       }
       raidTestStart(this.clock);
       gateTestStart(this.clock);
+      warrenTestStart();
     }
     this.area = arrivalArea(data);
     // Saves from before the wolves at home counted for anything: if they're all dead, note it.

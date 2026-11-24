@@ -125,7 +125,7 @@ export function inRange(g: GameScene, i: Interaction): boolean {
 export function npcInteraction(g: GameScene, npc: Npc): Interaction {
   const head = npc.promptPoint;
   return {
-    key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id.replace(/-hiding$/, '') as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
+    key: `npc:${npc.id}`, label: 'Talk-to', target: SPEAKERS[npc.id.replace(/-(hiding|dying|captive)$/, '').replace(/^hilde$/, 'baker') as SpeakerId]?.name, gx: npc.gx, gy: npc.gy, range: npc.talkRange,
     promptX: head.x, promptY: head.y, tile: { x: npc.tileX, y: npc.tileY },
     // Godric can be called over from a stool at his bar without getting up.
     run: () => g.startConversation(npc, npc.id === 'landlord' && g.seat?.name === 'tavern-bar'),

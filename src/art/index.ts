@@ -70,6 +70,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'wild herbs', load: () => import('./herbs').then((m) => m.generateHerbs) },
   { label: 'the north woods', load: () => import('./northwoods').then((m) => m.generateNorthWoods) },
   { label: 'the Greyfells', load: () => import('./greyfells').then((m) => m.generateGreyfells) },
+  { label: 'the brood hall', load: () => import('./broodhall').then((m) => m.generateBroodHall) },
   // After the townsfolk: it redraws the smith's and the baker's working frames.
   { label: 'the smithy and bakery', load: () => import('./workshops').then((m) => m.generateWorkshops) },
   { label: "the garrison and the Headman's house", load: () => import('./garrison').then((m) => m.generateGarrison) },

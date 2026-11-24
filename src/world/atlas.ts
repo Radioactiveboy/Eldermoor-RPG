@@ -60,6 +60,8 @@ export const LINKS: Link[] = [
   link('world', { x: 33.5, y: 0.5 }, 'northwoods', { x: 30.5, y: 75 }, 'The path north'),
   link('northwoods', { x: 13.5, y: 22.5 }, 'watchtower', { x: 0.5, y: 5.5 }),
   link('northwoods', { x: 41.5, y: 0.5 }, 'greyfells', { x: 21, y: 55.5 }, "The goblins' trail"),
+  link('greyfells', { x: 24.5, y: 6.5 }, 'warren', { x: 0.5, y: 3.5 }),
+  link('warren', { x: 29.5, y: 0.5 }, 'broodhall', { x: 4.5, y: 0.5 }),
   link('world', { x: 21.5, y: 37.5 }, 'home', { x: 0.5, y: 5.5 }),
   link('world', { x: 16.5, y: 14.5 }, 'hut', { x: 0.5, y: 3.5 }),
   link('world', { x: 27.5, y: 6.5 }, 'cave', { x: 0.5, y: 2.5 }),

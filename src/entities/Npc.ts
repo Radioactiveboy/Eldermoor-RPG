@@ -14,6 +14,7 @@ import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/m
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
 import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, MAID_CHORES, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
 import { watScript } from '../dialogue/companions';
+import { coombeScript, hildeCaptiveScript, motherDyingScript } from '../dialogue/warren';
 import { courierScript, footpadScript, goatherdScript, SHAREABLE_FOOD, tinkerScript, Wayfarers } from '../dialogue/wayfarers';
 import { ROOM_COUNT, Tavern } from '../systems/Tavern';
 import { TOLL } from '../world/MarketMap';
@@ -408,6 +409,13 @@ const NPCS: Record<string, NpcDef> = {
       return goblinPrisonerScript({ first, talked: QuestLog.isDone('the-raid', 'prisoner'), food: food && itemDef(food).name.toLowerCase() });
     }),
   },
+  // In the goblins' pen in the warren under the Greyfells (world/WarrenMap.ts): Hilde, if they took her from Adowvale, or else Coombe the shepherd, sat on the floor.
+  'hilde-captive': { texture: 'folk-baker', talkRange: 2.4, script: hildeCaptiveScript },
+  coombe: { texture: 'folk-coombe', sits: true, talkRange: 2.4, script: coombeScript },
+  // Mother at the bottom of the warren (world/BroodHallMap.ts), drawn lying on her furs (so tucked out of sight, see scenes/game/warren.ts).
+  'mother-dying': { texture: 'folk-mother', talkRange: 2.2, script: motherDyingScript },
+  // The brood hall's shaman, crouched before the orb: nobody to talk to.
+  shaman: { texture: 'folk-shaman', passerby: true, script: () => NOBODY },
   // The Headman's house: the Headman at his desk (spoken to across it), and his household.
   headman: {
     texture: 'folk-headman',

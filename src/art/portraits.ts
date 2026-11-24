@@ -896,6 +896,93 @@ const iran: Painter = (c, fr) => {
   finish(c);
 };
 
+/** Coombe the shepherd, days in the goblins' pen: bare-headed, a wild rust-red beard and hair, a black eye, dirt in every line of his face. */
+const coombe: Painter = (c, fr) => {
+  const skin = ramp(0xbc8a68);
+  const hair = ramp(0x8a4a2a);
+  const beard = ramp(0x9a5632);
+  const smock = ramp(0x5e5a52);
+  const hairTex = strands((x, y) => (x - CX) * 0.8 + y * 0.2, 40, 31);
+  // A shock of hair, grown wild.
+  blob(c, CX, 38, 25, 22, hair, -0.05, hairTex);
+  neck(c, skin, 8, 62);
+  shoulders(c, smock, 74, 12);
+  collar(c, ramp(0x4a3e34), 74, 9, 7);
+  ears(c, skin, 17.5);
+  const shape = { skin, width: 17.5, jaw: 9.5, top: 30, chin: 70, shadowAbove: 35 };
+  face(c, shape);
+  // Hair falling over the brow.
+  for (let y = 24; y < 36; y++) {
+    for (let x = CX - 18; x <= CX + 18; x++) {
+      const dx = (x + 0.5 - CX) / 18;
+      if (y > 30 + 4 * Math.cos(dx * 7) * (1 - Math.abs(dx)) || hash(x, y) < 0.08) continue;
+      c.set(x, y, tone(hair, lightness(dx, -0.5, 0.06) + hairTex(x, y), x, y));
+    }
+  }
+  eyes(c, { iris: 0x4a5a6a, blink: fr.blink, skin });
+  // A black eye, going yellow at the edges.
+  for (let y = EYE_Y - 3; y <= EYE_Y + 5; y++) {
+    for (let x = CX + 4; x <= CX + 15; x++) {
+      const d = Math.hypot((x - CX - 9.5) / 6.5, (y - EYE_Y - 1) / 4.5);
+      if (d > 1 || (d < 0.42 && !fr.blink)) continue;
+      c.set(x, y, d > 0.8 ? 0x9a8a4a : d > 0.6 ? 0x6a4a5a : 0x4a3248);
+    }
+  }
+  brows(c, 0x6a3420, 'heavy', 1);
+  nose(c, skin, 1);
+  wrinkles(c, skin, true);
+  // Grime.
+  for (let y = 34; y < 70; y++) for (let x = CX - 16; x <= CX + 16; x++) if (hash(x * 3, y * 5) < 0.04) c.set(x, y, 0x6a5040);
+  mouth(c, { skin, lip: 0x8a5040, open: fr.open, curve: -1, half: 4, y: EYE_Y + 16 });
+  // A full, ragged beard.
+  const beardTex = strands((x, y) => x * 0.9 + y * 0.1, undefined, 33);
+  for (let y = EYE_Y + 7; y < 84; y++) {
+    for (let x = CX - 21; x <= CX + 21; x++) {
+      const dx = Math.abs(x + 0.5 - CX);
+      const w = (faceHalf(shape, Math.min(y, 69)) ?? 9) + 2;
+      const lowest = 80 + 4 * (1 - (dx / 18) ** 2) - (hash(x, 7) < 0.4 ? 2 : 0);
+      if (dx > w || y > lowest) continue;
+      if (y < EYE_Y + 7 + Math.max(0, 14 - dx) * 0.55) continue;
+      if (y >= EYE_Y + 15 && y <= EYE_Y + (fr.open ? 19 : 17) && dx < 4.5) continue;
+      c.set(x, y, tone(beard, lightness((x - CX) / 22, (y - 70) / 30, 0.05) + beardTex(x, y), x, y));
+    }
+  }
+  finish(c);
+};
+
+/** The orb in the brood hall, for whoever speaks through it: a ball of glass in bone claws, smoke turning in it, and in the smoke the shape of a face that is not there. */
+const orb: Painter = (c, fr) => {
+  const R = 34;
+  const cy = 50;
+  const glass = ramp(0x6a40a8);
+  const bright = ramp(0xc8a4ff);
+  const bone = ramp(0xd8ccb0);
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const nx = (x + 0.5 - CX) / R;
+      const ny = (y + 0.5 - cy) / R;
+      const d = nx * nx + ny * ny;
+      if (d > 1) continue;
+      const a = Math.atan2(ny, nx);
+      const swirl = Math.sin(a * 2 + Math.sqrt(d) * 7 + (fr.open ? 0.9 : 0));
+      // Two hollows for eyes and a darker one for a mouth, like a face seen in a fire.
+      const eye = Math.min(Math.hypot(x - CX + 10, y - cy + 6), Math.hypot(x - CX - 10, y - cy + 6)) < (fr.blink ? 2 : 4.5);
+      const mouth = Math.abs(y - cy - 12) < (fr.open ? 4 : 1.5) && Math.abs(x - CX) < 10;
+      const v = lightness(nx * 0.8, ny * 0.8, swirl * 0.22);
+      c.set(x, y, eye || mouth ? glass[0] : swirl > 0.6 ? tone(bright, v + 0.15, x, y) : tone(glass, v, x, y));
+    }
+  }
+  // The claws holding it up from below.
+  for (const side of [-1, 0, 1]) {
+    for (let t = 0; t < 1; t += 0.02) {
+      const x = CX + side * (22 - t * 6) + side * Math.sin(t * 3) * 6;
+      const y = S - 2 - t * 30;
+      for (let k = -2; k <= 2; k++) c.set(x + k, y, tone(bone, lightness(k / 3, -0.3), Math.round(x + k), Math.round(y)));
+    }
+  }
+  finish(c);
+};
+
 /** One of Lord Morten's toll guards: a black nasal helm, a broken nose, a sour look, Morten's crimson over mail. */
 const tollguard: Painter = (c, fr) => {
   const skin = ramp(0xd8a482);
@@ -1842,7 +1929,7 @@ const snikkit = townsfolk({
 });
 
 const PAINTERS: Record<string, Painter> = {
-  hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, tollguard, carter, herbwife,
+  hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, orb, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
   footpad, cutpurse, tinker, goatherd, courier,

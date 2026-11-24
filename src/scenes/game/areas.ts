@@ -13,13 +13,14 @@
 import { MAP_HEIGHT, MAP_SEED, MAP_WIDTH } from '../../config';
 import { QuestLog } from '../../systems/Quests';
 import { Tavern } from '../../systems/Tavern';
-import { raidStage, raidWorld, ruinWorld } from '../../world/GoblinRaid';
+import { graveWorld, raidStage, raidWorld, ruinWorld } from '../../world/GoblinRaid';
 import { AreaId, MapData } from '../../world/MapData';
 import { generateMap } from '../../world/MapGenerator';
 import { buildMarketMap } from '../../world/MarketMap';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { enteredCave, enteredNorthWoods } from './hollow';
 import { enteredGreyfells, greyfellsOpen } from './trail';
+import { buryingMother, carryingMother, enteredBroodHall, enteredWarren, outOfWarren, penPrisoner } from './warren';
 import { gateAftermath } from '../../world/GateAftermath';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
@@ -74,6 +75,7 @@ function buildHollow(): MapData {
   const world = generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED);
   if (raid === 'morning') raidWorld(world);
   if (raid === 'over') ruinWorld(world);
+  if (QuestLog.hasFlag('mother-buried')) graveWorld(world);
   return world;
 }
 
@@ -94,7 +96,7 @@ function enteredHut(g: GameScene): void {
 
 export const AREAS: Record<AreaId, AreaDef> = {
   home: lazy(() => import('../../world/HomeMap'), (m) => m.buildHomeMap(raidStage() === 'over')),
-  world: { build: buildHollow, test: true },
+  world: { build: buildHollow, test: true, enter: buryingMother },
   hut: lazy(() => import('../../world/HutMap'), (m) => m.buildHutMap(raidStage() === 'over', !!QuestLog.get('speckle-and-moppet')?.completed), { test: true, enter: enteredHut }),
   cave: lazy(() => import('../../world/CaveMap'), (m) => m.buildCaveMap(), { test: true, enter: enteredCave }),
   market: { build: () => gateAftermath(buildMarketMap(QuestLog.hasFlag('paid-toll'))), test: true, enter: enteredMarket },
@@ -120,7 +122,15 @@ export const AREAS: Record<AreaId, AreaDef> = {
   // The woods north of the Hollow; after the raid, the goblins' trail through them shows, and in time leads on up onto the Greyfells.
   northwoods: lazy(() => import('../../world/NorthWoodsMap'), (m) => m.buildNorthWoodsMap(raidStage() === 'over', greyfellsOpen()), { test: true, enter: enteredNorthWoods }),
   // Up the goblins' trail out of the north woods: their camp, and the hole in the hill.
-  greyfells: lazy(() => import('../../world/GreyfellsMap'), (m) => m.buildGreyfellsMap(), { test: true, enter: enteredGreyfells }),
+  greyfells: lazy(() => import('../../world/GreyfellsMap'), (m) => m.buildGreyfellsMap(), {
+    test: true,
+    enter: (g) => {
+      enteredGreyfells(g);
+      outOfWarren(g);
+    },
+  }),
+  warren: lazy(() => import('../../world/WarrenMap'), (m) => m.buildWarrenMap({ prisoner: penPrisoner(), roused: carryingMother() }), { test: true, enter: enteredWarren }),
+  broodhall: lazy(() => import('../../world/BroodHallMap'), (m) => m.buildBroodHallMap({ motherDead: QuestLog.hasFlag('mother-dead') }), { test: true, enter: enteredBroodHall }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(
