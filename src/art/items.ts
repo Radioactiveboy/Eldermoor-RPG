@@ -3149,6 +3149,8 @@ const FISH_LOOKS: Record<string, FishLook> = {
   tench: { body: ['#2a3a1a', '#5a6a2a', '#a8a868'], fin: '#3a4a22', eye: '#c8402a', deep: 1.15, seed: 9 },
   carp: { body: ['#7a5418', '#d09a30', '#f8e0a0'], fin: '#b07028', deep: 1.2, seed: 11 },
   trout: { body: ['#4a3a24', '#a88a50', '#f0e4c0'], fin: '#a07a48', spots: 'rgba(170,40,30,0.85)', seed: 13 },
+  barbel: { body: ['#4a3a1e', '#a08850', '#e8dcb0'], fin: '#b8683a', long: 1.25, deep: 0.85, seed: 15 },
+  grayling: { body: ['#46505c', '#9aa6b2', '#eef0f0'], fin: '#8a4a7a', spots: 'rgba(40,40,50,0.6)', seed: 17 },
 };
 
 /** A fish lying across the icon, head to the left. Cooked, it's browned and crisp, with grill marks, on a wooden board. */
@@ -3546,6 +3548,8 @@ const FISHING_PAINTERS: Record<string, (c: Ctx) => void> = {
   tench: (c) => fishIcon(c, FISH_LOOKS.tench, false),
   carp: (c) => fishIcon(c, FISH_LOOKS.carp, false),
   trout: (c) => fishIcon(c, FISH_LOOKS.trout, false),
+  barbel: (c) => fishIcon(c, FISH_LOOKS.barbel, false),
+  grayling: (c) => fishIcon(c, FISH_LOOKS.grayling, false),
   eel: (c) => eelIcon(c, false),
   'grilled-perch': (c) => fishIcon(c, FISH_LOOKS.perch, true),
   'fried-roach': (c) => {
@@ -3574,6 +3578,8 @@ const FISHING_PAINTERS: Record<string, (c: Ctx) => void> = {
   'grilled-tench': (c) => fishIcon(c, FISH_LOOKS.tench, true),
   'roast-carp': (c) => fishIcon(c, FISH_LOOKS.carp, true),
   'grilled-trout': (c) => fishIcon(c, FISH_LOOKS.trout, true),
+  'baked-barbel': (c) => fishIcon(c, FISH_LOOKS.barbel, true),
+  'grilled-grayling': (c) => fishIcon(c, FISH_LOOKS.grayling, true),
   'smoked-eel': (c) => {
     steam(c, 64, 40, 14);
     eelIcon(c, true);
@@ -3981,6 +3987,8 @@ const ICONS: Array<[string, string]> = [
   ['item-tench', 'tench'],
   ['item-carp', 'carp'],
   ['item-trout', 'trout'],
+  ['item-barbel', 'barbel'],
+  ['item-grayling', 'grayling'],
   ['item-old-boot', 'old-boot'],
   ['item-grilled-perch', 'grilled-perch'],
   ['item-fried-roach', 'fried-roach'],
@@ -3989,6 +3997,8 @@ const ICONS: Array<[string, string]> = [
   ['item-grilled-tench', 'grilled-tench'],
   ['item-roast-carp', 'roast-carp'],
   ['item-grilled-trout', 'grilled-trout'],
+  ['item-baked-barbel', 'baked-barbel'],
+  ['item-grilled-grayling', 'grilled-grayling'],
   ['item-carrot-seed', 'carrot-seed'],
   ['item-turnip-seed', 'turnip-seed'],
   ['item-cabbage-seed', 'cabbage-seed'],

@@ -1,6 +1,7 @@
 import { darker, type Tones } from './character';
 import { Detail, Hit, limb, Model, Pose3D, Solid } from './figure3d';
 import { fineFace, shade } from './fine3d';
+import { JETTY_FOLK } from './jettyfolk3d';
 import { captiveGoblinModel, shamanGoblinModel } from './goblins3d';
 import { seatedLegs } from './models3d';
 import { PALETTE as P } from './palette';
@@ -405,4 +406,6 @@ export const FINE_FOLK: Record<string, (pose: Pose3D) => Model> = {
   // The goblins who stand about as folk rather than fight (see goblins3d.ts).
   snikkit: captiveGoblinModel,
   shaman: shamanGoblinModel,
+  // The jetty's folk: Maren the skipper, Old Hob and Wren.
+  ...JETTY_FOLK,
 };

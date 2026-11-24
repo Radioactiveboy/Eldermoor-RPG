@@ -110,3 +110,20 @@ export const SWARM: CreatureSpawn[] = [
 
 /** Where the hero lies in a rented room at the Crooked Tankard (the bed in TavernMap's room), for waking there. */
 export const TAVERN_BED = { tx: 3, ty: 1, gx: 2.5, gy: 1.6 };
+
+/** Adowvale Jetty, the landing on the river Wend below the village (JettyMap): its size, and where the path comes down from Adowvale. */
+export const JETTY_W = 52;
+export const JETTY_H = 46;
+export const JETTY_PATH_X = 20;
+/**
+ * The pier: its stem, two planks wide (columns x0 and x1), runs out from the quay to the cross-head, whose
+ * two rows start at headY and run from headX0 to headX1.
+ */
+export const PIER = { x0: 22, x1: 23, headY: 30, headX0: 19, headX1: 26 };
+/** Where the Grey Heron lies alongside the pier (her back corner, and her footprint along the stem). */
+export const HERON_BERTH = { tx: 24, ty: 22, w: 2, h: 7 };
+/**
+ * The lane down to the jetty, off the bottom of Adowvale's map (MarketMap): the columns its road runs off on,
+ * through the gap in the palisade.
+ */
+export const JETTY_LANE = { x0: 11, x1: 12 };

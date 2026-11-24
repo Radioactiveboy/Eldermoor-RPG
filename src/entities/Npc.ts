@@ -11,6 +11,8 @@ import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/traveller
 import { FeedStage, IRAN_HIDING, iranScript } from '../dialogue/iran';
 import { CARTER, HERBWIFE, tollGuardScript, tollRoadTalk } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
+import { ebbScript, JettyNews, marenScript, wrenScript } from '../dialogue/jetty';
+import { openVoyages } from '../systems/Voyages';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
 import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, MAID_CHORES, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
@@ -441,7 +443,37 @@ const NPCS: Record<string, NpcDef> = {
   steward: { texture: 'folk-steward', script: (hour) => wayfarer('steward', (first) => stewardScript(raidIsOver(), first, Npc.within([7, 22], hour)))() },
   housemaid: { texture: 'folk-housemaid', roam: 3, bustles: true, script: () => housemaidScript(raidIsOver()) },
   housecook: { texture: 'folk-housecook', roam: 2, script: () => housecookScript(raidIsOver()) },
+  // Down at Adowvale Jetty (world/JettyMap.ts): Maren on the pier by her boat, Old Ebb at his nets, and Wren about the smokehouse.
+  maren: {
+    texture: 'folk-maren', talkRange: 2.2,
+    script: () => {
+      const first = !met.has('maren');
+      met.add('maren');
+      return marenScript(first, jettyNews('maren'), openVoyages(), Inventory.coins);
+    },
+  },
+  ebb: {
+    texture: 'folk-ebb', sits: true,
+    script: () => {
+      const first = !met.has('ebb');
+      met.add('ebb');
+      return ebbScript(first, jettyNews('ebb'), Inventory.count('fishing-rod') > 0);
+    },
+  },
+  wren: {
+    texture: 'folk-wren', roam: 2, talkRange: 2.4,
+    script: () => {
+      const first = !met.has('wren');
+      met.add('wren');
+      return wrenScript(first, jettyNews('wren'));
+    },
+  },
 };
+
+/** What the jetty folk have heard: the raid (said once, the first time after it), and whether Mother is dead. */
+function jettyNews(id: SpeakerId): JettyNews {
+  return { raided: onceAfterRaid(id) === false && raidIsOver(), bereaved: QuestLog.hasFlag('mother-dead') };
+}
 
 /**
  * Whether someone has already said their piece about the raid (and if not,

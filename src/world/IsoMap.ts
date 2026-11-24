@@ -90,9 +90,13 @@ export class IsoMap {
   /** Slim objects (fences) that characters can stand right beside, for sorting them in front or behind. */
   private readonly slim = new Map<number, { depth: number; shapes: Shape[] }>();
 
+  /** Planked tiles over water (MapData.decks), by tile index: walked on though their ground is water. */
+  private readonly decks = new Set<number>();
+
   constructor(scene: Phaser.Scene, data: MapData) {
     this.scene = scene;
     this.data = data;
+    for (const [tx, ty] of data.decks ?? []) this.decks.add(ty * data.width + tx);
     this.buildShapes();
     this.render();
   }
@@ -112,7 +116,17 @@ export class IsoMap {
   isWalkable(tx: number, ty: number): boolean {
     if (!this.inBounds(tx, ty)) return false;
     if (this.occupied.has(ty * this.data.width + tx)) return false;
-    return TERRAIN_WALKABLE[this.data.terrain[ty][tx]] && this.data.props[ty][tx] === Prop.None;
+    return this.groundWalkable(tx, ty) && this.data.props[ty][tx] === Prop.None;
+  }
+
+  /** Whether a tile's ground bears weight: its terrain, or planks laid over the water (a pier). */
+  private groundWalkable(tx: number, ty: number): boolean {
+    return TERRAIN_WALKABLE[this.data.terrain[ty][tx]] || this.decks.has(ty * this.data.width + tx);
+  }
+
+  /** Whether a tile is planking over water (MapData.decks): water underneath, but not open water. */
+  isDeck(tx: number, ty: number): boolean {
+    return this.inBounds(tx, ty) && this.decks.has(ty * this.data.width + tx);
   }
 
   /**
@@ -225,12 +239,12 @@ export class IsoMap {
 
   /** Works out every tile's collision outline from its terrain, prop or object. */
   private buildShapes(): void {
-    const { width, height, terrain, props } = this.data;
+    const { width, height, props } = this.data;
     for (let ty = 0; ty < height; ty++) {
       for (let tx = 0; tx < width; tx++) {
         const prop = props[ty][tx];
         let local: Shape[] | undefined;
-        if (!TERRAIN_WALKABLE[terrain[ty][tx]] || prop === Prop.Blocked) local = FULL_TILE;
+        if (!this.groundWalkable(tx, ty) || prop === Prop.Blocked) local = FULL_TILE;
         else if (prop === Prop.Tree || prop === Prop.Rock) local = PROP_SHAPES[this.propArt(prop, tx, ty).shape];
         this.shapes[ty * width + tx] = local?.map((s) => offsetShape(s, tx, ty));
       }
@@ -513,6 +527,12 @@ export class IsoMap {
     const sprite = this.scene.add.sprite(p.x, p.y, art.key, obj.anim ? 0 : undefined);
     sprite.setOrigin(obj.flipX ? 1 - art.originX : art.originX, art.originY).setFlipX(!!obj.flipX).setDepth(depth);
     if (obj.anim) sprite.play(obj.anim);
+    if (obj.bob) {
+      // Riding at its moorings: up and down on the swell, slowly, each boat at its own pace.
+      const pace = 2600 + tileHash(obj.tx, obj.ty, 9) * 1400;
+      sprite.y -= obj.bob / 2;
+      this.scene.tweens.add({ targets: sprite, y: p.y + obj.bob / 2, duration: pace, ease: 'Sine.easeInOut', yoyo: true, repeat: -1, delay: tileHash(obj.tx, obj.ty, 10) * pace });
+    }
     this.objectSprites.set(obj, sprite);
     if (obj.fades) this.fading.push({ sprite, bounds: sprite.getBounds() });
   }

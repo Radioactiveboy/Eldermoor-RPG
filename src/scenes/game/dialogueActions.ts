@@ -15,6 +15,7 @@ import { RAID_ACTIONS } from './raid';
 import { GATE_ACTIONS } from './gate';
 import { TRAIL_ACTIONS } from './trail';
 import { WARREN_ACTIONS } from './broodhall';
+import { sailTo } from './voyages';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 
 /** A named story effect: what happens when a line with this action is said. */
@@ -33,7 +34,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...FISHING_ACTIONS,
 };
 
-/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, or a named one. */
+/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `voyage:<area>` (see voyages.ts), or a named one. */
 export function runDialogueAction(g: GameScene, action: string): void {
   if (action.startsWith('shop:') && action.slice(5) in SHOPS) {
     g.pendingShop = action.slice(5) as ShopId;
@@ -55,6 +56,10 @@ export function runDialogueAction(g: GameScene, action: string): void {
   if (action.startsWith('bond:') && bondAction(g, action)) return;
   if (action.startsWith('rent:')) {
     rentRoom(g, Number(action.slice(5)));
+    return;
+  }
+  if (action.startsWith('voyage:')) {
+    sailTo(g, action.slice(7));
     return;
   }
   const run = Object.hasOwn(ACTIONS, action) ? ACTIONS[action] : undefined;

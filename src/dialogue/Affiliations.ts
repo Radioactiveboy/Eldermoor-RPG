@@ -57,6 +57,10 @@ export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   tanner: VILLAGE,
   iran: VILLAGE,
   fisherman: VILLAGE,
+  ebb: VILLAGE,
+  wren: VILLAGE,
+  // A river skipper: she belongs to the Wend more than to Adowvale.
+  maren: { label: 'Boatfolk of the Wend', known: 'met' },
   coombe: VILLAGE,
   // His chain of office says it.
   headman: { ...VILLAGE, known: 'sight' },

@@ -35,6 +35,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { buildWatchtowerMap } = await import('../../src/world/WatchtowerMap');
   const { buildGreyfellsMap } = await import('../../src/world/GreyfellsMap');
   const garrison = await import('../../src/world/GarrisonMaps');
+  const { buildJettyMap } = await import('../../src/world/JettyMap');
   const { buildWarrenMap } = await import('../../src/world/WarrenMap');
   const { buildBroodHallMap } = await import('../../src/world/BroodHallMap');
   return {
@@ -65,6 +66,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     garrison: garrison.buildGarrisonMap(),
     jail: garrison.buildJailMap(true),
     residence: garrison.buildResidenceMap(),
+    jetty: buildJettyMap(),
     warren: buildWarrenMap({ prisoner: 'hilde' }),
     broodhall: buildBroodHallMap(),
   };
