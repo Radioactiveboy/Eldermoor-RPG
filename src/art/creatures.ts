@@ -17,7 +17,7 @@ import {
   wolfSheet,
   wolfSpec,
 } from './beasts3d';
-import { BRUTE_SIZE, goblinSpec } from './goblins3d';
+import { BRUTE_SIZE, GOBLIN_COLS, GOBLIN_RES, goblinShownSpec } from './goblins3d';
 import { footpadSpec } from './wayfarers3d';
 
 /**
@@ -47,6 +47,10 @@ export const CREATURE_ART: Record<
     eight?: boolean;
     /** How tall it stands on screen, in pixels (for what's shown over its head). */
     tall?: number;
+    /** How many times finer than this frame its sheet is drawn (the goblins', see goblins3d.ts): its sprite is scaled down by as much. */
+    res?: number;
+    /** Frames in each direction's row, if not the beasts' BEAST_COLS. */
+    cols?: number;
   }
 > = {
   wolf: { ...wolfSpec(1), eight: true, tall: 26 },
@@ -63,10 +67,11 @@ export const CREATURE_ART: Record<
   footpad: { ...footpadSpec(), eight: true, tall: 42 },
   cutpurse: { ...footpadSpec(), eight: true, tall: 40 },
   // The goblins who raid the Hollow (their sheets are drawn in goblins3d.ts).
-  goblin: { ...goblinSpec('goblin'), eight: true, tall: 32 },
-  goblinspear: { ...goblinSpec('goblinspear'), eight: true, tall: 34 },
-  goblintorch: { ...goblinSpec('goblintorch'), eight: true, tall: 34 },
-  goblinbrute: { ...goblinSpec('goblinbrute'), eight: true, tall: 34 * BRUTE_SIZE },
+  // Drawn finely (GOBLIN_RES times the detail), with a fight's worth of extra frames.
+  goblin: { ...goblinShownSpec('goblin'), eight: true, tall: 32, res: GOBLIN_RES, cols: GOBLIN_COLS },
+  goblinspear: { ...goblinShownSpec('goblinspear'), eight: true, tall: 34, res: GOBLIN_RES, cols: GOBLIN_COLS },
+  goblintorch: { ...goblinShownSpec('goblintorch'), eight: true, tall: 34, res: GOBLIN_RES, cols: GOBLIN_COLS },
+  goblinbrute: { ...goblinShownSpec('goblinbrute'), eight: true, tall: 34 * BRUTE_SIZE, res: GOBLIN_RES, cols: GOBLIN_COLS },
 };
 
 export function generateCreatures(scene: Phaser.Scene): void {
