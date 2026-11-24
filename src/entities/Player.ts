@@ -3,7 +3,7 @@ import { FEET_Y, FRAME_H, HERO_SCALE } from '../art/character';
 import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_RADIUS, PLAYER_SPEED } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
-import { IsoMap } from '../world/IsoMap';
+import { Hero, IsoMap } from '../world/IsoMap';
 import { GridPoint } from '../systems/Pathfinding';
 
 /** The walk animation's speed at walking pace: 9 frames a second slowed to 7, two steps each four frames. */
@@ -13,8 +13,9 @@ const WALK_CADENCE = 7 / 9;
  * The player lives in grid space (gx, gy in tiles). Every frame it moves,
  * resolves collisions against the map, then syncs its sprites to screen space.
  */
-export class Player {
+export class Player implements Hero {
   gx: number;
+  readonly radius = PLAYER_RADIUS;
   gy: number;
   readonly sprite: Phaser.GameObjects.Sprite;
   private readonly shadow: Phaser.GameObjects.Image;
@@ -40,6 +41,8 @@ export class Player {
     this.map = map;
     this.gx = gx;
     this.gy = gy;
+    // The people walking about keep out of the hero's way (see world/Avoidance.ts).
+    map.hero = this;
     this.shadow = scene.add.image(0, 0, 'shadow');
     this.sprite = scene.add.sprite(0, 0, 'player', 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
     // The walk is four frames: left foot forward, passing, right foot forward, passing.
@@ -56,6 +59,11 @@ export class Player {
 
   get tileY(): number {
     return Math.floor(this.gy);
+  }
+
+  /** On their feet, and so in the way of anyone walking past (not sat down, nor crouched at work). */
+  get solid(): boolean {
+    return this.pose === 'stand';
   }
 
   get hasPath(): boolean {
@@ -210,7 +218,8 @@ export class Player {
     if (dx === 0 && dy === 0) return false;
     const nx = this.gx + dx;
     const ny = this.gy + dy;
-    if (this.map.blocked(nx, ny, PLAYER_RADIUS)) return false;
+    // Someone who has ended up on top of the hero never pins them: stepping away is always allowed.
+    if (this.map.blockedMove({ x: this.gx, y: this.gy }, nx, ny, PLAYER_RADIUS)) return false;
     this.gx = nx;
     this.gy = ny;
     return true;

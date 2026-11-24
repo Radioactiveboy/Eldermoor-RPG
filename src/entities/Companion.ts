@@ -5,6 +5,7 @@ import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_SPEED, SPRINT_MULTIPLIER } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
 import { COMPANIONS, CompanionDef, CompanionId } from '../systems/Companions';
+import { stepAround } from '../world/Avoidance';
 import type { IsoMap } from '../world/IsoMap';
 
 /** How far behind the hero the first companion walks, in tiles, and how much further back each one after. */
@@ -12,6 +13,8 @@ export const FOLLOW_GAP = 1.3;
 export const FOLLOW_SPACING = 1.1;
 /** Further behind than this (lost round a corner, left behind by a door) and they catch up at once. */
 const LOST = 9;
+/** How wide they are, for keeping out of the hero's way (as wide as the hero). */
+const RADIUS = 0.25;
 /** The hero's trail is noted each time they've gone this far. */
 const CRUMB = 0.2;
 
@@ -180,10 +183,14 @@ export class Companion {
     const behind = dist > 0.6 ? 1.25 : 1;
     const speed = Math.min(PLAYER_SPEED * SPRINT_MULTIPLIER * 1.15, Math.max(PLAYER_SPEED * 0.9, heroSpeed) * behind);
     const step = Math.min(dist, speed * dt);
-    this.gx += (dx / dist) * step;
-    this.gy += (dy / dist) * step;
+    // Never through the hero (who may have doubled back towards them): round, or wait.
+    const to = stepAround({ x: this.gx, y: this.gy }, target, step, RADIUS, this.map.heroInTheWay);
     this.face({ x: dx, y: dy });
-    this.moving = true;
+    this.moving = !!to;
+    if (to) {
+      this.gx = to.x;
+      this.gy = to.y;
+    }
     this.sync();
   }
 
