@@ -164,12 +164,12 @@ const huntingKnife = heldWeapon((f, d) => [
 ]);
 
 /**
- * Which way the sword points: held loosely at the side, point down and a
- * little forward and out, so the blade runs clear of the leg instead of
- * splaying out sideways like a knife (seated, it lies forward across the knees).
+ * Which way the sword points: held up and ready in front of him, the blade
+ * rising past his shoulder and a little out, so its outline stands clear of
+ * the body from every side (seated, it lies forward across the knees).
  */
 function swordDir(f: HeroFrame): V3 {
-  return f.pose.sit ? norm([-0.3, -0.3, 1]) : norm([-0.28, -0.88, 0.38]);
+  return f.pose.sit ? norm([-0.3, -0.3, 1]) : norm([-0.5, 0.82, 0.28]);
 }
 
 /** Square to `d`, as near the body's left-right as it can be: the way the crossguard runs. */
@@ -178,28 +178,32 @@ function across(d: V3): V3 {
   return norm([1 - k * d[0], -k * d[1], -k * d[2]]);
 }
 
+/** Bright, polished steel, so the blade catches the eye against cloak and ground alike. */
+const BRIGHT_STEEL: Tones = [0xc4ccd6, 0x76808c, 0xffffff];
+
 /**
- * Good village steel: a brass pommel and a leather grip showing above the
- * fist, a crossguard square to the blade just below it, and a long blade
- * tapering to the point, sized to the hero (about a third of his height).
+ * Good village steel, held up ready in the right hand: a brass pommel and a
+ * leather grip below the fist, a broad brass-tipped crossguard square to the
+ * blade, and a long, broad, bright blade tapering to the point.
  */
 const shortSword: GearLook = {
+  adjust: (l) => ({ ...l, holding: true }),
   model: (f) => {
     const d = swordDir(f);
     const g = across(d);
-    const guard = along(f.hand, d, 1.8);
+    const guard = along(f.hand, d, 1.9);
     const brass: Tones = [P.gold, 0xa8802a, P.goldLight];
     const solids: Solid[] = [
-      // The grip runs through the fist, its end and the pommel standing proud above it.
-      { ...pointAt(along(f.hand, d, -2.9)), rx: 0.85, ry: 0.85, rz: 0.85, material: brass },
-      ...limb(along(f.hand, d, -2.3), guard, 0.6, 0.6, GRIP, 0.3),
-      // The crossguard, square to the blade, a little heavier at its tips.
-      ...limb(along(guard, g, -2), along(guard, g, 2), 0.5, 0.5, IRON, 0.3),
-      { ...pointAt(along(guard, g, -2.1)), rx: 0.6, ry: 0.6, rz: 0.6, material: IRON },
-      { ...pointAt(along(guard, g, 2.1)), rx: 0.6, ry: 0.6, rz: 0.6, material: IRON },
+      // The grip runs through the fist, its end and the pommel showing below it.
+      { ...pointAt(along(f.hand, d, -3)), rx: 1, ry: 1, rz: 1, material: brass },
+      ...limb(along(f.hand, d, -2.3), guard, 0.65, 0.65, GRIP, 0.3),
+      // The crossguard, square to the blade, brass at its tips.
+      ...limb(along(guard, g, -2.6), along(guard, g, 2.6), 0.6, 0.6, IRON, 0.3),
+      { ...pointAt(along(guard, g, -2.8)), rx: 0.75, ry: 0.75, rz: 0.75, material: brass },
+      { ...pointAt(along(guard, g, 2.8)), rx: 0.75, ry: 0.75, rz: 0.75, material: brass },
       // The blade: broad at the shoulder, narrowing to the point.
-      ...limb(along(guard, d, 0.4), along(guard, d, 10), 0.75, 0.5, STEEL, 0.3),
-      ...limb(along(guard, d, 10), along(guard, d, 12.4), 0.5, 0.18, STEEL, 0.3),
+      ...limb(along(guard, d, 0.5), along(guard, d, 11), 1, 0.7, BRIGHT_STEEL, 0.3),
+      ...limb(along(guard, d, 11), along(guard, d, 14), 0.7, 0.2, BRIGHT_STEEL, 0.3),
       fist(f.hand),
     ];
     return { solids };
