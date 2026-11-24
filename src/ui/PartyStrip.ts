@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { sheetScale } from '../art/fine3d';
 import { COMPANIONS, CompanionId, Companions, maxHpOf } from '../systems/Companions';
 import { Experience } from '../systems/Experience';
 import { drawPanel, UI_COLORS, UI_FONT } from './theme';
@@ -59,12 +60,14 @@ export class PartyStrip {
     const bg = s.add.graphics();
     drawPanel(bg, 0, 0, CARD_W, CARD_H);
     // Head and shoulders, cut from the first (south-facing) frame of their walking figure.
-    const k = FACE / CROP.h;
+    // A finely drawn figure's frame is bigger by its sheet's scale (see art/fine3d.ts).
+    const fine = sheetScale(s, def.texture);
+    const k = FACE / CROP.h / fine;
     const face = s.add
-      .image(6 - CROP.x * k, (CARD_H - FACE) / 2 - CROP.y * k, def.texture, 0)
+      .image(6 - CROP.x * fine * k, (CARD_H - FACE) / 2 - CROP.y * fine * k, def.texture, 0)
       .setOrigin(0, 0)
       .setScale(k)
-      .setCrop(CROP.x, CROP.y, CROP.w, CROP.h);
+      .setCrop(CROP.x * fine, CROP.y * fine, CROP.w * fine, CROP.h * fine);
     const name = s.add.text(FACE + 12, 5, def.short, { fontFamily: UI_FONT, fontSize: '12px', color: UI_COLORS.text, fontStyle: 'bold' });
     const hp = Companions.hp(id, level);
     const max = maxHpOf(id, level);

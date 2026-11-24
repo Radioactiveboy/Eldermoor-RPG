@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
+import { sheetScale } from '../art/fine3d';
 import type { DialogueScript, SpeakerId } from '../dialogue/Dialogue';
 import { raidAware, raidIsOver, toldOfRaid } from '../dialogue/afterRaid';
 import { goblinPrisonerScript, jailerScript, prisonerScript, sergeantScript } from '../dialogue/garrison';
@@ -365,7 +366,7 @@ const NPCS: Record<string, NpcDef> = {
     }),
   },
   // Wat, the militia lad on the east watch after the raid, who will come along if asked (see systems/Companions.ts).
-  wat: { texture: 'folk-guard', roam: 2, script: wayfarer('wat', watScript) },
+  wat: { texture: 'folk-wat', roam: 2, script: wayfarer('wat', watScript) },
   // Adowvale folk about the market by day, overheard rather than spoken to (scenes/game/marketCrowd.ts).
   'crowd-goodwife': { texture: 'folk-crowd-goodwife', passerby: true, roam: 6, script: () => NOBODY },
   'crowd-labourer': { texture: 'folk-crowd-labourer', passerby: true, roam: 7, script: () => NOBODY },
@@ -550,7 +551,8 @@ export class Npc implements Body {
     if (looking) this.face(looking);
     this.restFacing = this.facing;
     this.shadow = scene.add.image(0, 0, 'shadow');
-    this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
+    // Some are drawn finer than they stand, like the hero (see art/fine3d.ts).
+    this.sprite = scene.add.sprite(0, 0, def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H).setScale(1 / sheetScale(scene, def.texture));
     if (def.wander && map.data.road?.length) {
       this.road = map.data.road;
       this.roadIndex = this.home = this.nearestRoadIndex(gx, gy);

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
+import { sheetScale } from '../art/fine3d';
 import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_SPEED, SPRINT_MULTIPLIER } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
@@ -94,7 +95,8 @@ export class Companion {
     this.gy = gy;
     this.place = place;
     this.shadow = scene.add.image(0, 0, 'shadow');
-    this.sprite = scene.add.sprite(0, 0, this.def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
+    // Drawn finer than they stand, like the hero (see art/fine3d.ts).
+    this.sprite = scene.add.sprite(0, 0, this.def.texture, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H).setScale(1 / sheetScale(scene, this.def.texture));
     this.sync();
   }
 
