@@ -6,16 +6,29 @@ import { SaveGame } from './SaveGame';
  * satchel is a fixed number of slots holding stacks of them, and each
  * equipment slot holds at most one item.
  */
-export type EquipSlot = 'head' | 'body' | 'feet' | 'mainHand' | 'offHand' | 'trinket';
+export type EquipSlot = 'head' | 'neck' | 'cloak' | 'body' | 'hands' | 'ring' | 'trinket' | 'feet' | 'mainHand' | 'offHand';
 
+/**
+ * Every place gear can be worn, in the order the equipment screen lays them out
+ * (down the hero's left, down the right, then the weapons under their feet).
+ * Neck, cloak and hands have nothing made for them yet: they wait for new gear.
+ */
 export const EQUIP_SLOTS: Array<{ id: EquipSlot; label: string }> = [
   { id: 'head', label: 'Head' },
+  { id: 'neck', label: 'Neck' },
+  { id: 'cloak', label: 'Cloak' },
   { id: 'body', label: 'Body' },
+  { id: 'hands', label: 'Hands' },
+  { id: 'ring', label: 'Ring' },
+  { id: 'trinket', label: 'Trinket' },
   { id: 'feet', label: 'Feet' },
   { id: 'mainHand', label: 'Main hand' },
   { id: 'offHand', label: 'Off hand' },
-  { id: 'trinket', label: 'Trinket' },
 ];
+
+export function slotLabel(slot: EquipSlot): string {
+  return EQUIP_SLOTS.find((s) => s.id === slot)!.label;
+}
 
 export type ItemCategory = 'Food' | 'Potion' | 'Material' | 'Clothing' | 'Tool' | 'Weapon' | 'Armour';
 
@@ -467,7 +480,7 @@ export const ITEMS = {
     icon: 'item-ring',
     category: 'Clothing',
     stack: 1,
-    slot: 'trinket',
+    slot: 'ring',
     defence: 1,
     value: 22,
   },
@@ -883,7 +896,7 @@ export function itemEffects(def: ItemDef): string[] {
   if (def.eat?.health) lines.push(`${verb}: +${def.eat.health} health`);
   if (def.eat?.stamina) lines.push(`${verb}: +${def.eat.stamina} stamina`);
   if (def.boon) lines.push(`In a fight: ${boonText(def.boon)}`);
-  if (def.slot) lines.push(`Worn: ${EQUIP_SLOTS.find((s) => s.id === def.slot)!.label}`);
+  if (def.slot) lines.push(`Worn: ${slotLabel(def.slot)}`);
   if (def.defence) lines.push(`Defence +${def.defence}`);
   if (def.attack) lines.push(`Attack +${def.attack}`);
   if (def.slot === 'mainHand') {
@@ -919,6 +932,47 @@ export function satchelGroup(def: ItemDef): SatchelGroup {
   if (def.category === 'Food' || def.category === 'Potion') return 'food';
   if (def.category === 'Material') return 'materials';
   return 'gear';
+}
+
+/** How many satchel slots hold something of each filter tab's kind (and 'all' for every filled slot). */
+export function groupCounts(bag: Array<Stack | null>): Record<SatchelGroup | 'all', number> {
+  const counts = { all: 0, food: 0, gear: 0, materials: 0, quest: 0 };
+  for (const s of bag) {
+    if (!s) continue;
+    counts.all++;
+    counts[satchelGroup(itemDef(s.id))]++;
+  }
+  return counts;
+}
+
+/** One line of how a piece of gear compares with what's worn in its place: "Defence 1 → 2". */
+export interface GearChange {
+  label: string;
+  from: string;
+  to: string;
+  /** 1 better, -1 worse, 0 just different. */
+  better: number;
+}
+
+/**
+ * How wearing `def` instead of `worn` would change things: defence, attack, and
+ * for a weapon its damage die. Empty when it changes nothing (or isn't gear).
+ */
+export function compareGear(def: ItemDef, worn: ItemDef | undefined): GearChange[] {
+  if (!def.slot) return [];
+  const out: GearChange[] = [];
+  const num = (label: string, a = 0, b = 0) => {
+    if (a !== b) out.push({ label, from: `${a}`, to: `${b}`, better: Math.sign(b - a) });
+  };
+  num('Defence', worn?.defence, def.defence);
+  num('Attack', worn?.attack, def.attack);
+  if (def.slot === 'mainHand') {
+    const die = (d: ItemDef | undefined) => (d ? (d.weapon?.die ?? WEAPON_DIE) : FIST_DIE);
+    const a = die(worn);
+    const b = die(def);
+    if (a !== b) out.push({ label: 'Damage', from: `d${a}`, to: `d${b}`, better: Math.sign(b - a) });
+  }
+  return out;
 }
 
 /** Ways to tidy the satchel: by kind of thing, dearest first, or A to Z. */
@@ -1092,10 +1146,25 @@ class InventoryStore {
     return true;
   }
 
-  /** Takes off what's worn in a slot and puts it in the satchel, if there's room. */
-  unequip(slot: EquipSlot): boolean {
+  /**
+   * Takes off what's worn in a slot and puts it in the satchel, if there's room:
+   * into satchel slot `to` when that's given and empty (or holds something that
+   * can be worn there instead, which is then put on in its place), otherwise
+   * into the first empty one.
+   */
+  unequip(slot: EquipSlot, to?: number): boolean {
     const id = this.equipped[slot];
     if (!id) return false;
+    if (to !== undefined && to >= 0 && to < this.bag.length) {
+      const there = this.bag[to];
+      if (there && itemDef(there.id).slot === slot) return this.equip(to);
+      if (!there) {
+        this.bag[to] = { id, count: 1 };
+        delete this.equipped[slot];
+        this.emit({ type: 'changed' });
+        return true;
+      }
+    }
     const free = this.bag.indexOf(null);
     if (free < 0) return false;
     this.bag[free] = { id, count: 1 };
@@ -1116,9 +1185,21 @@ class InventoryStore {
       return s && isItem(s.id) && s.count > 0 ? { id: s.id, count: s.count } : null;
     });
     this.equipped = {};
+    const misplaced: ItemId[] = [];
     for (const { id: slot } of EQUIP_SLOTS) {
       const id = data.equipped?.[slot];
-      if (isItem(id)) this.equipped[slot] = id;
+      if (!isItem(id)) continue;
+      // Gear that has since moved to a slot of its own (the ring, once a trinket) goes there.
+      if (itemDef(id).slot === slot) this.equipped[slot] = id;
+      else misplaced.push(id);
+    }
+    for (const id of misplaced) {
+      const slot = itemDef(id).slot;
+      if (slot && !this.equipped[slot]) this.equipped[slot] = id;
+      else {
+        const free = this.bag.indexOf(null);
+        if (free >= 0) this.bag[free] = { id, count: 1 };
+      }
     }
     this.coins = typeof data.coins === 'number' ? data.coins : START_COINS;
     this.emit({ type: 'changed' });

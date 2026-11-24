@@ -76,10 +76,14 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   tracker says which place it's in. Switch them off (and the minimap) in **Settings**
 - **P**, or a companion's card under the health bars: who travels with you (see Companions below), with
   their health, and a button to send each one home
-- **I** or the **satchel** button: the satchel (inventory). **C**: equipment.
-  Tab switches between them; select an item to eat, wear or take it off. Tabs over the satchel (All, Food,
-  Gear, Materials, Quest) pick out one kind of thing and fade the rest; **Sort by** Type, Value or Name tidies it.
-  The footer shows how many of the 20 slots are used
+- **I**, **C** or the **satchel** button: the satchel and equipment, side by side. Arthus stands in the middle
+  with what he wears in ten slots around him (head, neck, cloak, body; hands, ring, trinket, feet; main and off
+  hand beneath), his health, armour, aim and damage under that, and the satchel's grid beside it. Hover over
+  anything for a tooltip (what it does, and how gear compares with what's worn); click or tap to pin it with
+  Eat / Wear / Take off; double-click or tap twice to do that at once. Drag things around the satchel, onto
+  Arthus to wear them or off him to take them off. Tabs over the satchel (All, Food, Gear, Materials, Quest)
+  pick out one kind of thing and fade the rest; **Sort** by Type, Value or Name tidies it. On a narrow screen
+  (a phone held upright) the satchel and equipment go under two tabs, and Tab switches between them
 - **Trading at a stall**: talk to the stallholder and ask to see their goods. Drag
   things from the stall to your satchel to buy them, or from your satchel to the stall
   to sell them; when there's more than one, a box asks how many (slider, - / +, or the
@@ -426,7 +430,7 @@ src/
                             (laid out by dialogue/ChoiceMenu.ts: a `key` reply stays up front, the rest fold away)
     JournalScene.ts         The journal book: tasks, quests, the diary (day and hour on each entry), and a Map tab
     MapScene.ts             The world map (M): an inked map of the places seen so far, the hero and the quest's mark
-    InventoryScene.ts       Satchel and equipment: item grid with filter tabs and sorting, worn gear, eat/wear
+    InventoryScene.ts       Satchel and equipment: paper doll, item grid with filter tabs and sorting, tooltips, eat/wear
     ShopScene.ts            Trading: the stall's goods and your satchel, drag to buy and sell, how-many box
     StationScene.ts         Brewing bench and hearth: drag ingredients in, the recipe book, progress, the result
     FishingScene.ts         The water side-on: casting, the bite, playing the fish, the catch card

@@ -55,6 +55,7 @@ import {
   REVIVE_SHARE,
 } from '../systems/Companions';
 import { Experience } from '../systems/Experience';
+import { heroSheet } from '../systems/HeroSheet';
 import { FightTally, lootLine } from '../systems/FightTally';
 import { Inventory, InventoryEvent, itemDef, ItemId, weaponOf } from '../systems/Inventory';
 import { abilityIconKey, ensureAbilityIcons } from '../ui/AbilityIcons';
@@ -1364,8 +1365,8 @@ export class CombatScene extends Phaser.Scene {
 
   /** The hero's numbers, from their level and what they're wearing and wielding. */
   private heroStats(): CombatantDef {
-    const gear = Inventory.totals;
     const weapon = weaponOf(Inventory.equipped.mainHand);
+    const sheet = heroSheet();
     const stats = this.world.stats;
     return {
       id: 'hero',
@@ -1373,9 +1374,9 @@ export class CombatScene extends Phaser.Scene {
       side: 'party',
       hp: Math.round(stats.health),
       maxHp: stats.maxHealth,
-      ac: 10 + gear.defence,
-      toHit: 3 + gear.attack + Experience.toHitBonus,
-      damage: { count: 1, sides: weapon.die, bonus: gear.attack + Experience.damageBonus },
+      ac: sheet.ac,
+      toHit: sheet.toHit,
+      damage: { count: 1, sides: sheet.die, bonus: sheet.damageBonus },
       quickness: 2,
       verb: weapon.verb!,
       weapon: weapon.effect,
