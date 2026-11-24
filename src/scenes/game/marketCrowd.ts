@@ -6,6 +6,7 @@
  * happening), and the two gossiping by the well talk back and forth.
  */
 import { childrensChatter, crowdGossip, Gossip, heroRemarks, pickGossip, TownNews } from '../../dialogue/marketCrowd';
+import { ashesOver, ashesState } from '../../dialogue/afterAshes';
 import { raidIsOver } from '../../dialogue/afterRaid';
 import type { Npc } from '../../entities/Npc';
 import { Bounties } from '../../systems/Bounties';
@@ -49,6 +50,7 @@ export function townNews(hour: number): TownNews {
     hour,
     weather: Weather.now.kind,
     raidOver: raidIsOver(),
+    ashes: ashesOver() ? ashesState() : undefined,
     motherSick: !!medicine && !medicine.completed,
     motherWell: !!medicine?.completed,
     paidToll: QuestLog.hasFlag('paid-toll'),

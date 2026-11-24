@@ -8,6 +8,7 @@
  */
 import Phaser from 'phaser';
 import { COMPANIONS, Companions } from '../../systems/Companions';
+import { wentDown } from '../../dialogue/afterAshes';
 import { Inventory } from '../../systems/Inventory';
 import { Needs } from '../../systems/Needs';
 import { QuestLog } from '../../systems/Quests';
@@ -176,6 +177,8 @@ export function buryingMother(g: GameScene): void {
   if (!QuestLog.hasFlag('mother-buried') || QuestLog.isDone('the-raid', 'bury')) return;
   QuestLog.clearFlag('carrying-mother');
   g.busy = true;
+  // Who came down with the hero, for what the village says of it after (dialogue/afterAshes.ts).
+  for (const id of Companions.fighters) QuestLog.setFlag(wentDown(id));
   const carrier = Companions.fighters[0];
   const lines = [
     'We buried her in the hollow beside the cottage, under the hawthorn, where the bluebells come up in spring. As she asked.',

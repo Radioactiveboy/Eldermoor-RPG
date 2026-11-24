@@ -60,6 +60,8 @@ export const QUEST_STANDING: Partial<Record<string, Partial<Record<Faction, numb
   'cellar-rats': { adowvale: 8 },
   'wolf-mother': { monastery: 30, militia: 12, adowvale: 10 },
   'mother-medicine': { monastery: 8 },
+  // Down the goblins' hole on the Greyfells, and Mother brought home.
+  'the-raid': { adowvale: 15, militia: 10, monastery: 5 },
 };
 
 /** The chance meetings on the plains (world/PlainsEvents.ts), and how each can end. */

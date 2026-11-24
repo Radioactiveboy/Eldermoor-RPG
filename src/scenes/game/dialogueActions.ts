@@ -15,6 +15,7 @@ import { RAID_ACTIONS } from './raid';
 import { GATE_ACTIONS } from './gate';
 import { TRAIL_ACTIONS } from './trail';
 import { WARREN_ACTIONS } from './broodhall';
+import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 
@@ -32,6 +33,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...TRAIL_ACTIONS,
   ...WARREN_ACTIONS,
   ...FISHING_ACTIONS,
+  ...ASHES_ACTIONS,
   ...BEACON_ACTIONS,
 };
 
