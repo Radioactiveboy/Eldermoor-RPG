@@ -3,10 +3,11 @@
  * hero level 1-6, with the kit in KIT_BY_LEVEL and the hero's rules of thumb
  * in systems/CombatSim.ts. Run with `npm run sim`; add `-- --fights 5000` for
  * steadier numbers, `-- --weapons` for each weapon at level 1, or
- * `-- --markdown` for a table to paste into a pull request.
+ * `-- --markdown` for a table to paste into a pull request, or `-- --brute` for
+ * the Brute at the door of the brood hall, later on and with companions.
  */
 import type { FoeKind } from '../src/systems/Combat';
-import { KIT_BY_LEVEL, simulate } from '../src/systems/CombatSim';
+import { KIT_BY_LEVEL, LATE_KIT, simulate } from '../src/systems/CombatSim';
 import { ItemId, itemDef } from '../src/systems/Inventory';
 
 const args = process.argv.slice(2);
@@ -63,3 +64,15 @@ if (flag('weapons')) {
   }
 }
 
+
+if (flag('brute')) {
+  // The Brute and the two at his side (see world/BroodHallMap.ts), in the best kit there is.
+  console.log('\nThe Brute in the brood hall (+ a cutter and a spearman), best kit: alone, with Sigrun, with Sigrun and Wat.\n');
+  const parties = [[], ['sigrun'], ['sigrun', 'wat']] as const;
+  for (const level of [8, 9, 10, 11, 12, 13]) {
+    const cells = parties.map((allies) =>
+      cell(simulate(level, 'goblinbrute', 1, { fights, kit: LATE_KIT, escort: { goblin: 1, goblinspear: 1 }, allies: [...allies] })).padEnd(20),
+    );
+    console.log([`L${level}`.padEnd(8), ...cells].join(''));
+  }
+}

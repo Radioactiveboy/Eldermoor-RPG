@@ -588,6 +588,21 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Shuts a conversation that's still open, at once and without what would
+   * follow it (a shop, an order, an afterTalk): a fight has broken out (see
+   * game/combat.ts startCombat), and the box would sit over it.
+   */
+  closeDialogue(): void {
+    if (!this.scene.isActive('Dialogue') && !this.scene.isPaused('Dialogue')) return;
+    const dialogue = this.scene.get('Dialogue');
+    dialogue.events.removeAllListeners('dialogue-closed');
+    this.scene.stop('Dialogue');
+    this.pendingShop = undefined;
+    this.ordered = undefined;
+    this.afterTalk = undefined;
+  }
+
   /** Brew at a bench or cook at a hearth (see scenes/StationScene.ts). */
   openStation(station: string): void {
     if (!this.takeControls()) return;

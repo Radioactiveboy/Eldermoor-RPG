@@ -160,6 +160,8 @@ export function startCombat(g: GameScene, first: Creature, raid?: Creature[], ba
     first.disengage();
     return;
   }
+  // A conversation still open (the gate's bands come on mid-word) is cut off: the fight comes first.
+  g.closeDialogue();
   if (g.seat) standUp(g);
   if (g.channel) cancelChannel(g);
   g.busy = true;
