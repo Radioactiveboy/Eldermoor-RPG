@@ -1,9 +1,9 @@
 /** Keyboard, mouse and touch in the world: moving, click-to-walk, pathfinding to a spot, and the hover tile. */
 import Phaser from 'phaser';
-import { CAMERA_ZOOM, PLAYER_RADIUS } from '../../config';
+import { PLAYER_RADIUS } from '../../config';
 import { gridToScreen, screenToGrid, Vec2 } from '../../iso/IsoMath';
 import { findPath, GridPoint } from '../../systems/Pathfinding';
-import { Display } from '../../ui/Display';
+import { pinchZoom, pinching } from '../../ui/PinchZoom';
 import type { GameScene } from '../GameScene';
 import { inRange, interactionAt, updateFocus } from './interactions';
 import { cancelChannel } from './sights';
@@ -32,15 +32,22 @@ export function setupInput(g: GameScene): void {
   kb.on('keydown-I', () => g.openInventory('satchel'));
   kb.on('keydown-C', () => g.openInventory('equipment'));
 
+  // (In a fight the fight's own scene takes the wheel and pinch, and zooms the same way.)
   g.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
     if (g.busy) return;
-    const cam = g.cameras.main;
-    cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), CAMERA_ZOOM.min * Display.render, CAMERA_ZOOM.max * Display.render));
-    g.fitCamera();
+    g.zoomBy(dy > 0 ? 0.9 : 1.1);
   });
+  pinchZoom(g, () => !g.busy, (factor) => g.zoomBy(factor));
 
   g.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
     if (g.busy) return;
+    // A second finger coming down is a pinch, not a tap: stop where the first one sent the hero.
+    if (pinching(g)) {
+      g.walkingTo = undefined;
+      g.player.setPath([]);
+      g.marker.setVisible(false);
+      return;
+    }
     const tile = pointerTile(g, pointer);
     if (g.channel) cancelChannel(g);
     // Clicking a person or thing walks over to it and uses it.
