@@ -16,6 +16,8 @@ import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../
 import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, MAID_CHORES, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
 import { watScript } from '../dialogue/companions';
 import { coombeScript, hildeCaptiveScript, motherDyingScript } from '../dialogue/warren';
+import { corwinScript, garthScript, tegScript, wrenScript } from '../dialogue/beacon';
+import { beaconHolders, beaconOutcome, beaconStage, BEACON_QUEST } from '../systems/Beacon';
 import { courierScript, footpadScript, goatherdScript, SHAREABLE_FOOD, tinkerScript, Wayfarers } from '../dialogue/wayfarers';
 import { ROOM_COUNT, Tavern } from '../systems/Tavern';
 import { TOLL } from '../world/MarketMap';
@@ -224,6 +226,25 @@ function medicineStage(): MedicineStage {
   if (Inventory.count('fever-tincture') > 0) return 'tincture';
   if (Inventory.count('moonpetal') > 0 && Inventory.count('willow-bark') > 0) return 'herbs';
   return 'looking';
+}
+
+/** Corwin Haske, as things stand with him: built again after each reply that changes them (the price haggled down, say). */
+function corwin(): DialogueScript {
+  const build = (first: boolean): DialogueScript => ({
+    ...corwinScript({
+      first,
+      errand: QuestLog.has(BEACON_QUEST) && !QuestLog.isDone(BEACON_QUEST, 'brigands'),
+      coins: Inventory.coins,
+      haggled: QuestLog.hasFlag('beacon-haggled'),
+      trusted: ['liked', 'honoured'].includes(Reputation.level('adowvale')),
+      toldOfAldo: QuestLog.hasFlag('beacon-told-aldo'),
+      keepers: beaconHolders() === 'keepers',
+    }),
+    refresh: () => build(first),
+  });
+  const first = !met.has('corwin');
+  met.add('corwin');
+  return build(first);
 }
 
 /** How Farmer Iran's errand for chicken feed stands (see the 'chicken-feed' quest). */
@@ -435,9 +456,16 @@ const NPCS: Record<string, NpcDef> = {
         slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
         goblinTalked: QuestLog.isDone('the-raid', 'prisoner'),
         paysSigrun: QuestLog.hasFlag('headman-pays-sigrun'),
+        beacon: beaconStage(),
+        beaconOutcome: beaconOutcome(),
       });
     },
   },
+  // The brigands holding the old beacon on Corbie Tor (world/BeaconMap.ts), or keeping it for the Headman, once Corwin has been talked round.
+  corwin: { texture: 'folk-corwin', loiters: true, talkRange: 2.4, script: corwin },
+  garth: { texture: 'folk-garth', loiters: true, script: () => garthScript(beaconHolders() === 'keepers') },
+  teg: { texture: 'folk-teg', loiters: true, script: () => tegScript(beaconHolders() === 'keepers') },
+  wren: { texture: 'folk-wren', loiters: true, talkRange: 2.4, script: () => wrenScript(beaconHolders() === 'keepers') },
   steward: { texture: 'folk-steward', script: (hour) => wayfarer('steward', (first) => stewardScript(raidIsOver(), first, Npc.within([7, 22], hour)))() },
   housemaid: { texture: 'folk-housemaid', roam: 3, bustles: true, script: () => housemaidScript(raidIsOver()) },
   housecook: { texture: 'folk-housecook', roam: 2, script: () => housecookScript(raidIsOver()) },

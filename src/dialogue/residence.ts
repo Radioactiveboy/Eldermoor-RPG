@@ -1,5 +1,6 @@
 import { HERO_NAME } from '../config';
 import type { DialogueChoice, DialogueNode, DialogueScript } from './Dialogue';
+import { BeaconOutcome, BeaconStage, beaconTopics } from './beacon';
 
 /**
  * The Headman's residence at the south end of Adowvale (see
@@ -30,6 +31,9 @@ export interface HeadmanTalk {
   goblinTalked?: boolean;
   /** He's promised to pay Sigrun's hire. */
   paysSigrun?: boolean;
+  /** His errand to the old beacon on Corbie Tor, offered once Mother is home and buried (see dialogue/beacon.ts). */
+  beacon?: BeaconStage;
+  beaconOutcome?: BeaconOutcome;
 }
 
 /**
@@ -184,7 +188,8 @@ export function headmanTopics(t: HeadmanTalk): HeadmanTopic[] {
       },
     },
   ];
-  return topics.filter((topic) => !topic.when || topic.when(t));
+  // The beacon's errand comes first while there's something new in it.
+  return [...beaconTopics(t.beacon, t.beaconOutcome), ...topics.filter((topic) => !topic.when || topic.when(t))];
 }
 
 /** Headman Osbert Hale: grey-bearded, careful, kind under it, and very tired since the raid. */

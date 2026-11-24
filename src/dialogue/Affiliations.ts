@@ -51,6 +51,11 @@ export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   snikkit: { label: 'Goblin Warband', known: 'sight' },
   footpad: { label: 'Footpads of the Plains', known: 'met' },
   cutpurse: { label: 'Footpads of the Plains', known: 'met' },
+  // Corwin wears the old watch's colours; the rest are known by the company they keep.
+  corwin: { label: 'Brigands of Corbie Tor', known: 'met' },
+  garth: { label: 'Brigands of Corbie Tor', known: 'met' },
+  teg: { label: 'Brigands of Corbie Tor', known: 'met' },
+  wren: { label: 'Brigands of Corbie Tor', known: 'met' },
 
   baker: VILLAGE,
   smith: VILLAGE,

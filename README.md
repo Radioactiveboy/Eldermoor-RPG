@@ -30,7 +30,8 @@ npm run sim          # the balance table: 1,000 simulated fights per foe and pac
 `npm run sim` (`tools/balance.ts`) plays fights with no screen, using the real rules in `systems/Combat.ts`
 and a hero who follows a few rules of thumb with a typical kit for each level (`systems/CombatSim.ts`). It prints
 the win rate, rounds to win and health lost for every fight the game sets up. Add `-- --weapons` to compare
-the weapons at level 1, `-- --fights 5000` for steadier numbers, or `-- --markdown` for a table to paste.
+the weapons at level 1, `-- --fights 5000` for steadier numbers, `-- --markdown` for a table to paste, or `-- --brute`
+and `-- --beacon` for the brood hall's Brute and Corwin Haske's band, later on and with companions.
 `tests/unit/balance.test.ts` checks the tuning targets (a lone wolf nearly always won at level 1, two wolves about
 3 times in 4, the Wolf Mother's den about 60% at levels 3-4), so a change to `FOES` that moves them fails the tests.
 
@@ -170,6 +171,18 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   table with their logbook on it (read it), rusted spears, their fire ring, tally marks on the wall, and their chest,
   which can be searched once for something worth having (a spear, an iron cap, a buckler or old pennies). Two rats
   live in the heap of fallen stone
+- **The beacon on Corbie Tor**: up the north road onto the upland, a sheep path turns off east past a waymark cairn
+  to a tor in the far north-east of the plains, where the old signal beacon stands: a great round stone tower like
+  a lighthouse, battlements and an iron brazier on top, heather and grey boulders round it, the warden's woodpile
+  and the shell of his hut. Smoke rises from the top while anyone keeps a fire inside. Once Mother is home and
+  buried, **Headman Hale** asks you to go up and see whether it can be opened again (and not to light it): the
+  side quest **The Beacon on Corbie Tor**. Inside, the hall is held by brigands, modelled in HD like the companions:
+  Corwin Haske, who kept the beacon for twenty years until Lord Morten stood the watch down (and knew your father),
+  Big Garth with his maul, masked Teg with two hatchets, and Wren on the stair with her longbow. Pay them to go
+  (80 coins, or 60 if you haggle), talk Corwin into keeping the tower again for the Headman's wage and a pardon (on
+  your word if Adowvale likes you, or with 20 coins on account), or fight all four at once. Then climb the stair to
+  the roof, with the painted sky all round, look over the brazier, and report back to the Headman. Try
+  `?area=beacon` or `?area=beacon-top`; `npm run sim -- --beacon` prints how the fight goes
 - **Chance meetings on Adowvale Plains**: now and then, out on the plains, something happens along the Lord's Road.
   Footpads (Rook and Nab) step out of the grass and ask for half your purse: pay, talk your way out (if you've killed
   the Wolf Mother), or fight them. Jory the tinker has stopped to rest and will trade odds and ends. Mags the goatherd
@@ -258,7 +271,7 @@ they only count when a new game starts (on the title screen, begin a new journey
 
 | Switch | What it does |
 | --- | --- |
-| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `garrison`, `jail` (the cells under it), `residence` (the Headman's house), `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
+| `?area=<id>` | Start in that area: `world` (the Hollow outside the cottage), `hut` (Farmer Iran's), `cave`, `northwoods`, `watchtower` (inside the old watchtower there), `beacon` (inside the beacon on Corbie Tor), `beacon-top` (its roof), `market` (Adowvale's square), `tavern`, `tavern-hall`, `cellar`, `smithy`, `bakery`, `garrison`, `jail` (the cells under it), `residence` (the Headman's house), `plains`, `den` (the Wolf Mother's den), `deepden` (through the crevice behind it), `monastery`, `abbey`, `chapel`, `infirmary`, `scriptorium`, `refectory`. `home` is where a new game starts anyway; every area with `test: true` in `scenes/game/areas.ts` works |
 | `?hour=21` | Start at that hour (0 to 23.99; 21 is 9pm) |
 | `?raid=night` | Start at 20:00 with the tincture in the satchel and Mother's errand otherwise done (talk to her to give it) |
 | `?raid=morning` | Wake on the morning of the goblin raid |
@@ -299,6 +312,8 @@ src/
                             wild cats, and after the raid the goblins' trail north (scenery only)
     WatchtowerMap.ts        Inside the old watchtower (7x7): roofless, the broken stair, the last watch's table,
                             logbook, spears, fire ring and chest, a rooks' nest, and two rats
+    BeaconMap.ts            Inside the beacon on Corbie Tor (9x9): the brigands' hall, the warden's desk and book,
+                            the stair to the hatch; and its roof (7x7): battlements, the brazier, fuel and the horn
     MarketMap.ts            Adowvale: the market square (stalls, well, houses, the inn, smithy and bakery doors,
                             the militia, the bounty board) and the lane north to Lord Morten's toll gate
     TavernMap.ts            The Crooked Tankard: taproom, the passage upstairs, a room to let, the cellar and its rats
@@ -492,6 +507,8 @@ src/
     abbey.ts                Saint Elda's within: the ranges round the cloister, the herb garden, the rooms' furnishings
     cave.ts                 The cave mouth, rock walls, stalactites, bones, the dead ewes, the locked door
     northwoods.ts           The watchtower (and its roofless inside), fallen trees, brambles, ford stones, the goblins' trail
+    beacon.ts               The beacon tower on Corbie Tor, its knoll, the hall inside, the roof and the painted sky
+    brigands3d.ts           Corwin Haske's band in HD: walking figures and full fight sheets, as the goblins have
     ruin.ts                 After the raid: burnt walls and furniture, blood and ash, fires, burnt fences and coop
     scorch.ts               Fire damage: makes any shader or texture come out charred and holed
     herbs.ts                Wild herb patches, grown and picked

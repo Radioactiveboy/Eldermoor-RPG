@@ -50,6 +50,8 @@ export const AREA_NAMES: Record<AreaId, string> = {
   plains: 'Adowvale Plains',
   northwoods: 'The north woods',
   watchtower: 'The old watchtower',
+  beacon: 'The beacon on Corbie Tor',
+  'beacon-top': 'The top of the beacon',
   greyfells: 'Greyfells Clearing',
   warren: "The goblins' warren",
   broodhall: 'The brood hall',
