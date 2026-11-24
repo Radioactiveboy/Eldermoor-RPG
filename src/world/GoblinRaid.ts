@@ -11,7 +11,7 @@ import { QuestLog } from '../systems/Quests';
 import { CutScene } from '../ui/CutScene';
 import type { Speaker } from '../ui/SpeechBubbles';
 import type { IsoMap } from './IsoMap';
-import { MapData, MapObject, placeObject, Prop } from './MapData';
+import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 
 /**
  * The goblin raid on the cottage, the morning after Mother takes her
@@ -447,3 +447,27 @@ export const RAID_BLACKOUT = [
   'Smoke. Laughing. Heat on my face.',
   'Then nothing at all.',
 ];
+
+/**
+ * Mother's grave, in the hollow beside the cottage (see scenes/game/warren.ts): a long mound
+ * under a cairn of stones off the cottage's west side, and a spot beside it to stand at.
+ */
+export function graveWorld(data: MapData): void {
+  const home = (data.objects ?? []).find((o) => o.key.startsWith('bld-cottage'));
+  if (!home) return;
+  // West of the house, a little south: the first clear patch of grass going out from it.
+  const spots: Array<[number, number]> = [[-2, 3], [-3, 2], [-2, 4], [-3, 4], [-4, 2], [-1, 4], [0, 4]];
+  for (const [dx, dy] of spots) {
+    const tx = home.tx + dx;
+    const ty = home.ty + dy;
+    const clear = [[0, 0], [1, 0], [1, 1], [0, 1]].every(([x, y]) => data.props[ty + y]?.[tx + x] === Prop.None && data.terrain[ty + y]?.[tx + x] === Terrain.Grass);
+    if (!clear) continue;
+    placeObject(data, { key: 'grave-mother', tx, ty, w: 1, h: 1 });
+    (data.entries ??= {}).grave = { x: tx + 2.4, y: ty + 1.9 };
+    (data.sights ??= []).push({
+      id: 'grave-mother', gx: tx + 0.5, gy: ty + 0.5, label: 'Stand by the grave', z: 20,
+      thought: "Mother's cairn, and the marker with her name on it, and Father's under it. Aldo. The bluebells will come up here in spring.",
+    });
+    return;
+  }
+}

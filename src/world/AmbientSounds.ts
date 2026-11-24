@@ -85,6 +85,10 @@ const PLACES: Record<AreaId, Place> = {
   cave: { cave: 1, echo: 1 },
   den: { cave: 0.9, echo: 1 },
   deepden: { cave: 1, echo: 1 },
+  // The goblins' tunnels: their fires, and every sound coming back off the rock.
+  warren: { cave: 0.85, fire: 0.3, echo: 0.8 },
+  // The brood hall: braziers, and close, hot air.
+  broodhall: { cave: 0.7, fire: 0.5, echo: 0.9 },
 };
 
 /**

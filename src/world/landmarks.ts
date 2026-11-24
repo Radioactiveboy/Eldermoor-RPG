@@ -6,7 +6,7 @@
  * (see scenes/game/areas.ts). Anything the rest of the game reads from a map belongs here too.
  */
 import { box, Shape } from './Collision';
-import type { Door, HenPen, Sight } from './MapData';
+import type { CreatureSpawn, Door, HenPen, Sight } from './MapData';
 
 /** Where Osric stands to the anvil's face, and Hilde's kneading trough (WorkshopMaps), for the sparks and the flour. */
 export const ANVIL = { x: 3.5, y: 3.3 };
@@ -88,3 +88,18 @@ export const MOPPET_SIGHT: Sight = { id: 'ruin-moppet', gx: 4.6, gy: 5.5, label:
  * beside the cottage, its crops trampled flat (see MapGenerator.ts addGarden).
  */
 export const GARDEN_PEN: HenPen = { x0: 24, y0: 35, x1: 29, y1: 40 };
+
+/** Where the hero comes into the goblins' warren (WarrenMap), from the hole in the hill on the Greyfells. */
+export const WARREN_MOUTH = { x: 1.2, y: 3.5 };
+
+/** The brood hall at the bottom of the warren (BroodHallMap): Mother's furs (2 x 1) and where she is spoken to, and the orb on its plinth. */
+export const MOTHER_PALLET = { tx: 15, ty: 15 };
+export const MOTHER_AT = { x: 16.2, y: 16.6 };
+export const ORB = { tx: 16, ty: 20 };
+/** The goblins who come pouring out of their holes at the far end of the brood hall when the orb sets them on the hero. */
+export const SWARM: CreatureSpawn[] = [
+  { id: 'bh-swarm-0', kind: 'goblinspear', gx: 22.5, gy: 24.5, notice: 12 },
+  { id: 'bh-swarm-1', kind: 'goblin', gx: 23.5, gy: 21.5, notice: 12 },
+  { id: 'bh-swarm-2', kind: 'goblintorch', gx: 20.5, gy: 26.2, notice: 12 },
+  { id: 'bh-swarm-3', kind: 'goblin', gx: 24.2, gy: 18.5, notice: 12 },
+];

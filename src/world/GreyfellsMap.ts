@@ -2,18 +2,9 @@ import Phaser from 'phaser';
 import { box, circle } from './Collision';
 import { CreatureSpawn, MapData, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine, Vec } from './MapGenerator';
+import { GOBLIN_CAMP, GREYFELLS_H, GREYFELLS_SOUTH_X, GREYFELLS_TRAIL, GREYFELLS_W, greyfellsHills, HILL_BLOCKS, TARN, WARREN, WARREN_MOUTH } from './greyfellsHills';
 
-export const GREYFELLS_W = 48;
-export const GREYFELLS_H = 56;
-
-/** Where the goblins' trail comes up out of the north woods, along the south edge. */
-export const GREYFELLS_SOUTH_X = 21;
-/** The middle of the goblins' camp: their cookfire. */
-export const GOBLIN_CAMP = { x: 23.5, y: 21.5 };
-/** The back corner of the hole in the hill (4x4; its mouth is the front corner tile, (3, 3)). */
-export const WARREN = { tx: 21, ty: 3 };
-/** The tarn, a cold little lake east of the camp. */
-const TARN = { x: 37, y: 31, rx: 5.5, ry: 3.8 };
+export { GOBLIN_CAMP, GREYFELLS_H, GREYFELLS_SOUTH_X, GREYFELLS_W, WARREN } from './greyfellsHills';
 
 /**
  * The edge of the Greyfells: the open moor above the north woods, where the
@@ -55,17 +46,8 @@ export function buildGreyfellsMap(): MapData {
   }
 
   // The goblins' trail: up from the woods, through the camp, and on to the hole in the hill.
-  const mouth = { x: WARREN.tx + 3.5, y: WARREN.ty + 4.4 };
-  const trail = smoothLine([
-    { x: GREYFELLS_SOUTH_X + 0.5, y: H + 2 },
-    { x: 20, y: H - 9 },
-    { x: 23, y: 40 },
-    { x: 21.5, y: 31 },
-    { x: GOBLIN_CAMP.x, y: GOBLIN_CAMP.y + 3.5 },
-    { x: GOBLIN_CAMP.x + 1.5, y: GOBLIN_CAMP.y - 4 },
-    { x: 25.5, y: 12 },
-    { x: mouth.x, y: mouth.y - 0.8 },
-  ]);
+  const mouth = WARREN_MOUTH;
+  const trail = smoothLine(GREYFELLS_TRAIL);
   paintPath(terrain, trail, (t) => 0.55 + 0.12 * Math.sin(t * 17.3));
   // The camp's trodden ground round the fire.
   for (let y = 0; y < H; y++) {
@@ -79,6 +61,7 @@ export function buildGreyfellsMap(): MapData {
 
   const near = (line: Vec[], x: number, y: number, within: number) => line.some((p) => Math.hypot(p.x - x, p.y - y) < within);
   const inCamp = (x: number, y: number) => Math.hypot(x - GOBLIN_CAMP.x, (y - GOBLIN_CAMP.y) * 1.1) < 8;
+  const hills = greyfellsHills();
   const underHill = (x: number, y: number) => x >= WARREN.tx - 2 && x < WARREN.tx + 7 && y < WARREN.ty + 6;
 
   // Boulders on the open fell, thick where the rock breaks through, trees only near the wood's edge to the south,
@@ -88,14 +71,24 @@ export function buildGreyfellsMap(): MapData {
       if (terrain[y][x] !== Terrain.Grass) continue;
       const cx = x + 0.5;
       const cy = y + 0.5;
+      // Where the land rises into the hills, nobody goes; scree spills out at their foot.
+      const rise = hills.tileMax(x, y);
+      if (rise >= HILL_BLOCKS) {
+        props[y][x] = Prop.Blocked;
+        continue;
+      }
       if (near(trail, cx, cy, 1.5) || inCamp(cx, cy) || underHill(cx, cy)) continue;
+      if (hills.tileMax(x - 1, y - 1) >= HILL_BLOCKS * 3 || hills.tileMax(x + 1, y + 1) >= HILL_BLOCKS * 3 || rise > 1) {
+        if (rnd.frac() < 0.3) props[y][x] = Prop.Rock;
+        continue;
+      }
       const edge = Math.min(x, y, W - 1 - x, H - 1 - y);
       const woods = Math.max(0, (y - (H - 12)) / 12);
       const stony = scree(cx, cy);
       const roll = rnd.frac();
-      if (edge < 2) props[y][x] = y > H - 6 ? Prop.Tree : roll < 0.8 ? Prop.Rock : Prop.None;
+      if (edge < 2 && y > H - 6) props[y][x] = Prop.Tree;
       else if (roll < 0.03 + woods * 0.5) props[y][x] = Prop.Tree;
-      else if (roll < 0.03 + woods * 0.5 + (stony ? 0.34 : 0.06)) props[y][x] = Prop.Rock;
+      else if (roll < 0.03 + woods * 0.5 + (stony ? 0.12 : 0.03)) props[y][x] = Prop.Rock;
     }
   }
 
@@ -110,6 +103,8 @@ export function buildGreyfellsMap(): MapData {
     decor: 0.12,
     // Open moor: browner and greyer than the Hollow's grass.
     groundShade: 0xa89c7e,
+    // The hills all round the clearing.
+    hills,
     entries: { northwoods: entry },
     doors: [],
     sights: [],
@@ -123,7 +118,7 @@ export function buildGreyfellsMap(): MapData {
     ],
     musings: [
       {
-        x0: 2, y0: 2, x1: 14, y1: 10,
+        x0: 17, y0: 9, x1: 31, y1: 14,
         text: 'The fell climbs on north into the hills, grey on grey, as far as I can see. Nothing up there but wind and stone.',
       },
     ],
@@ -217,13 +212,18 @@ export function buildGreyfellsMap(): MapData {
   });
 
   // ---- The hole in the hill ----
-  for (let y = WARREN.ty - 1; y < WARREN.ty + 5; y++) for (let x = WARREN.tx - 1; x < WARREN.tx + 5; x++) if (props[y]?.[x] !== undefined) props[y][x] = Prop.None;
+  for (let y = WARREN.ty - 1; y < WARREN.ty + 5; y++) for (let x = WARREN.tx - 1; x < WARREN.tx + 5; x++) if (props[y]?.[x] !== undefined && hills.tileMax(x, y) < HILL_BLOCKS) props[y][x] = Prop.None;
   for (let y = WARREN.ty; y < WARREN.ty + 4; y++) for (let x = WARREN.tx; x < WARREN.tx + 4; x++) terrain[y][x] = Terrain.Grass;
   const warrenBlocks: Array<[number, number]> = [];
   for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (!(x === 3 && y === 3)) warrenBlocks.push([x, y]);
   placeObject(data, { key: 'gf-warren', tx: WARREN.tx, ty: WARREN.ty, w: 4, h: 4, blocks: warrenBlocks });
-  // The mouth tile itself is too low and dark to go into, for now.
-  props[WARREN.ty + 3][WARREN.tx + 3] = Prop.Blocked;
+  // The mouth itself: down into the goblins' warren (WarrenMap), once the night they come for Adowvale is over (see game/warren.ts).
+  props[WARREN.ty + 3][WARREN.tx + 3] = Prop.None;
+  data.doors!.push({
+    id: 'warren', tx: WARREN.tx + 3, ty: WARREN.ty + 3, to: 'warren', entry: 'mouth', label: 'Go into the hole', facing: 'front',
+    ask: 'Do you want to go down into the hole? Whatever is down there, there is a great deal of it.',
+  });
+  data.entries!.warren = { x: WARREN.tx + 3.5, y: WARREN.ty + 4.6 };
   data.sights!.push({
     id: 'gf-warren', gx: WARREN.tx + 3.5, gy: WARREN.ty + 4.2, label: 'Look into the hole', z: 30,
     thought:

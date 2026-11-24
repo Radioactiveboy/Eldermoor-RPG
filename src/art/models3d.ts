@@ -1,7 +1,7 @@
 import { darker, type Tones } from './character';
 import { Detail, Hit, limb, Material, Model, Pose3D, Solid } from './figure3d';
 import { PALETTE as P } from './palette';
-import { captiveGoblinModel } from './goblins3d';
+import { captiveGoblinModel, shamanGoblinModel } from './goblins3d';
 import { MORTEN } from './tollgate';
 
 /**
@@ -89,6 +89,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   guard: guardModel,
   tollguard: tollGuardModel,
   iran: iranModel,
+  coombe: coombeModel,
   porter: porterModel,
   gardener: gardenerModel,
   silent: silentModel,
@@ -121,6 +122,7 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   housemaid: housemaidModel,
   housecook: housecookModel,
   snikkit: captiveGoblinModel,
+  shaman: shamanGoblinModel,
 };
 
 /** A dusting of flour: a scattered few points of a surface, the same every time it's drawn. */
@@ -536,18 +538,46 @@ function soldierModel(pose: Pose3D, look: SoldierLook): Model {
   return { solids, details };
 }
 
+/** How a countryman built like Farmer Iran is turned out. */
+interface CountrymanLook {
+  smock: Tones;
+  sleeve: Tones;
+  rope: Tones;
+  hair: Tones;
+  beard: Tones;
+  /** His battered straw hat. */
+  hat: boolean;
+}
+
+const IRAN_LOOK: CountrymanLook = {
+  smock: [0x9a8a6a, 0x6e6048, 0xb4a682],
+  sleeve: [0x7a5a3a, 0x54402a, 0x94704a],
+  rope: [0xc8b07a, 0x9a8458, 0xe0c890],
+  hair: [0x3a2e28, 0x241c18, 0x504038],
+  beard: [0x8a807a, 0x625a56, 0xa8a09a],
+  hat: true,
+};
+
+/** Coombe the shepherd, from over the fell: built like Iran, in a dark fleece-grey smock gone filthy in the goblins' pen, bare-headed, with a rust-red beard. */
+export function coombeModel(pose: Pose3D): Model {
+  return iranModel(pose, {
+    smock: [0x5e5a52, 0x3e3a34, 0x76726a],
+    sleeve: [0x4a3e34, 0x302820, 0x5e5044],
+    rope: [0x8a6a44, 0x644c30, 0xa48258],
+    hair: [0x8a4a2a, 0x5e301a, 0xa45e38],
+    beard: [0x9a5632, 0x6a3820, 0xb46a40],
+    hat: false,
+  });
+}
+
 /**
  * Farmer Iran: weathered and a little stooped, in a battered straw hat, a
  * grey beard, and an undyed wool smock tied at the waist with rope.
  */
-export function iranModel(pose: Pose3D): Model {
-  const smock: Tones = [0x9a8a6a, 0x6e6048, 0xb4a682];
-  const sleeve: Tones = [0x7a5a3a, 0x54402a, 0x94704a];
-  const rope: Tones = [0xc8b07a, 0x9a8458, 0xe0c890];
+export function iranModel(pose: Pose3D, look: CountrymanLook = IRAN_LOOK): Model {
+  const { smock, sleeve, rope, hair, beard } = look;
   const trouser: Tones = [0x4e4234, 0x342a20, 0x645440];
   const skin: Tones = [0xc8906a, 0x9c6a4c, 0xe0a882];
-  const hair: Tones = [0x3a2e28, 0x241c18, 0x504038];
-  const beard: Tones = [0x8a807a, 0x625a56, 0xa8a09a];
   const straw: Tones = [P.straw, P.strawDark, P.strawLight];
   const boots: Tones = [P.barkDark, P.ink, P.bark];
   // Sitting is sitting on the floor (huddled in a corner of the hut, after the raid): knees up, everything lower.
@@ -604,13 +634,18 @@ export function iranModel(pose: Pose3D): Model {
   solids.push({ cx: 0, cy: hy - 4.6, cz: hz + 2.6, rx: 3.2, ry: 2.2, rz: 2, material: beard });
   solids.push({ cx: 0, cy: hy + 0.2, cz: hz + 5.2, rx: 1, ry: 1.2, rz: 1, material: skin });
   // A battered straw hat: the brim droops on one side, the crown is dented.
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < (look.hat ? 16 : 0); i++) {
     const a = (i / 16) * Math.PI * 2;
     const droop = Math.max(0, Math.cos(a - 0.8)) * 1.3;
     solids.push({ cx: Math.cos(a) * 5.6, cy: hy + 3.6 - droop, cz: hz + Math.sin(a) * 5.2, rx: 3, ry: 0.8, rz: 3, material: straw });
   }
-  solids.push({ cx: 0, cy: hy + 5, cz: hz - 0.2, rx: 5, ry: 3.4, rz: 4.8, material: (h) => (Math.abs(h.y - (hy + 4)) < 0.5 ? sleeve : straw) });
-  solids.push({ cx: 0.8, cy: hy + 7.4, cz: hz, rx: 3.4, ry: 1.6, rz: 3.2, material: straw });
+  if (look.hat) {
+    solids.push({ cx: 0, cy: hy + 5, cz: hz - 0.2, rx: 5, ry: 3.4, rz: 4.8, material: (h) => (Math.abs(h.y - (hy + 4)) < 0.5 ? sleeve : straw) });
+    solids.push({ cx: 0.8, cy: hy + 7.4, cz: hz, rx: 3.4, ry: 1.6, rz: 3.2, material: straw });
+  } else {
+    // Bare-headed: a shock of hair, wild from days in the pen.
+    solids.push({ cx: 0, cy: hy + 2.4, cz: hz - 0.8, rx: 5.6, ry: 4.4, rz: 5.4, material: hair, soft: true });
+  }
 
   const details: Detail[] = [];
   for (const side of [-1, 1]) details.push({ x: side * 2, y: hy + 0.9, z: hz + 5, color: P.eye });

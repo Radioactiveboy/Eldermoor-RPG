@@ -532,6 +532,30 @@ export function captiveGoblinModel(pose: Pose3D): Model {
   return goblinModel(pose, GOBLIN_CAPTIVE);
 }
 
+/**
+ * The shaman who keeps the brood hall (see world/BroodHallMap.ts): old, bony and
+ * hunched almost double, grey-green gone pale as a toad's belly, in a hood and
+ * cape of black-dyed hide, white clay daubed across its face, and strings of
+ * bones and teeth round its neck. It carries nothing: what it has is the orb.
+ */
+export const GOBLIN_SHAMAN: GoblinLook = {
+  skin: [0x8a9a7a, 0x56624a, 0xb0bea0],
+  mottle: [0x6e7c60, 0x4c5642, 0x8a9878],
+  kilt: [0x3a3236, 0x262024, 0x524a4e],
+  hood: [0x2e2a32, 0x1c1a20, 0x46404a],
+  paint: [0xe8e4d8, 0xb8b4a8, 0xfffcf0],
+  bones: true,
+  eye: 0xc8a0ff,
+  weapon: 'none',
+  bulk: 0.85,
+  hunch: 3.6,
+};
+
+/** The brood hall's shaman as townsfolk are drawn (see folk.ts), for the 'folk-shaman' figure. */
+export function shamanGoblinModel(pose: Pose3D): Model {
+  return goblinModel(pose, GOBLIN_SHAMAN);
+}
+
 export type GoblinKind = 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute';
 
 export const GOBLIN_LOOKS: Record<GoblinKind, GoblinLook> = {

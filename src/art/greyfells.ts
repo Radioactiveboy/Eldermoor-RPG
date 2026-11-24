@@ -315,3 +315,4 @@ export function generateGreyfells(scene: Phaser.Scene): void {
   warren.canvas.toTexture(scene, 'gf-warren');
   MODEL_ART['gf-warren'] = { key: 'gf-warren', originX: warren.anchorX / warren.canvas.width, originY: warren.anchorY / warren.canvas.height };
 }
+

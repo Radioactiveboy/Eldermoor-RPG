@@ -160,9 +160,9 @@ function hall(o: HallLook): IsoModel {
   m.quad({ x: L, y: D / 2, z: H + R }, { x: ov, y: 0, z: 0 }, { x: 0, y: -D / 2 - ov, z: -R - 6 }, SLATE.dark);
   m.quad({ x: -ov, y: D / 2, z: H + R }, { x: L + ov * 2, y: 0, z: 0 }, { x: 0, y: D / 2 + ov, z: -R - 6 }, slates());
   m.box(-ov, D / 2 - 0.06, H + R - 2, L + ov * 2, 0.12, 4, { top: SLATE.light, left: SLATE.dark, right: SLATE.dark });
-  // A stone cross on the gable end.
-  m.box(L - 0.05, D / 2 - 0.05, H + R, 0.1, 0.1, 14, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
-  m.box(L - 0.05, D / 2 - 0.25, H + R + 8, 0.1, 0.5, 3, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
+  // The Saints' ring in stone on the gable end.
+  m.box(L - 0.05, D / 2 - 0.05, H + R, 0.1, 0.1, 6, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
+  m.quad({ x: L + 0.05, y: D / 2 - 0.23, z: H + R + 21 }, { x: 0, y: 0.46, z: 0 }, { x: 0, y: 0, z: -16 }, saintsRing(P.stoneDark, P.stone));
   if (o.bellcote) {
     const bx = L * 0.3;
     const z = H + R - 4;
@@ -326,7 +326,18 @@ function moonpetal(picked: boolean): IsoModel {
   return m;
 }
 
-/** A brother's grave: a low mound and a weathered headstone (or a stone cross). */
+/**
+ * The ring of the Saints, the sign the brothers keep (on the chapel's gable and altar, over their graves),
+ * as a shader for an upright square quad: a ring, lit on its left-hand side, and nothing inside or out.
+ */
+function saintsRing(base: number, light: number): (u: number, v: number) => number | null {
+  return (u, v) => {
+    const r = Math.hypot(u - 0.5, v - 0.5);
+    return r > 0.5 || r < 0.31 ? null : u < 0.45 ? light : base;
+  };
+}
+
+/** A brother's grave: a low mound and a weathered headstone (or a stone post with the Saints' ring on it). */
 function grave(cross: boolean, seed: number): IsoModel {
   const m = new IsoModel();
   m.quad({ x: 0.2, y: 0.15, z: 1 }, { x: 0.6, y: 0, z: 0 }, { x: 0, y: 0.7, z: 0 }, (u, v) => {
@@ -335,8 +346,8 @@ function grave(cross: boolean, seed: number): IsoModel {
   });
   const stone = rubble(0.4, 22, seed, 0.25);
   if (cross) {
-    m.box(0.45, 0.2, 0, 0.1, 0.1, 26, { top: P.stoneLight, left: stone, right: P.stoneDark });
-    m.box(0.33, 0.2, 16, 0.34, 0.1, 5, { top: P.stoneLight, left: stone, right: P.stoneDark });
+    m.box(0.45, 0.2, 0, 0.1, 0.1, 15, { top: P.stoneLight, left: stone, right: P.stoneDark });
+    m.quad({ x: 0.31, y: 0.3, z: 28 }, { x: 0.38, y: 0, z: 0 }, { x: 0, y: 0, z: -14 }, saintsRing(P.stone, P.stoneLight));
   } else {
     m.box(0.3, 0.18, 0, 0.4, 0.1, 20, {
       top: P.stoneLight,
@@ -386,7 +397,9 @@ function stoneWall(kind: StoneWallKind, index: number): Shader {
       }
     }
     if (kind === 'cross') {
-      if ((Math.abs(dx) < 1.6 && y > 38 && y < 70) || (Math.abs(y - 61) < 1.6 && Math.abs(dx) < 8)) return dx > 0.5 ? 0x9a7430 : P.gold;
+      // The Saints' ring in gilt, on a short post beneath it, as on the altar.
+      const r = Math.hypot(dx, (y - 50) * 1.15);
+      if ((r > 7 && r < 10.4) || (Math.abs(dx) < 1.3 && y > 31 && y < 42)) return dx > 0.5 ? 0x9a7430 : P.gold;
     }
     if (kind === 'board') {
       // A slate board in a wooden frame, chalked with the week's meals.
@@ -440,7 +453,7 @@ function makeStoneWall(scene: Phaser.Scene, key: string, side: 'back' | 'side', 
   put(scene, key, m, false);
 }
 
-/** The stone altar: a white cloth with a gold hem, a gilt cross and two candles burning. */
+/** The stone altar: a white cloth with a gold hem, the Saints' ring in gilt, and two candles burning. */
 function altar(): IsoModel {
   const m = new IsoModel();
   m.box(0.1, 0.1, 0, 1.8, 0.7, 4, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
@@ -454,8 +467,8 @@ function altar(): IsoModel {
     m.box(x, 0.4, 36, 0.05, 0.05, 6, { top: P.flowerWhite, left: P.flowerWhite, right: P.linen });
     m.box(x, 0.4, 42, 0.05, 0.05, 3, { top: P.fireYellow, left: P.fireYellow, right: P.fireOrange });
   }
-  m.box(0.97, 0.3, 28, 0.07, 0.07, 26, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
-  m.box(0.85, 0.3, 46, 0.31, 0.07, 4, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
+  m.box(0.97, 0.3, 28, 0.07, 0.07, 9, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
+  m.quad({ x: 0.75, y: 0.37, z: 55 }, { x: 0.5, y: 0, z: 0 }, { x: 0, y: 0, z: -18 }, saintsRing(P.gold, P.goldLight));
   return m;
 }
 

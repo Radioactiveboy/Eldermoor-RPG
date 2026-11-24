@@ -5,6 +5,8 @@ import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
 import { APPLE_ART, DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
 import { BlendLayer, blendTileKey, EDGE_VARIANTS, TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
+import { paintHills } from './HillPainter';
+import { HILL_BLOCKS } from './greyfellsHills';
 import { BakedLayer } from './BakedLayer';
 import { circle, circleHits, FULL_TILE, isBehind, offsetShape, Shape } from './Collision';
 import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
@@ -301,7 +303,9 @@ export class IsoMap {
       ground.draw(art.key, p.x, p.y, { flipX: !!obj.flipX, originX: obj.flipX ? 1 - art.originX : art.originX, originY: art.originY });
     }
     if (!this.data.indoor) this.renderOutskirts(ground, bounds);
+    const hills = this.data.hills ? this.renderHills(ground, bounds) : [];
     ground.bake(0);
+    for (const key of hills) this.scene.textures.remove(key);
 
     this.renderWalls();
     for (const obj of this.data.objects ?? []) if (!obj.flat) this.placeObject(obj);
@@ -383,6 +387,26 @@ export class IsoMap {
    * can walk there. Trees behind the map are baked into the ground; trees in
    * front of it go in one layer drawn over everything on the map.
    */
+  /** The map's hills (see HillPainter); returns the textures to drop once the ground is baked. */
+  private renderHills(ground: BakedLayer, bounds: Phaser.Geom.Rectangle): string[] {
+    const field = this.data.hills!;
+    const { width, height, props } = this.data;
+    const standing = new Set<number>();
+    for (const obj of this.data.objects ?? []) {
+      if (obj.flat) continue;
+      for (let y = obj.ty; y < obj.ty + obj.h; y++) for (let x = obj.tx; x < obj.tx + obj.w; x++) standing.add(y * width + x);
+    }
+    const painted = paintHills(this.scene, field, {
+      width,
+      height,
+      occupied: (tx, ty) => field.tileMax(tx, ty) < HILL_BLOCKS || props[ty][tx] === Prop.Tree || props[ty][tx] === Prop.Rock || standing.has(ty * width + tx),
+      groundShade: this.data.groundShade,
+      fog: OUTSKIRTS_FOG,
+      fade: OUTSKIRTS_FADE,
+    }, bounds, ground);
+    return painted.temporary;
+  }
+
   private renderOutskirts(ground: BakedLayer, canvas: Phaser.Geom.Rectangle): void {
     const { width, height, props } = this.data;
     const fog = Phaser.Display.Color.IntegerToColor(OUTSKIRTS_FOG);
@@ -428,6 +452,7 @@ export class IsoMap {
         // Thick forest, thickening further out, but never on the road or in the water.
         const edgeProp = props[ey][ex];
         if (t !== Terrain.Grass || edgeProp === Prop.Blocked) continue;
+        if (this.data.hills && this.data.hills.tileMax(tx, ty) > 1) continue;
         if (tileHash(tx, ty, 8) > 0.45 + 0.4 * Math.min(1, out / 4)) continue;
         const art = TREE_ART[Math.floor(tileHash(tx, ty, 6) * TREE_ART.length)];
         const tree = { tx, ty, x: center.x, y: center.y + 4, art, tint: tint(f), flip: tileHash(tx, ty, 7) < 0.5 };

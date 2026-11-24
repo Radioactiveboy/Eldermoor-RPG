@@ -27,6 +27,7 @@ import { regroup } from './companions';
 import { cancelChannel, give } from './sights';
 import { standUp } from './sitting';
 import { checkCellarClear } from './tavern';
+import { beatenUnderground, checkBroodHall } from './broodhall';
 
 /** The wolves of the den at home: once they're all gone, Brother Wystan hears of it. */
 export const CAVE_WOLVES = ['cave-wolf-1', 'cave-wolf-2', 'cave-wolf-3'];
@@ -137,7 +138,7 @@ export function spawnCreatures(g: GameScene): Creature[] {
       if (!g.defeatedFoes.has(id) && g.map.isWalkable(Math.floor(gx), Math.floor(gy))) spawns.push({ ...lead, id, gx, gy });
     }
   }
-  return spawns.map((s) => new Creature(g, g.map, s.id, s.kind, s.gx, s.gy, s.notice));
+  return spawns.map((s) => new Creature(g, g.map, s.id, s.kind, s.gx, s.gy, s.notice, s.asleep));
 }
 
 export function updateCreatures(g: GameScene, dt: number): void {
@@ -206,6 +207,8 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     return;
   }
   if (result.outcome === 'defeat') {
+    // Down the goblins' warren, nobody carries the hero all the way home: they come round on the fell outside (see game/warren.ts).
+    if (beatenUnderground(g)) return;
     const by = foes[0]?.kind === 'wolfmother' ? 'The Wolf Mother' : `A ${foes[0]?.name.toLowerCase() ?? 'beast'}`;
     // Whoever was fighting beside the hero got them home.
     const carrier = Companions.fighters[0];
@@ -263,6 +266,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     }
     if (result.slain.includes('den-mother')) slewWolfMother();
     checkCampCleared(g);
+    checkBroodHall(g, result.slain);
     if (g.gateAttack?.active) {
       g.release();
       g.gateAttack.won();

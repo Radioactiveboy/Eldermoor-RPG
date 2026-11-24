@@ -1,3 +1,4 @@
+import type { HillField } from './greyfellsHills';
 import type { TrackName } from '../audio/Audio';
 import type { HenKind } from '../art/henfarm';
 import type { FoeKind } from '../systems/Combat';
@@ -38,6 +39,8 @@ export type AreaId =
   | 'northwoods' | 'watchtower'
   // The open moor above the north woods, where the goblins camped on their way home with Mother.
   | 'greyfells'
+  // Under the Greyfells: the goblins' warren, and the brood hall at the bottom of it.
+  | 'warren' | 'broodhall'
   // Inside Saint Elda's walls: the grounds, and the rooms off them.
   | 'abbey' | 'chapel' | 'infirmary' | 'scriptorium' | 'refectory'
   // The Wolf Mother's den on the plains, and the passage beyond its crevice.
@@ -249,6 +252,8 @@ export interface CreatureSpawn {
    * in their camp on the Greyfells, who keep watch; the raiders only fight when the story says).
    */
   notice?: number;
+  /** Asleep where it lies until it notices the hero (`notice` is then how close they can creep). */
+  asleep?: boolean;
 }
 
 /** A named spot, shown under the area's name when the player is near it (see ui/LocationLabel.ts). */
@@ -329,6 +334,13 @@ export interface MapData {
   musings?: Musing[];
   /** Multiplies the colour of the ground (the gloom under thick woods); white or not given leaves it as it is. */
   groundShade?: number;
+  /**
+   * What stands past the map's edge (it's only painted): thick forest if not given. With `crags`, the
+   * north, west and east run on into crags (these art keys, all `cragSize` tiles across), and only the
+   * south, below `forestFromY`, is forest.
+   */
+  /** The lie of the land, where there are hills to paint (see HillPainter); the hills block the way where they rise. */
+  hills?: HillField;
   /** How much of the grass has flowers, tufts and pebbles on it (0..1; 0.22 if not given). */
   decor?: number;
   /** Tile rectangles (x0, y0 inclusive; x1, y1 exclusive) where the trees are apple trees. */

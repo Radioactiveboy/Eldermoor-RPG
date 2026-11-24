@@ -127,15 +127,15 @@ export function lookedAtCamp(id: string): void {
   QuestLog.writeDiary(find.diary);
 }
 
-/** Up onto the Greyfells: the first time, a thought and a diary line, and the quest moves on. */
+/** Up to Greyfells Clearing: the first time, a thought and a diary line, and the quest moves on. (Companions remark on the cold through the travel chatter.) */
 export function enteredGreyfells(g: GameScene): void {
   QuestLog.complete('the-raid', 'fells');
   if (g.visited.has('greyfells')) return;
   g.time.delayedCall(1000, () =>
-    g.onHint?.('Out of the trees at last, onto open moor. Wind, heather, grey stone. And smoke, up ahead: a fire, where nobody honest would light one.'),
+    g.onHint?.('Out of the trees and onto the fell, and the cold hits like a slap. Crags all round, wind, heather. And smoke up ahead: a fire, where nobody honest would light one.'),
   );
   QuestLog.writeDiary(
-    "Followed the goblins' trail up out of the north woods onto the Greyfells: open moor, heather and grey rock, and the wind never stops. " +
-      'There is smoke rising from a fire further up the trail.',
+    "Followed the goblins' trail up out of the north woods to Greyfells Clearing: a bowl of heather among the crags, bitter cold, and the " +
+      'wind never stops. There is smoke rising from a fire further up the trail.',
   );
 }

@@ -88,13 +88,13 @@ describe('the goblin camp on the Greyfells', () => {
     lookedAtCamp('gf-litter');
     expect(current()).toBe('warren');
     lookedAtCamp('gf-warren');
-    expect(current()).toBe('mother');
+    expect(current()).toBe('descend');
   });
 
   it('counts the camp as searched when the hero goes straight past it to the hole', () => {
     questionedGoblin();
     lookedAtCamp('gf-warren');
-    expect(current()).toBe('mother');
+    expect(current()).toBe('descend');
   });
 
   it('writes about the scratched stone once, without moving the quest on', () => {

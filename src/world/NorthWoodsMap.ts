@@ -375,7 +375,7 @@ function addGoblinTrail(data: MapData, way: Vec[], greyfells: boolean): void {
   const exit = way.reduce((best, p) => (Math.abs(p.y) < Math.abs(best.y) ? p : best));
   for (let tx = Math.floor(exit.x) - 1; tx <= Math.floor(exit.x) + 1; tx++) {
     for (let ty = 0; ty <= 2; ty++) if (data.props[ty][tx] === Prop.Tree || data.props[ty][tx] === Prop.Rock) data.props[ty][tx] = Prop.None;
-    data.doors!.push({ tx, ty: 0, to: 'greyfells', entry: 'northwoods', auto: true, ask: "Do you want to follow the goblins' trail up onto the Greyfells?" });
+    data.doors!.push({ tx, ty: 0, to: 'greyfells', entry: 'northwoods', auto: true, ask: "Do you want to follow the goblins' trail up to Greyfells Clearing?" });
   }
   data.entries!.greyfells = { x: Math.floor(exit.x) + 0.5, y: 2.4 };
 }
