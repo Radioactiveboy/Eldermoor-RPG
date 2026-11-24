@@ -19,6 +19,7 @@ import { sailTo } from './voyages';
 import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
+import { roseAction } from './blackrose';
 
 /** A named story effect: what happens when a line with this action is said. */
 export type DialogueAction = (g: GameScene) => void;
@@ -44,6 +45,7 @@ export function runDialogueAction(g: GameScene, action: string): void {
     g.pendingShop = action.slice(5) as ShopId;
     return;
   }
+  if (action.startsWith('rose-') && roseAction(g, action)) return;
   if (action.startsWith('drink:')) {
     drinkAtBar(g, action.slice(6) as ItemId);
     return;

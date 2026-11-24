@@ -2050,6 +2050,182 @@ const linnet = townsfolk({
   },
 });
 
+// ------------------------------------------------------------ The Black Rose
+// Gloomhaven's tavern (see art/blackrose3d.ts for the same folk in the round).
+
+/** The Widow Thorne: pale and gaunt, iron-grey hair in a hard bun, jet buttons up to a black lace collar, a black rose at her breast. */
+const thorne = townsfolk({
+  skin: 0xe4cfc0, hair: 0x6a6268, style: 'bun', cloth: 0x2a2428, shirt: 0x1e1a1e,
+  iris: 0x5a6a62, brow: 'arched', smile: -1, width: 15.5, jaw: 6, lashes: true, nose: 1, old: true, look: 1,
+  over: (c) => {
+    // Grey streaks scraped back from the temples, and the pin through the bun.
+    const grey = ramp(0xbab4ba);
+    for (let i = 0; i < 12; i++) for (const side of [-1, 1]) c.set(CX + side * (8 + i), 27 + Math.round(i * 0.6), grey[3 + (i % 2)]);
+    for (let i = -9; i <= 9; i++) c.set(CX + i, 15 + Math.round(i * 0.2), i % 3 ? P.outline : 0x9a8a6a);
+    // A high collar of black lace up the throat.
+    const lace = ramp(0x2a2428);
+    for (let y = 71; y < 78; y++) {
+      for (let x = CX - 9; x <= CX + 9; x++) c.set(x, y, (x * 3 + y * 5) % 7 === 0 ? 0x5a5258 : tone(lace, lightness((x - CX) / 12, 0), x, y));
+    }
+    for (let x = CX - 10; x <= CX + 10; x += 2) c.set(x, 71, 0x4a4248);
+    // Jet buttons down the bodice.
+    for (let y = 80; y < S; y += 4) { c.set(CX, y, 0x0e0c0e); c.set(CX, y - 1, 0x6a6470); }
+    // The black rose at her breast: dark petals, a glint of red at the heart, a leaf.
+    const rose = [0x1a0e12, 0x2e141c, 0x4a1e2a, 0x7a2838];
+    for (let r = 5; r >= 0; r--) {
+      for (let a = 0; a < 12; a++) {
+        const t = (a / 12) * Math.PI * 2 + r;
+        c.set(Math.round(CX + 14 + Math.cos(t) * r * 0.9), Math.round(86 + Math.sin(t) * r * 0.8), rose[Math.min(3, Math.floor((5 - r) / 1.5))]);
+      }
+    }
+    for (const [x, y] of [[CX + 20, 90], [CX + 21, 91], [CX + 19, 91], [CX + 20, 92]]) c.set(x, y, 0x2e3a2a);
+  },
+});
+
+/** Grubb: bald, huge-necked, broken nose and small eyes, stubble, tattoos and a leather jerkin. */
+const grubb = townsfolk({
+  skin: 0xd8a888, hair: 0x4a3a30, style: 'bald', cloth: 0x4a3626, shirt: 0x6a5a48,
+  iris: 0x3a2a20, brow: 'heavy', smile: -1, width: 21, jaw: 13, nose: 3, scar: true, blush: [0xc87a6a, 0.3], look: 0,
+  over: (c) => {
+    // A week's stubble on the jowls.
+    for (let y = EYE_Y + 10; y < 72; y++) {
+      for (let x = CX - 20; x <= CX + 20; x++) if ((x * 7 + y * 13) % 5 === 0 && c.get(x, y) !== null && Math.abs(x - CX) > 5) c.set(x, y, 0x8a6a58);
+    }
+    // A blue anchor tattooed on the side of the neck.
+    const ink = 0x3a4a7a;
+    for (let y = 64; y < 72; y++) c.set(CX - 11, y, ink);
+    for (let x = -3; x <= 3; x++) c.set(CX - 11 + x, 71 - Math.round(Math.abs(x) * 0.5), ink);
+    for (let x = -2; x <= 2; x++) c.set(CX - 11 + x, 65, ink);
+    // The jerkin's lacing.
+    for (let y = 80; y < S; y += 3) { c.set(CX - 2 + (y % 2), y, 0x2a1e14); c.set(CX + 2 - (y % 2), y + 1, 0x2a1e14); }
+  },
+});
+
+/** Midge: small and freckled, a grey kerchief over a mousy mop, an apron, a sharp, cheeky grin. */
+const midge = townsfolk({
+  skin: 0xecc4a4, hair: 0x8a6a4a, style: 'curly', cloth: 0x6a4a32, shirt: 0xd8ccb4, apron: 0xb8ac90, kerchief: 0x7a7470,
+  iris: 0x5a7a4a, brow: 'arched', smile: 2, width: 14, jaw: 5, lashes: true, freckles: true, blush: [0xe08070, 0.35], look: -1,
+  over: (c) => {
+    // A smudge of soot on the cheek, and the rag over her shoulder.
+    for (const [x, y] of [[CX + 12, 56], [CX + 13, 57], [CX + 11, 57], [CX + 12, 58]]) c.set(x, y, 0x8a7060);
+    const rag = ramp(0xc8bca0);
+    for (let y = 72; y < 92; y++) for (let x = CX + 24; x < CX + 32; x++) c.set(x, y, tone(rag, lightness(0.3, (y - 80) / 20) + ((x + y) % 4 === 0 ? -0.15 : 0), x, y));
+  },
+});
+
+/** Silas Crane: foxy and lean, a patch over one eye, a thin moustache, a slouch hat, gold in his ear, a mustard waistcoat under green. */
+const silas = townsfolk({
+  skin: 0xd8a886, hair: 0x2a2020, style: 'long', cloth: 0x2a3a30, shirt: 0x9a7a2a, cap: 0x2e2a26,
+  iris: 0x6a5a2a, brow: 'arched', smile: 2, width: 15.5, jaw: 7, moustache: 0x1a1414, nose: 2, earring: true, scar: true, look: 1,
+  over: (c) => {
+    // The black patch over his right eye, and its string across the brow.
+    const patch = ramp(0x1a1618);
+    blob(c, CX - EYE_DX, EYE_Y, 5.5, 4.5, patch, 0.05);
+    for (let x = CX - 22; x <= CX + 18; x++) {
+      const y = Math.round(EYE_Y - 4 - (x - (CX - EYE_DX)) * 0.22);
+      if (Math.abs(x - (CX - EYE_DX)) > 5 && c.get(x, y) !== null) c.set(x, y, 0x1a1618);
+    }
+    // The slouch hat's wide brim, dipping on one side.
+    const felt = ramp(0x2e2a26);
+    for (let x = CX - 34; x <= CX + 34; x++) {
+      const dx = (x - CX) / 34;
+      const y0 = Math.round(26 + dx * 3 + dx * dx * 2);
+      for (let y = y0; y < y0 + 4; y++) c.set(x, y, tone(felt, lightness(dx, (y - y0 - 2) / 3, 0.02), x, y));
+    }
+    for (let y = 6; y < 27; y++) {
+      const half = 20 * Math.sqrt(Math.max(0, 1 - ((27 - y) / 22) ** 2));
+      for (let x = Math.round(CX - half); x < Math.round(CX + half); x++) c.set(x, y, tone(felt, lightness((x - CX) / 22, (y - 16) / 20), x, y));
+    }
+    for (let x = CX - 19; x < CX + 19; x++) c.set(x, 23, 0x5a3a2a);
+    // Silver buttons on the waistcoat.
+    for (let y = 82; y < S; y += 5) c.set(CX + 3, y, 0xd8d0b0);
+  },
+});
+
+/** Hollis: the grown-out tonsure of a cast-out monk, grey stubble, a drinker's red nose and red-rimmed eyes, a brown habit's hood down. */
+const hollis = townsfolk({
+  skin: 0xe0b090, hair: 0x9a928a, style: 'bald', cloth: 0x5a4632, shirt: 0x5a4632,
+  iris: 0x5a7a8a, brow: 'worried', smile: 0, width: 16.5, jaw: 8, old: true, tired: true, nose: 2, blush: [0xd86a5a, 0.45], look: -1,
+  over: (c) => {
+    // The drinker's nose, redder than the rest.
+    for (const [x, y] of [[CX, 56], [CX + 1, 56], [CX - 1, 57], [CX, 57], [CX + 1, 57], [CX, 58]]) c.set(x, y, 0xc86a5a);
+    // Grey stubble.
+    for (let y = EYE_Y + 11; y < 72; y++) {
+      for (let x = CX - 17; x <= CX + 17; x++) if ((x * 5 + y * 11) % 4 === 0 && c.get(x, y) !== null && Math.abs(x - CX) > 4) c.set(x, y, 0xb4aca4);
+    }
+    // The cowl of the habit, fallen round his neck.
+    const cowl = ramp(0x5a4632);
+    for (let y = 66; y < 82; y++) {
+      for (let x = CX - 30; x <= CX + 30; x++) {
+        const dx = Math.abs(x - CX);
+        if (dx < 9 + (y - 66) * 0.4) continue;
+        c.set(x, y, tone(cowl, lightness((x - CX) / 30, (y - 74) / 10) + Math.sin(x * 0.6) * 0.06, x, y));
+      }
+    }
+    // A rope girdle's knot at the edge of the frame.
+    for (let y = S - 8; y < S; y++) c.set(CX - 6 + (y % 2), y, 0xb8a47a);
+  },
+});
+
+/** Old Sedge: wrinkled as a walnut, white wisps under a knitted cap, a checked shawl, a clay pipe in her gums. */
+const sedge = townsfolk({
+  skin: 0xc89a78, hair: 0xd8d4cc, style: 'long', cloth: 0x5a4a32, shirt: 0x6a5e48, cap: 0x4a5a3e,
+  iris: 0x8a8a6a, brow: 'worried', smile: 1, width: 15, jaw: 5, old: true, tired: true, nose: 2, look: 1,
+  over: (c) => {
+    // The shawl's check: brown and green bands.
+    for (let y = 74; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        if (c.get(x, y) === null || Math.abs(x - CX) < 9) continue;
+        if (((x >> 2) + (y >> 2)) % 3 === 0) c.set(x, y, 0x3e4a32);
+      }
+    }
+    // The clay pipe at the corner of her mouth, and a wisp of smoke.
+    for (let i = 0; i < 12; i++) c.set(CX + 5 + i, EYE_Y + 17 + Math.round(i * 0.15), 0xe8e0cc);
+    blob(c, CX + 18, EYE_Y + 16, 2.5, 2.5, ramp(0xd8ccb0), 0);
+    for (let i = 0; i < 10; i++) c.set(CX + 19 + Math.round(Math.sin(i * 0.8) * 2), EYE_Y + 12 - i, 0xa8a49c);
+  },
+});
+
+/** Dunn: a big slab of a face, flattened nose, short red-brown beard, a sailor's knitted cap. */
+const dunn = townsfolk({
+  skin: 0xe0a888, hair: 0x8a4a2a, style: 'short', cloth: 0x7a7462, shirt: 0x7a7462, cap: 0x3a3a4a,
+  iris: 0x4a5a6a, brow: 'heavy', smile: 0, width: 20, jaw: 12, beard: 0x8a4a2a, nose: 3, blush: [0xd0786a, 0.35], look: 0,
+});
+
+/** Ferret: thin and sallow, lank black hair, pock-marked, a sly crooked grin and shifty eyes. */
+const ferret = townsfolk({
+  skin: 0xd8c0a0, hair: 0x1e1a1c, style: 'long', cloth: 0x5a4a36, shirt: 0x8a8070,
+  iris: 0x6a5a3a, brow: 'stern', smile: 2, width: 13.5, jaw: 4, nose: 2, look: -1,
+  over: (c) => {
+    // Pock-marks, and a scrubby chin.
+    for (const [x, y] of [[CX - 12, 54], [CX - 9, 58], [CX + 10, 55], [CX + 13, 59], [CX - 14, 60], [CX + 8, 61]]) c.set(x, y, 0xb09a7c);
+    for (let y = 66; y < 71; y++) for (let x = CX - 5; x <= CX + 5; x++) if ((x + y) % 2 === 0 && c.get(x, y) !== null) c.set(x, y, 0x4a4040);
+    // His knife, held up by his face.
+    for (let i = 0; i < 14; i++) c.set(CX + 26 + Math.round(i * 0.2), 76 - i, i < 4 ? 0x3a2a1e : 0xc8ccd4);
+  },
+});
+
+/** Vane: an ageless pale face in the shadow of a fine grey hood, very light eyes, and nothing else to remember him by. */
+const vaneHood = hood(0x6a6a70);
+const vane = townsfolk({
+  skin: 0xe8dcd4, hair: 0xb8b4b0, style: 'short', cloth: 0x5a5a62, shirt: 0x3a3a42,
+  iris: 0x9ac8c0, brow: 'flat', smile: 1, width: 15, jaw: 6, nose: 1, look: 0,
+  behind: vaneHood.behind,
+  over: (c, f) => {
+    vaneHood.over?.(c, f);
+    // The hood's shadow over the brow.
+    for (let y = 26; y < EYE_Y - 3; y++) {
+      for (let x = CX - 20; x <= CX + 20; x++) {
+        const px = c.get(x, y);
+        if (px === null || px === undefined) continue;
+        c.set(x, y, mix(px, 0x2a2a32, 0.45 - (y - 26) * 0.02));
+      }
+    }
+    // A silver clasp at the hood's throat.
+    blob(c, CX, 78, 3, 2.5, ramp(0xc8c8d0), 0.1);
+  },
+});
+
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
@@ -2058,6 +2234,7 @@ const PAINTERS: Record<string, Painter> = {
   sergeant, jailer, prisoner, headman, steward, housemaid, housecook, snikkit,
   maren, ebb, wren,
   corwin, garth, teg, linnet,
+  thorne, grubb, midge, silas, hollis, sedge, dunn, ferret, vane,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide (the orb's is its own step; see orbPortrait.ts). */

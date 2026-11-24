@@ -54,7 +54,11 @@ export type AreaId =
   // On the lane at the south end of Adowvale: the militia garrison, its jail, and the Headman's residence.
   | 'garrison' | 'jail' | 'residence'
   // Down the lane past the garrison: Adowvale's landing on the river Wend, with its pier, boats and fishing huts.
-  | 'jetty';
+  | 'jetty'
+  // TEMPORARY: Gloomhaven itself comes from its own branch.
+  | 'gloomhaven'
+  // The Black Rose on Gloomhaven's square: the taproom, the back room behind the curtain, the passage upstairs, and the room to let.
+  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see

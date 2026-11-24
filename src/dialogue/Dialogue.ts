@@ -49,7 +49,8 @@ export type SpeakerId =
   | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook'
   | 'wat' | 'snikkit' | 'coombe' | 'orb'
   | 'maren' | 'ebb' | 'wren'
-  | 'corwin' | 'garth' | 'teg' | 'linnet';
+  | 'corwin' | 'garth' | 'teg' | 'linnet'
+  | 'thorne' | 'grubb' | 'midge' | 'silas' | 'hollis' | 'sedge' | 'dunn' | 'ferret' | 'vane';
 
 export interface Speaker {
   name: string;
@@ -120,4 +121,14 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   garth: { name: 'Big Garth', portrait: 'portrait-garth', voice: { pitch: 92, spread: 0.06, wave: 'sawtooth' } },
   teg: { name: 'Teg', portrait: 'portrait-teg', voice: { pitch: 215, spread: 0.2, wave: 'square' } },
   linnet: { name: 'Linnet', portrait: 'portrait-linnet', voice: { pitch: 300, spread: 0.1, wave: 'triangle' } },
+  // The Black Rose on Gloomhaven's square (see dialogue/blackrose.ts): the Widow, her doorman, her pot-girl, and the regulars.
+  thorne: { name: 'The Widow Thorne', portrait: 'portrait-thorne', voice: { pitch: 215, spread: 0.04, wave: 'sine' } },
+  grubb: { name: 'Grubb', portrait: 'portrait-grubb', voice: { pitch: 82, spread: 0.05, wave: 'sawtooth' } },
+  midge: { name: 'Midge', portrait: 'portrait-midge', voice: { pitch: 440, spread: 0.26, wave: 'triangle' } },
+  silas: { name: 'Silas Crane', portrait: 'portrait-silas', voice: { pitch: 160, spread: 0.2, wave: 'sawtooth' } },
+  hollis: { name: 'Hollis', portrait: 'portrait-hollis', voice: { pitch: 138, spread: 0.14, wave: 'sine' } },
+  sedge: { name: 'Old Sedge', portrait: 'portrait-sedge', voice: { pitch: 255, spread: 0.22, wave: 'triangle' } },
+  dunn: { name: 'Dunn', portrait: 'portrait-dunn', voice: { pitch: 88, spread: 0.04, wave: 'sawtooth' } },
+  ferret: { name: 'Ferret', portrait: 'portrait-ferret', voice: { pitch: 265, spread: 0.3, wave: 'square' } },
+  vane: { name: 'Vane', portrait: 'portrait-vane', voice: { pitch: 120, spread: 0.02, wave: 'sine' } },
 };

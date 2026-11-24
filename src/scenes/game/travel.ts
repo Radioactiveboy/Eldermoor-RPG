@@ -5,6 +5,7 @@ import { Inventory } from '../../systems/Inventory';
 import { marketOpen } from '../../systems/MarketHours';
 import { QuestLog } from '../../systems/Quests';
 import { Tavern } from '../../systems/Tavern';
+import { roseDoorAllowed } from './blackrose';
 import { clockText } from '../../systems/TimeOfDay';
 import { Door } from '../../world/MapData';
 import type { ConfirmSceneData } from '../ConfirmScene';
@@ -61,7 +62,7 @@ export function useDoor(g: GameScene, door: Door): void {
  * hero opens (and only while it's paid for).
  */
 export function doorAllowed(g: GameScene, door: Door): boolean {
-  if (!workshopOpen(g, door.to) || !residenceOpen(g, door.to) || !warrenDoorAllowed(g, door) || !beaconDoorAllowed(g, door)) return false;
+  if (!workshopOpen(g, door.to) || !residenceOpen(g, door.to) || !warrenDoorAllowed(g, door) || !beaconDoorAllowed(g, door) || !roseDoorAllowed(g, door)) return false;
   if (door.id === 'cellar' && !QuestLog.has('cellar-rats') && !QuestLog.hasFlag('may-use-cellar')) {
     GameAudio.rattle();
     g.onHint?.("The trapdoor is bolted, and Godric is watching me over the bar. Not without asking him first.");

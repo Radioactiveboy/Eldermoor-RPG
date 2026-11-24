@@ -31,6 +31,7 @@ import { beaconHolders } from '../../systems/Beacon';
 import { enteredBeacon, enteredBeaconTop } from './beacon';
 import { enteredWorkshop } from './workshops';
 import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
+import { enteredBlackRose, enteredRoseBack } from './blackrose';
 
 export interface AreaDef {
   /** Builds the area's map as things stand (gates open or shut, the farm whole or burnt). Needs load() first, if it has one. */
@@ -137,6 +138,12 @@ export const AREAS: Record<AreaId, AreaDef> = {
   broodhall: lazy(() => import('../../world/BroodHallMap'), (m) => m.buildBroodHallMap({ motherDead: QuestLog.hasFlag('mother-dead'), orbTaken: QuestLog.hasFlag('orb-taken') }), { test: true, enter: enteredBroodHall }),
   // Down the lane past the garrison: the landing on the river Wend.
   jetty: lazy(() => import('../../world/JettyMap'), (m) => m.buildJettyMap(), { test: true, enter: enteredJetty }),
+  gloomhaven: lazy(() => import('../../world/GloomhavenMap'), (m) => m.buildGloomhavenMap(), { test: true }),
+  // The Black Rose on Gloomhaven's square: the taproom, the back room, the passage upstairs, and the Widow's room to let (no ?area= for that).
+  blackrose: lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseMap(), { test: true, enter: enteredBlackRose }),
+  'blackrose-back': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseBackMap(), { test: true, enter: enteredRoseBack }),
+  'blackrose-upstairs': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseUpstairsMap(), { test: true }),
+  'blackrose-room': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseRoomMap()),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(
