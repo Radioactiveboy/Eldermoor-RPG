@@ -26,6 +26,8 @@ import { enteredMarket } from './market';
 import { enteredJetty } from './jetty';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
+import { beaconHolders } from '../../systems/Beacon';
+import { enteredBeacon, enteredBeaconTop } from './beacon';
 import { enteredWorkshop } from './workshops';
 import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 
@@ -112,7 +114,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
   garrison: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildGarrisonMap(), { test: true, enter: enteredGarrison }),
   jail: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildJailMap(raidStage() === 'over'), { test: true, enter: enteredJail }),
   residence: lazy(() => import('../../world/GarrisonMaps'), (m) => m.buildResidenceMap(), { test: true, enter: enteredResidence }),
-  plains: lazy(() => import('../../world/PlainsMap'), (m) => m.buildPlainsMap(), {
+  plains: lazy(() => import('../../world/PlainsMap'), (m) => m.buildPlainsMap(beaconHolders() !== 'empty'), {
     test: true,
     enter: firstVisit(
       'Open sky at last. The grass runs on for miles, and the wind smells of rain.',
@@ -142,6 +144,9 @@ export const AREAS: Record<AreaId, AreaDef> = {
         'but the last watch left their things behind: a table, rusted spears, a chest, and their logbook, rotted nearly to pulp.',
     ),
   }),
+  // The old beacon on Corbie Tor, up in the far north of the plains: the hall inside, held by brigands, and the roof with its brazier.
+  beacon: lazy(() => import('../../world/BeaconMap'), (m) => m.buildBeaconMap(beaconHolders()), { test: true, enter: enteredBeacon }),
+  'beacon-top': lazy(() => import('../../world/BeaconMap'), (m) => m.buildBeaconTopMap(), { test: true, enter: enteredBeaconTop }),
   den: lazy(() => import('../../world/DenMap'), (m) => m.buildDenMap(), { test: true, enter: enteredDen }),
   deepden: lazy(() => import('../../world/DenMap'), (m) => m.buildDeepDenMap(), {
     test: true,

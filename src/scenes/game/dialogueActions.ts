@@ -1,7 +1,7 @@
 /**
  * Story effects triggered by lines of dialogue (the `action` on a line or reply,
  * see dialogue/Dialogue.ts). The named ones live with their part of the story
- * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts, fishing.ts); add new ones there.
+ * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts, fishing.ts, beacon.ts); add new ones there.
  */
 import { ItemId } from '../../systems/Inventory';
 import { ShopId, SHOPS } from '../../systems/Shops';
@@ -16,6 +16,7 @@ import { GATE_ACTIONS } from './gate';
 import { TRAIL_ACTIONS } from './trail';
 import { WARREN_ACTIONS } from './broodhall';
 import { sailTo } from './voyages';
+import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 
 /** A named story effect: what happens when a line with this action is said. */
@@ -32,9 +33,10 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...TRAIL_ACTIONS,
   ...WARREN_ACTIONS,
   ...FISHING_ACTIONS,
+  ...BEACON_ACTIONS,
 };
 
-/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `voyage:<area>` (see voyages.ts), or a named one. */
+/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `beacon-pay:<coins>`, `voyage:<area>` (see voyages.ts), or a named one. */
 export function runDialogueAction(g: GameScene, action: string): void {
   if (action.startsWith('shop:') && action.slice(5) in SHOPS) {
     g.pendingShop = action.slice(5) as ShopId;
@@ -54,6 +56,7 @@ export function runDialogueAction(g: GameScene, action: string): void {
   }
   if (action.startsWith('companion:') && companionAction(g, action)) return;
   if (action.startsWith('bond:') && bondAction(g, action)) return;
+  if (beaconPayAction(g, action)) return;
   if (action.startsWith('rent:')) {
     rentRoom(g, Number(action.slice(5)));
     return;

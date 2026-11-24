@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DIRECTIONS_8, Model, Pose3D, renderFrame } from '../../src/art/figure3d';
 import { FINE_FOLK } from '../../src/art/companions3d';
+import { BRIGAND_FOLK, brigandFolkModel } from '../../src/art/brigands3d';
 import { MODELS_3D } from '../../src/art/models3d';
 import { motherModel } from '../../src/art/mother3d';
 import { WAYFARER_MODELS } from '../../src/art/wayfarers3d';
@@ -15,6 +16,7 @@ vi.mock('phaser', () => ({ default: {} }));
 /** Every 3D person, by the 'folk-<id>' texture they're registered as. */
 const MODELS: Record<string, (pose: Pose3D) => Model> = {
   ...MODELS_3D, ...FINE_FOLK, ...WAYFARER_MODELS, mother: motherModel,
+  ...Object.fromEntries(Object.entries(BRIGAND_FOLK).map(([id, look]) => [id, brigandFolkModel(look)])),
   ...Object.fromEntries(Object.entries(CROWD_MODELS).map(([id, m]) => [`crowd-${id}`, m])),
 };
 

@@ -28,6 +28,7 @@ import { cancelChannel, give } from './sights';
 import { standUp } from './sitting';
 import { checkCellarClear } from './tavern';
 import { beatenUnderground, checkBroodHall } from './broodhall';
+import { checkBeaconFight } from './beacon';
 
 /** The wolves of the den at home: once they're all gone, Brother Wystan hears of it. */
 export const CAVE_WOLVES = ['cave-wolf-1', 'cave-wolf-2', 'cave-wolf-3'];
@@ -55,6 +56,11 @@ export const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   goblinspear: [],
   goblintorch: [],
   goblinbrute: [],
+  // The brigands' purse is counted out with the rest of what's in the tower (see scenes/game/beacon.ts).
+  brigandcaptain: [],
+  brigandbrute: [['ale', 2]],
+  brigandcutter: [['hatchet', 1]],
+  brigandarcher: [['hunting-knife', 1]],
 };
 
 /** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
@@ -78,6 +84,10 @@ export const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> =
   goblinspear: { slain: 'One less. There are so many more of them.', fled: 'It scuttles off, cackling.' },
   goblintorch: { slain: 'Its torch hisses out in the mud.', fled: 'It scuttles off, waving its torch.' },
   goblinbrute: { slain: 'The Brute is down.', fled: 'The Brute backs away, laughing.' },
+  brigandcaptain: { slain: 'Corwin Haske is down, his old watch tabard dark with blood. He kept this beacon once.', fled: 'He is gone out of the door, into the long grass.' },
+  brigandbrute: { slain: 'Big Garth goes down like a felled oak, and the floor shakes.', fled: 'He lumbers off into the grass, cursing.' },
+  brigandcutter: { slain: 'Teg lies still. Even now his scarf is over his face.', fled: 'Gone, quick and quiet, out of the door.' },
+  brigandarcher: { slain: 'The lookout is down. Her bow lies across the stair.', fled: 'Gone up the stair and out of reach.' },
 };
 
 /** Out on the plains: chance meetings on the road, with the people, beasts, talk and fights they need from the game. */
@@ -211,7 +221,8 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
   if (result.outcome === 'defeat') {
     // Down the goblins' warren, nobody carries the hero all the way home: they come round on the fell outside (see game/warren.ts).
     if (beatenUnderground(g)) return;
-    const by = foes[0]?.kind === 'wolfmother' ? 'The Wolf Mother' : `A ${foes[0]?.name.toLowerCase() ?? 'beast'}`;
+    const by =
+      foes[0]?.kind === 'wolfmother' ? 'The Wolf Mother' : foes.some((c) => c.kind === 'brigandcaptain') ? 'Corwin Haske' : `A ${foes[0]?.name.toLowerCase() ?? 'beast'}`;
     // Whoever was fighting beside the hero got them home.
     const carrier = Companions.fighters[0];
     QuestLog.writeDiary(
@@ -230,7 +241,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
   } else {
     const slain = foes.filter((c) => result.slain.includes(c.id));
     for (const beast of slain) for (const [item, count] of SPOILS[beast.kind]) give(g, item, count);
-    const outlaws = slain.filter((c) => isOutlaw(c.kind));
+    const outlaws = slain.filter((c) => c.kind === 'footpad' || c.kind === 'cutpurse');
     if (outlaws.length > 0) {
       const purse = outlaws.reduce((n) => n + Phaser.Math.Between(FOOTPAD_PURSE[0], FOOTPAD_PURSE[1]), 0);
       Inventory.reward(purse);
@@ -269,6 +280,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     if (result.slain.includes('den-mother')) slewWolfMother();
     checkCampCleared(g);
     checkBroodHall(g, result.slain);
+    checkBeaconFight(g, slain);
     if (g.gateAttack?.active) {
       g.release();
       g.gateAttack.won();

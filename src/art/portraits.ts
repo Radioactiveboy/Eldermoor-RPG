@@ -1935,6 +1935,120 @@ const wren = townsfolk({
   skin: 0xf0c8a4, hair: 0xb8562a, style: 'curly', cloth: 0x8a4a32, apron: 0xc8bca0, kerchief: 0x4a7a5a,
   iris: 0x6a8a4a, brow: 'worried', smile: 1, width: 14.5, jaw: 6, freckles: true, blush: [0xe86a5a, 0.6], lashes: true, look: 1,
 });
+// --- The brigands in the beacon on Corbie Tor ------------------------------------
+
+/** A gold flame on a blue tabard at the chest: the old beacon watch's colours. */
+function watchFlame(c: PixelCanvas): void {
+  const gold = ramp(P.gold);
+  for (let y = 84; y < S; y++) {
+    const t = (y - 84) / (S - 84);
+    const half = 5 * Math.sin(Math.min(1, t * 1.3) * Math.PI) * (1 - t * 0.3);
+    for (let x = Math.round(CX - half); x <= Math.round(CX + half); x++) c.set(x, y, tone(gold, lightness((x - CX) / 6, t - 0.5, 0.05), x, y));
+  }
+}
+
+/** Corwin Haske, once warden of the beacon: a weathered, heavy-browed face, grey-shot hair tied back, a full beard, mail and the watch's blue, a red fur collar. */
+const corwin = townsfolk({
+  skin: 0xd8a080, hair: 0x5a4636, style: 'short', cloth: 0x2e4a7a, shirt: 0x6e6a62, mail: true,
+  iris: 0x4a6a8a, brow: 'stern', smile: 0, width: 17.5, jaw: 9, beard: 0x5a4a3e, moustache: 0x4a3e34, nose: 2, tired: true, look: -1,
+  behind: (c) => {
+    // The red cloak's fur collar, standing up round the shoulders.
+    const fur = ramp(0x7a5a44);
+    for (let y = 70; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const dx = Math.abs(x + 0.5 - CX);
+        if (dx < 18 || dx > 40 - (y - 70) * 0.1) continue;
+        c.set(x, y, tone(fur, lightness((x - CX) / 40, (y - 80) / 30) + (((x * 7 + y * 3) % 5) - 2) * 0.03, x, y));
+      }
+    }
+  },
+  over: (c) => {
+    watchFlame(c);
+    // Grey at the temples and through the beard.
+    const grey = ramp(0xa8a298);
+    for (const [x, y] of [[CX - 17, 36], [CX - 16, 40], [CX - 17, 44], [CX + 16, 37], [CX + 17, 41], [CX + 16, 45], [CX - 6, 70], [CX + 4, 72], [CX - 1, 75], [CX + 8, 66], [CX - 9, 64]]) {
+      if (c.get(x, y) !== null) c.set(x, y, grey[3]);
+    }
+    // The horn's baldric across the chest, studded.
+    const strap = ramp(0x5a3a22);
+    for (let y = 80; y < S; y++) {
+      const x0 = CX + 22 - (y - 80) * 1.1;
+      for (let x = Math.round(x0 - 3); x <= Math.round(x0 + 3); x++) c.set(x, y, tone(strap, lightness(0, (y - 88) / 12), x, y));
+      if (y % 5 === 0) c.set(Math.round(x0), y, P.gold);
+    }
+  },
+});
+
+/** Big Garth: bald and broken-nosed, a black beard to his chest, a scar across the bridge of the nose, a fur vest on bare tattooed shoulders. */
+const garth = townsfolk({
+  skin: 0xc8906c, hair: 0x1e1a1c, style: 'bald', cloth: 0x6a4a32, iris: 0x3a2a20, brow: 'heavy', smile: 1,
+  width: 20, jaw: 12, beard: 0x1e1a1c, nose: 3, scar: true, earring: true, look: 1,
+  over: (c) => {
+    // A blue tattoo of knots on the scalp above one ear.
+    const ink = 0x3a4a6a;
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2;
+      c.set(Math.round(CX - 14 + Math.cos(a) * 3), Math.round(28 + Math.sin(a) * 3), ink);
+    }
+    // Shaggy fur along the vest's edges at the neck.
+    const fur = ramp(0x8a7a62);
+    for (let y = 80; y < S; y++) {
+      for (const side of [-1, 1]) {
+        const x0 = CX + side * (10 + (y - 80) * 0.25);
+        for (let x = Math.round(x0 - 3); x <= Math.round(x0 + 3); x++) if ((x * 5 + y * 3) % 4) c.set(x, y, tone(fur, lightness(side * 0.4, 0) + ((x + y) % 3) * 0.04, x, y));
+      }
+    }
+  },
+});
+
+/** Teg: young and sharp-eyed under a dark hood, a black mask tied over nose and mouth. */
+const tegHood = hood(0x3a3a34);
+const teg = townsfolk({
+  skin: 0xe0b08e, hair: 0x3a2a22, style: 'short', cloth: 0x4a3e2e, shirt: 0x3a2e24,
+  iris: 0x6a5a2a, brow: 'flat', smile: 0, width: 15.5, jaw: 6, look: -1,
+  behind: tegHood.behind,
+  over: (c, f) => {
+    tegHood.over?.(c, f);
+    const k = ramp(0x2a2a2e);
+    const jaw = { skin: ramp(0xe0b08e), width: 15.5, jaw: 6, top: 22, chin: 70 };
+    for (let y = EYE_Y + 6; y < 80; y++) {
+      const half = y < 70 ? (faceHalf(jaw, y) ?? 0) + 1.5 : Math.max(0, 10 - (y - 70) * 1.3);
+      for (let x = CX - 22; x <= CX + 22; x++) {
+        const dx = Math.abs(x + 0.5 - CX);
+        if (dx > half || y < EYE_Y + 6 + (dx / 17) ** 2 * 3) continue;
+        c.set(x, y, tone(k, lightness((x - CX) / 22, (y - 58) / 22, 0.08) + Math.sin(x * 0.5 + y * 0.4) * 0.05, x, y));
+      }
+    }
+  },
+});
+
+/** Linnet: freckled and fierce, cropped red hair, a green hood thrown back, a quiver strap over the shoulder. */
+const linnet = townsfolk({
+  skin: 0xf0c8a8, hair: 0xb04a26, style: 'short', cloth: 0x4a6a3a, shirt: 0x6a5a3e,
+  iris: 0x4a7a5a, brow: 'stern', smile: 0, width: 15, jaw: 6, lashes: true, freckles: true, blush: [0xe0705a, 0.4], look: 1,
+  behind: (c) => {
+    // The hood, down on her shoulders behind the neck.
+    const r = ramp(0x3e5a32);
+    for (let y = 66; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const dx = Math.abs(x + 0.5 - CX);
+        if (dx > 30 + (y - 66) * 0.2) continue;
+        c.set(x, y, tone(r, lightness((x - CX) / 34, (y - 80) / 30) + Math.sin(dx * 0.4) * 0.05, x, y));
+      }
+    }
+  },
+  over: (c) => {
+    // The quiver's strap across her chest, and the fletchings over her shoulder.
+    const strap = ramp(0x6a4428);
+    for (let y = 80; y < S; y++) {
+      const x0 = CX - 22 + (y - 80) * 1.1;
+      for (let x = Math.round(x0 - 2); x <= Math.round(x0 + 2); x++) c.set(x, y, tone(strap, lightness(0, (y - 88) / 12), x, y));
+    }
+    for (const [x, col] of [[CX + 30, 0xe8e0d0], [CX + 33, 0xb04a26], [CX + 36, 0xe8e0d0]] as const) {
+      for (let y = 70; y < 80; y++) c.set(x + Math.round((y - 70) * -0.2), y, col);
+    }
+  },
+});
 
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, tollguard, carter, herbwife,
@@ -1943,6 +2057,7 @@ const PAINTERS: Record<string, Painter> = {
   footpad, cutpurse, tinker, goatherd, courier,
   sergeant, jailer, prisoner, headman, steward, housemaid, housecook, snikkit,
   maren, ebb, wren,
+  corwin, garth, teg, linnet,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide (the orb's is its own step; see orbPortrait.ts). */

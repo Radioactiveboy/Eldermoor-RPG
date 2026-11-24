@@ -38,12 +38,15 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { buildJettyMap } = await import('../../src/world/JettyMap');
   const { buildWarrenMap } = await import('../../src/world/WarrenMap');
   const { buildBroodHallMap } = await import('../../src/world/BroodHallMap');
+  const beacon = await import('../../src/world/BeaconMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
     // With the goblins' trail and the way on up to the Greyfells open, so every way out is there.
     northwoods: buildNorthWoodsMap(true, true),
     greyfells: buildGreyfellsMap(),
     watchtower: buildWatchtowerMap(),
+    beacon: beacon.buildBeaconMap(),
+    'beacon-top': beacon.buildBeaconTopMap(),
     market: buildMarketMap(true),
     plains: buildPlainsMap(),
     monastery: buildMonasteryMap(true),

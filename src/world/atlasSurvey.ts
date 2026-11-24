@@ -150,10 +150,10 @@ export const SURVEY: Partial<Record<AreaId, AreaSurvey>> = {
   "plains": {
     ground: [
       'TTTTTTTTTTWTTTTTTTTTTRTTTTTTTTTTTTTTTTTT',
-      'TT.T.TT....WT..TT.....RT...T.T..T.T.T..T',
+      'TT.T.TT....WT..TT.....RT...T...HT.T.T..T',
       'T..........W..........R..T.............T',
-      'T..........RW.RR.....R.................T',
-      'T............WWWR....R...TT.......T....T',
+      'T..........RW.RR.....RR..RR..RR........T',
+      'T............WWWR....R..R.TRR.....T....T',
       'TTTT.........RWW.....R...TT..........TTT',
       'TTTT..TT.......R.RR..R...............TTT',
       'TTT...TT...........R..R..............T.T',
@@ -201,7 +201,7 @@ export const SURVEY: Partial<Record<AreaId, AreaSurvey>> = {
       'TTTTTTTTTTTTTTTTTXXRRXXTTTTTTTTTTTTTTTTT',
     ],
     features: [["cave",98,57,4,4],["gate",58,149,4,1],["willow",47,16,3,3]],
-    names: [["The crossroads",60.5,92.5],["The toll gate",60,149],["The mere",88,118],["The reed pond",30,60],["The old willow",48.5,17.5],["The upland",64,12],["The road to Saint Elda's",119,80.5],["The old den",101,60]],
+    names: [["The crossroads",60.5,92.5],["The toll gate",60,149],["The mere",88,118],["The reed pond",30,60],["The old willow",48.5,17.5],["The upland",64,12],["The road to Saint Elda's",119,80.5],["The old den",101,60],["The beacon on Corbie Tor",90,7]],
   },
   "monastery": {
     ground: [

@@ -15,6 +15,7 @@ import { standUp } from './sitting';
 import { residenceOpen } from './garrison';
 import { workshopOpen } from './workshops';
 import { sawPen, warrenDoorAllowed } from './warren';
+import { beaconDoorAllowed, reachedBeacon } from './beacon';
 
 /** Walking off the end of a road at the edge of the map goes on to the next area. */
 export function checkRoadExits(g: GameScene): void {
@@ -37,6 +38,7 @@ export function checkMusings(g: GameScene): void {
     g.onHint?.(here.text);
     if (here.id === 'goblin-trail-end') reachedTrailEnd();
     if (here.id === 'warren-pen') sawPen();
+    if (here.id === 'beacon-knoll') reachedBeacon();
   }
   g.musing = here;
 }
@@ -59,7 +61,7 @@ export function useDoor(g: GameScene, door: Door): void {
  * hero opens (and only while it's paid for).
  */
 export function doorAllowed(g: GameScene, door: Door): boolean {
-  if (!workshopOpen(g, door.to) || !residenceOpen(g, door.to) || !warrenDoorAllowed(g, door)) return false;
+  if (!workshopOpen(g, door.to) || !residenceOpen(g, door.to) || !warrenDoorAllowed(g, door) || !beaconDoorAllowed(g, door)) return false;
   if (door.id === 'cellar' && !QuestLog.has('cellar-rats') && !QuestLog.hasFlag('may-use-cellar')) {
     GameAudio.rattle();
     g.onHint?.("The trapdoor is bolted, and Godric is watching me over the bar. Not without asking him first.");

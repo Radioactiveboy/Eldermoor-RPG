@@ -3,8 +3,9 @@
  * hero level 1-6, with the kit in KIT_BY_LEVEL and the hero's rules of thumb
  * in systems/CombatSim.ts. Run with `npm run sim`; add `-- --fights 5000` for
  * steadier numbers, `-- --weapons` for each weapon at level 1, or
- * `-- --markdown` for a table to paste into a pull request, or `-- --brute` for
- * the Brute at the door of the brood hall, later on and with companions.
+ * `-- --markdown` for a table to paste into a pull request, `-- --brute` for
+ * the Brute at the door of the brood hall, later on and with companions, or
+ * `-- --beacon` for Corwin Haske's band in the beacon on Corbie Tor.
  */
 import type { FoeKind } from '../src/systems/Combat';
 import { KIT_BY_LEVEL, LATE_KIT, simulate } from '../src/systems/CombatSim';
@@ -72,6 +73,18 @@ if (flag('brute')) {
   for (const level of [8, 9, 10, 11, 12, 13]) {
     const cells = parties.map((allies) =>
       cell(simulate(level, 'goblinbrute', 1, { fights, kit: LATE_KIT, escort: { goblin: 1, goblinspear: 1 }, allies: [...allies] })).padEnd(20),
+    );
+    console.log([`L${level}`.padEnd(8), ...cells].join(''));
+  }
+}
+
+if (flag('beacon')) {
+  // Corwin Haske and his band in the beacon on Corbie Tor (see world/BeaconMap.ts), all four at once, in the best kit there is.
+  console.log('\nCorwin Haske\'s band in the beacon (+ Garth, Teg and Linnet), best kit: alone, with Sigrun, with Sigrun and Wat.\n');
+  const parties = [[], ['sigrun'], ['sigrun', 'wat']] as const;
+  for (const level of [9, 10, 11, 12, 13]) {
+    const cells = parties.map((allies) =>
+      cell(simulate(level, 'brigandcaptain', 1, { fights, kit: LATE_KIT, escort: { brigandbrute: 1, brigandcutter: 1, brigandarcher: 1 }, allies: [...allies] })).padEnd(20),
     );
     console.log([`L${level}`.padEnd(8), ...cells].join(''));
   }

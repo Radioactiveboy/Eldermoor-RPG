@@ -37,6 +37,8 @@ export type AreaId =
   | 'home' | 'world' | 'market' | 'cave' | 'hut' | 'plains' | 'monastery'
   // The forest north of the Hollow, beyond the wolves' cave, and inside the old watchtower there.
   | 'northwoods' | 'watchtower'
+  // The old signal beacon on Corbie Tor, in the far north of the plains: the hall inside it, and its roof with the brazier.
+  | 'beacon' | 'beacon-top'
   // The open moor above the north woods, where the goblins camped on their way home with Mother.
   | 'greyfells'
   // Under the Greyfells: the goblins' warren, and the brood hall at the bottom of it.
