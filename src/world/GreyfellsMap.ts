@@ -77,8 +77,14 @@ export function buildGreyfellsMap(): MapData {
         props[y][x] = Prop.Blocked;
         continue;
       }
-      if (near(trail, cx, cy, 1.5) || inCamp(cx, cy) || underHill(cx, cy)) continue;
-      if (hills.tileMax(x - 1, y - 1) >= HILL_BLOCKS * 3 || hills.tileMax(x + 1, y + 1) >= HILL_BLOCKS * 3 || rise > 1) {
+      if (near(trail, cx, cy, 1.5) || inCamp(cx, cy)) continue;
+      const foot = hills.tileMax(x - 1, y - 1) >= HILL_BLOCKS * 3 || hills.tileMax(x + 1, y + 1) >= HILL_BLOCKS * 3 || rise > 1;
+      if (underHill(cx, cy)) {
+        // Scree fallen from the crags round the hole (rolled apart from the rest, so the fell's own scatter stays where it was).
+        if (foot && noise(x, y, 13) < 0.3) props[y][x] = Prop.Rock;
+        continue;
+      }
+      if (foot) {
         if (rnd.frac() < 0.3) props[y][x] = Prop.Rock;
         continue;
       }
@@ -212,15 +218,14 @@ export function buildGreyfellsMap(): MapData {
   });
 
   // ---- The hole in the hill ----
-  for (let y = WARREN.ty - 1; y < WARREN.ty + 5; y++) for (let x = WARREN.tx - 1; x < WARREN.tx + 5; x++) if (props[y]?.[x] !== undefined && hills.tileMax(x, y) < HILL_BLOCKS) props[y][x] = Prop.None;
-  for (let y = WARREN.ty; y < WARREN.ty + 4; y++) for (let x = WARREN.tx; x < WARREN.tx + 4; x++) terrain[y][x] = Terrain.Grass;
-  const warrenBlocks: Array<[number, number]> = [];
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (!(x === 3 && y === 3)) warrenBlocks.push([x, y]);
-  placeObject(data, { key: 'gf-warren', tx: WARREN.tx, ty: WARREN.ty, w: 4, h: 4, blocks: warrenBlocks });
+  // The mouth is cut into the foot of the crags (see greyfellsHills), and the hills' own rock frames it: only the
+  // opening itself, its rim and what's spilled round it are drawn here, over the face.
+  const mouthTile = { tx: WARREN.tx + 3, ty: WARREN.ty + 3 };
+  props[mouthTile.ty][mouthTile.tx] = Prop.None;
+  placeObject(data, { key: 'gf-warren', tx: mouthTile.tx, ty: mouthTile.ty, w: 1, h: 1 });
   // The mouth itself: down into the goblins' warren (WarrenMap), once the night they come for Adowvale is over (see game/warren.ts).
-  props[WARREN.ty + 3][WARREN.tx + 3] = Prop.None;
   data.doors!.push({
-    id: 'warren', tx: WARREN.tx + 3, ty: WARREN.ty + 3, to: 'warren', entry: 'mouth', label: 'Go into the hole', facing: 'front',
+    id: 'warren', tx: mouthTile.tx, ty: mouthTile.ty, to: 'warren', entry: 'mouth', label: 'Go into the hole', facing: 'front',
     ask: 'Do you want to go down into the hole? Whatever is down there, there is a great deal of it.',
   });
   data.entries!.warren = { x: WARREN.tx + 3.5, y: WARREN.ty + 4.6 };
