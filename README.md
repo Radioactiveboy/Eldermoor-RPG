@@ -549,6 +549,9 @@ src/
     character.ts            What every person's sprite sheet shares: frame size, feet, colour helpers
     figure3d.ts             The 3D figure renderer: rounded solids turned to 8 directions and lit as pixel art
     hero3d.ts               Arthus, the hero
+    fight3d.ts              How the hero and the companions fight: stances, swings, flinches, guards, kneeling;
+                            their bigger fight frames ('<key>@fight') and animations
+    fightStances.ts         Draws the hero's and the fighting companions' fight frames
     gear.ts                 How worn gear looks on the hero (add an entry to dress a new item)
     mother3d.ts             Mother
     models3d.ts             The villagers' models (traders, militia, guards, brothers, tavern folk, Iran and his
@@ -594,7 +597,9 @@ tests/
 - **Pixel art is generated in code** (`src/art/`) from one shared palette
   (`palette.ts`), so there are no image files to manage. The hero is built from
   rounded 3D solids (`art/hero3d.ts`, drawn by `art/figure3d.ts` like everyone else) turned to face 8 directions,
-  with idle, walk, sit and work animations (`player-idle-<dir>`, `player-walk-<dir>`). Tiles come in several variants and
+  with idle, walk, sit and work animations (`player-idle-<dir>`, `player-walk-<dir>`), and in a fight
+  ready, attack, hit, guard and down animations on a sheet of bigger frames (`player-attack-<dir>`, see `art/fight3d.ts`;
+  Sigrun and Wat have the same). Tiles come in several variants and
   the ground is sprinkled with flowers, grass tufts and pebbles. To use
   hand-drawn art instead, load it in `BootScene` under the same texture keys
   (`tile-grass`, `prop-tree`, `player`, ...).
