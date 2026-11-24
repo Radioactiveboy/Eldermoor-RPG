@@ -950,39 +950,6 @@ const coombe: Painter = (c, fr) => {
   finish(c);
 };
 
-/** The orb in the brood hall, for whoever speaks through it: a ball of glass in bone claws, smoke turning in it, and in the smoke the shape of a face that is not there. */
-const orb: Painter = (c, fr) => {
-  const R = 34;
-  const cy = 50;
-  const glass = ramp(0x6a40a8);
-  const bright = ramp(0xc8a4ff);
-  const bone = ramp(0xd8ccb0);
-  for (let y = 0; y < S; y++) {
-    for (let x = 0; x < S; x++) {
-      const nx = (x + 0.5 - CX) / R;
-      const ny = (y + 0.5 - cy) / R;
-      const d = nx * nx + ny * ny;
-      if (d > 1) continue;
-      const a = Math.atan2(ny, nx);
-      const swirl = Math.sin(a * 2 + Math.sqrt(d) * 7 + (fr.open ? 0.9 : 0));
-      // Two hollows for eyes and a darker one for a mouth, like a face seen in a fire.
-      const eye = Math.min(Math.hypot(x - CX + 10, y - cy + 6), Math.hypot(x - CX - 10, y - cy + 6)) < (fr.blink ? 2 : 4.5);
-      const mouth = Math.abs(y - cy - 12) < (fr.open ? 4 : 1.5) && Math.abs(x - CX) < 10;
-      const v = lightness(nx * 0.8, ny * 0.8, swirl * 0.22);
-      c.set(x, y, eye || mouth ? glass[0] : swirl > 0.6 ? tone(bright, v + 0.15, x, y) : tone(glass, v, x, y));
-    }
-  }
-  // The claws holding it up from below.
-  for (const side of [-1, 0, 1]) {
-    for (let t = 0; t < 1; t += 0.02) {
-      const x = CX + side * (22 - t * 6) + side * Math.sin(t * 3) * 6;
-      const y = S - 2 - t * 30;
-      for (let k = -2; k <= 2; k++) c.set(x + k, y, tone(bone, lightness(k / 3, -0.3), Math.round(x + k), Math.round(y)));
-    }
-  }
-  finish(c);
-};
-
 /** One of Lord Morten's toll guards: a black nasal helm, a broken nose, a sour look, Morten's crimson over mail. */
 const tollguard: Painter = (c, fr) => {
   const skin = ramp(0xd8a482);
@@ -1929,14 +1896,14 @@ const snikkit = townsfolk({
 });
 
 const PAINTERS: Record<string, Painter> = {
-  hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, orb, tollguard, carter, herbwife,
+  hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
   footpad, cutpurse, tinker, goatherd, courier,
   sergeant, jailer, prisoner, headman, steward, housemaid, housecook, snikkit,
 };
 
-/** Paints every speaker's portrait as 'portrait-<id>', three frames wide. */
+/** Paints every speaker's portrait as 'portrait-<id>', three frames wide (the orb's is its own step; see orbPortrait.ts). */
 export function generatePortraits(scene: Phaser.Scene): void {
   const frames: Frame[] = [
     { open: false, blink: false },
