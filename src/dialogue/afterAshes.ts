@@ -151,7 +151,7 @@ export function ashesTalk(s: AshesState): Record<string, RaidTalk> {
             '"Leave nothing standing in Adowvale." ...Goblins do not write letters to one another, lad, and they do not take their orders from glass.',
             'Somebody wanted a healer out of the Hollow, and somebody wants this village gone. That is not a raid. That is a war, and we did not know we were in it.',
             'Your father. Aldo. I knew him.',
-            'He kept the watch at the old tower in the north woods, and when Lord Morten\'s father had the watch taken down, it was my name under the order beside his.',
+            'He kept the watch at the old tower in the north woods, and when Lord Morten had the watch stood down, it was my name under the order beside his.',
             'The village could not pay its share of the watchmen. Aldo stood in this hall and told me we would be sorry.',
             'I am sorry now. ...Keep that thing close, and keep it quiet. And come back to me when you have rested. I have been thinking about the old watch, and what it would take to open it up again.',
           ],
