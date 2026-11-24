@@ -123,7 +123,7 @@ export const COMPANIONS: Record<CompanionId, CompanionDef> = {
     pronoun: { they: 'he', their: 'his', them: 'him' },
     speaker: 'wat',
     npc: 'wat',
-    texture: 'folk-guard',
+    texture: 'folk-wat',
     home: { area: 'market', place: "Adowvale's square" },
     fights: true,
     blurb: 'A militia lad, keen and green. His spear catches a charge, and he stands by you.',
