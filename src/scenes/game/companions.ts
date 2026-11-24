@@ -180,7 +180,7 @@ export function offerCompanion(npcId: string, script: DialogueScript): DialogueS
     };
   }
   const choices = [...at.choices];
-  choices.splice(Math.max(0, choices.length - 1), 0, choice);
+  choices.splice(Math.max(0, choices.length - 1), 0, { key: true, ...choice });
   nodes.ask = { ...at, choices };
   return { ...script, nodes };
 }
