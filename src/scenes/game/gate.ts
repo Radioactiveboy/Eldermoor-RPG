@@ -111,6 +111,9 @@ function startGateAttack(g: GameScene): GateAttack {
         const near = guards.sort((a, b) => Math.hypot(a.gx - GATE_LINE.x, a.gy - GATE_LINE.y) - Math.hypot(b.gx - GATE_LINE.x, b.gy - GATE_LINE.y));
         near[Math.floor(Math.random() * Math.min(2, near.length))].say(text, 3);
       },
+      // The militia of the square (not the one at the jail door).
+      guards: () => g.npcs.filter((n) => /^guard-[1-4]$/.test(n.id) && n.present),
+      addGoblin: (id, kind, gx, gy) => new Creature(g, g.map, id, kind, gx, gy),
       done: (held) => (held ? gateHeld(g) : gateFell(g)),
     },
     QuestLog.hasFlag('gate-warned'),

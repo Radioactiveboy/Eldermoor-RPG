@@ -517,6 +517,13 @@ export class Npc implements Body {
   /** Sat down for now (Mother at the table), whether or not they always sit. */
   sitting = false;
   /**
+   * Moved about by a script (the militia fighting at the gate, see world/GateSkirmish.ts) rather than
+   * going about by themselves: they stay where they're put, and aren't to be talked to, until let go.
+   */
+  scripted = false;
+  /** Screen-pixel nudge for the sprite, for a lunge or a flinch while scripted. */
+  readonly offset = { x: 0, y: 0 };
+  /**
    * Out of sight but still there to talk to (Mother lying in her bed, which is
    * drawn with her in it): `prompt` is where the talk prompt goes instead.
    */
@@ -597,7 +604,7 @@ export class Npc implements Body {
 
   /** Someone to talk to, rather than one of the market crowd going about their business. */
   get talks(): boolean {
-    return !this.def.passerby;
+    return !this.def.passerby && !this.scripted;
   }
 
   /** Not walking anywhere they've been sent. */
@@ -666,6 +673,14 @@ export class Npc implements Body {
     this.gx = gx;
     this.gy = gy;
     this.sync(false);
+  }
+
+  /** For a script moving them itself: stand (or be mid-stride) at a spot, facing a point. */
+  pose(gx: number, gy: number, faceAt: Vec2, moving: boolean): void {
+    this.gx = gx;
+    this.gy = gy;
+    this.face({ x: faceAt.x - gx, y: faceAt.y - gy });
+    this.sync(moving);
   }
 
   /** Face a grid direction and stay so (sat at the table, looking at it). */
@@ -789,6 +804,7 @@ export class Npc implements Body {
       this.speechLeft -= dt;
       if (this.speechLeft <= 0) this.speech = undefined;
     }
+    if (this.scripted) return;
     if (this.commute) {
       this.keepHours(dt, paused, player);
       return;
@@ -1140,7 +1156,7 @@ export class Npc implements Body {
   private sync(moving: boolean): void {
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
-    this.sprite.setPosition(p.x, p.y);
+    this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
     // Seated, drawn in front of the seat (as the player is).
     const d = (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.seated ? 2 : 0);
     this.shadow.setDepth(d - 0.5);
