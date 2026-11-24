@@ -1130,7 +1130,18 @@ export function drawBeastSheet(sheet: BeastSheet): PixelCanvas {
  * Registers 'creature-<kind>' (frame row * 12 + col) and '<kind>-idle-<dir>',
  * '-walk-' and '-sniff-' for all eight directions.
  */
-export function generateBeast(scene: Phaser.Scene, kind: string, sheet: BeastSheet, walkRate: number): void {
+/** One of a sheet's animations: its frames (by column) and how long each is held, and whether it loops (-1) or plays once (0). */
+export interface BeastAnim {
+  frames: Array<{ f: number; ms: number }>;
+  repeat: number;
+}
+
+/**
+ * Uploads a beast's sheet as 'creature-<kind>' and makes its animations in each
+ * direction: '<kind>-idle-<dir>', '-walk-' and '-sniff-', plus any in `extra`
+ * (which may also replace those three).
+ */
+export function generateBeast(scene: Phaser.Scene, kind: string, sheet: BeastSheet, walkRate: number, extra: Record<string, BeastAnim> = {}): void {
   const key = `creature-${kind}`;
   const { w, h } = sheet.spec;
   const cols = sheet.models.length;
@@ -1140,9 +1151,12 @@ export function generateBeast(scene: Phaser.Scene, kind: string, sheet: BeastShe
   }
   DIRECTIONS_8.forEach((d, row) => {
     const list = (ids: number[]) => ids.map((i) => ({ key, frame: row * cols + i }));
-    scene.anims.create({ key: `${kind}-idle-${d.name}`, frames: list([0, 1]), frameRate: 1.5, repeat: -1 });
+    if (!extra.idle) scene.anims.create({ key: `${kind}-idle-${d.name}`, frames: list([0, 1]), frameRate: 1.5, repeat: -1 });
     scene.anims.create({ key: `${kind}-walk-${d.name}`, frames: list([2, 3, 4, 5]), frameRate: walkRate, repeat: -1 });
-    scene.anims.create({ key: `${kind}-sniff-${d.name}`, frames: list([6, 7, 6, 6, 7, 7, 6]), frameRate: 5, repeat: -1 });
+    if (!extra.sniff) scene.anims.create({ key: `${kind}-sniff-${d.name}`, frames: list([6, 7, 6, 6, 7, 7, 6]), frameRate: 5, repeat: -1 });
+    for (const [name, anim] of Object.entries(extra)) {
+      scene.anims.create({ key: `${kind}-${name}-${d.name}`, frames: anim.frames.map(({ f, ms }) => ({ key, frame: row * cols + f, duration: ms })), frameRate: 1000, repeat: anim.repeat });
+    }
   });
 }
 

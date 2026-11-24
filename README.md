@@ -513,7 +513,7 @@ src/
     wayfarers3d.ts          The plains' chance meetings, Clover the goat, and the footpads' fighting frames
     beasts3d.ts             The beasts' 3D models: wolves, the Wolf Mother, deer, hares, boar, rats, the wild cat
     creatures.ts            Registers the beasts' sheets
-    goblins3d.ts            The raiding goblins: cutters, a spearman, firebrands and the Goblin Brute
+    goblins3d.ts            The goblins, drawn finely (2x): cutters, spearmen, firebrands, the Brute, Snikkit and the shaman, with fight animations
 
 public/audio/
   ambience/                 The ambient recordings (MP3) and CREDITS.md with their sources and licences

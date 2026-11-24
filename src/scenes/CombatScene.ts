@@ -1047,14 +1047,16 @@ export class CombatScene extends Phaser.Scene {
 
     await this.rollDie(attacker, r.roll, signed(r.total - r.roll), r.mode);
     if (attacker.creature) {
-      attacker.creature.setFrame(CREATURE_FRAME.bite);
+      // A goblin winds up before the blow comes down (see Creature.strike).
+      const windup = attacker.creature.strike();
+      if (windup) await this.wait(windup);
       if (isArmed(attacker.creature.kind)) GameAudio.swing(false);
       else GameAudio.bite();
     } else {
       GameAudio.swing(!!style.heavy);
     }
     await this.lunge(attacker, target, !!style.heavy);
-    if (attacker.creature && attacker.c.hp > 0) attacker.creature.setFrame(CREATURE_FRAME.snarl);
+    if (attacker.creature && attacker.c.hp > 0) this.time.delayedCall(260, () => attacker.c.hp > 0 && !attacker.c.fled && !this.battle.has(attacker.c, 'prone') && attacker.creature!.ready());
 
     const who = this.nameOf(attacker, true);
     const whom = this.nameOf(target, false);
@@ -1079,9 +1081,9 @@ export class CombatScene extends Phaser.Scene {
       await this.knockBack(attacker, target, r.crit || !!style.heavy);
       if (target.creature && !r.killed) {
         this.cry(target);
-        target.creature.setFrame(CREATURE_FRAME.hurt);
-        this.time.delayedCall(350, () => {
-          if (target.c.hp > 0 && !target.c.fled && !this.battle.has(target.c, 'prone')) target.creature!.setFrame(CREATURE_FRAME.snarl);
+        target.creature.flinch();
+        this.time.delayedCall(420, () => {
+          if (target.c.hp > 0 && !target.c.fled && !this.battle.has(target.c, 'prone')) target.creature!.ready();
         });
       }
       const how = r.crit ? 'A natural 20, a critical hit!' : 'Hit!';
@@ -1197,7 +1199,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private standUp(actor: Actor): void {
-    if (actor.creature) actor.creature.setFrame(CREATURE_FRAME.snarl);
+    if (actor.creature) actor.creature.ready();
     actor.companion?.setDown(false);
     void this.nudge(actor.offset, 0, 0, 120);
   }

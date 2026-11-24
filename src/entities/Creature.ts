@@ -75,6 +75,8 @@ export class Creature implements Body {
   private readonly ways: (typeof WAYS)[FoeKind];
   /** Drawn in all eight directions (modelled in 3D, see beasts3d.ts), rather than side-on and mirrored. */
   private readonly eight: boolean;
+  /** How many frames each direction's row of its sheet holds (more for the goblins, see goblins3d.ts). */
+  private readonly cols: number;
   /** Which of DIRECTIONS_8 it faces. */
   private facing = Math.floor(Math.random() * 8);
   /** The animation playing ('walk', 'sniff', 'idle'), or the frame it's held on. */
@@ -96,11 +98,17 @@ export class Creature implements Body {
     const art = CREATURE_ART[kind];
     this.eight = !!art.eight;
     const scale = art.scale ?? 1;
+    this.cols = art.cols ?? BEAST_COLS;
     const small = kind === 'hare' || kind === 'rat' || kind === 'wildcat';
     const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin');
     const big = kind === 'goblinbrute';
     this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : big ? 1.5 : upright ? 1 : 1.4) * scale, (small ? 0.6 : big ? 1.3 : 1) * scale);
-    this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale);
+    // A sheet drawn finer than it's shown (the goblins') is scaled down by as much.
+    this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale / (art.res ?? 1));
+    // A fight animation played once ends on its last frame: hold that, so turning to face someone keeps it.
+    this.sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
+      if ('anim' in this.showing && anim.key === this.animKey(this.showing.anim)) this.showing = { frame: Number(frame.frame.name) % this.cols };
+    });
     this.sprite.play({ key: this.animKey('sniff'), startFrame: Math.floor(Math.random() * 4) });
     if (!this.eight) this.sprite.setFlipX(Math.random() < 0.5);
     this.timer = 1 + Math.random() * 3;
@@ -179,7 +187,7 @@ export class Creature implements Body {
       this.state = 'alert';
       this.path = [];
       this.faceTowards(player.x, player.y);
-      this.setFrame(CREATURE_FRAME.snarl);
+      this.ready();
       this.sync();
       return true;
     }
@@ -205,7 +213,7 @@ export class Creature implements Body {
     this.wake();
     this.state = 'fight';
     this.path = [];
-    this.setFrame(CREATURE_FRAME.snarl);
+    this.ready();
   }
 
   /** Back to wandering, and leave the player be for a while (after they run away). */
@@ -220,7 +228,7 @@ export class Creature implements Body {
   die(): void {
     this.state = 'gone';
     this.map.bodies.delete(this);
-    this.setFrame(CREATURE_FRAME.dead);
+    if (!this.once('die')) this.setFrame(CREATURE_FRAME.dead);
     this.shadow.setVisible(false);
     this.sprite.setDepth(depthAt(this.gx, this.gy) - 1);
   }
@@ -274,7 +282,7 @@ export class Creature implements Body {
         duration: ms,
         onUpdate: () => this.sync(),
         onComplete: () => {
-          this.setFrame(CREATURE_FRAME.snarl);
+          this.ready();
           this.sync();
           resolve();
         },
@@ -307,13 +315,55 @@ export class Creature implements Body {
 
   /** The frame to show it by (in the fight's turn order): standing, turned three-quarters to the viewer. */
   get portraitFrame(): number {
-    return this.eight ? 1 * BEAST_COLS : 0;
+    return this.eight ? 1 * this.cols : 0;
   }
 
   /** Hold on one of the frames in {@link CREATURE_FRAME}'s order, in the direction it faces. */
   setFrame(frame: number): void {
     this.showing = { frame };
-    this.sprite.stop().setFrame(this.eight ? this.facing * BEAST_COLS + frame : frame);
+    this.sprite.stop().setFrame(this.eight ? this.facing * this.cols + frame : frame);
+  }
+
+  /** Whether its sheet has an animation of this name (the goblins have fight animations, see goblins3d.ts). */
+  private has(anim: string): boolean {
+    return this.scene.anims.exists(this.animKey(anim));
+  }
+
+  /** Plays a one-off animation if its sheet has it, ending on its last frame. */
+  private once(anim: string): boolean {
+    if (!this.has(anim)) return false;
+    this.sprite.anims.timeScale = 1;
+    this.play(anim);
+    return true;
+  }
+
+  /** Squared up for a fight: the fighting crouch, bobbing (or held on the snarl, for a beast). */
+  ready(): void {
+    if (this.has('ready')) {
+      if ('anim' in this.showing && this.showing.anim === 'ready' && this.sprite.anims.isPlaying) return;
+      this.sprite.anims.timeScale = 1;
+      this.play('ready');
+    } else this.setFrame(CREATURE_FRAME.snarl);
+  }
+
+  /**
+   * Attack: wind up and swing (or, for a beast, the bite frame). Returns how
+   * long the wind-up takes, in ms, for the lunge to wait on.
+   */
+  strike(): number {
+    if (this.once('attack')) return 150;
+    this.setFrame(CREATURE_FRAME.bite);
+    return 0;
+  }
+
+  /** Struck: reel back and recover (or the hurt frame, for a beast). */
+  flinch(): void {
+    if (!this.once('hit')) this.setFrame(CREATURE_FRAME.hurt);
+  }
+
+  /** Jeer at the foe, if it's the sort to (the goblins). */
+  taunt(): boolean {
+    return this.once('taunt');
   }
 
   private animKey(anim: string): string {
