@@ -9,6 +9,7 @@
  */
 import type { CompanionId } from '../systems/Companions';
 import type { FoeKind } from '../systems/Combat';
+import { atLeast, type BondLevel } from '../systems/Relationships';
 import type { WeatherKind } from '../systems/Weather';
 import type { AreaId } from '../world/MapData';
 
@@ -32,6 +33,8 @@ export interface ChatterContext {
   gateComing: boolean;
   /** A beast that might pick a fight, close by. */
   beastNear?: FoeKind;
+  /** How each of them feels about the hero (see systems/Relationships.ts); missing means newly met. */
+  bond?: Partial<Record<CompanionId, BondLevel>>;
 }
 
 /** One line said by one of them, and perhaps an answer from the other. */
@@ -57,6 +60,10 @@ const wet = (c: ChatterContext) => outdoors(c) && (c.weather === 'rain' || c.wea
 const both = (c: ChatterContext) => c.party.includes('sigrun') && c.party.includes('wat');
 const wild: AreaId[] = ['world', 'plains', 'northwoods', 'greyfells'];
 const inWild = (c: ChatterContext) => wild.includes(c.area);
+/** Feels at least this way about the hero. */
+const fond = (who: CompanionId, min: BondLevel) => (c: ChatterContext) => atLeast(c.bond?.[who] ?? 'acquainted', min);
+/** Has cooled on the hero. */
+const cool = (who: CompanionId) => (c: ChatterContext) => !atLeast(c.bond?.[who] ?? 'acquainted', 'acquainted');
 
 /**
  * Said on coming into an area: the first line each of them has for a place
@@ -172,6 +179,15 @@ export const TRAVEL: Chatter[] = [
   { id: 'w-hungry', who: 'wat', text: "Are you hungry? I'm hungry. I'm always hungry. Mum says I've got hollow legs.", when: outdoors },
   { id: 'w-dark', who: 'wat', text: 'Do you think there are spiders down here? Big ones?', when: (c) => c.underground },
   { id: 'w-far', who: 'wat', text: "This is the furthest I've ever been from home. Is that sad? It feels a bit sad.", when: (c) => c.area === 'northwoods' || c.area === 'greyfells' || c.area === 'plains' },
+  // How they feel about the hero shows in what they say along the way.
+  { id: 's-fond', who: 'sigrun', text: "You're less useless than you were. Don't let it go to your head.", when: fond('sigrun', 'friendly') },
+  { id: 's-close', who: 'sigrun', text: "I've walked beside worse. Most of them are dead. You won't be, if I've a say in it.", when: fond('sigrun', 'close'), once: true },
+  { id: 's-trust', who: 'sigrun', text: 'When this is done, maybe I will go north. Find out if Astrid wants to see me. ...Forget I said that.', when: fond('sigrun', 'trusted'), once: true },
+  { id: 's-cool', who: 'sigrun', text: "Walk. I'm not here to talk to you.", when: cool('sigrun') },
+  { id: 'w-fond', who: 'wat', text: "I'm glad it's you I'm with. I'd be useless with anyone else. More useless.", when: fond('wat', 'friendly') },
+  { id: 'w-close', who: 'wat', text: "When Mum asks who I've been with, I'm going to say my friend. Is that all right? I'm saying it anyway.", when: fond('wat', 'close'), once: true },
+  { id: 'w-trust', who: 'wat', text: "I didn't run. Did you notice? I didn't run once. I think that's because of you.", when: fond('wat', 'trusted'), once: true },
+  { id: 'w-cool', who: 'wat', text: "...I'll just walk back here, then. Out of the way.", when: cool('wat') },
   // Both of them, one answering the other.
   {
     id: 'p-quiet', who: 'wat', text: 'Have you killed a lot of people, Sigrun?', when: both,
@@ -200,6 +216,10 @@ export const TRAVEL: Chatter[] = [
   {
     id: 'p-brave', who: 'wat', text: "Do you ever get scared, Sigrun?", when: (c) => both(c) && inWild(c), once: true,
     reply: { who: 'sigrun', text: "Every time. The trick's to be scared after." },
+  },
+  {
+    id: 'p-friends', who: 'wat', text: "Sigrun, do you think we're friends? The three of us?", when: (c) => both(c) && fond('sigrun', 'friendly')(c) && fond('wat', 'friendly')(c), once: true,
+    reply: { who: 'sigrun', text: "...Don't make me say it, lad." },
   },
   {
     id: 'p-goblin', who: 'sigrun', text: 'Spear point down, Wat. You\'ll have someone\'s eye out.', when: (c) => both(c) && c.gateComing,

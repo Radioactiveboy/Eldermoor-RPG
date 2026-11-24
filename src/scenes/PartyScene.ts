@@ -1,3 +1,4 @@
+import { BOND_COLOURS, BOND_NAMES, bondCombatBonus, Relationships, willTravel } from '../systems/Relationships';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { PORTRAIT_SIZE } from '../art/sizes';
@@ -96,9 +97,13 @@ export class PartyScene extends Phaser.Scene {
     const x = left + FACE + 16;
     const textW = W - PAD * 2 - FACE - 16 - (with_ ? 150 : 0);
     out.push(this.add.text(x, y + 4, def.name, bodyStyle(19, THEME.goldText)));
-    out.push(
-      this.add.text(x, y + 30, with_ ? 'Travelling with you' : `Waiting at ${def.home.place}`, bodyStyle(13, with_ ? '#9fdc8a' : THEME.dimText)),
-    );
+    const where = this.add.text(x, y + 30, with_ ? 'Travelling with you' : `Waiting at ${def.home.place}`, bodyStyle(13, with_ ? '#9fdc8a' : THEME.dimText));
+    out.push(where);
+    // How they feel about the hero (see systems/Relationships.ts), and what it does for them in a fight.
+    const bond = Relationships.level(id);
+    const bonus = bondCombatBonus(bond);
+    const perk = bonus.toHit ? `  (+${bonus.toHit} to hit${bonus.ac ? `, +${bonus.ac} armour` : ''})` : !willTravel(bond) ? "  (won't travel with you)" : '';
+    out.push(this.add.text(x + where.width + 14, y + 30, `Bond: ${BOND_NAMES[bond]}${perk}`, bodyStyle(13, BOND_COLOURS[bond])));
     out.push(this.add.text(x, y + 50, def.blurb, { ...bodyStyle(13), wordWrap: { width: textW } }));
     const hp = Math.round(Companions.hp(id, level));
     const max = maxHpOf(id, level);

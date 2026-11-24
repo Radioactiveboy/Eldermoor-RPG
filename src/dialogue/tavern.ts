@@ -1,3 +1,5 @@
+import { bondGreeting } from './companionTalk';
+import { Relationships } from '../systems/Relationships';
 import { HERO_NAME } from '../config';
 import { itemDef, ItemId } from '../systems/Inventory';
 import type { RoadOutcome } from '../systems/Reputation';
@@ -480,9 +482,12 @@ export function sigrunScript(slewWolfMother: boolean): DialogueScript {
     nodes: {
       greet: {
         speaker: 'sigrun',
-        lines: slewWolfMother
-          ? ["You. You're the one who killed the white wolf on the plains. Hm. You don't look like much.", "Neither do I. Sit, if you want. Don't talk too much."]
-          : ['What.'],
+        // Once she's made her mind up about the hero, that's how she greets them (see systems/Relationships.ts).
+        lines: Relationships.level('sigrun') !== 'acquainted'
+          ? [bondGreeting('sigrun')]
+          : slewWolfMother
+            ? ["You. You're the one who killed the white wolf on the plains. Hm. You don't look like much.", "Neither do I. Sit, if you want. Don't talk too much."]
+            : ['What.'],
         next: 'ask',
       },
       ask: {
