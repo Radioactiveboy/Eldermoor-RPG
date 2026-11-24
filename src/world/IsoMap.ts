@@ -434,6 +434,11 @@ export class IsoMap {
     type Tree = { tx: number; ty: number; x: number; y: number; art: (typeof TREE_ART)[number]; tint: number; flip: boolean };
     const back: Tree[] = [];
     const front: Tree[] = [];
+    // Edge tiles a fence or palisade runs along: the forest outside grows right up to it.
+    const fenced = new Set<number>();
+    for (const obj of this.data.objects ?? []) {
+      if (obj.fence) for (let y = obj.ty; y < obj.ty + obj.h; y++) for (let x = obj.tx; x < obj.tx + obj.w; x++) fenced.add(y * width + x);
+    }
 
     // Every tile that can show on the canvas; ones below it still poke their tree tops in.
     const corners = [
@@ -465,7 +470,7 @@ export class IsoMap {
 
         // Thick forest, thickening further out, but never on the road or in the water.
         const edgeProp = props[ey][ex];
-        if (t !== Terrain.Grass || edgeProp === Prop.Blocked) continue;
+        if (t !== Terrain.Grass || (edgeProp === Prop.Blocked && !fenced.has(ey * width + ex))) continue;
         if (this.data.hills && this.data.hills.tileMax(tx, ty) > 1) continue;
         if (tileHash(tx, ty, 8) > 0.45 + 0.4 * Math.min(1, out / 4)) continue;
         const art = TREE_ART[Math.floor(tileHash(tx, ty, 6) * TREE_ART.length)];
