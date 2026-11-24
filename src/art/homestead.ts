@@ -271,13 +271,39 @@ function workshop(): IsoModel {
 
 /** A little goat shed: three board walls and a pent roof, open to the front, with hay inside. */
 function goatShed(): IsoModel {
+  // A little thatched goat house, two tiles long, its open front to the paddock (south) and hay in the doorway.
   const m = new IsoModel();
-  const boards = planks(5, 0xa57b4b, 0x87603d, 0xc29a62, 21);
-  m.quad({ x: 0, y: 0, z: 26 }, { x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: -26 }, boards);
-  m.quad({ x: 0, y: 0, z: 26 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: -26 }, planks(5, 0x87603d, 0x6b4a30, 0xa57b4b, 22));
-  m.box(0.1, 0.1, 0, 0.6, 0.5, 6, { top: P.strawLight, left: P.straw, right: P.strawDark });
-  m.quad({ x: 1, y: 0, z: 26 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: -26 }, (u, v) => (u > 0.45 && v > 0.15 ? null : boards(u, v)));
-  m.quad({ x: -0.1, y: -0.1, z: 30 }, { x: 1.2, y: 0, z: 0 }, { x: 0, y: 1.25, z: -8 }, (u, v) => ((v * 5) % 1 < 0.18 ? P.plankDark : hash(Math.floor(u * 7), Math.floor(v * 5)) < 0.4 ? P.plank : P.plankLight));
+  const W = 2;
+  const D = 1;
+  const H = 20;
+  const R = 14;
+  const o = 0.16;
+  const boards = planks(6, 0xa57b4b, 0x87603d, 0xc29a62, 21);
+  const darker = (c: number) => (c === 0xc29a62 ? 0xa57b4b : c === 0xa57b4b ? 0x87603d : 0x6b4a30);
+  const thatch: Shader = (u, v) => {
+    const row = Math.floor(v * 5);
+    const n = hash(Math.floor(u * 34), row);
+    if (v > 0.92 || (v * 5) % 1 > 0.8 || n < 0.18) return P.strawDark;
+    return n > 0.85 ? P.strawLight : P.straw;
+  };
+  // The front: boards, with a wide dark opening and a lintel over it.
+  m.quad({ x: 0, y: D, z: H }, { x: W, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, (u, v) => {
+    const y = (1 - v) * H;
+    if (u > 0.2 && u < 0.62 && y < H - 5) return y < 3 && u > 0.24 && u < 0.58 ? P.strawDark : P.ink;
+    if (u > 0.18 && u < 0.64 && y < H - 3) return P.plankDark;
+    return boards(u, v) ?? 0xa57b4b;
+  });
+  // The east end, in shade, with its gable.
+  m.quad({ x: W, y: 0, z: H }, { x: 0, y: D, z: 0 }, { x: 0, y: 0, z: -H }, (u, v) => darker(boards(u, v) ?? 0xa57b4b));
+  m.quad({ x: W, y: 0, z: H }, { x: 0, y: D, z: 0 }, { x: 0, y: 0, z: R }, (u, v) => (v > 1 - Math.abs(u * 2 - 1) ? null : darker(boards(u, v * 0.7) ?? 0xa57b4b)));
+  // The thatch, both slopes, with a ridge.
+  m.quad({ x: -o, y: D / 2, z: H + R }, { x: W + o * 2, y: 0, z: 0 }, { x: 0, y: -D / 2 - o, z: -R - 4 }, thatch);
+  m.quad({ x: W + o, y: D / 2, z: H + R }, { x: 0, y: -D / 2 - o, z: -R - 4 }, { x: 0, y: D / 2 + o, z: -R - 4 }, () => P.strawDark);
+  m.quad({ x: -o, y: D / 2, z: H + R }, { x: W + o * 2, y: 0, z: 0 }, { x: 0, y: D / 2 + o, z: -R - 4 }, thatch);
+  m.box(-o, D / 2 - 0.05, H + R - 2, W + o * 2, 0.1, 3, { top: P.strawLight, left: P.strawDark, right: P.strawDark });
+  // Hay spilling out of the door, and a hay rack on the end wall.
+  m.box(0.45, D + 0.02, 0, 0.75, 0.3, 3, { top: P.strawLight, left: P.straw, right: P.strawDark });
+  m.box(W + 0.02, 0.25, 6, 0.12, 0.5, 6, { top: P.strawLight, left: P.straw, right: P.plankDark });
   return m;
 }
 

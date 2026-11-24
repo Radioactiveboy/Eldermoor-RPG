@@ -94,9 +94,9 @@ export const SPOTS = {
   pile: [4, -2] as [number, number],
   well: [3, -2] as [number, number],
   beds: [[-1, 1], [-1, 2], [-2, 2]] as Array<[number, number]>,
-  workshop: [-4, 0] as [number, number],
+  workshop: [-5, -2] as [number, number],
   paddock: { x0: 13, y0: -1, x1: 17, y1: 3 },
-  wall: { x0: -5, y0: -4, x1: 3, y1: 2 },
+  wall: { x0: -7, y0: -4, x1: 3, y1: 2 },
 };
 
 /** Lays the rebuilding over the Hollow, as it stands at `now` (clock hours). */
@@ -211,7 +211,7 @@ function improve(data: MapData, p: ProjectId, x0: number, y0: number): void {
       clearGround(data, px0 - 1, py0 - 1, px1 + 1, py1 + 1);
       // Fenced all round, so the goats stay put (the hero leans on the rails).
       addFence(data, px0, py0, px1, py1, new Set());
-      placeObject(data, { key: 'hs-goatshed', tx: px1 - 1, ty: py0 + 1, w: 1, h: 1 });
+      placeObject(data, { key: 'hs-goatshed', tx: px1 - 2, ty: py0 + 1, w: 2, h: 1 });
       for (let y = py0 + 1; y < py1; y++) for (let x = px0 + 1; x < px1; x++) if (data.terrain[y][x] === Terrain.Grass && (x + y) % 3 === 0) data.terrain[y][x] = Terrain.Dirt;
       data.goats = [{ gx: px0 + 1.6, gy: py0 + 2.4 }, { gx: px0 + 2.8, gy: py0 + 3.1 }];
       (data.landmarks ??= []).push({ gx: px0 + 2.5, gy: py0 + 2.5, name: 'The goat paddock', range: 3 });
@@ -375,7 +375,7 @@ export function restoreStead(data: MapData, before: SteadSnapshot): void {
   const pen = data.hens?.pen ?? before.hens?.pen;
   const inPen = (o: MapObject) => !!pen && o.tx >= pen.x0 - 1 && o.tx <= pen.x1 && o.ty >= pen.y0 - 1 && o.ty <= pen.y1;
   const home = cottageAt(data);
-  const inGarden = (o: MapObject) => !!home && !inPen(o) && o.tx > home.tx + 3 && o.tx < home.tx + 14 && o.ty > home.ty - 4 && o.ty < home.ty + 8;
+  const inGarden = (o: MapObject) => !!home && !inPen(o) && o.tx > home.tx + 3 && o.tx < home.tx + SPOTS.paddock.x0 && o.ty > home.ty - 4 && o.ty < home.ty + 8;
   const mend = (which: (o: MapObject) => boolean) => {
     data.objects = (data.objects ?? []).filter((o) => !(o.key.startsWith('fence-') && which(o)));
     for (const f of before.fences.filter(which)) {

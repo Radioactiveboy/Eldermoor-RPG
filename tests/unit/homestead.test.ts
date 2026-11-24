@@ -8,7 +8,7 @@ const { QuestLog } = await import('../../src/systems/Quests');
 const { ITEMS } = await import('../../src/systems/Inventory');
 const { SHOPS } = await import('../../src/systems/Shops');
 const { homesteadTalk } = await import('../../src/dialogue/homestead');
-const { cottageKey, homesteadWorld, pileFill, restoreStead, snapshotStead } = await import('../../src/world/Homestead');
+const { cottageKey, homesteadWorld, pileFill, restoreStead, snapshotStead, SPOTS } = await import('../../src/world/Homestead');
 const { generateMap } = await import('../../src/world/MapGenerator');
 const { graveWorld, ruinWorld } = await import('../../src/world/GoblinRaid');
 const { MAP_HEIGHT, MAP_SEED, MAP_WIDTH } = await import('../../src/config');
@@ -183,6 +183,13 @@ describe('the Hollow, as it stands', () => {
     expect([...keys].some((k) => k.startsWith('hs-wall-'))).toBe(true);
     expect([...keys].some((k) => k.endsWith('-burnt'))).toBe(false);
     expect(data.goats).toHaveLength(2);
+    // The paddock is fenced all the way round, so the goats can't wander off.
+    const home = data.objects!.find((o) => o.key.startsWith('bld-cottage'))!;
+    const { x0, y0, x1, y1 } = SPOTS.paddock;
+    const fenced = new Set(data.objects!.filter((o) => o.key.startsWith('fence-')).map((o) => `${o.tx - home.tx},${o.ty - home.ty}`));
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) {
+      if (x === x0 || x === x1 || y === y0 || y === y1) expect(fenced.has(`${x},${y}`), `${x},${y}`).toBe(true);
+    }
     expect(data.hens!.flock.length).toBeGreaterThan(0);
     expect(data.sights!.some((s) => s.station === 'home-bench')).toBe(true);
     expect(data.music).toBe('world');
