@@ -1,6 +1,7 @@
 import { HEALTH, STAMINA } from '../config';
 import { BRACE_STAMINA, HEAVY_TO_HIT, SECOND_WIND, SWEEP_TO_HIT, ability } from './Abilities';
 import { Battle, Combatant, CombatantDef, chooseFoeAction, FoeKind, FOES, Outcome, Rng, shouldHowl } from './Combat';
+import { BASH_COOLDOWN, chooseCompanionAction, COMPANIONS, CompanionId, combatDefOf, fighterId, maxHpOf } from './Companions';
 import { HEALTH_PER_LEVEL } from './Experience';
 import { ItemId, itemDef, weaponOf } from './Inventory';
 
@@ -47,6 +48,9 @@ export const KIT_BY_LEVEL: Record<number, Kit> = {
   5: { worn: ['spear', 'buckler', 'iron-cap', 'jerkin', 'boots'], food: { count: 3, health: 20 } },
   6: { worn: ['short-sword', 'buckler', 'iron-cap', 'jerkin', 'riding-boots'], food: { count: 3, health: 20 } },
 };
+
+/** The best the smith and tailor have, and the silver ring: what a hero might wear down into the warren (about level 11). */
+export const LATE_KIT: Kit = { worn: ['short-sword', 'buckler', 'iron-cap', 'jerkin', 'riding-boots', 'silver-ring'], food: { count: 3, health: 20 } };
 
 /** The hero's fighting numbers at a level, in a kit: the same sums as CombatScene.heroStats. */
 export function heroDef(level: number, kit: Kit): CombatantDef {
@@ -111,8 +115,15 @@ const MAX_ROUNDS = 100;
  *    a Heavy Blow while stamina lasts; otherwise a plain Strike.
  *  - Always at the weakest foe still standing. Never runs.
  */
-export function simulateFight(hero: CombatantDef, foes: CombatantDef[], rng: Rng, kit: Kit = { worn: [] }, level = 1): FightResult {
-  const battle = new Battle([hero, ...foes], rng);
+export function simulateFight(
+  hero: CombatantDef,
+  foes: CombatantDef[],
+  rng: Rng,
+  kit: Kit = { worn: [] },
+  level = 1,
+  allies: CompanionId[] = [],
+): FightResult {
+  const battle = new Battle([hero, ...allies.map((id) => combatDefOf(id, level, maxHpOf(id, level))), ...foes], rng);
   const h = battle.combatants[0];
   let stamina = STAMINA.max;
   let food = kit.food?.count ?? 0;
@@ -136,6 +147,7 @@ export function simulateFight(hero: CombatantDef, foes: CombatantDef[], rng: Rng
     if (a.cooldown) battle.cooldown(h, id, a.cooldown);
   };
 
+  const allyOf = (c: Combatant) => allies.find((id) => fighterId(id) === c.id);
   if (h.weapon?.kind === 'opening') swing(weakest());
   battle.rollInitiative();
   while (battle.outcome() === 'ongoing' && battle.round <= MAX_ROUNDS) {
@@ -161,9 +173,13 @@ export function simulateFight(hero: CombatantDef, foes: CombatantDef[], rng: Rng
         if (battle.outcome() === 'ongoing') {
           const target = weakest();
           const many = battle.standing('foes').length >= 3;
+          const aimedAtMe = battle.standing('foes').some((f) => battle.status(f, 'windup')?.target === h.id);
           if (h.hp < h.maxHp / 3 && food > 0) {
             food--;
             battle.heal(h, kit.food!.health);
+          } else if (aimedAtMe && h.hp < h.maxHp / 2) {
+            // A crushing blow is coming: raise your guard against it.
+            battle.defend(h);
           } else if (many && armed && can('sweep')) {
             spend('sweep');
             for (const f of battle.standing('foes')) if (battle.outcome() === 'ongoing') swing(f, { toHit: SWEEP_TO_HIT, half: true });
@@ -182,15 +198,32 @@ export function simulateFight(hero: CombatantDef, foes: CombatantDef[], rng: Rng
             swing(target);
           }
         }
+      } else if (allyOf(c)) {
+        // Companions fight as they do in CombatScene.companionTurn.
+        const action = chooseCompanionAction(battle, c, COMPANIONS[allyOf(c)!].combat.tactic, { stood: start.stood, heroId: h.id });
+        if (action.type === 'attack') {
+          dealt += battle.attack(c, action.target).damage;
+        } else if (action.type === 'bash') {
+          battle.cooldown(c, 'bash', BASH_COOLDOWN);
+          battle.shove(c, action.target);
+        } else if (action.type === 'guard') {
+          battle.defend(c);
+        }
       } else {
         // The beasts fight as they do in CombatScene.foeTurn.
+        if (battle.shouldEnrage(c)) battle.enrage(c);
         const action = chooseFoeAction(battle, c, start.stood, rng);
-        if (action.type === 'attack') {
+        if (action.type === 'attack' || action.type === 'windup') {
           if (shouldHowl(battle, c)) {
             battle.cooldown(c, 'howl', battle.trait(c, 'howl')!.cooldown);
             for (const f of battle.standing('foes')) if (f !== c) battle.addStatus(f, 'rallied', 2);
           }
-          battle.attack(c, action.target);
+          if (action.type === 'attack') battle.attack(c, action.target);
+          else battle.windUp(c, action.target);
+        } else if (action.type === 'smash') {
+          battle.smash(c, action.target);
+        } else if (action.type === 'quake') {
+          battle.quake(c);
         } else if (action.type === 'flee') {
           c.fled = true;
         }
@@ -220,7 +253,12 @@ export interface SimSummary {
 }
 
 /** Many fights of one match-up, summed up. */
-export function simulate(level: number, kind: FoeKind, count = 1, opts: { fights?: number; seed?: number; kit?: Kit; escort?: Partial<Record<FoeKind, number>> } = {}): SimSummary {
+export function simulate(
+  level: number,
+  kind: FoeKind,
+  count = 1,
+  opts: { fights?: number; seed?: number; kit?: Kit; escort?: Partial<Record<FoeKind, number>>; allies?: CompanionId[] } = {},
+): SimSummary {
   const fights = opts.fights ?? 1000;
   const kit = opts.kit ?? KIT_BY_LEVEL[level];
   const rng = seeded(opts.seed ?? 1);
@@ -229,7 +267,7 @@ export function simulate(level: number, kind: FoeKind, count = 1, opts: { fights
   let hurt = 0;
   for (let i = 0; i < fights; i++) {
     const hero = heroDef(level, kit);
-    const r = simulateFight(hero, foeDefs(kind, count, opts.escort), rng, kit, level);
+    const r = simulateFight(hero, foeDefs(kind, count, opts.escort), rng, kit, level, opts.allies);
     if (r.outcome === 'victory') {
       wins++;
       rounds += r.rounds;

@@ -24,6 +24,8 @@ import {
   AttackResult,
   Battle,
   chooseFoeAction,
+  ENRAGE_TO_HIT,
+  RAID_BRUTE,
   applyBoon,
   boonText,
   Combatant,
@@ -319,7 +321,8 @@ export class CombatScene extends Phaser.Scene {
     this.allyDealt = new Map();
     for (const c of companions) defs.push(combatDefOf(c.id, Experience.level, Companions.hp(c.id, Experience.level)));
     data.foes.forEach((creature, i) => {
-      const foe = FOES[creature.kind];
+      // The Brute keeps his tricks for the brood hall (see RAID_BRUTE).
+      const foe = data.doom && creature.kind === 'goblinbrute' ? { ...FOES.goblinbrute, ...RAID_BRUTE } : FOES[creature.kind];
       const names = PACK_NAMES[creature.kind];
       let name = data.foes.length === 1 || !names ? foe.name : names[i % names.length];
       // Rats anywhere but the Crooked Tankard's cellar (the old watchtower's) aren't cellar rats.
@@ -607,6 +610,7 @@ export class CombatScene extends Phaser.Scene {
         if (!target) break;
         this.commit(a);
         const foe = this.actorOf(target);
+        const winding = this.battle.has(target, 'windup');
         const r = this.battle.shove(hero, target);
         await this.rollDie(this.hero, r.roll, signed(hero.toHit));
         GameAudio.swing(false);
@@ -617,7 +621,7 @@ export class CombatScene extends Phaser.Scene {
           GameAudio.hit(false);
           this.knockDown(foe);
           this.float(foe, 'Prone!', hex(STATUSES.prone.color));
-          this.log(`You shove the ${target.name}: ${sum}. ${man ? 'He' : 'It'} goes sprawling! Attacks against ${man ? 'him' : 'it'} roll with advantage.`);
+          this.log(`You shove the ${target.name}: ${sum}. ${man ? 'He' : 'It'} goes sprawling! Attacks against ${man ? 'him' : 'it'} roll with advantage.${winding ? ' The blow it was winding up is lost.' : ''}`);
         } else {
           this.float(foe, 'Holds firm', '#d8c8a4');
           void this.hop(foe.offset, 4, 0);
@@ -652,16 +656,29 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private async foeTurn(foe: Actor, start: TurnStart): Promise<void> {
-    const action = chooseFoeAction(this.battle, foe.c, start.stood);
+    let stood = start.stood;
+    if (this.battle.shouldEnrage(foe.c)) {
+      await this.enrage(foe, stood);
+      stood = false;
+    }
+    const action = chooseFoeAction(this.battle, foe.c, stood);
     if (action.type === 'stand') {
       this.standUp(foe);
       await this.hop(foe.offset, 0, -4);
       this.log(`The ${foe.c.name} scrambles back onto ${isOutlaw(foe.creature!.kind) ? 'his' : 'its'} feet.`);
       return;
     }
-    if (action.type === 'attack' && shouldHowl(this.battle, foe.c)) await this.howl(foe);
+    if ((action.type === 'attack' || action.type === 'windup') && shouldHowl(this.battle, foe.c)) await this.howl(foe);
     if (action.type === 'attack') {
       await this.attack(foe, this.actorOf(action.target));
+    } else if (action.type === 'windup') {
+      await this.windUp(foe, this.actorOf(action.target));
+    } else if (action.type === 'smash') {
+      const target = this.actorOf(action.target);
+      this.log(`The ${foe.c.name} brings the club down with everything it has!`);
+      await this.attack(foe, target, {}, { verb: 'brings its club crashing down on', heavy: true, smash: true });
+    } else if (action.type === 'quake') {
+      await this.quake(foe);
     } else if (action.type === 'flee') {
       foe.c.fled = true;
       this.cry(foe);
@@ -696,6 +713,7 @@ export class CombatScene extends Phaser.Scene {
       case 'bash': {
         const foe = this.actorOf(action.target);
         this.battle.cooldown(ally.c, 'bash', BASH_COOLDOWN);
+        const winding = this.battle.has(action.target, 'windup');
         const r = this.battle.shove(ally.c, action.target);
         await this.rollDie(ally, r.roll, signed(ally.c.toHit));
         GameAudio.swing(true);
@@ -706,7 +724,7 @@ export class CombatScene extends Phaser.Scene {
           GameAudio.hit(false, true);
           this.knockDown(foe);
           this.float(foe, 'Prone!', hex(STATUSES.prone.color));
-          this.log(`${ally.c.name} slams ${p.their} shield into the ${action.target.name}: ${sum}. Down ${man ? 'he' : 'it'} goes! Attacks against ${man ? 'him' : 'it'} roll with advantage.`);
+          this.log(`${ally.c.name} slams ${p.their} shield into the ${action.target.name}: ${sum}. Down ${man ? 'he' : 'it'} goes! Attacks against ${man ? 'him' : 'it'} roll with advantage.${winding ? ' The blow it was winding up is lost.' : ''}`);
         } else {
           GameAudio.block();
           this.float(foe, 'Holds firm', '#d8c8a4');
@@ -781,6 +799,73 @@ export class CombatScene extends Phaser.Scene {
     this.log(doom.text);
     this.drawOrder();
     await this.wait(1100);
+  }
+
+  /** The Brute heaves his club up for a crushing blow next turn (see FoeTrait 'smash'). */
+  private async windUp(foe: Actor, target: Actor): Promise<void> {
+    this.battle.windUp(foe.c, target.c);
+    const at = target.pos();
+    foe.creature?.faceTowards(at.x, at.y);
+    GameAudio.shriek(true);
+    await this.hop(foe.offset, 0, -10);
+    this.float(foe, 'Winding up!', hex(STATUSES.windup.color), true);
+    const whom = target === this.hero ? 'you' : target.c.name;
+    this.log(
+      `The ${foe.c.name} heaves its club high over its head, eyes fixed on ${whom}. Next turn it comes down for double damage` +
+        `${target === this.hero ? ': knock it off its feet first, or raise your guard!' : '.'}`,
+    );
+    this.drawOrder();
+    await this.wait(700);
+  }
+
+  /** The Brute stamps and beats the ground, and it shakes under the whole party (see FoeTrait 'quake'). */
+  private async quake(foe: Actor): Promise<void> {
+    GameAudio.shriek(true);
+    await this.hop(foe.offset, 0, -14);
+    GameAudio.hit(true, true);
+    this.world.cameras.main.shake(420, 0.014);
+    const results = this.battle.quake(foe.c);
+    this.log(`The ${foe.c.name} leaps and brings its club down on the rock. The ground heaves under your feet!`);
+    for (const r of results) {
+      const who = this.actorOf(r.target);
+      const name = this.nameOf(who, true);
+      const save = `${r.roll} ${signed(r.total - r.roll)} = ${r.total} against ${r.dc}`;
+      if (who === this.hero) {
+        GameAudio.hurt();
+        this.world.stats.damage(r.damage);
+      }
+      this.tally.hurt(r.target, r.damage);
+      this.flash(who);
+      this.damageNumber(who, r.damage, false);
+      if (r.kept || r.killed) {
+        this.log(`${name} ${who === this.hero ? 'keep your' : `keeps ${this.their(who)}`} feet (${save}), but ${who === this.hero ? 'take' : 'takes'} ${r.damage} damage.`);
+      } else {
+        this.knockDown(who);
+        this.float(who, 'Prone!', hex(STATUSES.prone.color));
+        this.log(`${name} ${who === this.hero ? 'are' : 'is'} thrown off ${who === this.hero ? 'your' : this.their(who)} feet (${save}): ${r.damage} damage.`);
+      }
+    }
+    this.drawOrder();
+    await this.wait(650);
+    for (const r of results) if (r.killed) await this.fall(this.actorOf(r.target));
+  }
+
+  /** Brought to half his health, the Brute goes berserk (see FoeTrait 'enrage'). */
+  private async enrage(foe: Actor, wasDown: boolean): Promise<void> {
+    this.battle.enrage(foe.c);
+    if (wasDown) this.standUp(foe);
+    GameAudio.warHorn();
+    GameAudio.shriek(true);
+    this.world.cameras.main.shake(300, 0.008);
+    await this.hop(foe.offset, 0, -8);
+    this.float(foe, 'Enraged!', hex(STATUSES.enraged.color), true);
+    this.banner(`The ${foe.c.name} is enraged!`);
+    this.log(
+      `Bleeding and bellowing, the ${foe.c.name} ${wasDown ? 'surges back up, ' : ''}tears off its helm and flings it away. It's gone berserk: ` +
+        `${signed(ENRAGE_TO_HIT)} to hit and harder blows for the rest of the fight, and nothing will daze it now.`,
+    );
+    this.drawOrder();
+    await this.wait(900);
   }
 
   /** A pack leader's howl rouses the rest of the pack. */
@@ -952,9 +1037,9 @@ export class CombatScene extends Phaser.Scene {
     attacker: Actor,
     target: Actor,
     opts: AttackOptions = {},
-    style: { verb?: string; heavy?: boolean; quick?: boolean } = {},
+    style: { verb?: string; heavy?: boolean; quick?: boolean; smash?: boolean } = {},
   ): Promise<AttackResult> {
-    const r = this.battle.attack(attacker.c, target.c, opts);
+    const r = style.smash ? this.battle.smash(attacker.c, target.c) : this.battle.attack(attacker.c, target.c, opts);
     const at = target.pos();
     if (attacker.creature) attacker.creature.faceTowards(at.x, at.y);
     else if (attacker.companion) attacker.companion.faceTowards(at.x, at.y);
@@ -1007,7 +1092,7 @@ export class CombatScene extends Phaser.Scene {
           await this.wait(250);
           this.knockDown(target);
           this.float(target, 'Prone!', hex(STATUSES.prone.color));
-          this.log(`${capital(whom)} ${target === this.hero ? 'are' : 'is'} dragged to the ground (${save})!`);
+          this.log(`${capital(whom)} ${target === this.hero ? 'are' : 'is'} ${style.smash ? 'hammered flat' : 'dragged to the ground'} (${save})!`);
         } else {
           this.log(`${capital(whom)} ${target === this.hero ? 'keep your' : `keeps ${this.their(target)}`} feet (${save}).`);
         }
