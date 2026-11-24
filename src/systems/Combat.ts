@@ -992,7 +992,7 @@ export const FOES = {
     traits: [{ kind: 'rend', damage: 2, turns: 2 }],
   },
   brigandarcher: {
-    name: 'Wren',
+    name: 'Linnet',
     maxHp: 32,
     ac: 14,
     toHit: 8,

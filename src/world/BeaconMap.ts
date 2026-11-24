@@ -23,8 +23,8 @@ export const BRIGAND_POSTS: Array<NpcSpawn & { looking: { x: number; y: number }
   { id: 'garth', gx: 5.45, gy: 3.7, looking: { x: -1, y: 1 } },
   // Teg leaning by the loot, near the door.
   { id: 'teg', gx: 5.7, gy: 6.4, looking: { x: -1, y: 0 } },
-  // Wren at the foot of the stair, bow in hand.
-  { id: 'wren', gx: 6.6, gy: 1.6, looking: { x: -1, y: 1 } },
+  // Linnet at the foot of the stair, bow in hand.
+  { id: 'linnet', gx: 6.6, gy: 1.6, looking: { x: -1, y: 1 } },
 ];
 
 /**

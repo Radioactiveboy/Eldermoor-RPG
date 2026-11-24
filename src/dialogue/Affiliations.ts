@@ -55,7 +55,7 @@ export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   corwin: { label: 'Brigands of Corbie Tor', known: 'met' },
   garth: { label: 'Brigands of Corbie Tor', known: 'met' },
   teg: { label: 'Brigands of Corbie Tor', known: 'met' },
-  wren: { label: 'Brigands of Corbie Tor', known: 'met' },
+  linnet: { label: 'Brigands of Corbie Tor', known: 'met' },
 
   baker: VILLAGE,
   smith: VILLAGE,

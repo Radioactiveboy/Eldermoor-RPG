@@ -7,7 +7,7 @@ import type { DialogueChoice, DialogueNode, DialogueScript } from './Dialogue';
  * Headman Hale asks the hero, once Mother is home and buried, to go up and see
  * whether the beacon can be opened again. Inside, Corwin Haske, who kept it for
  * twenty years until Lord Morten stood the watch down, holds it with three of
- * his band: Big Garth, Teg and Wren. The hero can pay them to go (haggling them
+ * his band: Big Garth, Teg and Linnet. The hero can pay them to go (haggling them
  * down), talk Corwin into keeping the tower again for the Headman's wage and a
  * pardon, or fight them for it. Corwin knew the hero's father, Aldo, who stood
  * the watch at the old tower in the north woods.
@@ -57,14 +57,14 @@ export function corwinScript(t: CorwinTalk): DialogueScript {
       speaker: 'corwin',
       lines: [
         "That's far enough.",
-        'Easy, now. Nobody here wants blood on the floor, least of all the floor. Wren has had an arrow on the string since you came up the path, and Wren does not miss.',
+        'Easy, now. Nobody here wants blood on the floor, least of all the floor. Linnet has had an arrow on the string since you came up the path, and Linnet does not miss.',
         'So. Who sent you, and what for?',
       ],
       choices: menu,
     },
     again: {
       speaker: 'corwin',
-      lines: ['Back again. Wren, ease off the string. Well?'],
+      lines: ['Back again. Linnet, ease off the string. Well?'],
       choices: menu,
     },
     menu: { speaker: 'corwin', lines: ['Well?'], choices: menu },
@@ -72,7 +72,7 @@ export function corwinScript(t: CorwinTalk): DialogueScript {
       speaker: 'corwin',
       lines: [
         "Corwin Haske. I kept this beacon twenty years, for Lord Morten's grandfather and then for him, till he decided the north was quiet and the tower cost too much.",
-        "That's Garth by the fire, Teg by the door, and Wren up on the stair. Garth was a drover. Teg was a tanner's lad. Wren was the best shot in the Stonebrook watch, before there wasn't a Stonebrook watch.",
+        "That's Garth by the fire, Teg by the door, and Linnet up on the stair. Garth was a drover. Teg was a tanner's lad. Linnet was the best shot in the Stonebrook watch, before there wasn't a Stonebrook watch.",
         'Twelve years since they stood us down. No pay after Lammas, and no thanks either. A man has to eat.',
       ],
       next: t.toldOfAldo ? 'menu' : 'look',
@@ -151,7 +151,7 @@ export function corwinScript(t: CorwinTalk): DialogueScript {
     paid: {
       speaker: 'corwin',
       lines: [
-        'Done. Garth, Teg, Wren: get your packs.',
+        'Done. Garth, Teg, Linnet: get your packs.',
         "Look after my tower. The stair's sound, the hatch sticks, and there's fuel laid on the roof. Don't let the fools light it for nothing.",
       ],
     },
@@ -179,7 +179,7 @@ export function corwinScript(t: CorwinTalk): DialogueScript {
       speaker: 'corwin',
       lines: [
         "Then we've a bargain.",
-        "Wren, unstring that bow. Teg, put the kettle on. Garth, you're on watch, top of the tower, and if you fall asleep up there I'll push you off it.",
+        "Linnet, unstring that bow. Teg, put the kettle on. Garth, you're on watch, top of the tower, and if you fall asleep up there I'll push you off it.",
         `Go and tell Hale his beacon's manned. And tell him Corwin Haske said he took his time about it. The roof's yours whenever you want it, ${HERO_NAME}.`,
       ],
     },
@@ -193,7 +193,7 @@ export function corwinScript(t: CorwinTalk): DialogueScript {
     },
     fight: {
       speaker: 'corwin',
-      lines: ["Is that how it is. Shame. I liked you.", 'Garth. Teg. Wren.'],
+      lines: ["Is that how it is. Shame. I liked you.", 'Garth. Teg. Linnet.'],
       action: 'beacon-fight',
     },
     leave: {
@@ -221,7 +221,7 @@ const CORWIN_KEEPER: DialogueScript = {
     watch: {
       speaker: 'corwin',
       lines: [
-        "Garth's up top by day, Wren by night: she sees better in the dark than an owl. Teg keeps the fuel dry and the hoist greased.",
+        "Garth's up top by day, Linnet by night: she sees better in the dark than an owl. Teg keeps the fuel dry and the hoist greased.",
         "We've a fire laid in the brazier and the pitch to hand. If it goes up, it'll be because something is coming down.",
       ],
       next: 'greet',
@@ -276,13 +276,13 @@ export function tegScript(keepers: boolean): DialogueScript {
   };
 }
 
-/** Wren: the archer, who doesn't miss. */
-export function wrenScript(keepers: boolean): DialogueScript {
+/** Linnet: the archer, who doesn't miss. */
+export function linnetScript(keepers: boolean): DialogueScript {
   return {
-    start: 'wren',
+    start: 'linnet',
     nodes: {
-      wren: {
-        speaker: 'wren',
+      linnet: {
+        speaker: 'linnet',
         lines: keepers
           ? ['From the top you can see the Stonebrook tor on a clear day. There should be a light there. There will be again.']
           : ["I'd not, if I were you.", "Whatever it is you're thinking. Talk to Corwin."],

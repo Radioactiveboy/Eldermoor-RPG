@@ -17,7 +17,7 @@ import type { Door } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 
 /** Which brigand fights as which foe. */
-const BRIGAND_FOES: Record<string, FoeKind> = { corwin: 'brigandcaptain', garth: 'brigandbrute', teg: 'brigandcutter', wren: 'brigandarcher' };
+const BRIGAND_FOES: Record<string, FoeKind> = { corwin: 'brigandcaptain', garth: 'brigandbrute', teg: 'brigandcutter', linnet: 'brigandarcher' };
 
 /** Steps already behind the hero when the errand is taken on (if they had been up the tor before being asked). */
 function alreadyDone(): string[] {
@@ -66,10 +66,10 @@ export function enteredBeacon(g: GameScene): void {
   });
 }
 
-/** Up the stair: only once the band are gone or keep the tower for the Headman (Wren's bow says not before). */
+/** Up the stair: only once the band are gone or keep the tower for the Headman (Linnet's bow says not before). */
 export function beaconDoorAllowed(g: GameScene, door: Door): boolean {
   if (door.to !== 'beacon-top' || beaconHolders() !== 'brigands') return true;
-  g.onHint?.("Wren's arrow follows me to the foot of the stair. \"Up there's ours,\" she says. Not while they hold the place.");
+  g.onHint?.("Linnet's arrow follows me to the foot of the stair. \"Up there's ours,\" she says. Not while they hold the place.");
   return false;
 }
 
@@ -164,7 +164,7 @@ function hired(earnest: boolean): void {
 }
 
 /**
- * "Garth. Teg. Wren." Each of them becomes the foe they fight as, where they stand, and the fight is on.
+ * "Garth. Teg. Linnet." Each of them becomes the foe they fight as, where they stand, and the fight is on.
  * (The fight's code is fetched rather than imported, so the areas' arrival hooks stay light: see areas.ts.)
  */
 function fight(g: GameScene): void {

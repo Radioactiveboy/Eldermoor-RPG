@@ -228,7 +228,7 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     flee: 'backs off, snarling.',
   },
   brigandcaptain: {
-    start: 'Corwin draws his falchion. "Garth. Teg. Wren." Up on the stair, a bowstring creaks. The brigands spread out round you.',
+    start: 'Corwin draws his falchion. "Garth. Teg. Linnet." Up on the stair, a bowstring creaks. The brigands spread out round you.',
     banner: 'The brigands of Corbie Tor!',
     flee: 'backs to the door, sword up, and is gone into the grass.',
   },

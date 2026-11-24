@@ -48,7 +48,7 @@ export type SpeakerId =
   | 'footpad' | 'cutpurse' | 'tinker' | 'goatherd' | 'courier'
   | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook'
   | 'wat' | 'snikkit' | 'coombe' | 'orb'
-  | 'corwin' | 'garth' | 'teg' | 'wren';
+  | 'corwin' | 'garth' | 'teg' | 'linnet';
 
 export interface Speaker {
   name: string;
@@ -114,5 +114,5 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   corwin: { name: 'Corwin Haske', portrait: 'portrait-corwin', voice: { pitch: 118, spread: 0.08, wave: 'sawtooth' } },
   garth: { name: 'Big Garth', portrait: 'portrait-garth', voice: { pitch: 92, spread: 0.06, wave: 'sawtooth' } },
   teg: { name: 'Teg', portrait: 'portrait-teg', voice: { pitch: 215, spread: 0.2, wave: 'square' } },
-  wren: { name: 'Wren', portrait: 'portrait-wren', voice: { pitch: 300, spread: 0.1, wave: 'triangle' } },
+  linnet: { name: 'Linnet', portrait: 'portrait-linnet', voice: { pitch: 300, spread: 0.1, wave: 'triangle' } },
 };

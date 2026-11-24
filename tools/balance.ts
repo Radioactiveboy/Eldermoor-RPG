@@ -80,7 +80,7 @@ if (flag('brute')) {
 
 if (flag('beacon')) {
   // Corwin Haske and his band in the beacon on Corbie Tor (see world/BeaconMap.ts), all four at once, in the best kit there is.
-  console.log('\nCorwin Haske\'s band in the beacon (+ Garth, Teg and Wren), best kit: alone, with Sigrun, with Sigrun and Wat.\n');
+  console.log('\nCorwin Haske\'s band in the beacon (+ Garth, Teg and Linnet), best kit: alone, with Sigrun, with Sigrun and Wat.\n');
   const parties = [[], ['sigrun'], ['sigrun', 'wat']] as const;
   for (const level of [9, 10, 11, 12, 13]) {
     const cells = parties.map((allies) =>

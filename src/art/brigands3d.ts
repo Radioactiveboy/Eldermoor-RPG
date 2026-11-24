@@ -17,7 +17,7 @@ import { PALETTE as P } from './palette';
  * lord stopped paying the watch, in his old faded watch tabard over mail, a
  * fur-collared cloak, a falchion and the warden's horn; Big Garth, a bald giant
  * in a fur-trimmed vest with tattooed arms and a great maul; Teg, hooded and
- * masked, with a hatchet in each hand and knives across his chest; and Wren,
+ * masked, with a hatchet in each hand and knives across his chest; and Linnet,
  * the band's lookout, a freckled red-haired archer with a longbow and a quiver.
  *
  * Each is drawn twice from the same model: standing about as folk do (the
@@ -735,8 +735,8 @@ export const TEG: BrigandLook = {
   bulk: 0.94,
 };
 
-/** Wren, the lookout: cropped red hair and freckles, a green hood down on her shoulders, a laced jerkin, a quiver, and a yew longbow. */
-export const WREN: BrigandLook = {
+/** Linnet, the lookout: cropped red hair and freckles, a green hood down on her shoulders, a laced jerkin, a quiver, and a yew longbow. */
+export const LINNET: BrigandLook = {
   skin: [0xf0c8a8, 0xc8a084, 0xffdcc0],
   hair: [0xb4502a, 0x84381e, 0xd4703e],
   hairStyle: 'crop',
@@ -764,7 +764,7 @@ export const BRIGAND_LOOKS: Record<BrigandKind, BrigandLook> = {
   brigandcaptain: CORWIN,
   brigandbrute: GARTH,
   brigandcutter: TEG,
-  brigandarcher: WREN,
+  brigandarcher: LINNET,
 };
 
 /** Every solid and detail scaled up about the feet. */
@@ -861,7 +861,7 @@ export const BRIGAND_FOLK: Record<string, BrigandLook> = {
   corwin: CORWIN,
   garth: GARTH,
   teg: TEG,
-  wren: WREN,
+  linnet: LINNET,
 };
 
 /** The brigands' figures ('folk-<id>', drawn finely) and their fighting sheets ('creature-<kind>'). */

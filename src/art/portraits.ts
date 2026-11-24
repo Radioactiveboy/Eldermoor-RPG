@@ -1982,8 +1982,8 @@ const teg = townsfolk({
   },
 });
 
-/** Wren: freckled and fierce, cropped red hair, a green hood thrown back, a quiver strap over the shoulder. */
-const wren = townsfolk({
+/** Linnet: freckled and fierce, cropped red hair, a green hood thrown back, a quiver strap over the shoulder. */
+const linnet = townsfolk({
   skin: 0xf0c8a8, hair: 0xb04a26, style: 'short', cloth: 0x4a6a3a, shirt: 0x6a5a3e,
   iris: 0x4a7a5a, brow: 'stern', smile: 0, width: 15, jaw: 6, lashes: true, freckles: true, blush: [0xe0705a, 0.4], look: 1,
   behind: (c) => {
@@ -2016,7 +2016,7 @@ const PAINTERS: Record<string, Painter> = {
   landlord, nell, rosie, harlan, fenwick, sigrun, ada, cobb, pell,
   footpad, cutpurse, tinker, goatherd, courier,
   sergeant, jailer, prisoner, headman, steward, housemaid, housecook, snikkit,
-  corwin, garth, teg, wren,
+  corwin, garth, teg, linnet,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide (the orb's is its own step; see orbPortrait.ts). */

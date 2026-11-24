@@ -178,7 +178,7 @@ The HUD doesn't list controls; they're under **Controls** in the pause menu.
   buried, **Headman Hale** asks you to go up and see whether it can be opened again (and not to light it): the
   side quest **The Beacon on Corbie Tor**. Inside, the hall is held by brigands, modelled in HD like the companions:
   Corwin Haske, who kept the beacon for twenty years until Lord Morten stood the watch down (and knew your father),
-  Big Garth with his maul, masked Teg with two hatchets, and Wren on the stair with her longbow. Pay them to go
+  Big Garth with his maul, masked Teg with two hatchets, and Linnet on the stair with her longbow. Pay them to go
   (80 coins, or 60 if you haggle), talk Corwin into keeping the tower again for the Headman's wage and a pardon (on
   your word if Adowvale likes you, or with 20 coins on account), or fight all four at once. Then climb the stair to
   the roof, with the painted sky all round, look over the brazier, and report back to the Headman. Try
