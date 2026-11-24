@@ -163,16 +163,48 @@ const huntingKnife = heldWeapon((f, d) => [
   ...limb(along(f.hand, d, 1.6), along(f.hand, d, 5.8), 0.6, 0.25, STEEL, 0.3),
 ]);
 
-/** Good village steel: a crossguard, a long tapering blade, a brass pommel. */
-const shortSword = heldWeapon((f, d) => {
-  const guard = along(f.hand, d, 1.5);
-  return [
-    { ...pointAt(along(f.hand, d, -1.7)), rx: 0.8, ry: 0.8, rz: 0.8, material: [P.gold, 0xa8802a, P.goldLight] },
-    ...limb(along(f.hand, d, -1.2), guard, 0.55, 0.55, GRIP, 0.3),
-    ...limb([guard[0] - 1.7, guard[1], guard[2]], [guard[0] + 1.7, guard[1], guard[2]], 0.5, 0.5, IRON, 0.3),
-    ...limb(along(f.hand, d, 1.8), along(f.hand, d, 11.5), 0.7, 0.3, STEEL, 0.3),
-  ];
-});
+/**
+ * Which way the sword points: held loosely at the side, point down and a
+ * little forward and out, so the blade runs clear of the leg instead of
+ * splaying out sideways like a knife (seated, it lies forward across the knees).
+ */
+function swordDir(f: HeroFrame): V3 {
+  return f.pose.sit ? norm([-0.3, -0.3, 1]) : norm([-0.28, -0.88, 0.38]);
+}
+
+/** Square to `d`, as near the body's left-right as it can be: the way the crossguard runs. */
+function across(d: V3): V3 {
+  const k = d[0];
+  return norm([1 - k * d[0], -k * d[1], -k * d[2]]);
+}
+
+/**
+ * Good village steel: a brass pommel and a leather grip showing above the
+ * fist, a crossguard square to the blade just below it, and a long blade
+ * tapering to the point, sized to the hero (about a third of his height).
+ */
+const shortSword: GearLook = {
+  model: (f) => {
+    const d = swordDir(f);
+    const g = across(d);
+    const guard = along(f.hand, d, 1.8);
+    const brass: Tones = [P.gold, 0xa8802a, P.goldLight];
+    const solids: Solid[] = [
+      // The grip runs through the fist, its end and the pommel standing proud above it.
+      { ...pointAt(along(f.hand, d, -2.9)), rx: 0.85, ry: 0.85, rz: 0.85, material: brass },
+      ...limb(along(f.hand, d, -2.3), guard, 0.6, 0.6, GRIP, 0.3),
+      // The crossguard, square to the blade, a little heavier at its tips.
+      ...limb(along(guard, g, -2), along(guard, g, 2), 0.5, 0.5, IRON, 0.3),
+      { ...pointAt(along(guard, g, -2.1)), rx: 0.6, ry: 0.6, rz: 0.6, material: IRON },
+      { ...pointAt(along(guard, g, 2.1)), rx: 0.6, ry: 0.6, rz: 0.6, material: IRON },
+      // The blade: broad at the shoulder, narrowing to the point.
+      ...limb(along(guard, d, 0.4), along(guard, d, 10), 0.75, 0.5, STEEL, 0.3),
+      ...limb(along(guard, d, 10), along(guard, d, 12.4), 0.5, 0.18, STEEL, 0.3),
+      fist(f.hand),
+    ];
+    return { solids };
+  },
+};
 
 /** A short ash haft with a bearded iron head, hanging head-down. */
 const hatchet = heldWeapon((f, d) => {
