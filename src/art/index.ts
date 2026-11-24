@@ -15,6 +15,7 @@ import { generateWayfarers } from './wayfarers3d';
 import { generateProps } from './props';
 import { generateTiles } from './tiles';
 import { generateTollGate } from './tollgate';
+import { generatePalisade } from './palisade';
 
 type Painter = (scene: Phaser.Scene) => void;
 
@@ -62,6 +63,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'small creatures', load: () => import('./critters').then((m) => m.generateCritters) },
   // (The toll gate and the goblins stay in the first download: other art draws from them.)
   { label: 'the toll gate', draw: generateTollGate },
+  { label: 'the stockade', draw: generatePalisade },
   { label: 'the monastery', load: () => import('./monastery').then((m) => m.generateMonastery) },
   { label: 'the abbey', load: () => import('./abbey').then((m) => m.generateAbbey) },
   { label: 'the tavern', load: () => import('./tavern').then((m) => m.generateTavern) },

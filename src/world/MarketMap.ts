@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GARRISON, RESIDENCE, RESIDENCE_CHIMNEYS } from '../art/sizes';
+import { GARRISON, PALISADE_CUTS, RESIDENCE, RESIDENCE_CHIMNEYS } from '../art/sizes';
 import { INN_CHIMNEY, TOWNHOUSE_CHIMNEY } from '../art/market';
 import { TREK_HOURS } from '../config';
 import { box, circle, Shape } from './Collision';
@@ -14,6 +14,16 @@ export const MARKET_H = 44;
 
 /** The back corner of Lord Morten's toll gate, across the road north out of the village (see addTollGate). */
 export const TOLL_GATE = { tx: 23, ty: 0, w: 4, h: 1 };
+
+/**
+ * Adowvale's stockade: the lines its palisade runs along (tile rows and
+ * columns), and the gateways through it, each four tiles long with a gate
+ * post on its end tiles: south, where the path goes down to the jetty, and
+ * east, where the road leaves for the Hollow (see addPalisade).
+ */
+export const STOCKADE = { north: 0, west: 0, south: 41, east: 31 } as const;
+export const SOUTH_GATE = { tx: 10, ty: STOCKADE.south, w: 4, h: 1 } as const;
+export const EAST_GATE = { tx: STOCKADE.east, ty: 16, w: 1, h: 4 } as const;
 
 /** Coins the toll guards ask for, once, to open the gate onto the Lord's Road. */
 export const TOLL = 100;
@@ -260,6 +270,7 @@ export function buildMarketMap(gateOpen = false): MapData {
   data.sights.push({ id: board.id, gx: board.tx + 1, gy: board.ty + 0.9, label: 'Read the notices', z: 62 });
   addTollGate(data, gateOpen);
   addGarrisonLane(data);
+  addPalisade(data);
 
   // The militia, each walking their own patch of the square.
   data.npcs!.push(
@@ -350,6 +361,66 @@ function addTollGate(data: MapData, open: boolean): void {
     sign: { heading: 'Signpost', lines: ['↑  North: toll gate, the Lord\'s Road, Adowvale Plains', '↓  South: Adowvale market square'] },
   });
   data.landmarks!.push({ gx: middle, gy: 1, name: 'The toll gate', range: 6 });
+}
+
+/**
+ * The stockade round Adowvale: a palisade of sharpened stakes run loosely
+ * round the village out among the trees at the edge of the clearing, joining
+ * up with Lord Morten's stretch either side of the toll gate. Stout posts
+ * stand at the corners and every so often along it, a timber gateway lets the
+ * east road and the jetty path through, and watchtowers on stilts look out
+ * over it, their braziers burning at night.
+ */
+function addPalisade(data: MapData): void {
+  const { north, west, south, east } = STOCKADE;
+  const along = { shapes: [box(0, 0.38, 1, 0.62)] };
+  const across = { flipX: true, shapes: [box(0.38, 0, 0.62, 1)] };
+  const post = { shapes: [circle(0.5, 0.5, 0.2)] };
+  // Every few tiles a stouter post, and the stakes between in a few different cuts.
+  const stake = (tx: number, ty: number, flip: boolean, n: number) => {
+    if (n % 8 === 7) placeObject(data, { key: 'palisade-post', tx, ty, w: 1, h: 1, ...post });
+    else placeObject(data, { key: `palisade-${(tx * 7 + ty * 3 + n) % PALISADE_CUTS}`, tx, ty, w: 1, h: 1, ...(flip ? across : along) });
+  };
+  const inGate = (tx: number, ty: number) =>
+    [SOUTH_GATE, EAST_GATE].some((g) => tx >= g.tx && tx < g.tx + g.w && ty >= g.ty && ty < g.ty + g.h);
+
+  // Along the back of the village, behind the houses, to where Lord Morten's palisade takes over (x 19).
+  for (let x = west + 1; x < 19; x++) stake(x, north, false, x);
+  // Down the west side, behind the houses there.
+  for (let y = north + 1; y < south; y++) stake(west, y, true, y);
+  // Along the south, past the garrison and the Headman's house, leaving the jetty path through.
+  for (let x = west + 1; x < east; x++) if (!inGate(x, south)) stake(x, south, false, x + 3);
+  // Up the east side, leaving the road through.
+  for (let y = north + 1; y < south; y++) if (!inGate(east, y)) stake(east, y, true, y + 5);
+  for (const [tx, ty] of [[west, north], [east, north], [west, south], [east, south]]) {
+    placeObject(data, { key: 'palisade-post', tx, ty, w: 1, h: 1, ...post });
+  }
+
+  // The gateways, a lantern lit on each post at night.
+  placeObject(data, {
+    key: 'palisade-gateway', ...SOUTH_GATE,
+    shapes: [box(0.3, 0.25, 0.8, 0.75), box(3.2, 0.25, 3.7, 0.75)], blocks: [[0, 0], [3, 0]],
+  });
+  placeObject(data, {
+    key: 'palisade-gateway', ...EAST_GATE, flipX: true,
+    shapes: [box(0.25, 0.3, 0.75, 0.8), box(0.25, 3.2, 0.75, 3.7)], blocks: [[0, 0], [0, 3]],
+  });
+  for (const dx of [0.89, 3.11]) {
+    data.lights!.push({ gx: SOUTH_GATE.tx + dx, gy: SOUTH_GATE.ty + 0.5, z: 44, radius: 120, flicker: 0.5 });
+    data.lights!.push({ gx: EAST_GATE.tx + 0.5, gy: EAST_GATE.ty + dx, z: 44, radius: 120, flicker: 0.5 });
+  }
+
+  // Watchtowers: by the east gate, over the west corners, each with its brazier.
+  for (const [tx, ty] of [[29, 20], [1, 34], [1, 2]]) {
+    for (let y = ty - 1; y <= ty + 2; y++) {
+      for (let x = tx - 1; x <= tx + 2; x++) if (data.props[y]?.[x] === Prop.Tree || data.props[y]?.[x] === Prop.Rock) data.props[y][x] = Prop.None;
+    }
+    placeObject(data, {
+      key: 'palisade-tower', tx, ty, w: 2, h: 2,
+      shapes: [circle(0.3, 0.3, 0.14), circle(1.7, 0.3, 0.14), circle(0.3, 1.7, 0.14), circle(1.7, 1.7, 0.14)],
+    });
+    data.lights!.push({ gx: tx + 1, gy: ty + 1, z: 100, radius: 170, flicker: 0.8 });
+  }
 }
 
 /**

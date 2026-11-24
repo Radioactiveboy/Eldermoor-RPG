@@ -33,7 +33,7 @@ const FEATURES: Array<[RegExp, FeatureKind]> = [
   [/^(mon-tower|nw-watchtower)$/, 'tower'],
   [/^(cave|den)-entrance$/, 'cave'],
   [/^plains-willow$/, 'willow'],
-  [/^(toll|mon)-gate-open$/, 'gate'],
+  [/^((toll|mon)-gate-open|palisade-gateway)$/, 'gate'],
   [/^mkt-well$/, 'well'],
 ];
 
@@ -44,8 +44,17 @@ const FEATURES: Array<[RegExp, FeatureKind]> = [
 export function survey(map: MapData, skipAbove = 0): Survey {
   const cols = Math.ceil(map.width / CELL);
   const rows = Math.ceil(map.height / CELL);
-  const walls = new Set<string>();
-  for (const o of map.objects ?? []) if (/^mon-wall/.test(o.key) && o.ty >= skipAbove) walls.add(`${Math.floor(o.tx / CELL)},${Math.floor(o.ty / CELL)}`);
+  // A patch with a stretch of wall in it is wall: the monastery's, or two or more tiles of a palisade
+  // (so a patch with only the end of one beside a gateway stays open, and the way through shows).
+  const wallTiles = new Map<string, number>();
+  for (const o of map.objects ?? []) {
+    if (o.ty < skipAbove) continue;
+    const weight = /^mon-wall/.test(o.key) ? 2 : /^(palisade|toll-palisade)/.test(o.key) && o.key !== 'palisade-tower' && o.key !== 'palisade-gateway' ? 1 : 0;
+    if (!weight) continue;
+    const k = `${Math.floor(o.tx / CELL)},${Math.floor(o.ty / CELL)}`;
+    wallTiles.set(k, (wallTiles.get(k) ?? 0) + weight);
+  }
+  const walls = new Set([...wallTiles].filter(([, n]) => n >= 2).map(([k]) => k));
   const ground: string[] = [];
   for (let cy = 0; cy < rows; cy++) {
     let row = '';

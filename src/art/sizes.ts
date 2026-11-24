@@ -38,3 +38,6 @@ export const RESIDENCE_CHIMNEYS = [
 
 /** Height of the residence's panelled inner walls, in pixels (see garrison.ts). */
 export const PANEL_WALL_HEIGHT = 100;
+
+/** How many cuts of Adowvale's palisade there are, palisade-0 onwards (see palisade.ts). */
+export const PALISADE_CUTS = 5;
