@@ -3,6 +3,7 @@ import { GameAudio } from '../audio/Audio';
 import { DialogueChoice, DialogueNode, DialogueScript, Speaker, SpeakerId, SPEAKERS } from '../dialogue/Dialogue';
 import { arrangeChoices, ChoiceMenu, MenuRow, MenuView, scrollToShow } from '../dialogue/ChoiceMenu';
 import { PORTRAIT_SIZE } from '../art/sizes';
+import { Affiliations } from '../dialogue/Affiliations';
 import { THEME } from '../ui/Widgets';
 
 export interface DialogueSceneData {
@@ -88,6 +89,11 @@ export class DialogueScene extends Phaser.Scene {
   private portrait!: Phaser.GameObjects.Image;
   private nameText!: Phaser.GameObjects.Text;
   private nameBg!: Phaser.GameObjects.Graphics;
+  /** Who the speaker belongs to, under the portrait (on a phone, over their name), once the hero knows. */
+  private factionText!: Phaser.GameObjects.Text;
+  private factionBg!: Phaser.GameObjects.Graphics;
+  /** Everyone who spoke in this conversation, so a `met` affiliation is known next time. */
+  private spoke = new Set<SpeakerId>();
   private body!: Phaser.GameObjects.Text;
   private more!: Phaser.GameObjects.Text;
   private choiceBox!: Phaser.GameObjects.Container;
@@ -127,6 +133,7 @@ export class DialogueScene extends Phaser.Scene {
     this.closing = false;
     this.barked = undefined;
     this.subFor = undefined;
+    this.spoke.clear();
     // Ignore the key press or click that opened the conversation.
     this.readyAt = this.time.now + 150;
 
@@ -199,6 +206,10 @@ export class DialogueScene extends Phaser.Scene {
     this.nameText = this.add
       .text(L.nameX, -2, '', { fontFamily: THEME.font, fontSize: '20px', color: THEME.goldText, fontStyle: 'bold' })
       .setOrigin(0, 0.5);
+    this.factionBg = this.add.graphics();
+    this.factionText = this.add
+      .text(0, 0, '', { fontFamily: THEME.font, fontSize: L.compact ? '12px' : '13px', color: '#c8b88e', fontStyle: 'bold' })
+      .setOrigin(L.compact ? 0 : 0.5, 0.5);
     this.body = this.add
       .text(L.textX, L.textY, keepText, {
         fontFamily: TEXT_FONT,
@@ -215,9 +226,9 @@ export class DialogueScene extends Phaser.Scene {
 
     // Replies are listed inside the box, under what was said.
     this.choiceBox = this.add.container(0, 0);
-    this.root = this.add.container(0, 0, [this.frameG, frame, this.portrait, this.nameBg, this.nameText, this.body, this.more, this.choiceBox]);
+    this.root = this.add.container(0, 0, [this.frameG, frame, this.portrait, this.factionBg, this.factionText, this.nameBg, this.nameText, this.body, this.more, this.choiceBox]);
     this.drawFrame();
-    if (this.speaker) this.setSpeaker(this.speaker);
+    if (this.speaker) this.setSpeaker(this.speaker, this.node ? this.node.speaker : undefined);
   }
 
   /** The box itself, at its current height. */
@@ -288,13 +299,14 @@ export class DialogueScene extends Phaser.Scene {
     this.lineIndex = 0;
     const speaker = SPEAKERS[node.speaker];
     // A short bark as someone starts speaking, under the typing blips.
+    this.spoke.add(node.speaker);
     if (speaker !== this.barked) GameAudio.bark(speaker.name, speaker.voice.pitch, speaker.voice.wave, node.lines[0] ?? '');
     this.barked = speaker;
-    this.setSpeaker(speaker);
+    this.setSpeaker(speaker, node.speaker);
     this.showLine();
   }
 
-  private setSpeaker(speaker: Speaker): void {
+  private setSpeaker(speaker: Speaker, id?: SpeakerId): void {
     this.speaker = speaker;
     this.portrait.setTexture(speaker.portrait, 0);
     this.nameText.setText(speaker.name);
@@ -304,6 +316,33 @@ export class DialogueScene extends Phaser.Scene {
     this.nameBg.fillRoundedRect(this.nameText.x - 14, -18, w, 32, 8);
     this.nameBg.lineStyle(2, THEME.gold, 1);
     this.nameBg.strokeRoundedRect(this.nameText.x - 14, -18, w, 32, 8);
+    this.showFaction(id);
+  }
+
+  /** The speaker's faction under their portrait: in the box below it on a wide screen, on a little plate over their name on a phone. */
+  private showFaction(id?: SpeakerId): void {
+    const L = this.L!;
+    const known = id ? Affiliations.known(id) : undefined;
+    this.factionBg.clear();
+    this.factionText.setText(known?.label ?? '').setVisible(!!known);
+    if (!known) return;
+    const t = this.factionText.setScale(1);
+    if (L.compact) {
+      t.setPosition(this.nameText.x - 8, -32);
+      const w = t.width + 16;
+      this.factionBg.fillStyle(THEME.panel, 0.92);
+      this.factionBg.fillRoundedRect(t.x - 8, t.y - 10, w, 20, 6);
+      this.factionBg.lineStyle(1, THEME.gold, 0.6);
+      this.factionBg.strokeRoundedRect(t.x - 8, t.y - 10, w, 20, 6);
+      return;
+    }
+    // In the strip of box between the bottom of the portrait and the box's inner edge.
+    const top = L.py + L.portrait;
+    t.setPosition(L.px + L.portrait / 2, (top + L.h - 7) / 2 + 1);
+    t.setScale(Math.min(1, (L.portrait + 6) / t.width));
+    this.factionBg.lineStyle(1, THEME.gold, 0.35);
+    const half = Math.min(L.portrait, t.displayWidth + 24) / 2;
+    this.factionBg.lineBetween(t.x - half, top + 5, t.x + half, top + 5);
   }
 
   private showLine(): void {
@@ -611,6 +650,7 @@ export class DialogueScene extends Phaser.Scene {
   private close(): void {
     if (this.closing) return;
     this.closing = true;
+    this.spoke.forEach((id) => Affiliations.markMet(id));
     this.tweens.add({
       targets: this.root,
       alpha: 0,
