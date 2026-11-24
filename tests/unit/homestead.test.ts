@@ -183,6 +183,10 @@ describe('the Hollow, as it stands', () => {
     expect([...keys].some((k) => k.startsWith('hs-wall-'))).toBe(true);
     expect([...keys].some((k) => k.endsWith('-burnt'))).toBe(false);
     expect(data.goats).toHaveLength(2);
+    // Nothing new stands beside Mother's grave.
+    const grave = data.objects!.find((o) => o.key === 'grave-mother')!;
+    for (const o of data.objects!.filter((o) => o.key.startsWith('hs-'))) expect(Math.hypot(o.tx - grave.tx, o.ty - grave.ty), o.key).toBeGreaterThan(3);
+    for (const k of ['hs-bed-yarrow', 'hs-bed-comfrey', 'hs-bed-sage', 'hs-workshop']) expect(keys.has(k), k).toBe(true);
     // The paddock is fenced all the way round, so the goats can't wander off.
     const home = data.objects!.find((o) => o.key.startsWith('bld-cottage'))!;
     const { x0, y0, x1, y1 } = SPOTS.paddock;

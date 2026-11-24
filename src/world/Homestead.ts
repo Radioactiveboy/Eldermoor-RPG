@@ -93,7 +93,8 @@ export const SPOTS = {
   rubble: [[-1, 2], [0.5, 3.6], [2.5, 3.8], [5, -0.5], [4.6, 3]] as Array<[number, number]>,
   pile: [4, -2] as [number, number],
   well: [3, -2] as [number, number],
-  beds: [[-1, 1], [-1, 2], [-2, 2]] as Array<[number, number]>,
+  // A row of beds along the workshop's west end, well away from Mother's grave (at -2, 3).
+  beds: [[-6, -1], [-6, 0], [-6, 1]] as Array<[number, number]>,
   workshop: [-5, -2] as [number, number],
   paddock: { x0: 13, y0: -1, x1: 17, y1: 3 },
   wall: { x0: -7, y0: -4, x1: 3, y1: 2 },
@@ -185,6 +186,7 @@ function improve(data: MapData, p: ProjectId, x0: number, y0: number): void {
     case 'herb-garden': {
       (['yarrow', 'comfrey', 'sage'] as const).forEach((kind, i) => {
         const { tx, ty } = at(...SPOTS.beds[i]);
+        clearGround(data, tx, ty, tx, ty);
         if (!free(data, tx, ty)) return;
         placeObject(data, { key: `hs-bed-${kind}`, tx, ty, w: 1, h: 1, shapes: [box(0.08, 0.08, 0.92, 0.92)] });
         const herb = HERBS[kind];
