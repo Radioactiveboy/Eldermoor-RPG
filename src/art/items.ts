@@ -3857,6 +3857,55 @@ const PLOT_PAINTERS: Record<string, (c: Ctx) => void> = {
 
 Object.assign(PAINTERS, PLOT_PAINTERS);
 
+/** The dark orb from the brood hall: smoky glass, cold, with a faint wisp still stirring in it. */
+const ORB_PAINTERS: Record<string, (c: Ctx) => void> = {
+  'dark-orb': (c) => {
+    drop(c, () => {
+      ellipse(c, 64, 66, 40, 40);
+      c.fillStyle = '#16141c';
+      c.fill();
+    }, 10, 6);
+    ellipse(c, 64, 66, 40, 40);
+    fillInk(c, rad(c, 52, 52, 52, [
+      [0, '#4a4458'],
+      [0.55, '#25222e'],
+      [1, '#0e0d12'],
+    ]));
+    ellipse(c, 64, 66, 38, 38);
+    clipped(c, () => {
+      // The smoke inside, nearly still: a couple of pale wisps curling round.
+      c.lineCap = 'round';
+      for (const [w, a, col] of [[7, 0, 'rgba(150,120,200,0.22)'], [3.5, 0.7, 'rgba(190,160,240,0.35)'], [2, 2.2, 'rgba(120,96,170,0.3)']] as const) {
+        c.beginPath();
+        for (let t = 0; t <= 1.001; t += 0.05) {
+          const r = 8 + t * 24;
+          const ang = a + t * 4.2;
+          const x = 64 + Math.cos(ang) * r;
+          const y = 68 + Math.sin(ang) * r * 0.7;
+          if (t === 0) c.moveTo(x, y);
+          else c.lineTo(x, y);
+        }
+        c.strokeStyle = col;
+        c.lineWidth = w;
+        c.stroke();
+      }
+      // A cold violet glow deep down, and the rim catching the light below.
+      c.fillStyle = rad(c, 70, 74, 20, [
+        [0, 'rgba(140,100,210,0.35)'],
+        [1, 'rgba(140,100,210,0)'],
+      ]);
+      c.fillRect(0, 0, 128, 128);
+      ellipse(c, 64, 104, 30, 8);
+      c.fillStyle = 'rgba(120,110,150,0.25)';
+      c.fill();
+    });
+    shine(c, 48, 48, 12, 7, -0.6, 0.6);
+    shine(c, 82, 90, 4, 2.5, -0.6, 0.3);
+  },
+};
+
+Object.assign(PAINTERS, ORB_PAINTERS);
+
 /** Which painter makes each texture. */
 const ICONS: Array<[string, string]> = [
   ['item-carrot', 'carrot'],
@@ -3946,6 +3995,7 @@ const ICONS: Array<[string, string]> = [
   ['item-spade', 'spade'],
   ['item-watering-can', 'watering-can'],
   ['item-rag-doll', 'rag-doll'],
+  ['item-dark-orb', 'dark-orb'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {

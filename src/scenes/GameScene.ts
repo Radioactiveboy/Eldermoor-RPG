@@ -63,7 +63,7 @@ import { loadSave, wakingThought } from './game/sleep';
 import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
 import { checkMusings, checkRoadExits } from './game/travel';
 import { checkGateAttack, gateTestStart, wokeAfterGate } from './game/gate';
-import { warrenTestStart } from './game/warren';
+import { warrenTestStart, wokeAfterBurial } from './game/warren';
 import { absent } from '../world/GateAftermath';
 import type { GateAttack } from '../world/GateAttack';
 
@@ -87,6 +87,8 @@ export interface GameSceneData {
   raidAftermath?: boolean;
   /** The morning after the goblins took Adowvale's road, waking in the Tankard (see game/gate.ts). */
   gateAftermath?: boolean;
+  /** Waking in the Tankard two days after Mother's burial, the prologue over (see game/warren.ts). */
+  prologueOver?: boolean;
 }
 
 /** Things the HUD can show the player as a speech-like hint. */
@@ -350,6 +352,8 @@ export class GameScene extends Phaser.Scene {
     if (data.gateAftermath) wokeAfterGate(this);
     if (data.raidAftermath) {
       cameAround(this);
+    } else if (data.prologueOver) {
+      wokeAfterBurial(this);
     } else if (data.slept !== undefined && raidStage() === 'morning') {
       this.time.delayedCall(900, () => this.onHint?.('Shouting. Screaming, outside, and the smell of smoke. What in the world is going on out there?'));
       this.time.delayedCall(5200, () => this.onHint?.("Mother is still asleep. I'd better go and see."));

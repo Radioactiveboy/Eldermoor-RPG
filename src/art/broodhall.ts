@@ -126,8 +126,12 @@ function clutch(seed: number, count: number): Model {
 
 // ---------------------------------------------------------------- the orb
 
-/** A rough stone plinth with bone claws holding up a glass orb, smoke and light turning inside it; `turn` is how far round the smoke has turned. */
-function orb(turn: number, dark = false): Model {
+/**
+ * A rough stone plinth with bone claws holding up a glass orb, smoke and light
+ * turning inside it; `turn` is how far round the smoke has turned. Dark once
+ * the voice has gone out of it, and `empty` once the hero has taken it.
+ */
+function orb(turn: number, dark = false, empty = false): Model {
   const solids: Solid[] = [];
   for (let y = 0; y <= 22; y += 3) {
     const w = 7.4 - y * 0.08 + (y === 0 ? 2 : 0);
@@ -145,7 +149,7 @@ function orb(turn: number, dark = false): Model {
     if (swirl > 0) return [0xa070e0, 0x6a40a8, 0xc8a4ff];
     return [0x5a3290, 0x3a1e64, 0x7a4ab8];
   };
-  solids.push({ cx: 0, cy: 34, cz: 0, rx: 8, ry: 8, rz: 8, material: glass, soft: true });
+  if (!empty) solids.push({ cx: 0, cy: 34, cz: 0, rx: 8, ry: 8, rz: 8, material: glass, soft: true });
   return { solids, details: [] };
 }
 
@@ -181,6 +185,7 @@ export function generateBroodHall(scene: Phaser.Scene): void {
   const tall: FrameSpec = { w: 32, h: 64, feetY: 58, groundShade: 4 };
   register(scene, 'bh-orb', [0, 0.25, 0.5, 0.75].map((t) => draw(orb(t), 30, tall)), tall, 1, 1, { key: 'bh-orb-swirl', order: [0, 1, 2, 3], rate: 5 });
   register(scene, 'bh-orb-dark', [draw(orb(0, true), 30, tall)], tall, 1, 1);
+  register(scene, 'bh-plinth', [draw(orb(0, true, true), 30, tall)], tall, 1, 1);
   const bed: FrameSpec = { w: 72, h: 44, feetY: 34, groundShade: 3, creases: true };
   register(scene, 'bh-pallet-mother', [draw(pallet(true), 0, bed)], bed, 2, 1);
   register(scene, 'bh-pallet', [draw(pallet(false), 0, bed)], bed, 2, 1);

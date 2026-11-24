@@ -1,7 +1,7 @@
 import { ABBEY_WALL_HEIGHT } from '../art/abbey';
 import { ROOM_COUNT } from '../systems/Tavern';
 import { box, circle } from './Collision';
-import { CELLAR_RAT_SPOTS, CELLAR_RATS } from './landmarks';
+import { CELLAR_RAT_SPOTS, CELLAR_RATS, TAVERN_BED } from './landmarks';
 import { CreatureSpawn, MapData, MapObject, placeObject, Prop, Seat, Terrain } from './MapData';
 
 /**
@@ -239,7 +239,7 @@ export function buildTavernRoomMap(room: number): MapData {
       { gx: 4.5, gy: 0.5, z: 28, radius: 160, flicker: 0.6 },
       { gx: 1.5, gy: 0.4, z: 50, radius: 90, flicker: 0.2 },
     ],
-    beds: [{ id: 'tavern-room', tx: 3, ty: 1, gx: 2.5, gy: 1.6 }],
+    beds: [{ id: 'tavern-room', ...TAVERN_BED }],
     sights: [
       { id: 'tavern-room-window', gx: 1.5, gy: 0.3, label: 'Look out', z: 60, thought: 'The window looks out over the market square. Somebody down there is singing, badly. Pell, probably.' },
     ],

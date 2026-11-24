@@ -130,7 +130,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
     },
   }),
   warren: lazy(() => import('../../world/WarrenMap'), (m) => m.buildWarrenMap({ prisoner: penPrisoner(), roused: carryingMother() }), { test: true, enter: enteredWarren }),
-  broodhall: lazy(() => import('../../world/BroodHallMap'), (m) => m.buildBroodHallMap({ motherDead: QuestLog.hasFlag('mother-dead') }), { test: true, enter: enteredBroodHall }),
+  broodhall: lazy(() => import('../../world/BroodHallMap'), (m) => m.buildBroodHallMap({ motherDead: QuestLog.hasFlag('mother-dead'), orbTaken: QuestLog.hasFlag('orb-taken') }), { test: true, enter: enteredBroodHall }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

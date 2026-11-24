@@ -8,12 +8,13 @@ import { GameAudio } from '../../audio/Audio';
 import { orbScript } from '../../dialogue/warren';
 import { Creature } from '../../entities/Creature';
 import { COMPANIONS, Companions } from '../../systems/Companions';
+import { Inventory } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
-import { ORB, SWARM, WARREN_MOUTH } from '../../world/landmarks';
+import { ORB, ORB_TAKE, SWARM, WARREN_MOUTH } from '../../world/landmarks';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { startCombat } from './combat';
 import type { DialogueAction } from './dialogueActions';
-import { carryingMother, draggedOut, penPrisoner } from './warren';
+import { carryingMother, draggedOut, orbTaken, penPrisoner, pocketOrb } from './warren';
 
 /** Letting whoever is in the pen out (dialogue/warren.ts): off they creep, back up to the daylight. */
 function freedPrisoner(g: GameScene): void {
@@ -121,9 +122,16 @@ function liftMother(g: GameScene): void {
   if (pallet) g.map.setObjectArt(pallet, 'bh-pallet');
   const orb = g.map.data.objects?.find((o) => o.key === 'bh-orb' && o.tx === ORB.tx && o.ty === ORB.ty);
   if (orb) g.map.setObjectArt(orb, 'bh-orb-dark');
+  // The orb is there to be taken now (see warren.ts), and the hero won't leave without it.
+  const sights = (g.map.data.sights ??= []).filter((s) => s.id !== 'bh-orb');
+  if (!orbTaken()) sights.push({ ...ORB_TAKE });
+  g.map.data.sights = sights;
   const carrier = Companions.fighters[0];
-  g.time.delayedCall(2000, () => g.onHint?.('The orb has gone dark. I lift her up. She weighs nothing at all. I am taking her home.'));
-  if (carrier) g.time.delayedCall(6500, () => g.onHint?.(`${COMPANIONS[carrier].short} goes ahead with a torch. Up, then. Through all of them.`));
+  g.time.delayedCall(2000, () => g.onHint?.('I lift her up. She weighs nothing at all. I am taking her home.'));
+  g.time.delayedCall(6500, () =>
+    g.onHint?.('And the orb has gone dark. Whoever was looking out of it set them on us. On her. I am not leaving it here.'),
+  );
+  if (carrier) g.time.delayedCall(11000, () => g.onHint?.(`${COMPANIONS[carrier].short} goes ahead with a torch. Up, then. Through all of them.`));
   QuestLog.writeDiary(
     'The thing in the glass spoke when she died. A voice, cold, from very far away: it called her a failure and told them to kill me, and then ' +
       'go up and finish Adowvale. They came out of their holes and we fought them over her body. The orb is dark now. Whoever it was, they ' +
@@ -131,12 +139,40 @@ function liftMother(g: GameScene): void {
   );
 }
 
+/** Taking the dark orb off its plinth in the brood hall, once the voice has gone out of it and the fight over Mother is done. */
+export function takeOrb(g: GameScene): void {
+  if (orbTaken()) return;
+  if (!Inventory.canAdd('dark-orb')) {
+    g.onHint?.('Cold as a stone in winter, and heavier than glass should be. My satchel is full: I will have to make room for it.');
+    return;
+  }
+  pocketOrb();
+  GameAudio.pickup();
+  g.map.data.sights = (g.map.data.sights ?? []).filter((s) => s.id !== ORB_TAKE.id);
+  const plinth = g.map.data.objects?.find((o) => o.tx === ORB.tx && o.ty === ORB.ty && o.key.startsWith('bh-orb'));
+  if (plinth) g.map.setObjectArt(plinth, 'bh-plinth');
+  g.cameras.main.flash(260, 60, 30, 110);
+  g.onHint?.('Cold as a stone in winter, and heavier than glass should be. For a moment the smoke inside it stirs, and I feel someone, very far off, look up.');
+  g.time.delayedCall(5600, () =>
+    g.onHint?.('Whoever you are, you know my face now. Good. I will find yours. Now: home, with Mother.'),
+  );
+  QuestLog.writeDiary(
+    'I took the orb. I could not leave it there. Something spoke out of it and set them on Adowvale, on us, on her, and it will do it again ' +
+      'somewhere else if nobody stops it. It is dark now and cold, and it sits in my satchel like a stone. But it led somewhere once. It can again.',
+  );
+}
+
 /** Beaten down here: dragged out, or crawled out, and come round in the heather by the hole. With Mother, if they were carrying her. */
 export function beatenUnderground(g: GameScene): boolean {
   if (g.area !== 'warren' && g.area !== 'broodhall') return false;
-  if (QuestLog.hasFlag('mother-dead')) QuestLog.setFlag('carrying-mother');
+  if (QuestLog.hasFlag('mother-dead')) {
+    QuestLog.setFlag('carrying-mother');
+  }
+  // Whoever got the hero out brought the orb too: it is in the satchel when they come round (see warren.ts).
+  const orb = QuestLog.hasFlag('mother-dead') && !orbTaken();
+  if (orb) pocketOrb();
   const carrier = Companions.fighters[0];
-  draggedOut(carrier ? COMPANIONS[carrier].short : 'nobody');
+  draggedOut(carrier ? COMPANIONS[carrier].short : 'nobody', orb);
   g.stats.heal(g.stats.maxHealth * 0.35);
   g.stats.restoreStamina(g.stats.maxStamina);
   g.cameras.main.fadeOut(1200, 0, 0, 0);

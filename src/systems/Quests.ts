@@ -162,10 +162,23 @@ export const QUESTS: Record<string, QuestDef> = {
       { id: 'tunnels', text: "Find the way down through the goblins' tunnels", target: { area: 'warren', x: 29.5, y: 1.5 } },
       { id: 'brute', text: 'Get past the Brute', target: { area: 'broodhall', x: 12.5, y: 8.5 } },
       { id: 'mother', text: 'Find Mother', target: { area: 'broodhall', x: 16.2, y: 16.6, npc: 'mother-dying' } },
+      { id: 'orb', text: 'Take the orb', target: { area: 'broodhall', x: 16.5, y: 21.2 } },
       { id: 'out', text: "Carry Mother out of the warren", target: { area: 'warren', x: 1.2, y: 3.5 } },
       { id: 'bury', text: 'Take Mother home to the Hollow' },
     ],
     xp: 300,
+  },
+  'the-watcher': {
+    id: 'the-watcher',
+    title: 'The Watcher in the Glass',
+    kind: 'main',
+    giver: 'Myself',
+    summary:
+      'When Mother died, something spoke out of the orb in the brood hall: a cold voice, from very far away, that called the goblins\' ' +
+      'mother a failure and told them to kill me and finish Adowvale. The orb is dark now, and in my satchel. Whoever was looking out of it ' +
+      'set the goblins on us. On her. I am going to find out who.',
+    objectives: [{ id: 'who', text: 'Find out who spoke through the orb, and set the goblins on Adowvale' }],
+    xp: 500,
   },
   'the-pen': {
     id: 'the-pen',

@@ -17,6 +17,8 @@ import { companionInteractions } from './companions';
 import { fishInteraction } from './fishing';
 import { plotInteractions } from './plot';
 import { examine, pickCrop, shakeTree } from './sights';
+import { takeOrb } from './broodhall';
+import { ORB_TAKE } from '../../world/landmarks';
 import { speckleInteraction } from './speckle';
 import { sitOn, standUp } from './sitting';
 import { goToBed } from './sleep';
@@ -166,7 +168,8 @@ export function sightInteraction(g: GameScene, sight: Sight): Interaction {
   return {
     key: `sight:${sight.id}`, label: sight.label, gx: sight.gx, gy: sight.gy, range: 1.5,
     promptX: p.x, promptY: p.y - sight.z, tile: { x: Math.floor(sight.gx), y: Math.floor(sight.gy) },
-    run: () => examine(g, sight),
+    // (The dark orb in the brood hall is taken, not looked at: see broodhall.ts.)
+    run: () => (sight.id === ORB_TAKE.id ? takeOrb(g) : examine(g, sight)),
   };
 }
 
