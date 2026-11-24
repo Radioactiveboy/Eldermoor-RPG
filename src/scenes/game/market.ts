@@ -1,5 +1,6 @@
 /** Adowvale's market square: arriving, and the militia calling the market's hours. */
 import { MILITIA_RAID_CALLS, MILITIA_WATCH, raidIsOver } from '../../dialogue/afterRaid';
+import { ashesOver, MILITIA_ASHES_WATCH } from '../../dialogue/afterAshes';
 import { marketOpen } from '../../systems/MarketHours';
 import { QuestLog } from '../../systems/Quests';
 import type { GameScene } from '../GameScene';
@@ -43,7 +44,8 @@ export function updateMarketHours(g: GameScene): void {
   g.marketWasOpen = open;
   // Since the raid, the militia shout to each other on their rounds, every so often.
   if (raidIsOver() && g.time.now >= nextWatchCall) {
-    if (nextWatchCall > 0) militiaShout(g, MILITIA_WATCH[Math.floor(Math.random() * MILITIA_WATCH.length)]);
+    const shouts = ashesOver() ? MILITIA_ASHES_WATCH : MILITIA_WATCH;
+    if (nextWatchCall > 0) militiaShout(g, shouts[Math.floor(Math.random() * shouts.length)]);
     nextWatchCall = g.time.now + (WATCH_GAP[0] + Math.random() * (WATCH_GAP[1] - WATCH_GAP[0])) * 1000;
   }
 }

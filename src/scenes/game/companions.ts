@@ -5,6 +5,7 @@
  * talking to whoever is following.
  */
 import { bondGreeting, bondTalk, keepsakeNode, VOICES } from '../../dialogue/companionTalk';
+import { ashesOver, COMPANION_ASHES, wentDown } from '../../dialogue/afterAshes';
 import { DialogueChoice, DialogueNode, DialogueScript, SpeakerId } from '../../dialogue/Dialogue';
 import { Companion, Trail } from '../../entities/Companion';
 import { Npc } from '../../entities/Npc';
@@ -122,11 +123,14 @@ export function followerScript(id: CompanionId): DialogueScript {
   const friendly = atLeast(Relationships.level(id), 'friendly');
   const talk = bondTalk({ id, speaker, bag: Inventory.bag, hurt: hp < max, back: 'greet' });
   const keepsake = keepsakeNode(id, speaker, 'greet');
+  // Once Mother is buried, they can be asked how they're bearing it, once (dialogue/afterAshes.ts).
+  const ashes = ashesOver() && !QuestLog.hasFlag(`ashes-confided:${id}`);
   const greet: DialogueNode = {
     speaker,
     lines: [bondGreeting(id)],
     choices: [
       { text: 'How are you holding up?', next: 'how' },
+      ...(ashes ? [{ text: 'About Mother, and the warren...', next: 'ashes' }] : []),
       ...talk.choices,
       { text: `Go back to ${def.home.place} and wait for me there.`, next: 'leave' },
       { text: "Nothing. Let's keep going.", next: 'on' },
@@ -138,6 +142,12 @@ export function followerScript(id: CompanionId): DialogueScript {
       ...talk.nodes,
       ...(keepsake ? { keepsake } : {}),
       greet,
+      ashes: {
+        speaker,
+        lines: COMPANION_ASHES[id][QuestLog.hasFlag(wentDown(id)) ? 'went' : 'stayed'],
+        action: `ashes-confided-${id}`,
+        next: 'greet',
+      },
       how: {
         speaker,
         lines: [`${state} (${Math.round(hp)} of ${max} health.)`],

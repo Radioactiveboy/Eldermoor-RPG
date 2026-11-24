@@ -36,6 +36,21 @@ const stoolShape = [circle(0.5, 0.5, 0.15)];
 const tableShape = [box(0.12, 0.12, 1, 0.88), box(1, 0.12, 1.88, 0.88)];
 
 /**
+ * Once Ashes is over, whoever the hero let out of the goblins' pen is staying
+ * at the Tankard (see dialogue/afterAshes.ts): Hilde in her usual place at the
+ * traders' table by the barrels (her bakery is a ruin), or Coombe the shepherd
+ * on a stool of his own by the fire, where Godric has put him.
+ */
+export function seatFreedPrisoner(data: MapData, who: 'hilde' | 'coombe' | undefined): MapData {
+  if (who === 'hilde') data.npcs!.push({ id: 'hilde-tankard', gx: 10.5, gy: 5.55, looking: { x: 0, y: 1 } });
+  if (who === 'coombe') {
+    placeObject(data, { key: 'furn-stool', tx: 1, ty: 2, w: 1, h: 1, shapes: stoolShape });
+    data.npcs!.push({ id: 'coombe-tankard', gx: 1.5, gy: 2.45, looking: { x: 0, y: -1 } });
+  }
+  return data;
+}
+
+/**
  * The taproom. The bar runs along the back on the right, with Godric behind
  * it and his kegs and bottles on the wall; the stairs up to the rooms climb
  * the back wall beside it, and the trapdoor to the cellar is by the end of

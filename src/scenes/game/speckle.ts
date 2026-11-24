@@ -7,6 +7,7 @@
  * Speckle lives in the hut.
  */
 import { GameAudio } from '../../audio/Audio';
+import { ashesOver, SIBLING_AFTER_ASHES, SIBLING_AFTER_ASHES_HELLO } from '../../dialogue/afterAshes';
 import {
   ChildLine,
   SIBLING_BANTER,
@@ -46,6 +47,11 @@ const loose = new WeakMap<GameScene, Hen>();
 /** What the children squabble about and how they say hello after the raid, as the side story stands. */
 export function siblingLines(): { banter: ChildLine[][]; hello: () => ChildLine[] } {
   if (raidStage() !== 'over') return { banter: SIBLING_BANTER, hello: siblingHello };
+  // Once Mother is buried: they keep her grave, and grieve her, between whatever else is going on.
+  if (ashesOver() && !underway()) {
+    const comforted = QuestLog.get(SIDE_QUEST)?.completed ? SIBLING_COMFORTED.filter((ex) => !ex.some(([, line]) => /mam\b/.test(line) && /bring back/i.test(line))) : [];
+    return { banter: [...SIBLING_AFTER_ASHES, ...comforted], hello: () => SIBLING_AFTER_ASHES_HELLO };
+  }
   if (QuestLog.get(SIDE_QUEST)?.completed) return { banter: SIBLING_COMFORTED, hello: () => SIBLING_GLAD_HELLO[0] };
   if (underway()) return { banter: [...SIBLING_SCARED, ...SIBLING_WAITING], hello: () => SIBLING_SCARED_HELLO[0] };
   return { banter: SIBLING_SCARED, hello: () => SIBLING_SCARED_HELLO[0] };

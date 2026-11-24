@@ -36,6 +36,8 @@ export interface TownNews {
   courier?: RoadOutcome;
   /** Militia bounties the hero has claimed. */
   bounties: number;
+  /** Ashes is over (dialogue/afterAshes.ts): how it went, as the square tells it. */
+  ashes?: { held: boolean; freed?: 'hilde' | 'coombe'; penned?: 'hilde' | 'coombe' };
 }
 
 /**
@@ -59,7 +61,22 @@ export function crowdGossip(n: TownNews): Gossip[] {
   const news = (id: string, ...lines: string[]) => out.push({ id, lines, news: true });
   const talk = (id: string, ...lines: string[]) => out.push({ id, lines });
 
-  if (n.raidOver) {
+  if (n.ashes) {
+    // Once the hero has carried Mother home from under the hill and buried her: the story everyone tells, quietly, and proudly.
+    const a = n.ashes;
+    news('ashes-warren', "He went down the goblins' hole on the Greyfells. Down it! And came back up.", 'With his mother in his arms, Odo says. Gone, poor soul.');
+    news('ashes-brute', "The big one that burnt the Hollow's dead. The Brute, they called it. Him that did it, down there.", 'Good. I hope it hurt.');
+    if (a.held) news('ashes-road', "Brannock's lads are still telling the night on the old road. It gets bigger every time.", 'Garrick killed eleven, last I heard. Last week it was two.');
+    else news('ashes-bakery', "Osric's clearing the ash out of Hilde's bakery every morning before he lights his own forge.", "He'd never say so, but he's been sweet on her thirty years.");
+    if (a.freed === 'hilde') news('ashes-hilde', "Hilde's back! Walked in at the gate at dawn with a rock in her fist, they say.", "She's at the Tankard. Godric's feeding her up.");
+    if (a.freed === 'coombe') news('ashes-coombe', 'Old Coombe stood a round at the Tankard last night. Coombe!', 'The goblins must have knocked something loose.');
+    if (a.penned === 'hilde') news('ashes-hilde-lost', 'Still no word of Hilde.', "Don't. I can't.");
+    talk('ashes-grave', "Iran's keeping her grave in the Hollow, I hear. His little girl takes it flowers.");
+    talk('ashes-gates', "Gates still barred at dusk. The sergeant says till he's sure.", 'Sure of what?');
+    talk('ashes-hero', "That's him. No, don't stare. Let the lad be.");
+    talk('ashes-morten', '"Gratified," Lord Morten wrote. Gratified! The Headman read it out to the whole square.');
+    if (a.held) talk('ashes-eggs', "No eggs on the end of Hilde's stall since. She'll not have another egg-woman, she says.");
+  } else if (n.raidOver) {
     // Since the goblins came, nobody talks of anything else, and they keep their voices down.
     news('raid-hollow', 'Burnt to the ground, the whole farm in the Hollow. Goblins, they say.', 'Goblins. In my grandmother\'s day that was a story to frighten children.');
     news('raid-mother', 'And they took his mother. Took her. What do goblins want with a woman?', "Hush. Don't. Not where he can hear.");

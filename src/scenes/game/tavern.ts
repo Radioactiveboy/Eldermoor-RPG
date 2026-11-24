@@ -4,6 +4,7 @@
  * rats in the cellar.
  */
 import { GameAudio } from '../../audio/Audio';
+import { ashesOver, TAVERN_ASHES_CHATTER, TAVERN_ASHES_MUTTERS, TAVERN_ASHES_TOASTS } from '../../dialogue/afterAshes';
 import { PLAYER_RADIUS } from '../../config';
 import { SpeakerId } from '../../dialogue/Dialogue';
 import { raidIsOver } from '../../dialogue/afterRaid';
@@ -262,10 +263,12 @@ export function updateChatter(g: GameScene, dt: number): void {
   if (g.chatterTimer > 0) return;
   const gap = () => CHATTER_GAP[0] + Math.random() * (CHATTER_GAP[1] - CHATTER_GAP[0]);
   // Since the goblins came, there's only one thing anybody talks about.
+  // And once Mother is buried, they talk of what the hero did under the hill, and raise their cups to her.
   const raid = raidIsOver();
-  const chatter = raid ? TAVERN_RAID_CHATTER : TAVERN_CHATTER;
-  const mutters = raid ? TAVERN_RAID_MUTTERS : TAVERN_MUTTERS;
-  const toasts = raid ? TAVERN_RAID_TOASTS : TAVERN_TOASTS;
+  const ashes = ashesOver();
+  const chatter = ashes ? TAVERN_ASHES_CHATTER : raid ? TAVERN_RAID_CHATTER : TAVERN_CHATTER;
+  const mutters = ashes ? TAVERN_ASHES_MUTTERS : raid ? TAVERN_RAID_MUTTERS : TAVERN_MUTTERS;
+  const toasts = ashes ? TAVERN_ASHES_TOASTS : raid ? TAVERN_RAID_TOASTS : TAVERN_TOASTS;
   const exchanges = chatter.filter((ex) => ex.every(([id]) => g.someone(id)?.idle));
   if (exchanges.length > 0 && Math.random() < 0.55) {
     const ex = exchanges[Math.floor(Math.random() * exchanges.length)];

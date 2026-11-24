@@ -25,6 +25,7 @@ import { gateAftermath } from '../../world/GateAftermath';
 import { enteredMarket } from './market';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
+import { ashesOver, ashesState } from '../../dialogue/afterAshes';
 import { enteredWorkshop } from './workshops';
 import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 
@@ -100,7 +101,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
   hut: lazy(() => import('../../world/HutMap'), (m) => m.buildHutMap(raidStage() === 'over', !!QuestLog.get('speckle-and-moppet')?.completed), { test: true, enter: enteredHut }),
   cave: lazy(() => import('../../world/CaveMap'), (m) => m.buildCaveMap(), { test: true, enter: enteredCave }),
   market: { build: () => gateAftermath(buildMarketMap(QuestLog.hasFlag('paid-toll'))), test: true, enter: enteredMarket },
-  tavern: lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernMap(), { test: true, enter: enteredTavern }),
+  tavern: lazy(() => import('../../world/TavernMap'), (m) => m.seatFreedPrisoner(m.buildTavernMap(), ashesOver() ? ashesState().freed : undefined), { test: true, enter: enteredTavern }),
   'tavern-hall': lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernHallMap(), { test: true }),
   // No ?area= for a rented room: it needs a room taken first.
   'tavern-room': lazy(() => import('../../world/TavernMap'), (m) => m.buildTavernRoomMap(Tavern.room ?? 1)),

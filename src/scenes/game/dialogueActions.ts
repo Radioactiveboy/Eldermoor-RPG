@@ -15,6 +15,7 @@ import { RAID_ACTIONS } from './raid';
 import { GATE_ACTIONS } from './gate';
 import { TRAIL_ACTIONS } from './trail';
 import { WARREN_ACTIONS } from './broodhall';
+import { ASHES_ACTIONS } from './ashes';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 
 /** A named story effect: what happens when a line with this action is said. */
@@ -31,6 +32,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...TRAIL_ACTIONS,
   ...WARREN_ACTIONS,
   ...FISHING_ACTIONS,
+  ...ASHES_ACTIONS,
 };
 
 /** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, or a named one. */
