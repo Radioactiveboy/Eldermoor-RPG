@@ -222,7 +222,8 @@ export function buildGreyfellsMap(): MapData {
   // opening itself, its rim and what's spilled round it are drawn here, over the face.
   const mouthTile = { tx: WARREN.tx + 3, ty: WARREN.ty + 3 };
   props[mouthTile.ty][mouthTile.tx] = Prop.None;
-  placeObject(data, { key: 'gf-warren', tx: mouthTile.tx, ty: mouthTile.ty, w: 1, h: 1 });
+  // Drawn over the face, but blocking nothing: its tile is the way in.
+  placeObject(data, { key: 'gf-warren', tx: mouthTile.tx, ty: mouthTile.ty, w: 1, h: 1, blocks: [] });
   // The mouth itself: down into the goblins' warren (WarrenMap), once the night they come for Adowvale is over (see game/warren.ts).
   data.doors!.push({
     id: 'warren', tx: mouthTile.tx, ty: mouthTile.ty, to: 'warren', entry: 'mouth', label: 'Go into the hole', facing: 'front',
