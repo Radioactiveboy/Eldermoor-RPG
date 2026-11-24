@@ -5,6 +5,7 @@ import { generateCreatures } from './creatures';
 import { generateFarm } from './farm';
 import { generateFishing } from './fishing';
 import { generateFolk } from './folk';
+import { generateBrigands } from './brigands3d';
 import { generateGoblins } from './goblins3d';
 import { generateHenFarm } from './henfarm';
 import { generateHero } from './hero3d';
@@ -15,6 +16,7 @@ import { generateWayfarers } from './wayfarers3d';
 import { generateProps } from './props';
 import { generateTiles } from './tiles';
 import { generateTollGate } from './tollgate';
+import { generatePalisade } from './palisade';
 
 type Painter = (scene: Phaser.Scene) => void;
 
@@ -62,15 +64,18 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'small creatures', load: () => import('./critters').then((m) => m.generateCritters) },
   // (The toll gate and the goblins stay in the first download: other art draws from them.)
   { label: 'the toll gate', draw: generateTollGate },
+  { label: 'the stockade', draw: generatePalisade },
   { label: 'the monastery', load: () => import('./monastery').then((m) => m.generateMonastery) },
   { label: 'the abbey', load: () => import('./abbey').then((m) => m.generateAbbey) },
   { label: 'the tavern', load: () => import('./tavern').then((m) => m.generateTavern) },
   { label: 'the willow', load: () => import('./willow').then((m) => m.generateWillow) },
   { label: 'Mother', load: () => import('./mother3d').then((m) => m.generateMother) },
   { label: 'goblins', draw: generateGoblins },
+  { label: 'brigands', draw: generateBrigands },
   { label: 'wild herbs', load: () => import('./herbs').then((m) => m.generateHerbs) },
   { label: 'the north woods', load: () => import('./northwoods').then((m) => m.generateNorthWoods) },
   { label: 'the Greyfells', load: () => import('./greyfells').then((m) => m.generateGreyfells) },
+  { label: 'the beacon on Corbie Tor', load: () => import('./beacon').then((m) => m.generateBeacon) },
   { label: 'the brood hall', load: () => import('./broodhall').then((m) => m.generateBroodHall) },
   // After the townsfolk: it redraws the smith's and the baker's working frames.
   { label: 'the smithy and bakery', load: () => import('./workshops').then((m) => m.generateWorkshops) },

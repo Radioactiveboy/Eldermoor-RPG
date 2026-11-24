@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BAG_SIZE, Inventory, InventoryEvent, itemDef, itemEffects } from '../../src/systems/Inventory';
+import { BAG_SIZE, compareGear, EQUIP_SLOTS, groupCounts, Inventory, InventoryEvent, itemDef, itemEffects } from '../../src/systems/Inventory';
 
 beforeEach(() => Inventory.reset());
 
@@ -102,6 +102,45 @@ describe('equipment', () => {
     expect(Inventory.equipped.body).toBe('tunic');
   });
 
+  it('has a place for every kind of gear, the ring on its own finger', () => {
+    expect(EQUIP_SLOTS.map((s) => s.id)).toEqual(['head', 'neck', 'cloak', 'body', 'hands', 'ring', 'trinket', 'feet', 'mainHand', 'offHand']);
+    Inventory.bag[3] = { id: 'silver-ring', count: 1 };
+    expect(Inventory.equip(3)).toBe(true);
+    expect(Inventory.equipped.ring).toBe('silver-ring');
+    expect(Inventory.equipped.trinket).toBe('river-stone');
+  });
+
+  it('takes gear off into the satchel slot it was dropped on', () => {
+    expect(Inventory.unequip('body', 7)).toBe(true);
+    expect(Inventory.bag[7]).toEqual({ id: 'tunic', count: 1 });
+    expect(Inventory.equipped.body).toBeUndefined();
+  });
+
+  it('dropped on something that fits, swaps the two', () => {
+    Inventory.bag[5] = { id: 'riding-boots', count: 1 };
+    expect(Inventory.unequip('feet', 5)).toBe(true);
+    expect(Inventory.equipped.feet).toBe('riding-boots');
+    expect(Inventory.bag[5]).toEqual({ id: 'boots', count: 1 });
+  });
+
+  it("dropped on something that doesn't fit, goes into the first empty slot", () => {
+    expect(Inventory.unequip('body', 0)).toBe(true); // the bread's slot
+    expect(Inventory.bag[0]).toEqual({ id: 'bread', count: 2 });
+    expect(Inventory.bag[3]).toEqual({ id: 'tunic', count: 1 });
+  });
+
+  it('compares gear with what is worn in its place', () => {
+    expect(compareGear(itemDef('short-sword'), itemDef('walking-staff'))).toEqual([{ label: 'Attack', from: '2', to: `${itemDef('short-sword').attack}`, better: 1 }]);
+    expect(compareGear(itemDef('short-sword'), undefined)).toContainEqual({ label: 'Damage', from: 'd4', to: 'd6', better: 1 });
+    expect(compareGear(itemDef('straw-hat'), itemDef('iron-cap'))).toEqual([{ label: 'Defence', from: `${itemDef('iron-cap').defence}`, to: '1', better: -1 }]);
+    expect(compareGear(itemDef('bread'), undefined)).toEqual([]);
+  });
+
+  it("counts the satchel's slots by filter tab", () => {
+    Inventory.add('dark-orb', 1);
+    expect(groupCounts(Inventory.bag)).toEqual({ all: 4, food: 1, gear: 2, materials: 0, quest: 1 });
+  });
+
   it('describes what an item does', () => {
     expect(itemEffects(itemDef('bread'))).toEqual(['Eat: +10 health', 'Eat: +25 stamina']);
     expect(itemEffects(itemDef('walking-staff'))).toContain('Worn: Main hand');
@@ -137,5 +176,12 @@ describe('saving', () => {
     Inventory.reset();
     Inventory.fromSave(copy);
     expect(Inventory.toSave()).toEqual(data);
+  });
+
+  it('moves a ring worn as a trinket in an older save onto the ring finger', () => {
+    const data = Inventory.toSave();
+    data.equipped = { body: 'tunic', trinket: 'silver-ring' };
+    Inventory.fromSave(JSON.parse(JSON.stringify(data)));
+    expect(Inventory.equipped).toEqual({ body: 'tunic', ring: 'silver-ring' });
   });
 });

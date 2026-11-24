@@ -372,7 +372,7 @@ function pointAt(p: V3): { cx: number; cy: number; cz: number } {
 }
 
 /** Layering order, from the body outwards: what's worn goes on before what's held. */
-const LAYER_ORDER: EquipSlot[] = ['body', 'feet', 'trinket', 'head', 'offHand', 'mainHand'];
+const LAYER_ORDER: EquipSlot[] = ['body', 'feet', 'hands', 'cloak', 'neck', 'ring', 'trinket', 'head', 'offHand', 'mainHand'];
 
 /** The looks of whatever the hero is wearing and carrying, in layering order. */
 export function dressed(equipped: Partial<Record<EquipSlot, ItemId>>): GearLook[] {

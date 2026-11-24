@@ -19,7 +19,7 @@ const KEY_CONTROLS: Array<[string, string]> = [
   ['C', 'Equipment'],
   ['M', 'World map'],
   ['P', 'Companions: who travels with you'],
-  ['Mouse wheel', 'Zoom'],
+  ['Mouse wheel', 'Zoom (in fights too)'],
   ['Hold T', 'Fast-forward time'],
   ['Esc', 'Pause'],
 ];
@@ -28,6 +28,7 @@ const TOUCH_CONTROLS: Array<[string, string]> = [
   ['Tap the ground', 'Walk there'],
   ['Tap a person or thing', 'Go over and use it'],
   ['Tap a prompt', 'Do what it says'],
+  ['Pinch', 'Zoom in and out (in fights too)'],
   ['Book button', 'Journal (its Map tab: the world map)'],
   ['Satchel button', 'Satchel and equipment'],
   ['A companion\'s card', 'Companions: who travels with you'],

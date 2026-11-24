@@ -64,6 +64,8 @@ const PLACES: Record<AreaId, Place> = {
   greyfells: { open: true, wind: 0.85, wild: 0.6 },
   // Open to the sky, the wind moaning over the broken top, and the stone throwing every sound back.
   watchtower: { open: true, wind: 0.5, wild: 0.6, echo: 0.45 },
+  beacon: { fire: 0.55, wind: 0.2, echo: 0.35 },
+  'beacon-top': { open: true, wind: 0.85, wild: 0.4 },
   market: { open: true, wind: 0.35, wild: 0.4 },
   monastery: { open: true, wind: 0.5, wild: 0.9, bell: 0.45 },
   abbey: { open: true, wind: 0.35, wild: 0.6, bell: 0.85, echo: 0.2 },
