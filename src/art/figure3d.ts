@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { darker, FEET_Y, FRAME_H, FRAME_W, IDLE_FRAME_RATE, Tones } from './character';
+import type { FightAct } from './fight3d';
 import { PixelCanvas } from './PixelCanvas';
 
 /**
@@ -77,6 +78,8 @@ export interface Pose3D {
    * 0 at the top of the stroke, 1 at the bottom.
    */
   work?: number;
+  /** A moment of a fight, for the figures who fight (see fight3d.ts): drawn in a fighting stance rather than standing. */
+  fight?: FightAct;
 }
 
 /** Drawn directions, in sheet-row order: angle in degrees, 0 facing the viewer, 90 facing screen-right. */
