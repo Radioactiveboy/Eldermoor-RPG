@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { TILE_HEIGHT } from '../config';
-import { caveEntrance } from './cave';
 import { MODEL_ART, registerModel } from './interior';
 import { IsoModel, Shader } from './IsoModel';
 import { PALETTE as P } from './palette';
@@ -292,6 +291,124 @@ function heather(seed: number): PixelCanvas {
   return c;
 }
 
+/** The hills' rock (see world/HillPainter), so the mouth's rim is cut from the same stone as the crag round it. */
+const CRAG = [P.mortar, P.stoneDark, P.stone, P.stoneLight].map((c) => {
+  const r = (((c >> 16) & 0xff) * 0xf4) / 255;
+  const g = (((c >> 8) & 0xff) * 0xee) / 255;
+  const b = ((c & 0xff) * 0xe2) / 255;
+  return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b);
+});
+
+/**
+ * The hole in the hill: just the opening, cut into the foot of the crags the
+ * hills paint round it (see world/greyfellsHills), at the inside corner of
+ * the cleft. A ragged arch of broken stone, black inside with the faint red
+ * of fires far down, propped with crooked goblin timbers lashed with gut, a
+ * skull hung from the lintel, roots trailing over the lip and rubble kicked
+ * out to either side. Drawn round the mouth tile's back corner.
+ */
+function warrenMouth(): { canvas: PixelCanvas; anchorX: number; anchorY: number } {
+  const W = 84;
+  const ax = W / 2;
+  const ay = 66;
+  const c = new PixelCanvas(W, ay + 18);
+  const mw = 24;
+  const mh = 52;
+  const floor = (x: number) => ay + Math.abs(x - ax) * 0.5 + 1;
+  const arch = (x: number) => {
+    const nx = (x - ax) / mw;
+    return ay - mh * Math.sqrt(Math.max(0, 1 - nx * nx)) * (0.93 + smoothNoise(x / 5, 3, 41) * 0.14);
+  };
+
+  // The rim: blocks of broken rock round the opening, lit from the upper left like the crag, ragged at their outer edge so they run into it.
+  for (let y = ay - mh - 14; y <= ay + 14; y++) {
+    for (let x = ax - mw - 12; x <= ax + mw + 12; x++) {
+      if (y > floor(x)) continue;
+      const nx = (x - ax) / (mw + 0.5);
+      const ny = (ay - y) / (mh + 0.5);
+      const r = Math.hypot(nx, Math.max(0, ny));
+      const band = 1.38 + (smoothNoise(x / 3, y / 3, 43) - 0.5) * 0.3;
+      if (r < 0.98 || r > band) continue;
+      const ang = Math.atan2(Math.max(0, ny), nx);
+      const block = Math.floor(ang * 3.4 + smoothNoise(x / 6, y / 6, 47) * 1.6);
+      const seam = Math.abs(ang * 3.4 + smoothNoise(x / 6, y / 6, 47) * 1.6 - block - 0.5) > 0.44;
+      const lit = (x < ax ? 1.6 : 0.7) + (hash(block, 5) - 0.5) * 1.2 + (r < 1.08 ? -0.9 : 0) + (hash(x, y) - 0.5) * 0.6;
+      // In the lee of the opening the rock is in its own shadow.
+      const lee = r < 1.1 + smoothNoise(x / 2, y / 2, 49) * 0.08;
+      const k = seam || lee ? 0 : Math.max(0, Math.min(3, Math.round(lit)));
+      // Ragged where the rim meets the face.
+      const a = r > band - 0.08 ? 160 : 255;
+      c.set(x, y, k === 0 && hash(x * 3, y) > 0.8 ? P.moss : CRAG[k], a);
+    }
+  }
+
+  // The opening: black, with the faint red of fires far down at the bottom.
+  for (let y = ay - mh - 3; y <= ay + 14; y++) {
+    for (let x = ax - mw; x <= ax + mw; x++) {
+      const top = arch(x);
+      if (y < top || y > floor(x)) continue;
+      const depth = (y - top) / (floor(x) - top + 1);
+      const glow = Math.max(0, 1 - Math.hypot((x - ax) / 13, (y - ay + 6) / 9));
+      let col = 0x0b090d;
+      if (y < top + 2) col = 0x1d1820;
+      else if (glow > 0.55) col = hash(x, y) < 0.3 ? 0x4a1e12 : 0x34160f;
+      else if (glow > 0.2) col = hash(x, y) < glow ? 0x24120e : 0x140c0e;
+      else if (depth > 0.9) col = 0x1a1519;
+      c.set(x, y, col);
+    }
+  }
+
+  // Goblin shoring: two crooked posts and a lintel, lashed with gut.
+  const post = (x0: number, lean: number) => {
+    const y0 = Math.round(floor(x0)) - 1;
+    const y1 = Math.round(ay - mh * 0.72);
+    for (let y = y1; y <= y0; y++) {
+      const t = (y0 - y) / (y0 - y1);
+      const x = Math.round(x0 + lean * t + Math.sin(t * 7 + x0) * 0.6);
+      c.set(x - 1, y, P.logLight);
+      c.set(x, y, P.log);
+      c.set(x + 1, y, P.logDark);
+      if (hash(x, y) < 0.12) c.set(x, y, P.logDark);
+    }
+    return { x: Math.round(x0 + lean), y: y1 };
+  };
+  const left = post(ax - mw + 5, 2);
+  const right = post(ax + mw - 5, -2);
+  for (let x = left.x - 4; x <= right.x + 4; x++) {
+    const sag = Math.sin(((x - left.x + 4) / (right.x - left.x + 8)) * Math.PI) * 1.2;
+    const y = Math.round(left.y - 1 + (right.y - left.y) * ((x - left.x) / (right.x - left.x)) + sag);
+    c.set(x, y - 1, P.logLight);
+    c.set(x, y, P.log);
+    c.set(x, y + 1, P.logDark);
+    c.set(x, y + 2, 0x0b090d);
+  }
+  for (const j of [left, right]) {
+    for (let k = -1; k <= 2; k++) c.set(j.x + (k % 2 === 0 ? -1 : 1), j.y + k, P.strawDark);
+  }
+  // A goblin's warning: a little skull hung from the lintel on a thong.
+  const sx = ax + 3;
+  const sy = Math.round(left.y + 2);
+  for (let k = 0; k < 5; k++) c.set(sx, sy + k, P.leatherDark);
+  for (let y = 0; y < 5; y++) for (let x = -2; x <= 2; x++) if (Math.abs(x) + Math.max(0, y - 2) <= 2.5) c.set(sx + x, sy + 5 + y, x < 0 ? BONE : BONE_DARK);
+  c.set(sx - 1, sy + 7, 0x0b090d);
+  c.set(sx + 1, sy + 7, 0x0b090d);
+
+  // Roots and ivy trailing over the lip.
+  const rnd = seededRandom(37);
+  for (let i = 0; i < 11; i++) {
+    const x = ax - mw - 2 + rnd() * (mw * 2 + 4);
+    const y0 = Math.min(arch(Math.round(x)), ay - 4) - 2 - rnd() * 3;
+    const len = 4 + rnd() * 13;
+    for (let k = 0; k < len; k++) c.set(x + Math.sin(k * 0.6 + i) * 0.8, y0 + k, k > len - 3 ? P.leaf : i % 3 === 0 ? P.barkDark : P.leafDark);
+  }
+
+  // Rubble kicked out to either side of the way in.
+  for (const [dx, dy, r] of [[-26, 10, 3.5], [-20, 9, 2.5], [-31, 12, 2.2], [24, 10, 3.2], [30, 13, 2.4], [19, 8, 2]] as const) {
+    c.ellipse(ax + dx, ay + dy, r, r * 0.65, CRAG[2], CRAG[1], CRAG[3]);
+  }
+  return { canvas: c, anchorX: ax, anchorY: ay };
+}
+
 /** Registers a canvas drawn around one tile's middle, `footY` pixels down from its top. */
 function registerOnTile(scene: Phaser.Scene, key: string, c: PixelCanvas, footY: number): void {
   c.toTexture(scene, key);
@@ -310,8 +427,8 @@ export function generateGreyfells(scene: Phaser.Scene): void {
   registerModel(scene, 'gf-skullpole-1', skullPole(9).render());
   registerOnTile(scene, 'gf-stone', scratchedStone(), 30);
   for (let i = 0; i < 3; i++) registerOnTile(scene, `gf-heather-${i}`, heather(331 + i * 13), 15);
-  // The hole in the hill: a bigger, rougher mound than the wolves' cave, its mouth at the front corner.
-  const warren = caveEntrance(4, 104, 37);
+  // The hole in the hill, cut into the crags at the head of the cleft.
+  const warren = warrenMouth();
   warren.canvas.toTexture(scene, 'gf-warren');
   MODEL_ART['gf-warren'] = { key: 'gf-warren', originX: warren.anchorX / warren.canvas.width, originY: warren.anchorY / warren.canvas.height };
 }

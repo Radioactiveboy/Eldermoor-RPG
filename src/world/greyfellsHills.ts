@@ -15,7 +15,7 @@ export const GREYFELLS_H = 56;
 export const GREYFELLS_SOUTH_X = 21;
 /** The middle of the goblins' camp: their cookfire. */
 export const GOBLIN_CAMP = { x: 23.5, y: 21.5 };
-/** The back corner of the hole in the hill (4x4; its mouth is the front corner tile, (3, 3)). */
+/** The back corner of the hole in the hill's old 4x4 footprint; its mouth is the tile at (3, 3) from here, cut into the foot of the crags. */
 export const WARREN = { tx: 21, ty: 3 };
 /** The tarn, a cold little lake east of the camp. */
 export const TARN = { x: 37, y: 31, rx: 5.5, ry: 3.8 };
@@ -93,7 +93,6 @@ const OPEN: Array<{ x: number; y: number; r: number }> = (() => {
       out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, r: radii[i] + (radii[i + 1] - radii[i]) * t });
     }
   }
-  out.push({ x: WARREN_MOUTH.x, y: WARREN_MOUTH.y, r: 3.2 });
   // The camp, and a wide stretch of open fell west of the trail.
   out.push({ x: GOBLIN_CAMP.x, y: GOBLIN_CAMP.y, r: 11 });
   out.push({ x: 13, y: 38, r: 6.5 });
@@ -109,11 +108,48 @@ function outOfOpen(x: number, y: number): number {
   // The tarn and its shore.
   const tx = (x - TARN.x) / (TARN.rx + 4);
   const ty = (y - TARN.y) / (TARN.ry + 4);
-  d = Math.min(d, (Math.hypot(tx, ty) - 1) * (TARN.ry + 4));
-  // The hole in the hill sits in a notch at the foot of the slope.
-  const wx = Math.max(WARREN.tx - x, 0, x - (WARREN.tx + 4));
-  const wy = Math.max(WARREN.ty - y, 0, y - (WARREN.ty + 4));
-  return Math.min(d, Math.hypot(wx, wy) - 0.2);
+  return Math.min(d, (Math.hypot(tx, ty) - 1) * (TARN.ry + 4));
+}
+
+/** The tile the hole in the hill opens onto, and the cleft the trail climbs up through to reach it. */
+const MOUTH_TILE = { x: WARREN.tx + 3, y: WARREN.ty + 3 };
+const CLEFT = { ax: MOUTH_TILE.x + 0.5, ay: MOUTH_TILE.y + 0.75, bx: 25.6, by: 12, r0: 0.62, r1: 2.9 };
+
+/** How far (tiles) a point is out of the mouth's tile and the cleft in front of it; negative inside. */
+function outOfCleft(x: number, y: number): number {
+  // The mouth's own tile, square, so the rock rises straight from its back edges.
+  const qx = Math.max(MOUTH_TILE.x - x, 0, x - (MOUTH_TILE.x + 1));
+  const qy = Math.max(MOUTH_TILE.y - y, 0, y - (MOUTH_TILE.y + 1));
+  const tile = qx === 0 && qy === 0 ? -Math.min(x - MOUTH_TILE.x, MOUTH_TILE.x + 1 - x, y - MOUTH_TILE.y, MOUTH_TILE.y + 1 - y) : Math.hypot(qx, qy);
+  // A wedge opening out down the trail.
+  const { ax, ay, bx, by, r0, r1 } = CLEFT;
+  const vx = bx - ax;
+  const vy = by - ay;
+  const t = clamp01(((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy));
+  const wedge = Math.hypot(x - ax - vx * t, y - ay - vy * t) - (r0 + (r1 - r0) * t);
+  return Math.min(tile, wedge);
+}
+
+/**
+ * The crags the hole is cut into: a face of rock standing straight up behind
+ * the mouth and along both sides of the cleft, dying back into the fell's own
+ * slopes a few tiles off, so the way in is a notch in the hillside rather
+ * than a mound set down in front of it.
+ */
+function cragAroundMouth(x: number, y: number): number {
+  const s = outOfCleft(x, y) - 0.04;
+  if (s <= 0) return 0;
+  const far = Math.hypot(x - (MOUTH_TILE.x + 0.5), y - (MOUTH_TILE.y + 0.5));
+  // Full height round the mouth, dying away down the cleft and off to the sides.
+  const near = 1 - smooth(clamp01((far - 2.6) / 3.6));
+  if (near <= 0) return 0;
+  // Behind the mouth it climbs highest, into the fell's shoulder.
+  const behind = clamp01((MOUTH_TILE.x + MOUTH_TILE.y + 1 - x - y) / 3);
+  const top = 92 + 46 * behind + (fbm(x * 0.7, y * 0.7, 91, 3) - 0.5) * 40;
+  // A sheer face for the first stretch, ledges and fissures in it, then easing into the slope.
+  const face = 1 - Math.exp(-s / 0.45);
+  const ledge = (valueNoise(x * 1.8, y * 1.8, 93) - 0.5) * 18 * clamp01(s / 0.5);
+  return Math.max(0, (top * face + ledge) * near);
 }
 
 /** Where the bedrock breaks through: above about 0.66 there's an outcrop. */
@@ -122,6 +158,12 @@ export function outcrop(x: number, y: number): number {
 }
 
 function rawHeight(x: number, y: number, open: number): number {
+  // Nothing rises inside the cleft: it's the way in.
+  if (outOfCleft(x, y) <= 0) return 0;
+  return Math.max(fellHeight(x, y, open), cragAroundMouth(x, y));
+}
+
+function fellHeight(x: number, y: number, open: number): number {
   const d = open + (fbm(x * 0.11, y * 0.11, 1, 3) - 0.5) * 6;
   if (d <= 0) return 0;
   const north = clamp01((16 - y) / 24);
