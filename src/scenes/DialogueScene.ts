@@ -365,7 +365,14 @@ export class DialogueScene extends Phaser.Scene {
 
   /** A node's action runs once its lines have been read, so its effects (like a "New quest" banner) follow the words. */
   private leaveNode(): void {
-    if (this.node.action) this.data_.onAction?.(this.node.action);
+    if (this.node.action) this.runAction(this.node.action);
+  }
+
+  /** Runs an action, then brings the conversation up to date if it can be (see DialogueScript.refresh). */
+  private runAction(action: string): void {
+    this.data_.onAction?.(action);
+    const refresh = this.data_.script.refresh;
+    if (refresh) this.data_.script = refresh();
   }
 
   private showChoices(choices: DialogueChoice[]): void {
@@ -586,7 +593,7 @@ export class DialogueScene extends Phaser.Scene {
     HEARD.add(heardKey(this.node.speaker, choice));
     this.clearChoices();
     this.leaveNode();
-    if (choice.action) this.data_.onAction?.(choice.action);
+    if (choice.action) this.runAction(choice.action);
     this.goTo(choice.next);
   }
 

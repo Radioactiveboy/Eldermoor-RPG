@@ -1,4 +1,5 @@
 import { Battle, Combatant, CombatantDef, Dice, WeaponEffect } from './Combat';
+import { bondCombatBonus, Relationships } from './Relationships';
 import { SaveGame } from './SaveGame';
 import type { AreaId } from '../world/MapData';
 
@@ -175,15 +176,17 @@ export function combatDefOf(id: CompanionId, heroLevel: number, hp: number): Com
   const def = COMPANIONS[id];
   const c = def.combat;
   const maxHp = maxHpOf(id, heroLevel);
-  // A little better aim every third level of the hero's, as they learn to fight together.
-  const toHit = c.toHit + Math.floor(Math.max(0, heroLevel - 1) / 3);
+  // A little better aim every third level of the hero's, as they learn to fight together,
+  // and better still beside a friend (see systems/Relationships.ts).
+  const bond = bondCombatBonus(Relationships.level(id));
+  const toHit = c.toHit + Math.floor(Math.max(0, heroLevel - 1) / 3) + bond.toHit;
   return {
     id: fighterId(id),
     name: def.short,
     side: 'party',
     hp: Math.max(1, Math.min(maxHp, Math.round(hp))),
     maxHp,
-    ac: c.ac,
+    ac: c.ac + bond.ac,
     toHit,
     damage: c.damage,
     quickness: c.quickness,

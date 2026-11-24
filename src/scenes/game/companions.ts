@@ -4,13 +4,15 @@
  * area behind the hero, asking someone to come or sending them home, and
  * talking to whoever is following.
  */
+import { bondGreeting, bondTalk, keepsakeNode, VOICES } from '../../dialogue/companionTalk';
 import { DialogueChoice, DialogueNode, DialogueScript, SpeakerId } from '../../dialogue/Dialogue';
 import { Companion, Trail } from '../../entities/Companion';
 import { Npc } from '../../entities/Npc';
 import { Vec2 } from '../../iso/IsoMath';
 import { COMPANIONS, CompanionId, Companions, isCompanion, MAX_PARTY, maxHpOf } from '../../systems/Companions';
 import { Experience } from '../../systems/Experience';
-import { Inventory } from '../../systems/Inventory';
+import { Inventory, itemDef, ItemId, ITEMS } from '../../systems/Inventory';
+import { atLeast, BONDS, bondPrice, hasBond, PRY_BOND, Relationships, SORRY_BOND, TOPIC_BOND, willTravel } from '../../systems/Relationships';
 import { QuestLog } from '../../systems/Quests';
 import type { GameScene } from '../GameScene';
 import type { Interaction } from './interactions';
@@ -33,7 +35,8 @@ function willCome(id: CompanionId): boolean {
 export function priceOf(id: CompanionId): number {
   const hire = COMPANIONS[id].hire;
   if (!hire || Companions.isRecruited(id)) return 0;
-  return hire.freeFlag && QuestLog.hasFlag(hire.freeFlag) ? 0 : hire.coins;
+  // Someone else paying, or a friend who won't take the hero's coin; otherwise the fee goes with how they feel.
+  return hire.freeFlag && QuestLog.hasFlag(hire.freeFlag) ? 0 : bondPrice(hire.coins, Relationships.level(id));
 }
 
 /**
@@ -116,26 +119,35 @@ export function followerScript(id: CompanionId): DialogueScript {
   };
   const lines = how[id];
   const state = share > 0.75 ? lines[0] : share > 0.4 ? lines[1] : lines[2];
+  const friendly = atLeast(Relationships.level(id), 'friendly');
+  const talk = bondTalk({ id, speaker, bag: Inventory.bag, hurt: hp < max, back: 'greet' });
+  const keepsake = keepsakeNode(id, speaker, 'greet');
+  const greet: DialogueNode = {
+    speaker,
+    lines: [bondGreeting(id)],
+    choices: [
+      { text: 'How are you holding up?', next: 'how' },
+      ...talk.choices,
+      { text: `Go back to ${def.home.place} and wait for me there.`, next: 'leave' },
+      { text: "Nothing. Let's keep going.", next: 'on' },
+    ],
+  };
   return {
-    start: 'greet',
+    start: keepsake ? 'keepsake' : 'greet',
     nodes: {
-      greet: {
-        speaker,
-        lines: [id === 'sigrun' ? 'What.' : 'Yes? What is it?'],
-        choices: [
-          { text: 'How are you holding up?', next: 'how' },
-          { text: `Go back to ${def.home.place} and wait for me there.`, next: 'leave' },
-          { text: "Nothing. Let's keep going.", next: 'on' },
-        ],
-      },
+      ...talk.nodes,
+      ...(keepsake ? { keepsake } : {}),
+      greet,
       how: {
         speaker,
         lines: [`${state} (${Math.round(hp)} of ${max} health.)`],
         next: 'greet',
       },
       leave: { speaker, lines: [def.barks.leave], action: `companion:leave:${id}` },
-      on: { speaker, lines: [id === 'sigrun' ? 'Then stop talking and walk.' : 'Right you are!'] },
+      on: { speaker, lines: [id === 'sigrun' ? (friendly ? 'Lead on, then.' : 'Then stop talking and walk.') : 'Right you are!'] },
     },
+    // After a gift or a story, the next thing they say starts from the list again, with what's said and given brought up to date.
+    refresh: () => ({ ...followerScript(id), start: 'greet' }),
   };
 }
 
@@ -146,14 +158,37 @@ export function followerScript(id: CompanionId): DialogueScript {
  */
 export function offerCompanion(npcId: string, script: DialogueScript): DialogueScript {
   const id = companionAt(npcId);
-  if (!id || Companions.isWith(id) || !willCome(id)) return script;
+  if (!id || Companions.isWith(id)) return script;
   const at = script.nodes.ask;
   if (!at?.choices) return script;
   const def = COMPANIONS[id];
   const speaker = def.speaker as SpeakerId;
   const nodes: Record<string, DialogueNode> = { ...script.nodes };
+  // Getting to know them (see dialogue/companionTalk.ts): their life, gifts, a word kind or cruel.
+  const extra: DialogueChoice[] = [];
+  if (hasBond(id)) {
+    const talk = bondTalk({ id, speaker, bag: Inventory.bag, hurt: false, back: 'ask' });
+    Object.assign(nodes, talk.nodes);
+    extra.push(...talk.choices);
+    const keepsake = keepsakeNode(id, speaker, 'ask');
+    if (keepsake) {
+      nodes['bond-keepsake'] = keepsake;
+      extra.unshift({ key: true, text: 'You look like you want to say something.', next: 'bond-keepsake' });
+    }
+  }
+  const refresh = () => ({ ...offerCompanion(npcId, script), start: 'ask', refresh });
+  const done = (more: DialogueChoice[]): DialogueScript => {
+    const choices = [...at.choices!];
+    choices.splice(Math.max(0, choices.length - 1), 0, ...more, ...extra);
+    nodes.ask = { ...at, choices };
+    return { ...script, nodes, refresh: hasBond(id) ? refresh : script.refresh };
+  };
+  if (!willCome(id)) return done([]);
   let choice: DialogueChoice;
-  if (Companions.full) {
+  if (hasBond(id) && !willTravel(Relationships.level(id))) {
+    choice = { text: Companions.isRecruited(id) ? 'Come with me again.' : 'Will you come with me?', next: 'companion-refuse' };
+    nodes['companion-refuse'] = { speaker, lines: [VOICES[id].refuse], next: 'ask' };
+  } else if (Companions.full) {
     choice = { text: Companions.isRecruited(id) ? 'Come with me again.' : 'Will you come with me?', next: 'companion-full' };
     nodes['companion-full'] = {
       speaker,
@@ -165,24 +200,23 @@ export function offerCompanion(npcId: string, script: DialogueScript): DialogueS
     nodes['companion-join'] = { speaker, lines: [def.barks.join], action: `companion:join:${id}` };
   } else {
     const price = priceOf(id);
-    if (price > Inventory.coins) return script;
-    const free = !!def.hire && price === 0;
+    if (price > Inventory.coins) return done([]);
+    const paid = !!def.hire?.freeFlag && QuestLog.hasFlag(def.hire.freeFlag);
+    // A friend who'd come for nothing (Sigrun, once she trusts the hero).
+    const asFriend = !!def.hire && price === 0 && !paid;
     choice = {
-      text: price > 0 ? `Here are ${price} coins. Come with me.` : free ? "The Headman's paying. Will you come?" : 'Will you come with me?',
+      text: price > 0 ? `Here are ${price} coins. Come with me.` : paid ? "The Headman's paying. Will you come?" : 'Will you come with me?',
       next: 'companion-hire',
     };
     nodes['companion-hire'] = {
       speaker,
       lines: id === 'sigrun'
-        ? [price > 0 ? 'Hm. Count it out. ...All there. Fine.' : 'Is he. Then fine.', def.barks.join]
+        ? [price > 0 ? 'Hm. Count it out. ...All there. Fine.' : asFriend ? "Keep your coin. I'll come because it's you." : 'Is he. Then fine.', def.barks.join]
         : [def.barks.join],
       action: `companion:hire:${id}`,
     };
   }
-  const choices = [...at.choices];
-  choices.splice(Math.max(0, choices.length - 1), 0, { key: true, ...choice });
-  nodes.ask = { ...at, choices };
-  return { ...script, nodes };
+  return done([{ key: true, ...choice }]);
 }
 
 /** `companion:hire:<id>`, `companion:join:<id>` and `companion:leave:<id>`, from a conversation. */
@@ -206,6 +240,74 @@ export function companionAction(g: GameScene, action: string): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * The bond actions from talking to a companion (see dialogue/companionTalk.ts):
+ * `bond:topic|pry|say|gift|tend|keepsake|sorry:<id>[:...]`. Someone who comes
+ * to resent the hero while following them walks off home once the talk is done.
+ */
+export function bondAction(g: GameScene, action: string): boolean {
+  const [, verb, id, a, b] = action.split(':');
+  if (!hasBond(id)) return false;
+  switch (verb) {
+    case 'topic':
+      if (Relationships.mark(id, `topic:${a}`)) Relationships.gain(id, TOPIC_BOND, 'Got to know them');
+      break;
+    case 'pry':
+      Relationships.gain(id, PRY_BOND, 'Pried');
+      break;
+    case 'say': {
+      const amount = Number(a);
+      // A kind word counts once a day ("day:<what>"); an answer to a story once ever; a cruel word every time.
+      if (b?.startsWith('day')) {
+        const what = action.split(':').slice(5).join(':') || b;
+        if (Relationships.today(id, `say:${what}`) === 0) Relationships.gain(id, amount, 'A kind word');
+        Relationships.noteToday(id, `say:${what}`);
+      } else if (amount > 0) {
+        if (Relationships.mark(id, `answer:${b}`)) Relationships.gain(id, amount, 'A kind word');
+      } else {
+        if (Relationships.mark(id, `answer:${b}`) || !VOICES[id].topics.some((t) => t.id === b)) Relationships.gain(id, amount, 'A cruel word');
+      }
+      break;
+    }
+    case 'gift': {
+      const item = a as ItemId;
+      if (!Object.hasOwn(ITEMS, item) || !Relationships.canGift(id) || !Inventory.remove(item, 1)) break;
+      Relationships.gift(id, item, itemDef(item).name);
+      break;
+    }
+    case 'tend': {
+      const item = a as ItemId;
+      if (!Object.hasOwn(ITEMS, item) || !isCompanion(id) || !Inventory.remove(item, 1)) break;
+      const heal = itemDef(item).eat?.health ?? 0;
+      Companions.setHp(id, Companions.hp(id, Experience.level) + heal, Experience.level);
+      Relationships.tended(id);
+      break;
+    }
+    case 'keepsake': {
+      const k = BONDS[id].keepsake;
+      // No room in the satchel: they'll offer it again next time.
+      if (!k || Relationships.has(id, 'keepsake') || !Inventory.canAdd(k.item, k.count)) break;
+      Relationships.mark(id, 'keepsake');
+      Inventory.add(k.item, k.count);
+      break;
+    }
+    case 'sorry':
+      if (Relationships.today(id, 'sorry') === 0) Relationships.gain(id, SORRY_BOND, 'Apologised');
+      Relationships.noteToday(id, 'sorry');
+      break;
+    default:
+      return false;
+  }
+  // Pushed too far: they'll not stay with the hero (once the talk is over, they walk off).
+  if (isCompanion(id) && Companions.isWith(id) && !willTravel(Relationships.level(id))) {
+    g.afterTalk = () => {
+      companionSays(g, id, VOICES[id].quit, 4);
+      sendHome(g, id);
+    };
+  }
+  return true;
 }
 
 /** Someone who's just agreed to come steps out from where they were, and falls in behind. */

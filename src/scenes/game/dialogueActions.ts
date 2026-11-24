@@ -6,7 +6,7 @@
 import { ItemId } from '../../systems/Inventory';
 import { ShopId, SHOPS } from '../../systems/Shops';
 import type { GameScene } from '../GameScene';
-import { companionAction } from './companions';
+import { bondAction, companionAction } from './companions';
 import { FISHING_ACTIONS } from './fishing';
 import { HOLLOW_ACTIONS } from './hollow';
 import { MEDICINE_ACTIONS } from './medicine';
@@ -33,7 +33,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...FISHING_ACTIONS,
 };
 
-/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, or a named one. */
+/** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, or a named one. */
 export function runDialogueAction(g: GameScene, action: string): void {
   if (action.startsWith('shop:') && action.slice(5) in SHOPS) {
     g.pendingShop = action.slice(5) as ShopId;
@@ -52,6 +52,7 @@ export function runDialogueAction(g: GameScene, action: string): void {
     return;
   }
   if (action.startsWith('companion:') && companionAction(g, action)) return;
+  if (action.startsWith('bond:') && bondAction(g, action)) return;
   if (action.startsWith('rent:')) {
     rentRoom(g, Number(action.slice(5)));
     return;

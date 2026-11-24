@@ -32,6 +32,12 @@ export interface DialogueNode {
 export interface DialogueScript {
   start: string;
   nodes: Record<string, DialogueNode>;
+  /**
+   * Builds the conversation again as things now stand, after a reply's or a
+   * node's action has run (a gift given, a story told), so what's offered next
+   * fits: the same node ids, with what's in them brought up to date.
+   */
+  refresh?: () => DialogueScript;
 }
 
 export type SpeakerId =

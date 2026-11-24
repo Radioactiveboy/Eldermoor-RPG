@@ -5,6 +5,7 @@
  * are along. Other parts of the story can have a companion say something with
  * companionRemark.
  */
+import { Relationships } from '../../systems/Relationships';
 import { ARRIVALS, Chatter, ChatterContext, chatterThatFits } from '../../dialogue/companionChatter';
 import type { CompanionId } from '../../systems/Companions';
 import { QuestLog } from '../../systems/Quests';
@@ -66,6 +67,7 @@ export function chatterContext(g: GameScene): ChatterContext {
     heroHealth: g.stats.health / g.stats.maxHealth,
     party: g.companions.filter((c) => !c.isGone).map((c) => c.id),
     motherMissing: QuestLog.hasFlag('raid-over') && !QuestLog.get('the-raid')?.completed,
+    bond: { sigrun: Relationships.level('sigrun'), wat: Relationships.level('wat') },
     gateComing: !!gate && !gate.completed,
     beastNear: beast?.kind,
   };

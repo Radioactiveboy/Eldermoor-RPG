@@ -1,3 +1,5 @@
+import { bondGreeting } from './companionTalk';
+import { Relationships } from '../systems/Relationships';
 import { HERO_NAME } from '../config';
 import type { DialogueScript } from './Dialogue';
 
@@ -21,7 +23,9 @@ export function watScript(first: boolean): DialogueScript {
       },
       again: {
         speaker: 'wat',
-        lines: ["Still watching the Hollow road. Nothing's come up it. Nothing ever does, now."],
+        lines: Relationships.level('wat') === 'acquainted'
+          ? ["Still watching the Hollow road. Nothing's come up it. Nothing ever does, now."]
+          : [bondGreeting('wat')],
         next: 'ask',
       },
       ask: {

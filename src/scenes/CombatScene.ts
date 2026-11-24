@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
 import { HERO_SCALE } from '../art/character';
 import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
+import { Relationships } from '../systems/Relationships';
 import { HERO_NAME } from '../config';
 import type { Companion } from '../entities/Companion';
 import type { Creature } from '../entities/Creature';
@@ -1184,6 +1185,8 @@ export class CombatScene extends Phaser.Scene {
       const max = a.c.maxHp;
       const hp = outcome === 'defeat' ? Math.max(a.c.hp, Math.ceil(max * 0.5)) : a.c.hp > 0 ? a.c.hp : Math.ceil(max * REVIVE_SHARE);
       Companions.setHp(id, hp, Experience.level);
+      // A fight won side by side brings them a little closer (see systems/Relationships.ts).
+      if (outcome === 'victory') Relationships.foughtBeside(id);
       if (a.c.hp <= 0 && outcome !== 'defeat') a.companion!.say(COMPANIONS[id].barks.revived, 4);
       else if (outcome === 'victory' && Math.random() < 0.6) {
         const won = COMPANIONS[id].barks.won;
