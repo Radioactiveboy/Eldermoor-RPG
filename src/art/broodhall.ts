@@ -190,7 +190,7 @@ export function generateBroodHall(scene: Phaser.Scene): void {
 // ---------------------------------------------------------------- Mother's grave
 
 /** Mother's grave in the Hollow: a long mound of fresh earth, a cairn of field stones at its head, and a wooden marker with two names cut in it. */
-function grave(): Model {
+export function grave(): Model {
   const earth: Tones = [0x6a4a32, 0x46301f, 0x86624a];
   const wood: Tones = [P.bark, P.barkDark, P.barkLight];
   const solids: Solid[] = [];
@@ -200,15 +200,22 @@ function grave(): Model {
   }
   const stones: Array<[number, number, number, number]> = [[-18, 3, -3, 3.4], [-18, 3, 3, 3], [-21, 3, 0, 3.2], [-19, 7.5, 0, 2.8], [-15, 3, 0, 2.6], [-19.5, 11, -0.5, 2]];
   for (const [x, y, z, r] of stones) solids.push({ cx: x, cy: y, cz: z, rx: r * 1.1, ry: r * 0.85, rz: r, material: (h) => (speck(h, 1.2) < 0.2 ? [STONE[2], STONE[0], 0xb0aca6] : STONE) });
-  // The marker, a split plank pegged across a post.
-  solids.push(...limb([-24, 0, 0], [-24, 24, 0], 1.1, 1, wood));
-  solids.push(...limb([-24, 18, -5], [-24, 18, 5], 1, 1, wood));
+  // The marker: a post with a ring of wood on top, the old sign of the Saints, its middle hung with a sprig of heather.
+  solids.push(...limb([-24, 0, 0], [-24, 20, 0], 1.1, 1, wood));
+  for (let k = 0; k < 18; k++) {
+    const a = (k / 18) * Math.PI * 2;
+    solids.push({ cx: -24 + Math.cos(a) * 5, cy: 25 + Math.sin(a) * 5, cz: 0, rx: 1.2, ry: 1.2, rz: 1.2, material: wood });
+  }
+  solids.push({ cx: -24, cy: 24, cz: 0.6, rx: 1, ry: 1.8, rz: 0.8, material: [0x7a4a7e, 0x4e3050, 0xa06aa2] });
   // A few early flowers someone put on it.
   const details: Detail[] = [[-4, 6, 3], [2, 6, -2], [8, 5.6, 2]].map(([x, y, z]) => ({ x, y, z, color: 0x8a9ae0 }));
   return { solids, details };
 }
 
+/** Which way the grave lies: its head (the cairn and marker) up to the right, the mound running down to the left. */
+export const GRAVE_ANGLE = 210;
+
 export function generateGrave(scene: Phaser.Scene): void {
   const spec: FrameSpec = { w: 96, h: 76, feetY: 60, groundShade: 3 };
-  register(scene, 'grave-mother', [draw(scaled(grave(), 1.5), 30, spec)], spec, 1, 1);
+  register(scene, 'grave-mother', [draw(scaled(grave(), 1.5), GRAVE_ANGLE, spec)], spec, 1, 1);
 }
