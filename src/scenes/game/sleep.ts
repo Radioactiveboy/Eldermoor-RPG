@@ -12,6 +12,7 @@ import type { ConfirmSceneData } from '../ConfirmScene';
 import type { GameScene, GameSceneData } from '../GameScene';
 import type { SleepSceneData } from '../SleepScene';
 import { standUp } from './sitting';
+import { hearWhisper, whisperPending } from './whisper';
 
 /** What the hero thinks on waking, by the hour (and in a rented room at the Crooked Tankard, where). */
 export function wakingThought(hour: number, area: AreaId): string {
@@ -81,34 +82,44 @@ export function goToBed(g: GameScene, bed: Bed): void {
   });
 }
 
-/** Fade to black, let the hours pass, wake rested, and save the game. */
-export function sleep(g: GameScene, bed: Bed, hours: number): void {
+/**
+ * Fade to black, let the hours pass, wake rested, and save the game. `area` is
+ * where the bed is, when it isn't where the hero is standing (sent off to the
+ * Tankard to sleep, see whisper.ts). The night after the beacon, the orb speaks first.
+ */
+export function sleep(g: GameScene, bed: Bed, hours: number, area: AreaId = g.area): void {
   g.player.setPath([]);
   g.cameras.main.fadeOut(900, 0, 0, 0);
   g.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-    g.clock.advance(hours);
-    // The night after the tincture: and in the morning, the goblins.
-    if (raidStage() === 'pending') {
-      QuestLog.clearFlag('raid-pending');
-      QuestLog.setFlag('raid-morning');
-    }
-    Needs.slept(hours, g.clock.elapsedHours);
-    g.stats.heal(g.stats.maxHealth);
-    g.stats.restoreStamina(g.stats.maxStamina);
-    const save = makeSave(g, bed);
-    SaveGame.write(save);
-    // Wake up from the save just made, so waking always matches what loading it later gives.
-    g.scene.restart({ load: save, slept: hours } satisfies GameSceneData);
+    if (whisperPending()) hearWhisper(g, () => wake(g, bed, hours, area, true));
+    else wake(g, bed, hours, area, false);
   });
 }
 
-/** Everything needed to come back to this moment, waking in `bed`. */
-export function makeSave(g: GameScene, bed: Bed): SaveData {
+/** The hours pass in the dark: rested, saved, and up again from that save. */
+function wake(g: GameScene, bed: Bed, hours: number, area: AreaId, whispered: boolean): void {
+  g.clock.advance(hours);
+  // The night after the tincture: and in the morning, the goblins.
+  if (raidStage() === 'pending') {
+    QuestLog.clearFlag('raid-pending');
+    QuestLog.setFlag('raid-morning');
+  }
+  Needs.slept(hours, g.clock.elapsedHours);
+  g.stats.heal(g.stats.maxHealth);
+  g.stats.restoreStamina(g.stats.maxStamina);
+  const save = makeSave(g, bed, area);
+  SaveGame.write(save);
+  // Wake up from the save just made, so waking always matches what loading it later gives.
+  g.scene.restart({ load: save, slept: hours, whispered: whispered || undefined } satisfies GameSceneData);
+}
+
+/** Everything needed to come back to this moment, waking in `bed` (in `area`, if not here). */
+export function makeSave(g: GameScene, bed: Bed, area: AreaId = g.area): SaveData {
   return {
     version: SAVE_VERSION,
     savedAt: Date.now(),
     savePoint: bed.id,
-    area: g.area,
+    area,
     position: { x: bed.gx, y: bed.gy },
     hours: g.clock.elapsedHours,
     health: g.stats.health,
