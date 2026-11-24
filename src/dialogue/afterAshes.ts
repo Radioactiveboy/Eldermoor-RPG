@@ -93,7 +93,9 @@ export function ashesTalk(s: AshesState): Record<string, RaidTalk> {
       first: [
         `${HERO_NAME}. Come in, lad. Sit. No, sit, I insist. Aldwin can tut at the floor after.`,
         'I heard. Godric came over the night you brought her home, and stood in my hall with his hat in his hands, and could not get the words out. I am so very sorry. Your mother was the best of us.',
-        `And I will say the other thing as well, because somebody ought to say it plainly. You went down into that hill${party}, where my grandfather's men would not go, and you came back up. The Brute that burnt the Hollow is dead. Their brood is dead. The shepherds say there is not a fire burning on the Greyfells.`,
+        `And I will say the other thing as well, because somebody ought to say it plainly.`,
+        `You went down into that hill${party}, where my grandfather's men would not go, and you came back up.`,
+        `The Brute that burnt the Hollow is dead. Their brood is dead. The shepherds say there is not a fire burning on the Greyfells.`,
         s.held
           ? "Adowvale is standing because you stood on the old road with Brannock's lads. I have written that to Lord Morten in so many words. Let him underline that."
           : "We lost the bakery the night they came, and very nearly Hilde, and I do not hold you to account for it. I hold myself. What you did after, under the hill, this village will not forget.",
@@ -146,8 +148,11 @@ export function ashesTalk(s: AshesState): Record<string, RaidTalk> {
           action: 'told-headman-orb',
           lines: [
             '(The Headman puts down his pen.) An orb. Tell me what it said. Every word.',
-            '"Leave nothing standing in Adowvale." ...Goblins do not write letters to one another, lad, and they do not take their orders from glass. Somebody wanted a healer out of the Hollow, and somebody wants this village gone. That is not a raid. That is a war, and we did not know we were in it.',
-            'Your father. Aldo. I knew him. He kept the watch at the old tower in the north woods, and when Lord Morten\'s father had the watch taken down, it was my name under the order beside his. The village could not pay its share of the watchmen. Aldo stood in this hall and told me we would be sorry.',
+            '"Leave nothing standing in Adowvale." ...Goblins do not write letters to one another, lad, and they do not take their orders from glass.',
+            'Somebody wanted a healer out of the Hollow, and somebody wants this village gone. That is not a raid. That is a war, and we did not know we were in it.',
+            'Your father. Aldo. I knew him.',
+            'He kept the watch at the old tower in the north woods, and when Lord Morten\'s father had the watch taken down, it was my name under the order beside his.',
+            'The village could not pay its share of the watchmen. Aldo stood in this hall and told me we would be sorry.',
             'I am sorry now. ...Keep that thing close, and keep it quiet. And come back to me when you have rested. I have been thinking about the old watch, and what it would take to open it up again.',
           ],
           next: 'ask',
@@ -163,7 +168,8 @@ export function ashesTalk(s: AshesState): Record<string, RaidTalk> {
         'ashes-hollow': {
           speaker: 'headman',
           lines: [
-            "The cottage is yours, and the land, and I have written that in the village book in my own hand: nobody is to touch it. When you are ready, and only when you are ready, there will be men to put a roof on it again. Osric has said so, and the cooper's boys, and half the Tankard.",
+            "The cottage is yours, and the land, and I have written that in the village book in my own hand: nobody is to touch it.",
+            "When you are ready, and only when you are ready, there will be men to put a roof on it again. Osric has said so, and the cooper's boys, and half the Tankard.",
             'Iran is keeping the grave. He goes up every morning with the children. Hetty takes flowers. I thought you would want to know.',
           ],
           next: 'ask',
@@ -172,7 +178,8 @@ export function ashesTalk(s: AshesState): Record<string, RaidTalk> {
           speaker: 'headman',
           lines: [
             '(He is quiet for a long moment.) Then she may still be alive. Gods. Alive, down there.',
-            "Brannock has no men to send that he would get back. I know that. You know that. I will not ask it of you. But if you find you can go back down, lad, I will not stand in your way, and the village chest will pay whoever goes with you.",
+            "Brannock has no men to send that he would get back. I know that. You know that. I will not ask it of you.",
+            "But if you find you can go back down, lad, I will not stand in your way, and the village chest will pay whoever goes with you.",
           ],
           next: 'ask',
         },
@@ -216,7 +223,8 @@ export function ashesTalk(s: AshesState): Record<string, RaidTalk> {
       speaker: 'sergeant',
       first: [
         `${HERO_NAME}. ...Sit down. I'll not say much. I've never been any good at this.`,
-        "I held the lads back the morning the Hollow burned, and I'd do it again, and I'll be sorry for it every day I've got left. And then you went down into that hill on your own two feet and did what I couldn't send a man to do.",
+        "I held the lads back the morning the Hollow burned, and I'd do it again, and I'll be sorry for it every day I've got left.",
+        "And then you went down into that hill on your own two feet and did what I couldn't send a man to do.",
         s.held
           ? "And the night on the old road. My lads stood because you stood first. Garrick tells it with you killing forty. It was nine. I counted."
           : "The night on the old road, they got past us. Past me. That's mine to carry, not yours. You went and finished it anyway.",
@@ -238,7 +246,8 @@ export function ashesTalk(s: AshesState): Record<string, RaidTalk> {
         'ashes-goblins': {
           speaker: 'sergeant',
           lines: [
-            "Hamm and two of the lads went up as far as the camp on the Greyfells yesterday. Empty. Cold fires and bones. The hole in the hill still breathing warm air, and not a sound out of it. They didn't go closer, and I didn't ask them to.",
+            "Hamm and two of the lads went up as far as the camp on the Greyfells yesterday. Empty. Cold fires and bones.",
+            "The hole in the hill still breathing warm air, and not a sound out of it. They didn't go closer, and I didn't ask them to.",
             "Broken, I'd say. Not finished. You don't finish goblins, my grandad said. You teach them to stay down.",
           ],
           next: 'ask',
