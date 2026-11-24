@@ -114,7 +114,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private buildUi(): void {
-    const title = this.add.text(0, -190, 'ELDERMOOR', titleStyle(76)).setOrigin(0.5);
+    const title = this.add.text(0, -190, 'ELWYRN', titleStyle(76)).setOrigin(0.5);
     const subtitle = this.add
       .text(0, -120, '~  an isometric adventure  ~', bodyStyle(18, THEME.dimText))
       .setOrigin(0.5);
@@ -184,7 +184,7 @@ export class MainMenuScene extends Phaser.Scene {
     pickSaveFile().then((save) => {
       if (save === undefined || this.leaving || !this.scene.isActive()) return;
       if (!save) {
-        this.notice.setText("That file isn't an Eldermoor save.");
+        this.notice.setText("That file isn't an Elwyrn save.");
         return;
       }
       // It becomes the save to continue from, as if slept just now; kept in browser storage too where allowed.

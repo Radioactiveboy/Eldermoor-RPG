@@ -199,7 +199,7 @@ export function saveToText(save: SaveData): string {
   return JSON.stringify(save);
 }
 
-/** Reads a save file back. Returns undefined if it isn't an Eldermoor save (or is from a newer version). */
+/** Reads a save file back. Returns undefined if it isn't an Elwyrn save (or is from a newer version). */
 export function saveFromText(text: string): SaveData | undefined {
   try {
     const save = JSON.parse(text) as SaveData;
