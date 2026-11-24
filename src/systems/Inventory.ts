@@ -402,6 +402,17 @@ export const ITEMS = {
     quest: true,
     stack: 1,
   },
+  // Taken from its plinth in the brood hall under the Greyfells, once the voice had gone out of it (see scenes/game/warren.ts).
+  'dark-orb': {
+    name: 'The Dark Orb',
+    description:
+      'A ball of smoky glass the size of a fist, taken from the bone claws in the brood hall. Cold, always, and heavier than glass should be. ' +
+      'Something far away spoke out of it and set the goblins on Adowvale. Sometimes, in the dark, the smoke inside it stirs.',
+    icon: 'item-dark-orb',
+    category: 'Material',
+    quest: true,
+    stack: 1,
+  },
   // Growing your own, on the plot Farmer Iran lends (see systems/Farm.ts): seeds from Hilde, and Iran's old tools.
   'carrot-seed': {
     name: 'Carrot Seed',

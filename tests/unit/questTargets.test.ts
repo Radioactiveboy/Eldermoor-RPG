@@ -13,7 +13,7 @@ const maps = await allMaps();
 // After the raid, the quests that follow it happen in the ruined cottage and in Iran's hut, where he hides.
 const ruined = { home: buildHomeMap(true), hut: buildHutMap(true) };
 /** Steps with nowhere to mark yet: the story hasn't got there. */
-const NO_TARGET = ['the-raid/bury'];
+const NO_TARGET = ['the-raid/bury', 'the-watcher/who'];
 
 beforeEach(() => QuestLog.reset());
 

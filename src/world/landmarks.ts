@@ -96,6 +96,10 @@ export const WARREN_MOUTH = { x: 1.2, y: 3.5 };
 export const MOTHER_PALLET = { tx: 15, ty: 15 };
 export const MOTHER_AT = { x: 16.2, y: 16.6 };
 export const ORB = { tx: 16, ty: 20 };
+/** The dark orb on its plinth once the voice has gone out of it: the hero takes it (see scenes/game/warren.ts). */
+export const ORB_TAKE: Sight = {
+  id: 'bh-orb-take', gx: ORB.tx + 0.5, gy: ORB.ty + 0.5, label: 'Take the orb', z: 34,
+};
 /** The goblins who come pouring out of their holes at the far end of the brood hall when the orb sets them on the hero. */
 export const SWARM: CreatureSpawn[] = [
   { id: 'bh-swarm-0', kind: 'goblinspear', gx: 22.5, gy: 24.5, notice: 12 },
@@ -103,3 +107,6 @@ export const SWARM: CreatureSpawn[] = [
   { id: 'bh-swarm-2', kind: 'goblintorch', gx: 20.5, gy: 26.2, notice: 12 },
   { id: 'bh-swarm-3', kind: 'goblin', gx: 24.2, gy: 18.5, notice: 12 },
 ];
+
+/** Where the hero lies in a rented room at the Crooked Tankard (the bed in TavernMap's room), for waking there. */
+export const TAVERN_BED = { tx: 3, ty: 1, gx: 2.5, gy: 1.6 };

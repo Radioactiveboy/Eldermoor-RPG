@@ -8,11 +8,17 @@
  */
 import Phaser from 'phaser';
 import { COMPANIONS, Companions } from '../../systems/Companions';
+import { Inventory } from '../../systems/Inventory';
+import { Needs } from '../../systems/Needs';
 import { QuestLog } from '../../systems/Quests';
-import { MOTHER_PALLET } from '../../world/landmarks';
+import { SAVE_VERSION, SaveData, SaveGame } from '../../systems/SaveGame';
+import { CHECKOUT_HOUR, Tavern } from '../../systems/Tavern';
+import { MOTHER_PALLET, TAVERN_BED } from '../../world/landmarks';
 import { Door } from '../../world/MapData';
 import { gridToScreen } from '../../iso/IsoMath';
 import type { GameScene, GameSceneData } from '../GameScene';
+import type { InterludeSceneData } from '../InterludeScene';
+import type { TitleCardSceneData } from '../TitleCardScene';
 
 /**
  * Handy for testing the way down (with ?raid=after): ?warren=open has the night at the gate over (held, or
@@ -27,7 +33,10 @@ export function warrenTestStart(): void {
   QuestLog.complete('the-gate', 'warn');
   QuestLog.complete('the-gate', 'hold');
   if (which === 'carrying' || which === 'burial') for (const flag of ['mother-dead', 'carrying-mother']) QuestLog.setFlag(flag);
-  if (which === 'burial') QuestLog.setFlag('mother-buried');
+  if (which === 'burial') {
+    QuestLog.setFlag('mother-buried');
+    pocketOrb();
+  }
 }
 
 /** The way into the hole opens once the night the goblins came for Adowvale is over, one way or the other. */
@@ -35,8 +44,12 @@ export function warrenOpen(): boolean {
   return QuestLog.isDone('the-gate', 'hold');
 }
 
-/** The hole in the hill on the Greyfells, before the night they come for Adowvale: not yet. */
+/** The hole in the hill on the Greyfells, before the night they come for Adowvale: not yet. And not out of the brood hall without the orb. */
 export function warrenDoorAllowed(g: GameScene, door: Door): boolean {
+  if (door.id === 'broodhall-up' && carryingMother() && !orbTaken()) {
+    g.onHint?.('Not without the orb. Whoever was looking out of it sent them for her. I have to know who.');
+    return false;
+  }
   if (door.id !== 'warren' || warrenOpen()) return true;
   g.onHint?.(
     QuestLog.has('the-gate')
@@ -55,6 +68,18 @@ export function penPrisoner(): 'hilde' | 'coombe' | undefined {
 /** Mother is gone, and the hero is carrying her out. */
 export function carryingMother(): boolean {
   return QuestLog.hasFlag('carrying-mother');
+}
+
+/** The hero has the dark orb from the brood hall. */
+export function orbTaken(): boolean {
+  return QuestLog.hasFlag('orb-taken');
+}
+
+/** Into the satchel with it (and if the satchel is full, it goes home anyway, in the hero's arms with Mother). */
+export function pocketOrb(): void {
+  QuestLog.setFlag('orb-taken');
+  QuestLog.complete('the-raid', 'orb');
+  if (Inventory.count('dark-orb') === 0) Inventory.add('dark-orb', 1);
 }
 
 /** Into the upper tunnels: the first time, a thought and a diary line; on the way back out with Mother, the warren is awake. */
@@ -106,16 +131,22 @@ export function enteredBroodHall(g: GameScene): void {
 
 /** Who got the hero out of the warren after a beating ('nobody' if they crawled out themselves). */
 let cameRound: string | undefined;
+/** Whether the orb came out with them, without the hero taking it. */
+let orbCameToo = false;
 
-/** Beaten down there: someone, or nobody, got the hero out onto the fell (see broodhall.ts). */
-export function draggedOut(by: string): void {
+/** Beaten down there: someone, or nobody, got the hero out onto the fell (see broodhall.ts), and maybe the orb with them. */
+export function draggedOut(by: string, orb = false): void {
   cameRound = by;
+  orbCameToo = orb;
 }
 
 /** Back up on the fell from the warren: after a beating, coming round; with Mother, the way home, and the burial. */
 export function outOfWarren(g: GameScene): void {
   const by = cameRound;
+  const orb = orbCameToo;
   cameRound = undefined;
+  orbCameToo = false;
+  if (orb) g.time.delayedCall(4600, () => g.onHint?.('Something heavy and cold in my satchel. The orb, from the brood hall. I do not remember taking it.'));
   if (by) {
     g.time.delayedCall(1200, () =>
       g.onHint?.(
@@ -128,8 +159,8 @@ export function outOfWarren(g: GameScene): void {
   if (!carryingMother() || QuestLog.isDone('the-raid', 'out')) return;
   QuestLog.complete('the-raid', 'out');
   g.busy = true;
-  g.time.delayedCall(by ? 5200 : 900, () => g.onHint?.('Out. Daylight, and the wind, and Mother in my arms. The long way home now.'));
-  g.time.delayedCall(by ? 9500 : 5200, () => {
+  g.time.delayedCall(by ? (orb ? 9000 : 5200) : 900, () => g.onHint?.('Out. Daylight, and the wind, and Mother in my arms. The long way home now.'));
+  g.time.delayedCall(by ? (orb ? 13300 : 9500) : 5200, () => {
     g.cameras.main.fadeOut(2200, 0, 0, 0);
     g.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       // Down off the fell, through the north woods, and home: it takes the rest of the day.
@@ -157,8 +188,73 @@ export function buryingMother(g: GameScene): void {
     QuestLog.writeDiary(
       'Buried Mother in the hollow beside the cottage, as she asked, and put up a cairn. I have cut Father\'s name on the marker too, beside hers. ' +
         'Aldo, who kept the watch at the tower and went north after the goblins and never came back. Something out there gives them their orders, ' +
-        'and it knows my face now. I have nothing left to keep me here but her grave. When I am ready, I will go and find out what he found.',
+        'and it knows my face now. I have its orb. When I am ready, I will go and find out what he found.',
     );
-    g.release();
+    g.time.delayedCall(2600, () => endOfAshes(g));
   });
+}
+
+/** The end of the prologue: the camera lifts away from the grave into the dark, the game's title comes up, and two days pass. */
+function endOfAshes(g: GameScene): void {
+  const cam = g.cameras.main;
+  cam.stopFollow();
+  g.tweens.add({ targets: cam, scrollY: cam.scrollY - 140, duration: 5200, ease: 'Sine.easeInOut' });
+  cam.fadeOut(4800, 0, 0, 0);
+  cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+    const card: TitleCardSceneData = {
+      title: 'Elwyrn',
+      subtitle: 'The Watcher in the Glass',
+      onDone: () => {
+        const after: InterludeSceneData = {
+          lines: ['Two days pass.', 'Godric gives me a room at the Crooked Tankard, and will not take a coin for it.', 'I sleep, mostly. The orb does not.'],
+          onDone: () => wakeInTankard(g),
+        };
+        g.scene.launch('Interlude', after);
+      },
+    };
+    g.scene.launch('TitleCard', card);
+  });
+}
+
+/** Hours from the burial to waking in the Tankard: two nights, and the second morning after. */
+function hoursToWaking(g: GameScene): number {
+  return g.clock.hoursUntil(8) + 24;
+}
+
+/** Two days on, in a room above the Crooked Tankard: Godric's kindness, a new start, and the game saved there. */
+function wakeInTankard(g: GameScene): void {
+  const hours = hoursToWaking(g);
+  g.clock.advance(hours);
+  Needs.slept(hours, g.clock.elapsedHours);
+  g.stats.heal(g.stats.maxHealth);
+  g.stats.restoreStamina(g.stats.maxStamina);
+  // Godric's room, on the house, for a few nights yet.
+  Tavern.rent(3, g.clock.elapsedHours, g.clock.hoursUntil(CHECKOUT_HOUR));
+  QuestLog.start('the-watcher');
+  QuestLog.writeDiary(
+    'Two days at the Crooked Tankard. Godric gave me a room the night we buried her and will not hear of payment. I have slept, and eaten ' +
+      'when they put food in front of me, and looked at the orb. It is cold and dark and it does nothing. But someone made it, and someone ' +
+      'looked out of it, and sent them for her. I am going to find out who.',
+  );
+  const save: SaveData = {
+    version: SAVE_VERSION,
+    savedAt: Date.now(),
+    savePoint: 'tavern-room',
+    area: 'tavern-room',
+    position: { x: TAVERN_BED.gx, y: TAVERN_BED.gy },
+    hours: g.clock.elapsedHours,
+    health: g.stats.health,
+    stamina: g.stats.stamina,
+    sections: SaveGame.collect(),
+  };
+  SaveGame.write(save);
+  g.scene.restart({ load: save, slept: hours, prologueOver: true } satisfies GameSceneData);
+}
+
+/** Waking in the Tankard two days after the burial (see endOfAshes): what now. */
+export function wokeAfterBurial(g: GameScene): void {
+  g.time.delayedCall(1200, () => g.onHint?.('Morning. Carts in the square, and somebody singing downstairs. The world has carried on without asking me.'));
+  g.time.delayedCall(6200, () =>
+    g.onHint?.('The orb is in my satchel, cold through the leather. Whoever was looking out of it sent them for her. I am going to find out who.'),
+  );
 }

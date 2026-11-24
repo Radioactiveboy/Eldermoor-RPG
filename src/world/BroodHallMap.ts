@@ -1,5 +1,5 @@
 import { box, circle } from './Collision';
-import { MOTHER_AT, MOTHER_PALLET, ORB } from './landmarks';
+import { MOTHER_AT, MOTHER_PALLET, ORB, ORB_TAKE } from './landmarks';
 import { CreatureSpawn, MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 
 export const BROODHALL_W = 26;
@@ -9,6 +9,8 @@ export const BROODHALL_UP_X = 4;
 export interface BroodHallState {
   /** Mother is gone, and the hero is carrying her out (see scenes/game/warren.ts). */
   motherDead?: boolean;
+  /** The hero has taken the dark orb off its plinth. */
+  orbTaken?: boolean;
 }
 
 /** The Brute who keeps the way into the hall, and the two at his side. */
@@ -129,17 +131,21 @@ export function buildBroodHallMap(state: BroodHallState = {}): MapData {
   placeObject(data, { key: state.motherDead ? 'bh-pallet' : 'bh-pallet-mother', tx: MOTHER_PALLET.tx, ty: MOTHER_PALLET.ty, w: 2, h: 1, shapes: [box(0.1, 0.2, 1.9, 0.8)] });
   if (!state.motherDead) data.npcs!.push({ id: 'mother-dying', gx: MOTHER_AT.x, gy: MOTHER_AT.y, looking: { x: 0, y: 1 } });
   // The orb on its plinth, and the shaman crouched before it.
-  add(state.motherDead ? 'bh-orb-dark' : 'bh-orb', ORB.tx, ORB.ty, { anim: state.motherDead ? undefined : 'bh-orb-swirl', shapes: [circle(0.5, 0.5, 0.32)] });
+  const orbArt = !state.motherDead ? 'bh-orb' : state.orbTaken ? 'bh-plinth' : 'bh-orb-dark';
+  add(orbArt, ORB.tx, ORB.ty, { anim: state.motherDead ? undefined : 'bh-orb-swirl', shapes: [circle(0.5, 0.5, 0.32)] });
   if (!state.motherDead) {
     data.lights!.push({ gx: ORB.tx + 0.5, gy: ORB.ty + 0.5, z: 34, radius: 150, flicker: 0.3 });
     data.npcs!.push({ id: 'shaman', gx: ORB.tx + 1.6, gy: ORB.ty + 1.2, looking: { x: -1, y: -1 } });
   }
-  data.sights!.push({
-    id: 'bh-orb', gx: ORB.tx + 0.5, gy: ORB.ty + 0.5, label: 'Look at the orb', z: 34,
-    thought: state.motherDead
-      ? 'Dark now, and cold as a stone in winter. Whoever was looking out of it has gone. But they saw me. They know my face.'
-      : 'A ball of glass held up in bone claws, with smoke turning inside it, lit from within. It is not goblin work. Nothing about it is.',
-  });
+  if (state.motherDead && !state.orbTaken) data.sights!.push({ ...ORB_TAKE });
+  else {
+    data.sights!.push({
+      id: 'bh-orb', gx: ORB.tx + 0.5, gy: ORB.ty + 0.5, label: state.orbTaken ? 'Look at the plinth' : 'Look at the orb', z: 34,
+      thought: state.orbTaken
+        ? 'Bone claws, holding nothing. What they held is in my pack now.'
+        : 'A ball of glass held up in bone claws, with smoke turning inside it, lit from within. It is not goblin work. Nothing about it is.',
+    });
+  }
   // Braziers round the walls of the hall.
   fire(3, 13, 170);
   fire(21, 14, 160);
