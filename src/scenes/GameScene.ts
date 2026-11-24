@@ -718,6 +718,14 @@ export class GameScene extends Phaser.Scene {
     const w = Math.max(b.width, this.scale.width / cam.zoom);
     const h = Math.max(b.height, this.scale.height / cam.zoom);
     cam.setBounds(Math.round(b.centerX - w / 2), Math.round(b.centerY - h / 2), Math.ceil(w), Math.ceil(h));
-    cam.startFollow(this.player.sprite, true, 0.12, 0.12);
+    // In a fight the camera stays on the fight (see frameFight) rather than the hero.
+    if (!this.inCombat) cam.startFollow(this.player.sprite, true, 0.12, 0.12);
+  }
+
+  /** Zooms the world camera in (factor above 1) or out, within the usual limits, keeping what's in the middle of the screen there. */
+  zoomBy(factor: number): void {
+    const cam = this.cameras.main;
+    cam.setZoom(Phaser.Math.Clamp(cam.zoom * factor, CAMERA_ZOOM.min * Display.render, CAMERA_ZOOM.max * Display.render));
+    this.fitCamera();
   }
 }
