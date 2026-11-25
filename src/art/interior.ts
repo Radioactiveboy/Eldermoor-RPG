@@ -440,9 +440,30 @@ function alight(shade: Shader): Shader {
   };
 }
 
+/**
+ * How the cottage looks while it's put right again, after the raid (see
+ * systems/Homestead.ts and world/Homestead.ts): the burnt shell swept out,
+ * raised again over a few days, then whole, and later slated.
+ */
+export interface CottageLook {
+  /** The burnt shell swept out: the fallen rafters, the charred scraps of thatch and the embers gone. */
+  cleared?: boolean;
+  /** Being raised again, a day at a time: 0 new oak in the walls and new rafters, 1 half thatched, 2 thatched; scaffolding up throughout. */
+  raising?: 0 | 1 | 2;
+  /** Built again: new oak where the old logs burnt, and a fresh golden thatch. */
+  fresh?: boolean;
+  /** Grey slate in place of the thatch. */
+  slate?: boolean;
+}
+
 /** The family cottage as seen from the village: log walls, thatched gable roof, chimney. */
-function cottage(ruined = false, burning = false): { model: IsoModel; windows: Array<[number, number]> } {
+function cottage(ruined = false, burning = false, look: CottageLook = {}): { model: IsoModel; windows: Array<[number, number]> } {
   const m = new IsoModel();
+  const swept = !!look.cleared;
+  if (swept) ruined = true;
+  const raising = look.raising;
+  // Rebuilt (or being rebuilt): the upper courses of the walls are new oak, pale and clean, where the fire took the old.
+  const renewed = raising !== undefined || !!look.fresh || !!look.slate;
   const { S, H, R, o } = COTTAGE; // footprint in tiles; wall height, roof rise and overhang
   const logs = planks(10, P.log, P.logDark, P.logLight, 3);
   const thatch: Shader = (u, v) => {
@@ -455,6 +476,24 @@ function cottage(ruined = false, burning = false): { model: IsoModel; windows: A
     if (n > 0.86 || lv < 0.15) return P.thatchLight;
     return P.thatch;
   };
+  // New reed, golden where the old was brown.
+  const freshThatch: Shader = (u, v) => {
+    const c = thatch(u, v);
+    return c === P.thatchDark ? P.strawDark : c === P.thatchLight ? P.strawLight : P.straw;
+  };
+  // Grey slates, in staggered courses, each a little different.
+  const slates: Shader = (u, v) => {
+    const row = Math.floor(v * 14);
+    const lv = (v * 14) % 1;
+    const col = Math.floor(u * 22 + (row % 2) * 0.5);
+    if (v > 0.95 || lv > 0.84) return 0x2e3038;
+    if (((u * 22 + (row % 2) * 0.5) % 1) < 0.08) return 0x34363f;
+    const n = hash(col, row);
+    if (lv < 0.16) return n < 0.5 ? 0x7a7e8c : 0x6e7280;
+    return n < 0.25 ? 0x4c505c : n < 0.6 ? 0x585c69 : n < 0.85 ? 0x626674 : 0x6b5f5a;
+  };
+  const roof: Shader = look.slate ? slates : renewed ? freshThatch : thatch;
+  const newOak = planks(10, 0xa57b4b, 0x87603d, 0xc6a066, 3);
   const wall = (windows: Array<[number, number]>, door: [number, number] | null, dark: boolean): Shader => (u, v) => {
     const x = u * S * 32;
     const y = v * H;
@@ -475,11 +514,14 @@ function cottage(ruined = false, burning = false): { model: IsoModel; windows: A
         const wu = (u - a) / (b - a);
         if (wu < 0.12 || wu > 0.88 || y < 20.5 || y > 37.5) return P.barkDark;
         if (Math.abs(wu - 0.5) < 0.06 || Math.abs(y - 29) < 1) return P.bark;
+        if (raising !== undefined) return y < 29 ? P.ink : 0x3a2e2a; // no shutters in yet
         return y < 29 ? P.glassLit : P.fireOrange;
       }
       if (u > a - 0.02 && u < b + 0.02 && y >= 40 && y < 43) return P.plankLight;
     }
-    const c = logs(u, v * 0.86) ?? P.log;
+    // New oak in the upper courses, down as far as the fire reached (ragged, as the charred logs were cut out).
+    const renew = renewed && v < 0.42 + 0.18 * Math.sin(u * 9.3 + (dark ? 2 : 0)) * Math.sin(u * 3.1 + 1);
+    const c = (renew ? newOak(u, v * 0.86) : logs(u, v * 0.86)) ?? P.log;
     return dark ? darken(c) : c;
   };
 
@@ -487,7 +529,7 @@ function cottage(ruined = false, burning = false): { model: IsoModel; windows: A
   // Burnt by the goblins: walls blackened from the top down, windows and door gone to black holes,
   // the thatch burnt away to a few charred tufts over bare, broken rafters.
   const burn = (shade: Shader, seed: number, amount: number, holes = 0): Shader =>
-    ruined ? scorch(shade, seed, { amount, holes, climb: 0.7, grain: 1.2, embers: true }, [9, 6]) : shade;
+    ruined ? scorch(shade, seed, { amount, holes, climb: 0.7, grain: 1.2, embers: !swept }, [9, 6]) : shade;
   const gutted: Shader = (u, v) => {
     // Windows and door burnt out: black holes, a jagged sliver of shutter left here and there.
     return ruined && (hash(Math.floor(u * 40), Math.floor(v * 30)) < 0.85) ? P.ink : P.barkDark;
@@ -508,6 +550,7 @@ function cottage(ruined = false, burning = false): { model: IsoModel; windows: A
     const boards = planks(9, P.plankDark, P.ink, P.plank, 5);
     m.quad({ x: 0, y: 0, z: 0 }, { x: S, y: 0, z: 0 }, { x: 0, y: S, z: 0 }, burn((u, v) => {
       const n = hash(Math.floor(u * 30), Math.floor(v * 30));
+      if (swept) return n < 0.06 ? P.ash : darken(boards(u, v) ?? P.plankDark);
       if (n < 0.12) return P.ashLight;
       if (n < 0.3) return P.ash;
       return darken(boards(u, v) ?? P.plankDark);
@@ -519,19 +562,36 @@ function cottage(ruined = false, burning = false): { model: IsoModel; windows: A
     }, seed, 0.75, 0.4);
     m.quad({ x: 0, y: 0, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, inner(17));
     m.quad({ x: 0, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, inner(18));
-    // ...and the bed and table inside, burnt to frames.
-    m.box(0.3, 0.3, 0, 0.8, 1.4, 9, { top: 0x2a2224, left: 0x3a2e2a, right: P.ink });
-    m.box(1.4, 1.2, 0, 1, 0.6, 14, { top: 0x3a2e2a, left: 0x2a2224, right: P.ink });
+    // ...and the bed and table inside, burnt to frames (dragged out, once the shell is swept).
+    if (!swept) {
+      m.box(0.3, 0.3, 0, 0.8, 1.4, 9, { top: 0x2a2224, left: 0x3a2e2a, right: P.ink });
+      m.box(1.4, 1.2, 0, 1, 0.6, 14, { top: 0x3a2e2a, left: 0x2a2224, right: P.ink });
+    }
+  }
+  // While it's raised again: the floor inside shows through the open roof, new boards.
+  if (raising === 0) {
+    const boards = planks(9, P.plank, P.plankDark, P.plankLight, 5);
+    m.quad({ x: 0, y: 0, z: 0 }, { x: S, y: 0, z: 0 }, { x: 0, y: S, z: 0 }, (u, v) => boards(u, v));
+    const inner: Shader = (u, v) => darken((v < 0.42 ? newOak(u, v * 0.86) : logs(u, v * 0.86)) ?? P.log);
+    m.quad({ x: 0, y: 0, z: H }, { x: S, y: 0, z: 0 }, { x: 0, y: 0, z: -H }, inner);
+    m.quad({ x: 0, y: 0, z: H }, { x: 0, y: S, z: 0 }, { x: 0, y: 0, z: -H }, inner);
   }
   // Back roof slope (drawn first; the front slope and gable cover most of it).
-  if (!ruined) m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, thatch);
+  // New rafters, pale oak, front and back, and the ridge beam along their tops: all there is of a roof on the first day.
+  const rafter = (x: number, front: boolean) =>
+    m.quad({ x, y: S / 2, z: H + R }, { x: 0, y: (front ? 1 : -1) * (S / 2 + o), z: -R - 8 }, { x: 0.1, y: 0, z: 0 }, (u) => (u < 0.5 ? 0xc29a62 : 0x93693f));
+  if (raising === 0) {
+    for (let x = -0.2; x <= S + 0.2; x += 0.55) rafter(x, false);
+    m.box(-o, S / 2 - 0.06, H + R - 4, S + o * 2, 0.12, 4, { top: 0xc29a62, left: 0xa57b4b, right: 0x87603d });
+  }
+  if (!ruined && raising !== 0) m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, roof);
   // Chimney poking up through the back slope (the stone stands, even when all else burns).
   m.box(0.55, 0.45, H, 0.45, 0.45, R + 24, {
     top: P.soot,
     left: burn((u, v) => ((v * 8) % 1 < 0.15 || (u * 3 + Math.floor(v * 8) * 0.5) % 1 < 0.1 ? P.mortar : P.stone), 21, 0.35),
     right: burn((_u, v) => ((v * 8) % 1 < 0.15 ? P.mortar : P.stoneDark), 22, 0.35),
   });
-  if (ruined) {
+  if (ruined && !swept) {
     // Charred rafters, front and back, a few broken off short, and what's left of the ridge beam, sagging.
     const char = { left: 0x2a2224 };
     const rafters: Array<[number, number]> = [[-0.1, 1], [0.7, 0.55], [1.35, 1], [2.05, 0.4], [2.75, 0.85]];
@@ -551,6 +611,12 @@ function cottage(ruined = false, burning = false): { model: IsoModel; windows: A
     if (Math.abs(u - 0.5) < 0.05 && v > 0.25 && v < 0.5) return P.ink; // vent
     return v < 0.06 ? P.logDark : darken(logs(u, v) ?? P.log);
   }, 26, 0.6));
+  if (swept) {
+    // Swept out: the bench by the door scrubbed and set back on its legs, the barrel stood up again.
+    m.box(S + 0.05, 0.25, 0, 0.3, 0.7, 7, { top: 0x3a2e2a, left: 0x2a2224, right: P.ink });
+    barrel(S + 0.3, 2.55, m, 24);
+    return { model: m, windows: [] };
+  }
   if (ruined) {
     // The front rafters over everything, a couple snapped and hanging.
     const rafters: Array<[number, number]> = [[-0.2, 1], [0.6, 0.35], [1.3, 0.8], [2.0, 1], [2.7, 0.5], [S + 0.15, 0.9]];
@@ -567,15 +633,67 @@ function cottage(ruined = false, burning = false): { model: IsoModel; windows: A
     m.quad({ x: S + 0.1, y: 2.2, z: 1 }, { x: 0.5, y: 0.15, z: 0 }, { x: 0, y: 0, z: 9 }, burn(lipped(P.bark, P.barkLight), 28, 0.5));
     return { model: m, windows: [] };
   }
+  if (raising !== undefined) {
+    // Being raised again: rafters over the front, then the thatch going on from the eaves up, and scaffolding round it all.
+    if (raising === 0) {
+      for (let x = -0.2; x <= S + 0.2; x += 0.55) rafter(x, true);
+    } else {
+      m.quad({ x: S, y: S / 2, z: H + R }, { x: o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, P.strawDark);
+      // Day two: thatched from the eaves halfway up, the bare battens and rafters showing above; day three: all of it.
+      const half = raising === 1;
+      m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, (u, v) => {
+        if (half && v < 0.5) {
+          if ((v * 9) % 1 < 0.22) return 0xb3874f; // battens
+          return ((u * (S + o * 2)) / 0.55) % 1 < 0.18 ? 0xc29a62 : 0x2a2224; // rafters, the dark of the loft between
+        }
+        return freshThatch(u, v);
+      });
+      if (!half) m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: P.strawLight, left: P.strawDark, right: P.strawDark });
+      // A bundle or two of reed waiting on the roof.
+      if (half) for (const x of [0.6, 1.7]) m.box(x, S / 2 + 0.15, H + R - 14, 0.5, 0.22, 6, { top: P.strawLight, left: P.straw, right: P.strawDark });
+    }
+    scaffold(m, S, H);
+    // The bench stays by the door; the barrel holds the lads' drinking water.
+    m.box(S + 0.05, 0.25, 0, 0.3, 0.7, 12, { top: P.plankLight, left: P.plank, right: P.plankDark });
+    return { model: m, windows: [] };
+  }
   // Overhang of the back slope past the gable, then the front slope over everything.
-  m.quad({ x: S, y: S / 2, z: H + R }, { x: o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, P.thatchDark);
-  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, burning ? alight(thatch) : thatch);
-  // Ridge cap.
-  m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: P.thatchLight, left: P.thatchDark, right: P.thatchDark });
+  m.quad({ x: S, y: S / 2, z: H + R }, { x: o, y: 0, z: 0 }, { x: 0, y: -S / 2 - o, z: -R - 8 }, look.slate ? 0x34363f : renewed ? P.strawDark : P.thatchDark);
+  m.quad({ x: -o, y: S / 2, z: H + R }, { x: S + o * 2, y: 0, z: 0 }, { x: 0, y: S / 2 + o, z: -R - 8 }, burning ? alight(thatch) : roof);
+  // Ridge cap: bound reed, or for slate a row of stone ridge tiles.
+  if (look.slate) m.box(-o, S / 2 - 0.08, H + R - 3, S + o * 2, 0.16, 5, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
+  else if (renewed) m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: P.strawLight, left: P.strawDark, right: P.strawDark });
+  else m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: P.thatchLight, left: P.thatchDark, right: P.thatchDark });
   // A bench and a water barrel by the door.
   m.box(S + 0.05, 0.25, 0, 0.3, 0.7, 12, { top: P.plankLight, left: P.plank, right: P.plankDark });
   barrel(S + 0.3, 2.55, m, 24);
   return { model: m, windows: frontWindows };
+}
+
+/**
+ * Builders' scaffolding round the cottage's front and door side: lashed poles, a
+ * plank walkway at the eaves, and a ladder up to it.
+ */
+function scaffold(m: IsoModel, S: number, H: number): void {
+  const pole = { top: 0xa57b4b, left: 0x87603d, right: 0x5c3b23 };
+  const walk = { top: 0xc29a62, left: 0x93693f, right: 0x6b4a30 };
+  // Along the front (+y) wall, a little out from it.
+  const fy = S + 0.38;
+  for (const x of [-0.15, 1.0, 2.1, S + 0.25]) m.box(x, fy, 0, 0.07, 0.07, H + 14, pole);
+  m.box(-0.15, fy - 0.12, H - 6, S + 0.47, 0.3, 2, walk);
+  m.box(-0.15, fy, H + 8, S + 0.47, 0.05, 2, pole); // the rail
+  // Along the door (+x) side, either side of the door.
+  const fx = S + 0.38;
+  for (const y of [0.1, 0.85, 2.25]) m.box(fx, y, 0, 0.07, 0.07, H + 14, pole);
+  m.box(fx - 0.12, 0.1, H - 6, 0.3, 2.3, 2, walk);
+  // A ladder leant against the walkway at the near corner.
+  for (const dx of [0, 0.32]) m.quad({ x: S + 0.55 + dx, y: S + 0.75, z: 0 }, { x: 0, y: -0.3, z: H - 4 }, { x: 0.05, y: 0, z: 0 }, 0x93693f);
+  for (let i = 1; i < 6; i++) m.box(S + 0.55, S + 0.75 - (0.3 * i) / 6, ((H - 4) * i) / 6, 0.37, 0.04, 1.5, pole);
+}
+
+/** The cottage at a stage of being put right again (see {@link CottageLook}). */
+export function cottageArt(look: CottageLook): RenderedModel {
+  return cottage(false, false, look).model.render();
 }
 
 // ---------------------------------------------------------------- registry

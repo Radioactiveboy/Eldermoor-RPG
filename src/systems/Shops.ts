@@ -62,12 +62,17 @@ export const SHOPS = {
     greeting: 'Blades, helms, shields. Honest steel at honest prices. Mind the edges.',
     refuse: "Hm. Not my trade. Try one of the others.",
     thanks: ['Hm. Good.', 'Done.', "Keep it oiled and it'll keep you."],
-    stock: [['hunting-knife', 2], ['short-sword', 1], ['spear', 1], ['hatchet', 1], ['cudgel', 1], ['buckler', 2], ['iron-cap', 1]],
+    stock: [
+      ['hunting-knife', 2], ['short-sword', 1], ['spear', 1], ['hatchet', 1], ['cudgel', 1], ['buckler', 2], ['iron-cap', 1],
+      // Building goods from the yard behind the forge, for putting the Hollow right (systems/Homestead.ts).
+      ['iron-nails', 4], ['timber', 12], ['dressed-stone', 10], ['slate', 20],
+    ],
     buys: ['Weapon', 'Armour', 'Tool'],
     faction: 'adowvale',
     buyRate: 0.5,
     // Osric forges more as they sell (and this puts them on his rack in a game saved before they were made).
-    keeps: { spear: 1, hatchet: 1, cudgel: 1 },
+    // The yard's carted full again from the sawpit and the quarry as it empties.
+    keeps: { spear: 1, hatchet: 1, cudgel: 1, 'iron-nails': 3, timber: 8, 'dressed-stone': 6, slate: 12 },
   },
   tanner: {
     name: "Tamsin's Leathers",
@@ -103,13 +108,14 @@ export const SHOPS = {
     greeting: "Smoked eel, smoked pike, and anything else Grandad's caught. Don't squeeze them, they're not apples.",
     refuse: "That's not a fish! I only do fish. And eels. Eels are fish. Grandad says.",
     thanks: ['Thank you! Eat it with bread, it\'s best with bread.', "Pleasure doing business! That's what Maren says.", "Come back tomorrow, there'll be more. There's always more."],
-    stock: [['smoked-eel', 8], ['baked-pike', 2], ['eel', 4], ['roach', 6], ['perch', 4], ['bread', 3]],
+    // And bundles of thatching reed, cut along the riverbank by the jetty folk and dried on the smokehouse rails.
+    stock: [['smoked-eel', 8], ['baked-pike', 2], ['eel', 4], ['roach', 6], ['perch', 4], ['bread', 3], ['thatching-reed', 16]],
     buys: ['Food'],
     faction: 'adowvale',
     buyRate: 0.5,
     // River fish to smoke: she pays well for them.
     wants: { eel: 0.8, barbel: 0.75, grayling: 0.75, pike: 0.7 },
-    keeps: { 'smoked-eel': 3 },
+    keeps: { 'smoked-eel': 3, 'thatching-reed': 10 },
   },
   // Jory, a travelling tinker met now and then on the Lord's Road (see world/PlainsEvents.ts): odds and ends, and he'll buy most anything, cheaply.
   tinker: {

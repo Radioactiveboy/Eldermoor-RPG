@@ -10,6 +10,21 @@ export const HOME_H = 7;
  *
  * Wall art keys come from art/interior.ts; index 0..7 along each wall.
  */
+/**
+ * The cottage built again after the raid (see systems/Homestead.ts): the room
+ * as it was, new from the joiner, but with nobody in Mother's bed. Her bed is
+ * made up, with Hetty's bluebell leaves on the pillow.
+ */
+export function buildRebuiltHomeMap(): MapData {
+  const data = buildHomeMap(false);
+  data.npcs = [];
+  (data.sights ??= []).push({
+    id: 'home-mother-bed', gx: 1.5, gy: 1.2, label: "Look at Mother's bed", z: 26,
+    thought: "Her bed, new from the joiner, made up the way she liked it, tight as a drum. Hetty has left bluebell leaves on the pillow. I'll leave them there.",
+  });
+  return data;
+}
+
 export function buildHomeMap(ruined = false): MapData {
   if (ruined) return buildRuinedHomeMap();
   const terrain: Terrain[][] = [];

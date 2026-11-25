@@ -531,7 +531,7 @@ function ashesNews(s: AshesState): string[] {
   return [
     "Hamm and two of the lads went up to the goblins' camp on the Greyfells. Cold fires and bones, they say, and not a sound from the hole. They came back and drank till I threw them out.",
     "Lord Morten's sent a letter. Not men: a letter. \"Gratified to hear,\" it says. The Headman read it out in the square, and the square laughed till it cried.",
-    "Iran's coop is half up again. The cooper's boys are doing it of an evening, for nothing, and complaining about it the whole time, which is how you know they mean it.",
+    "Iran's coop's still a heap of black sticks. The cooper's boys would put it up again for nothing, but oak isn't nothing, and Iran won't take a penny off anybody.",
     s.held
       ? "Garrick's telling the night on the old road again, at the militia table. You killed forty, last I heard. Brannock says it was nine. Brannock counts."
       : "Osric's at the bakery every morning, clearing the ash. He thinks nobody knows. Everybody knows.",

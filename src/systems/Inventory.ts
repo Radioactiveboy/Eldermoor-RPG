@@ -910,6 +910,47 @@ export const ITEMS = {
     eat: { health: 20, stamina: 16 },
     value: 9,
   },
+  // Building goods for putting the Hollow right (see systems/Homestead.ts): gathered, or bought from Osric and Wren.
+  timber: {
+    name: 'Oak Timber',
+    description: 'A length of sound oak, trimmed square with a hatchet. Osric says the cottage wants a dozen of these, and the burnt ones out.',
+    icon: 'item-timber',
+    category: 'Material',
+    stack: 6,
+    value: 6,
+  },
+  'thatching-reed': {
+    name: 'Bundle of Reed',
+    description: 'Water reed off the lakeshore, cut long, dried and tied in a bundle as thick as a man\'s waist. Good thatch lasts forty years.',
+    icon: 'item-reed',
+    category: 'Material',
+    stack: 10,
+    value: 3,
+  },
+  'iron-nails': {
+    name: 'Keg of Nails',
+    description: 'A little keg of square iron nails from Osric\'s forge, a few hundred of them, packed in sawdust.',
+    icon: 'item-nails',
+    category: 'Material',
+    stack: 4,
+    value: 12,
+  },
+  'dressed-stone': {
+    name: 'Dressed Stone',
+    description: 'A block of grey stone, squared off on its faces. Heavy enough to make my arms ache just looking at it.',
+    icon: 'item-stone',
+    category: 'Material',
+    stack: 5,
+    value: 5,
+  },
+  slate: {
+    name: 'Roofing Slate',
+    description: 'A stack of thin grey slates split off the Greyfells, each with a nail hole punched near the top. They ring when they knock together.',
+    icon: 'item-slate',
+    category: 'Material',
+    stack: 10,
+    value: 4,
+  },
 } satisfies Record<string, ItemDef>;
 
 export type ItemId = keyof typeof ITEMS;

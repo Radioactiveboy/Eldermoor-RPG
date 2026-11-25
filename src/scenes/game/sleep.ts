@@ -1,4 +1,5 @@
 /** Beds: choosing how long to sleep, sleeping, and saving (and loading) the game. */
+import { checkHomestead, sleptAtHome } from './homestead';
 import Phaser from 'phaser';
 import { Needs } from '../../systems/Needs';
 import { PlayerStats } from '../../systems/PlayerStats';
@@ -105,6 +106,9 @@ function wake(g: GameScene, bed: Bed, hours: number, area: AreaId, whispered: bo
     QuestLog.setFlag('raid-morning');
   }
   Needs.slept(hours, g.clock.elapsedHours);
+  // Work on the Hollow goes on overnight; and the first night in the rebuilt cottage is the end of the rebuilding.
+  checkHomestead(g);
+  if (bed.id === 'home-bed' && g.map.data.sights?.some((s) => s.id === 'home-mother-bed')) sleptAtHome();
   g.stats.heal(g.stats.maxHealth);
   g.stats.restoreStamina(g.stats.maxStamina);
   const save = makeSave(g, bed, area);
