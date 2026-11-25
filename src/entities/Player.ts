@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, HERO_SCALE } from '../art/character';
+import { FIGHT_ORIGIN_Y, WINDUP_MS } from '../art/fight3d';
 import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_RADIUS, PLAYER_SPEED } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
@@ -36,6 +37,8 @@ export class Player implements Hero {
   private pace = 1;
   /** Screen-pixel nudge for the sprite, for lunges and flinches in a fight. */
   readonly offset = { x: 0, y: 0 };
+  /** In a fight, the fight animation showing ('ready', 'attack', 'hit', 'guard', 'down': see art/fight3d.ts). */
+  private fighting?: string;
 
   constructor(scene: Phaser.Scene, map: IsoMap, gx: number, gy: number) {
     this.map = map;
@@ -150,6 +153,33 @@ export class Player implements Hero {
     this.sync(false);
   }
 
+  /**
+   * Squares up for a fight (or, with nothing, stands easy again): from then on he
+   * shows the fight animation named, in whichever way he faces. The ones that
+   * play once ('attack', 'hit', 'guard', 'down') hold their last frame.
+   */
+  fight(anim?: string): void {
+    this.fighting = anim;
+    if (anim) this.sprite.anims.stop();
+    this.sync(false);
+  }
+
+  /** Square up, bobbing on his toes. */
+  ready(): void {
+    if (this.fighting !== 'ready') this.fight('ready');
+  }
+
+  /** Wind up and swing; returns how long the wind-up takes, in ms, for the lunge to wait on. */
+  strike(): number {
+    this.fight('attack');
+    return this.showingFight ? WINDUP_MS : 0;
+  }
+
+  /** Whether a fight animation is showing (his fight frames are drawn: see art/fight3d.ts). */
+  private get showingFight(): boolean {
+    return !!this.fighting && this.sprite.scene.anims.exists(`player-${this.fighting}-s`);
+  }
+
   /** Direction towards the next waypoint, shortened so this frame's step of `maxStep` tiles can't overshoot it. */
   private steerAlongPath(maxStep: number): Vec2 {
     const next = this.route[0];
@@ -236,14 +266,23 @@ export class Player implements Hero {
   private sync(moving: boolean): void {
     // All eight facings are drawn (the hero is modelled in 3D, see hero3d.ts), so none is mirrored.
     const drawn = DIRECTIONS_8[this.facing].name;
-    const anim = this.pose === 'stand' ? (moving ? 'walk' : 'idle') : this.pose;
-    this.sprite.play(`player-${anim}-${drawn}`, true);
+    if (this.showingFight && this.pose === 'stand') {
+      // A fight frame is bigger than a walking one, with the feet lower down it.
+      const key = `player-${this.fighting}-${drawn}`;
+      if (this.sprite.anims.currentAnim?.key !== key) {
+        this.sprite.anims.timeScale = 1;
+        this.sprite.setOrigin(0.5, FIGHT_ORIGIN_Y).play(key);
+      }
+    } else {
+      const anim = this.pose === 'stand' ? (moving ? 'walk' : 'idle') : this.pose;
+      this.sprite.setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H).play(`player-${anim}-${drawn}`, true);
+    }
     // Sneaking: hunched lower, with slow, careful steps.
     const low = this.sneaking && this.pose === 'stand';
     // The sheet is drawn HERO_SCALE times finer than he stands (see character.ts).
     this.sprite.setScale(1 / HERO_SCALE, (low ? 0.88 : 1) / HERO_SCALE);
     // An unhurried walk of about three and a half steps a second, quicker when sprinting.
-    this.sprite.anims.timeScale = low ? 0.5 : WALK_CADENCE * this.pace ** 0.6;
+    if (!this.showingFight) this.sprite.anims.timeScale = low ? 0.5 : WALK_CADENCE * this.pace ** 0.6;
 
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);

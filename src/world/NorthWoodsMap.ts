@@ -11,7 +11,7 @@ export const NORTH_WOODS_H = 76;
 /** Where the path from the Hollow comes in, along the south edge. */
 const SOUTH_GATE_X = 30;
 /** The back corner of the old watchtower's 3x3 footprint, up on its rise in the west. */
-const TOWER = { tx: 12, ty: 19 };
+export const TOWER = { tx: 12, ty: 19 };
 /** The middle of the glade in the south-east, where the deer graze. */
 const GLADE = { x: 46, y: 58, r: 6.5 };
 /** The bramble thickets west of the path, where the wild cats lie up. */

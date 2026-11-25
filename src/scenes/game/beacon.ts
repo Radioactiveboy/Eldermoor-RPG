@@ -15,6 +15,7 @@ import { QuestLog } from '../../systems/Quests';
 import { Reputation } from '../../systems/Reputation';
 import type { Door } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
+import { beaconPaidOff } from './whisper';
 
 /** Which brigand fights as which foe. */
 const BRIGAND_FOES: Record<string, FoeKind> = { corwin: 'brigandcaptain', garth: 'brigandbrute', teg: 'brigandcutter', linnet: 'brigandarcher' };
@@ -204,7 +205,7 @@ export function checkBeaconFight(g: GameScene, slain: Creature[]): void {
 }
 
 /** The Headman's reward, when the hero reports back. */
-function rewarded(): void {
+function rewarded(g: GameScene): void {
   if (!QuestLog.isDone(BEACON_QUEST, 'brazier') || QuestLog.isDone(BEACON_QUEST, 'return')) return;
   Inventory.reward(BEACON_REWARD);
   GameAudio.coins();
@@ -217,6 +218,8 @@ function rewarded(): void {
   );
   // (Every step behind it is done by now; make sure, so the quest closes.)
   for (const step of ['talk', 'find', 'inside', 'return']) QuestLog.complete(BEACON_QUEST, step);
+  // And that night, the orb (see whisper.ts).
+  beaconPaidOff(g);
 }
 
 /** Lines of dialogue that move the beacon's story on (see dialogueActions.ts). */

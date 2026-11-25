@@ -298,6 +298,11 @@ export const STATIONS: Record<string, StationDef> = {
     name: "Old Maud's Brewing Bench",
     blurb: "Godric's grandmother's stillroom bench: a copper pot, a mortar, and shelves of dusty flasks.",
   },
+  'home-bench': {
+    kind: 'alchemy',
+    name: 'My Own Brewing Bench',
+    blurb: "Under the lean-to by the cottage: a copper pot of my own, a mortar, and a shelf of flasks. Old Maud's was better. This one is mine.",
+  },
   'home-hearth': { kind: 'cooking', name: 'The Cottage Hearth', blurb: "Mother's black iron pot and the old spit. The fire is low, but it will do." },
   'hut-hearth': { kind: 'cooking', name: "Farmer Iran's Hearth", blurb: 'A smoky little fire, with a pan that smells of a hundred breakfasts.' },
   'tavern-hearth': { kind: 'cooking', name: 'The Tankard Hearth', blurb: 'A great roaring fire, with a spit and a griddle. Godric lets folk use it, so long as they mind the sparks.' },

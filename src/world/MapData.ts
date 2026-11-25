@@ -168,6 +168,8 @@ export interface Sight {
   thought?: string;
   /** Somewhere to brew or cook: opens the station window (an id in systems/Crafting.ts STATIONS). */
   station?: string;
+  /** Part of putting the Hollow right: a heap of burnt timber to drag out, or the builder's pile (see scenes/game/homestead.ts). */
+  work?: 'rubble' | 'pile';
 }
 
 /** A warm light source that brightens its surroundings in the dark. */
@@ -347,6 +349,8 @@ export interface MapData {
   chimneys?: Array<{ gx: number; gy: number; z: number; ruin?: boolean }>;
   /** Where crows come down to pick about, in tiles (the ruined farm, after the raid). */
   crows?: Array<{ gx: number; gy: number }>;
+  /** Goats grazing in a paddock (the Hollow's, once it's built: see world/Homestead.ts). */
+  goats?: Array<{ gx: number; gy: number }>;
   landmarks?: Landmark[];
   musings?: Musing[];
   /** Multiplies the colour of the ground (the gloom under thick woods); white or not given leaves it as it is. */
