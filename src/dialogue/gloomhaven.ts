@@ -69,8 +69,8 @@ export function voskScript(first: boolean): DialogueScript {
       pay: {
         speaker: 'vosk',
         lines: [
-          'The tolls, mostly. Every cart that comes in, every barge that ties up. And the Black Rose stands us our ale, which is the best part of the wage.',
-          "There's a Reeve, somewhere. Nobody's seen him since the spring floods. So it's us, and the Rose, and the river. It works. Don't ask me how.",
+          'The town. A penny at the gate off every cart, the way it always was. And the Black Rose stands us our ale, which is the best part of the wage.',
+          "Or it was. The Reeve's back since midsummer, with his Flood Toll and his yellowbands, and they take the coin at my gate now, and we stand by and watch them. Ask me about him, if you've the stomach.",
         ],
         next: 'ask',
       },

@@ -88,6 +88,7 @@ export const ART_STEPS: ArtStep[] = [
   // Last: it makes burnt copies of art drawn above.
   { label: 'the river front', load: () => import('./jetty').then((m) => m.generateJetty) },
   { label: 'the Black Rose', load: () => import('./blackrose').then((m) => m.generateBlackRose) },
+  { label: "the Reeve's toll house", load: () => import('./tollhouse').then((m) => m.generateTollHouse) },
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },
   { label: 'the Hollow rebuilt', load: () => import('./homestead').then((m) => m.generateHomestead) },
 ];

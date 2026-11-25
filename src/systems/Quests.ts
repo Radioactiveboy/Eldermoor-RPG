@@ -356,6 +356,42 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 60,
   },
+  'flood-toll': {
+    id: 'flood-toll',
+    title: 'The Flood Toll',
+    giver: 'Hobb Tallow',
+    kind: 'side',
+    summary:
+      "Since midsummer the Reeve of Gloomhaven has put a Flood Toll on everything that comes in or goes out, and his men in yellow " +
+      "take it off folk who can't pay in whatever they have. Hobb Tallow's lamp oil is sitting in the toll house with DISTRAINED " +
+      "chalked on it, and Annet Marl, an eel-wife, has had her creels taken. Somebody ought to have a word with the Reeve.",
+    objectives: [
+      { id: 'talk', text: 'Hear Hobb Tallow out about the Flood Toll', target: { area: 'gloomhaven', x: 19.65, y: 26.8, npc: 'tallow' } },
+      { id: 'reeve', text: "Put the small traders' case to the Reeve, upstairs in the toll house (the clerk at the grille takes names for a hearing)", target: { area: 'tollhouse-upstairs', x: 4.5, y: 1.35, npc: 'reeve' } },
+      { id: 'creels', text: "Get Annet Marl's creels back out of the Reeve's strongroom, and give them to her", target: { area: 'tollhouse', x: 0.45, y: 4.3, npc: 'annet' } },
+      { id: 'lifted', text: 'Find something that will make the Reeve back down. Captain Vosk at the gate has no love for him', target: { area: 'gloomhaven', x: 38, y: 6.6, npc: 'vosk' } },
+      { id: 'tell', text: 'Tell Hobb Tallow the toll is off', target: { area: 'gloomhaven', x: 19.65, y: 26.8, npc: 'tallow' } },
+    ],
+    xp: 150,
+  },
+  'reeve-silver': {
+    id: 'reeve-silver',
+    title: "The Reeve's Silver",
+    giver: 'Captain Vosk',
+    kind: 'side',
+    summary:
+      "The Reeve went off after the spring floods with empty pockets and came back at midsummer with a fur coat, a gilt chain and " +
+      "silver enough to hire both of Gloomhaven's gangs as his Watch. Captain Vosk wants to know where the silver comes from. If it " +
+      "can be written down and sent to the lord's steward at Harrowford, he says, the Reeve will do as he's told.",
+    objectives: [
+      { id: 'talk', text: 'Hear Captain Vosk out about the Reeve', target: { area: 'gloomhaven', x: 38, y: 6.6, npc: 'vosk' } },
+      { id: 'strong', text: "Get into the Reeve's strongroom, behind the toll office", target: { area: 'tollhouse', x: 8.5, y: 1.1 } },
+      { id: 'ledger', text: "Find the Reeve's true book of accounts", target: { area: 'tollhouse-strong', x: 3.5, y: 1.5 } },
+      { id: 'letter', text: 'Find out who is paying the Reeve', target: { area: 'tollhouse-strong', x: 3.2, y: 1.8 } },
+      { id: 'return', text: 'Take what I found to Captain Vosk', target: { area: 'gloomhaven', x: 38, y: 6.6, npc: 'vosk' } },
+    ],
+    xp: 200,
+  },
 };
 
 export interface QuestState {
