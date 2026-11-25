@@ -368,7 +368,7 @@ export const QUESTS: Record<string, QuestDef> = {
       'Master Thrale says brigands. Edric Lowe tried to say foreign powers and sabotage, and they shouted him down. The guild has taken me on ' +
       'to find out who is really behind it, and why.',
     objectives: [
-      { id: 'meeting', text: 'Offer the guild my services', target: { area: 'guildhall', x: 3.55, y: 3.4, npc: 'wexley' } },
+      { id: 'meeting', text: 'Offer the guild my services', target: { area: 'guildhall', x: 3.45, y: 4.5, npc: 'wexley' } },
       { id: 'garrow', text: 'Ask Nat Garrow, the caravan master who came back, what happened at the Drowned Mile', target: { area: 'guildhall', x: 12.5, y: 2.5, npc: 'garrow' } },
       { id: 'ledger', text: 'Find out who knew when the caravans would leave: Pim the clerk keeps the route book in the counting room', target: { area: 'guildhall-counting', x: 2.5, y: 2.45, npc: 'pim' } },
       { id: 'edric', text: 'Hear out Edric Lowe, away from Master Thrale', target: { area: 'guildhall', x: 6.5, y: 6.5, npc: 'edric' } },

@@ -51,7 +51,7 @@ export function buildGuildHallMap(met = false): MapData {
   const hours = (h: [number, number]) => (met ? { hours: h } : {});
   const npcs: NpcSpawn[] = [
     // The guildmaster at the head of the table, by his great chair.
-    { id: 'wexley', gx: 3.55, gy: 3.4, looking: { x: 1, y: 0.4 }, ...hours([8, 20]) },
+    { id: 'wexley', gx: 3.45, gy: 4.5, looking: { x: 1, y: 0 }, ...hours([8, 20]) },
     // Dame Marrable on her feet behind the chairs, leaning on one.
     { id: 'marrable', gx: 5.5, gy: 2.45, looking: { x: 0.3, y: 1 }, ...hours([9, 18]) },
     // Master Thrale at his ease in his chair across the table.
@@ -118,7 +118,7 @@ export function buildGuildHallMap(met = false): MapData {
     add(`gd-table-n-${i}`, 4 + i, 4, { shapes: [box(0, 0.06, 1, 1)] });
     add(`gd-table-s-${i}`, 4 + i, 5, { shapes: [box(0, 0, 1, 0.94)] });
   });
-  add('gd-greatchair', 3, 4, { h: 2, shapes: [box(0.12, 0.45, 0.84, 1.55)] });
+  add('gd-greatchair', 2, 4, { h: 2, shapes: [box(0.12, 0.45, 0.84, 1.55)] });
   for (const x of [5, 6, 9]) add('gd-chair-s', x, 3, { shapes: chairShape });
   add('gd-chair-s-pushed', 7, 3, { shapes: chairShape });
   add('gd-chair-s', 8, 3, { shapes: chairShape }); // Master Thrale's
