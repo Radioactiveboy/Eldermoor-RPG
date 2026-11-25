@@ -50,6 +50,9 @@ const WOOD_DARK = 0x3a2818;
 const WOOD_LIGHT = 0x7a5838;
 const WOOD_TOP = 0x6a4a30;
 // The guild's colours: a deep blue gone grey, and gold.
+/** The height of a seat's top, where a sitter's hips go (art/IsoModel.ts SEAT_TOP, from the seat-height fix). */
+const SEAT = 9;
+
 const BLUE = 0x2e3e5a;
 const BLUE_DARK = 0x1e2a40;
 const BLUE_LIGHT = 0x4a5e7e;
@@ -853,10 +856,10 @@ function chair(facing: 'n' | 's', pushed = 0): IsoModel {
   const m = new IsoModel();
   const wood = { top: WOOD_LIGHT, left: WOOD, right: WOOD_DARK };
   const oy = pushed * (facing === 's' ? -1 : 1);
-  for (const [x, y] of [[0.25, 0.25], [0.7, 0.25], [0.25, 0.7], [0.7, 0.7]]) m.box(x, y + oy, 0, 0.06, 0.06, 16, wood);
-  m.box(0.22, 0.22 + oy, 16, 0.56, 0.56, 3, { top: (u, v) => (u < 0.08 || u > 0.92 || v < 0.08 || v > 0.92 ? WOOD_LIGHT : BLUE), left: WOOD, right: WOOD_DARK });
+  for (const [x, y] of [[0.25, 0.25], [0.7, 0.25], [0.25, 0.7], [0.7, 0.7]]) m.box(x, y + oy, 0, 0.06, 0.06, SEAT - 3, wood);
+  m.box(0.22, 0.22 + oy, SEAT - 3, 0.56, 0.56, 3, { top: (u, v) => (u < 0.08 || u > 0.92 || v < 0.08 || v > 0.92 ? WOOD_LIGHT : BLUE), left: WOOD, right: WOOD_DARK });
   const by = facing === 's' ? 0.2 : 0.74;
-  m.box(0.22, by + oy, 19, 0.56, 0.06, 26, {
+  m.box(0.22, by + oy, SEAT, 0.56, 0.06, 34, {
     top: WOOD_LIGHT,
     left: (u, v) => (v < 0.15 ? WOOD_LIGHT : u > 0.2 && u < 0.8 && v > 0.25 && v < 0.75 ? (Math.floor(v * 10) % 2 ? WOOD : BLUE_DARK) : WOOD),
     right: WOOD_DARK,
@@ -875,34 +878,63 @@ function fallenChair(): IsoModel {
   return m;
 }
 
-/** The guildmaster's great chair (1 x 2, facing +x): carved, high-backed, a canopy, the guild's ship in the back. */
+/**
+ * The guildmaster's great chair, at the head of the table (in a 1 x 2 spot,
+ * centred on it, facing +x down the table): a high, square oak back framed by
+ * two posts with gilt finials, a carved cresting with the guild's scales, and a
+ * buttoned crimson back and cushion; open arms on turned front posts.
+ */
 function greatChair(): IsoModel {
   const m = new IsoModel();
-  const wood = { top: WOOD_LIGHT, left: (u: number, v: number) => (Math.sin(v * 20 + u * 3) > 0.7 ? WOOD_LIGHT : WOOD), right: WOOD_DARK };
-  m.box(0.2, 0.55, 0, 0.6, 0.9, 18, wood);
-  m.box(0.2, 0.55, 18, 0.64, 0.9, 4, { top: (u, v) => (u < 0.1 || u > 0.9 || v < 0.06 || v > 0.94 ? WOOD_LIGHT : BLUE), left: WOOD, right: WOOD_DARK });
-  // The arms.
-  for (const y of [0.5, 1.4]) m.box(0.2, y, 22, 0.6, 0.1, 10, wood);
-  // The tall back against -x, carved, and a little canopy over it.
-  m.box(0.12, 0.45, 0, 0.12, 1.1, 64, {
+  const CRIMSON = 0x7a1e2a;
+  const CRIMSON_DARK = 0x4a1018;
+  const CRIMSON_LIGHT = 0x9e3444;
+  const wood = { top: WOOD_LIGHT, left: WOOD, right: WOOD_DARK };
+  const y0 = 0.62;
+  const y1 = 1.38;
+  // Four short legs and the seat frame, with its crimson cushion.
+  for (const x of [0.16, 0.7]) for (const y of [y0, y1 - 0.07]) m.box(x, y, 0, 0.07, 0.07, SEAT - 3, wood);
+  m.box(0.14, y0, SEAT - 3, 0.66, y1 - y0, 2, { top: WOOD, left: WOOD, right: (u) => (u < 0.04 || u > 0.96 ? WOOD_DARK : GOLD_DARK) });
+  m.box(0.2, y0 + 0.06, SEAT - 1, 0.56, y1 - y0 - 0.12, 1.5, {
+    top: (u, v) => ((Math.abs(u - 0.5) < 0.04 && Math.abs(v - 0.5) < 0.04) ? CRIMSON_DARK : u > 0.85 ? CRIMSON_LIGHT : CRIMSON),
+    left: CRIMSON_DARK,
+    right: CRIMSON_DARK,
+  });
+  // The back: two posts with gilt finials, and the panel between them.
+  for (const y of [y0, y1 - 0.08]) {
+    m.box(0.1, y, 0, 0.1, 0.08, 52, wood);
+    m.cylinder(0.15, y + 0.04, 52, 0.045, 3, (u) => (u < 0.4 ? GOLD_LIGHT : GOLD_DARK), GOLD);
+    m.cylinder(0.15, y + 0.04, 55, 0.03, 2, (u) => (u < 0.4 ? GOLD_LIGHT : GOLD), GOLD_LIGHT);
+  }
+  m.box(0.11, y0 + 0.08, SEAT, 0.07, y1 - y0 - 0.16, 40, {
     top: WOOD_LIGHT,
-    left: WOOD_DARK,
+    left: WOOD,
     right: (u, v) => {
-      const y = v * 64;
-      if (y < 6 || u < 0.08 || u > 0.92) return WOOD_LIGHT;
-      if (y > 10 && y < 34 && u > 0.2 && u < 0.8) {
-        const cu = u - 0.5;
-        const cv = (y - 10) / 24;
-        if (cv > 0.62 && cv < 0.72 && Math.abs(cu) < 0.26 - (cv - 0.62) * 0.8) return GOLD;
-        if (Math.abs(cu) < 0.025 && cv > 0.15 && cv < 0.65) return GOLD_DARK;
-        if (cv > 0.2 && cv < 0.55 && Math.abs(cu) < 0.18) return GOLD_LIGHT;
-        return BLUE_DARK;
-      }
-      return Math.sin(y * 0.9) > 0.7 ? WOOD : WOOD_DARK;
+      // A crimson panel, buttoned, in an oak frame with a gilt bead round it.
+      if (v < 0.08 || v > 0.94 || u < 0.06 || u > 0.94) return WOOD;
+      if (v < 0.11 || v > 0.91 || u < 0.09 || u > 0.91) return GOLD;
+      const bu = (u - 0.09) * 5;
+      const bv = (v - 0.11) * 6;
+      if (Math.abs(bu - Math.round(bu)) < 0.08 && Math.abs(bv - Math.round(bv)) < 0.08) return CRIMSON_DARK;
+      return u < 0.2 ? CRIMSON_LIGHT : CRIMSON;
     },
   });
-  m.box(0.08, 0.4, 64, 0.5, 1.2, 4, { top: WOOD_LIGHT, left: WOOD, right: WOOD_DARK });
-  m.quad({ x: 0.58, y: 0.4, z: 68 }, { x: 0, y: 1.2, z: 0 }, { x: 0, y: 0, z: -8 }, (u, v) => (v > 0.7 && Math.floor(u * 12) % 2 ? null : v < 0.2 ? GOLD : BLUE));
+  // The cresting over the back: a carved arch with the guild's scales in gilt.
+  m.quad({ x: 0.17, y: y0 + 0.08, z: SEAT + 40 + 9 }, { x: 0, y: y1 - y0 - 0.16, z: 0 }, { x: 0, y: 0, z: -9 }, (u, v) => {
+    const arch = 1 - Math.pow(Math.abs(u - 0.5) * 2, 2) * 0.75;
+    if (1 - v > arch) return null;
+    const cu = u - 0.5;
+    if (v > 0.55 && v < 0.65 && Math.abs(cu) < 0.2) return GOLD_LIGHT; // the beam
+    if (Math.abs(cu) < 0.025 && v > 0.3 && v < 0.95) return GOLD; // the post
+    if (v > 0.65 && v < 0.85 && Math.abs(Math.abs(cu) - 0.17) < 0.06) return GOLD; // the pans
+    return 1 - v > arch - 0.08 ? WOOD_LIGHT : WOOD;
+  });
+  // The arms: turned front posts, and broad flat rests with gilt knobs.
+  for (const y of [y0 - 0.01, y1 - 0.08]) {
+    m.cylinder(0.72, y + 0.045, SEAT, 0.035, 9, (u) => (u < 0.4 ? WOOD_LIGHT : WOOD_DARK), WOOD);
+    m.box(0.18, y, SEAT + 9, 0.6, 0.09, 2, wood);
+    m.cylinder(0.76, y + 0.045, SEAT + 11, 0.035, 1.5, (u) => (u < 0.4 ? GOLD_LIGHT : GOLD_DARK), GOLD);
+  }
   return m;
 }
 
@@ -1077,8 +1109,8 @@ function candlestand(): IsoModel {
 function bench(len: number): IsoModel {
   const m = new IsoModel();
   const wood = { top: WOOD_TOP, left: lipped(WOOD, WOOD_LIGHT), right: WOOD_DARK };
-  for (const x of [0.15, len - 0.25]) m.box(x, 0.3, 0, 0.1, 0.4, 14, wood);
-  m.box(0.05, 0.25, 14, len - 0.1, 0.5, 3, wood);
+  for (const x of [0.15, len - 0.25]) m.box(x, 0.3, 0, 0.1, 0.4, SEAT - 3, wood);
+  m.box(0.05, 0.25, SEAT - 3, len - 0.1, 0.5, 3, wood);
   return m;
 }
 
