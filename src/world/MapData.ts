@@ -56,7 +56,9 @@ export type AreaId =
   // Down the lane past the garrison: Adowvale's landing on the river Wend, with its pier, boats and fishing huts.
   | 'jetty'
   // Gloomhaven, the walled marsh town downriver (no way there in play yet: see the debug panel).
-  | 'gloomhaven';
+  | 'gloomhaven'
+  // The Black Rose on Gloomhaven's square: the taproom, the back room behind the curtain, the passage upstairs, and the room to let.
+  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see

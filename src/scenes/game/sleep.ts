@@ -6,6 +6,7 @@ import { PlayerStats } from '../../systems/PlayerStats';
 import { QuestLog } from '../../systems/Quests';
 import { SAVE_VERSION, SaveData, SaveGame } from '../../systems/SaveGame';
 import { Tavern } from '../../systems/Tavern';
+import { BlackRose } from '../../systems/BlackRose';
 import { TimeOfDay } from '../../systems/TimeOfDay';
 import { raidStage } from '../../world/GoblinRaid';
 import { AreaId, Bed } from '../../world/MapData';
@@ -21,6 +22,11 @@ export function wakingThought(hour: number, area: AreaId): string {
     if (hour >= 5 && hour < 12) return 'Morning. Carts in the square below, and the smell of bacon coming up the stairs.';
     if (hour >= 12 && hour < 18) return 'I slept half the day away in a rented bed. Downstairs, somebody is already arguing about dice.';
     return 'Dark outside. Through the floor I can hear the taproom: laughing, tankards, and Pell, singing.';
+  }
+  if (area === 'blackrose-room') {
+    if (hour >= 5 && hour < 12) return 'Grey morning through the cracked pane. Gulls, and the smell of the marsh. The chair is still under the handle.';
+    if (hour >= 12 && hour < 18) return "I slept half the day away, and something in the walls didn't. My purse is still here. I check twice.";
+    return 'Dark. Through the floorboards, voices in the taproom, low. Somebody laughs, once, and stops.';
   }
   if (hour >= 5 && hour < 10) return 'Morning already. I feel rested, and the fire has burned low.';
   if (hour >= 10 && hour < 16) return 'I slept half the day away. Still, I feel better for it.';
@@ -72,6 +78,10 @@ export function goToBed(g: GameScene, bed: Bed): void {
   }
   if (bed.id === 'tavern-room' && !Tavern.renting(g.clock.elapsedHours)) {
     g.onHint?.('My time in this room is up. I should see Godric downstairs if I want to stay another night.');
+    return;
+  }
+  if (bed.id === 'blackrose-room' && !BlackRose.renting(g.clock.elapsedHours)) {
+    g.onHint?.("My time in this room is up. The Widow will want paying again before I lie down on that bed.");
     return;
   }
   if (!g.takeControls()) return;

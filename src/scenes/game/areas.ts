@@ -32,6 +32,7 @@ import { beaconHolders } from '../../systems/Beacon';
 import { enteredBeacon, enteredBeaconTop } from './beacon';
 import { enteredWorkshop } from './workshops';
 import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
+import { enteredBlackRose, enteredRoseBack } from './blackrose';
 import { Homestead } from '../../systems/Homestead';
 import { gatheringWorld, homesteadWorld, northWoodsGathering, restoreStead, snapshotStead } from '../../world/Homestead';
 import { enteredHome } from './homestead';
@@ -154,6 +155,11 @@ export const AREAS: Record<AreaId, AreaDef> = {
   jetty: lazy(() => import('../../world/JettyMap'), (m) => m.buildJettyMap(), { test: true, enter: enteredJetty }),
   // Downriver: the walled marsh town of Gloomhaven (no way there in play yet; the debug panel's teleport goes there).
   gloomhaven: lazy(() => import('../../world/GloomhavenMap'), (m) => m.buildGloomhavenMap(), { test: true, enter: enteredGloomhaven }),
+  // The Black Rose on Gloomhaven's square: the taproom, the back room, the passage upstairs, and the Widow's room to let (no ?area= for that).
+  blackrose: lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseMap(), { test: true, enter: enteredBlackRose }),
+  'blackrose-back': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseBackMap(), { test: true, enter: enteredRoseBack }),
+  'blackrose-upstairs': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseUpstairsMap(), { test: true }),
+  'blackrose-room': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseRoomMap()),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

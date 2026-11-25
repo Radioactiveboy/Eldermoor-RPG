@@ -36,10 +36,11 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { buildGreyfellsMap } = await import('../../src/world/GreyfellsMap');
   const garrison = await import('../../src/world/GarrisonMaps');
   const { buildJettyMap } = await import('../../src/world/JettyMap');
-  const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   const { buildWarrenMap } = await import('../../src/world/WarrenMap');
   const { buildBroodHallMap } = await import('../../src/world/BroodHallMap');
   const beacon = await import('../../src/world/BeaconMap');
+  const rose = await import('../../src/world/BlackRoseMap');
+  const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
     // With the goblins' trail and the way on up to the Greyfells open, so every way out is there.
@@ -72,6 +73,10 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     residence: garrison.buildResidenceMap(),
     jetty: buildJettyMap(),
     gloomhaven: buildGloomhavenMap(),
+    blackrose: rose.buildBlackRoseMap(),
+    'blackrose-back': rose.buildBlackRoseBackMap(),
+    'blackrose-upstairs': rose.buildBlackRoseUpstairsMap(),
+    'blackrose-room': rose.buildBlackRoseRoomMap(),
     warren: buildWarrenMap({ prisoner: 'hilde' }),
     broodhall: buildBroodHallMap(),
   };

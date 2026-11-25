@@ -27,6 +27,10 @@ const ROOFS: Partial<Record<AreaId, number>> = {
   home: 1,
   hut: 1,
   'tavern-room': 1,
+  'blackrose-room': 1,
+  // The Rose's roof leaks: the rain is half in the taproom already.
+  blackrose: 0.6,
+  'blackrose-upstairs': 0.85,
   tavern: 0.45,
   chapel: 0.55,
   cellar: 0.12,
@@ -79,6 +83,11 @@ const PLACES: Record<AreaId, Place> = {
   'tavern-hall': { tavern: 0.3, echo: 0.2 },
   'tavern-room': { tavern: 0.15, fire: 0.2, echo: 0.1 },
   cellar: { cave: 0.35, tavern: 0.12, echo: 0.6 },
+  // The Black Rose: a low fire and a low murmur; the back room cold and close, the taproom's talk through the curtain.
+  blackrose: { fire: 0.55, tavern: 0.75, echo: 0.25 },
+  'blackrose-back': { tavern: 0.25, cave: 0.15, echo: 0.3 },
+  'blackrose-upstairs': { tavern: 0.3, echo: 0.25 },
+  'blackrose-room': { tavern: 0.15, echo: 0.1 },
   smithy: { fire: 0.85, echo: 0.3 },
   bakery: { fire: 0.55, echo: 0.15 },
   garrison: { fire: 0.6, echo: 0.35 },

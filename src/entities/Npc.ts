@@ -28,6 +28,10 @@ import { corwinScript, garthScript, tegScript, linnetScript } from '../dialogue/
 import { beaconHolders, beaconOutcome, beaconStage, BEACON_QUEST } from '../systems/Beacon';
 import { courierScript, footpadScript, goatherdScript, SHAREABLE_FOOD, tinkerScript, Wayfarers } from '../dialogue/wayfarers';
 import { ROOM_COUNT, Tavern } from '../systems/Tavern';
+import { BlackRose, ROSE_FLAGS } from '../systems/BlackRose';
+import {
+  dunnScript, ferretScript, grubbScript, hollisScript, midgeScript, RoseNews, sedgeScript, silasScript, vaneScript, widowScript,
+} from '../dialogue/blackrose';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { marketOpen } from '../systems/MarketHours';
@@ -258,6 +262,24 @@ function corwin(): DialogueScript {
   const first = !met.has('corwin');
   met.add('corwin');
   return build(first);
+}
+
+/** Where the hero stands with the story, for the Black Rose's talk (dialogue/blackrose.ts). */
+function roseNews(): RoseNews {
+  return {
+    raidOver: raidIsOver(),
+    bereaved: QuestLog.hasFlag('mother-dead') || QuestLog.hasFlag('mother-buried'),
+    slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
+  };
+}
+
+/** A Black Rose script, with whether it's the first time this one has been spoken to. */
+function rose(id: string, script: (first: boolean, hour: number) => DialogueScript): (hour: number) => DialogueScript {
+  return (hour) => {
+    const first = !met.has(id);
+    met.add(id);
+    return script(first, hour);
+  };
 }
 
 /** How Farmer Iran's errand for chicken feed stands (see the 'chicken-feed' quest). */
@@ -497,6 +519,33 @@ const NPCS: Record<string, NpcDef> = {
   steward: { texture: 'folk-steward', script: (hour) => wayfarer('steward', (first) => stewardScript(raidIsOver(), first, Npc.within([7, 22], hour)))() },
   housemaid: { texture: 'folk-housemaid', roam: 3, bustles: true, script: () => housemaidScript(raidIsOver()) },
   housecook: { texture: 'folk-housecook', roam: 2, script: () => housecookScript(raidIsOver()) },
+  // The Black Rose on Gloomhaven's square (world/BlackRoseMap.ts): the Widow behind her bar, Grubb at the curtain, Midge with the pots,
+  // the regulars at their tables, and, in the back room, the gentleman in grey.
+  thorne: {
+    texture: 'folk-thorne', talkRange: 3.2,
+    script: rose('thorne', (first, hour) =>
+      widowScript({
+        first,
+        coins: Inventory.coins,
+        renting: BlackRose.renting(NpcWorld.now),
+        nightsLeft: BlackRose.nightsLeft(NpcWorld.now),
+        late: hour % 24 >= 1 && hour % 24 < 6,
+        backOk: QuestLog.hasFlag(ROSE_FLAGS.backOk),
+        news: roseNews(),
+      }),
+    ),
+  },
+  grubb: { texture: 'folk-grubb', script: rose('grubb', (first) => grubbScript(first, QuestLog.hasFlag(ROSE_FLAGS.backOk), Inventory.coins)) },
+  midge: { texture: 'folk-midge', roam: 3, bustles: true, script: rose('midge', (first) => midgeScript(first, Inventory.coins)) },
+  silas: {
+    texture: 'folk-silas', sits: true,
+    script: rose('silas', (first) => silasScript(first, Inventory.coins, QuestLog.hasFlag(ROSE_FLAGS.silasWon), QuestLog.hasFlag(ROSE_FLAGS.silasCaught))),
+  },
+  hollis: { texture: 'folk-hollis', sits: true, script: rose('hollis', (first) => hollisScript(first, Inventory.coins, QuestLog.hasFlag(ROSE_FLAGS.hollisBook))) },
+  sedge: { texture: 'folk-sedge', sits: true, script: rose('sedge', (first) => sedgeScript(first)) },
+  dunn: { texture: 'folk-dunn', sits: true, script: rose('dunn', (first) => dunnScript(first, Inventory.coins)) },
+  ferret: { texture: 'folk-ferret', sits: true, script: rose('ferret', (first) => ferretScript(first, roseNews())) },
+  vane: { texture: 'folk-vane', sits: true, talkRange: 2.4, script: rose('vane', (first) => vaneScript(first)) },
   // Down at Adowvale Jetty (world/JettyMap.ts): Maren on the pier by her boat, Old Ebb at his nets, and Wren about the smokehouse.
   maren: {
     texture: 'folk-maren', talkRange: 2.2,

@@ -317,18 +317,15 @@ function addSquare(data: MapData, set: Setter, slim: Slim): void {
  * steep slate roof with three chimneys, a gallery over the door, leaded windows
  * lit red and gold, and a black rose on its sign. The only building in the
  * town anyone paints. Its door is the way in to the tavern itself (the
- * 'blackrose' area, built separately): until that's here, the door stays shut.
+ * 'blackrose' area, in world/BlackRoseMap.ts).
  */
 function addBlackRose(data: MapData, set: Setter, slim: Slim): void {
   const r = BLACK_ROSE;
   set('gh-blackrose', r.tx, r.ty, r.w, r.h);
   for (const [gx, gy, z] of [[1.6, 2.2, 214], [5.2, 2.2, 224], [8.6, 2.4, 206]]) data.chimneys!.push({ gx: r.tx + gx, gy: r.ty + gy, z });
   data.entries!.blackrose = { x: r.door.tx + 0.5, y: r.door.ty + 0.7 };
-  // Until the inside is built: the door's barred. (Swap this for the door into 'blackrose' when it is:
-  // { tx: r.door.tx, ty: r.door.ty, to: 'blackrose', entry: 'door', label: 'Go inside', facing: 'back' }.)
-  data.sights!.push({
-    id: 'gh-blackrose-door', gx: r.door.tx + 0.5, gy: r.door.ty + 0.35, label: 'Try the door', z: 40, locked: true,
-  });
+  // The way in to the taproom (world/BlackRoseMap.ts).
+  data.doors!.push({ tx: r.door.tx, ty: r.door.ty, to: 'blackrose', entry: 'door', label: 'Go inside', facing: 'back' });
   data.landmarks!.push({ gx: r.door.tx + 0.5, gy: r.door.ty + 0.5, name: 'The Black Rose', range: 3.5 });
   // Lanterns either side of the door, and the glow of the windows on the mud.
   for (const dx of [-1.4, 1.4]) data.lights!.push({ gx: r.door.tx + 0.5 + dx, gy: r.door.ty + 0.05, z: 46, radius: 130, flicker: 0.5 });

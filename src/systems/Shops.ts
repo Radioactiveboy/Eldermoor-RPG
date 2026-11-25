@@ -117,6 +117,19 @@ export const SHOPS = {
     wants: { eel: 0.8, barbel: 0.75, grayling: 0.75, pike: 0.7 },
     keeps: { 'smoked-eel': 3, 'thatching-reed': 10 },
   },
+  // The Widow Thorne, at the Black Rose's bar in Gloomhaven (world/BlackRoseMap.ts): drink and food to take away, and, for
+  // those who know to ask, she'll take most things off your hands and not ask where they came from. Cheaply.
+  blackrose: {
+    name: 'The Black Rose',
+    keeper: 'thorne',
+    greeting: "Black ale, bog cider, eel, bread. And if you've anything to sell, put it on the bar, and I won't ask, and you won't tell.",
+    refuse: "I'm not a midden. Take that away.",
+    thanks: ["Mm.", "Don't mention where you got it. Not that you would.", 'Pleasure, I\'m sure.', 'Grubb. See them to the door.'],
+    stock: [['ale', 10], ['cider', 6], ['spiced-wine', 2], ['stew', 3], ['smoked-eel', 5], ['bread', 4], ['hunting-knife', 1], ['wool-hood', 1], ['silver-ring', 1]],
+    buys: ['Food', 'Material', 'Clothing', 'Tool', 'Weapon', 'Armour'],
+    buyRate: 0.35,
+    keeps: { ale: 3 },
+  },
   // Jory, a travelling tinker met now and then on the Lord's Road (see world/PlainsEvents.ts): odds and ends, and he'll buy most anything, cheaply.
   tinker: {
     name: "Jory's Pack",
