@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, RenderedModel, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, RenderedModel, SEAT_TOP, Shader } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { mixColor, scorch, smoothNoise } from './scorch';
@@ -279,9 +279,9 @@ export function table(): IsoModel {
 export function stool(): IsoModel {
   const m = new IsoModel();
   for (const [x, y] of [[0.3, 0.3], [0.62, 0.3], [0.3, 0.62], [0.62, 0.62]]) {
-    m.box(x, y, 0, 0.08, 0.08, 14, { top: P.bark, left: P.bark, right: P.barkDark });
+    m.box(x, y, 0, 0.08, 0.08, SEAT_TOP - 3, { top: P.bark, left: P.bark, right: P.barkDark });
   }
-  m.cylinder(0.5, 0.5, 14, 0.28, 4, (u) => (u < 0.35 ? P.plankLight : u > 0.75 ? P.plankDark : P.plank), P.plankLight);
+  m.cylinder(0.5, 0.5, SEAT_TOP - 3, 0.28, 3, (u) => (u < 0.35 ? P.plankLight : u > 0.75 ? P.plankDark : P.plank), P.plankLight);
   return m;
 }
 

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, planks, Shader } from './IsoModel';
+import { IsoModel, planks, SEAT_TOP, Shader } from './IsoModel';
 import { MODEL_ART } from './interior';
 import { PALETTE as P } from './palette';
 import { GARRISON, PANEL_WALL_HEIGHT, RESIDENCE, RESIDENCE_CHIMNEYS } from './sizes';
@@ -634,12 +634,12 @@ function chair(grand: boolean, turned = false): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
   const seat = grand ? 0x7a2a2a : 0x2e5a3e;
-  for (const [x, y] of [[0.22, 0.22], [0.7, 0.22], [0.22, 0.7], [0.7, 0.7]]) m.box(x, y, 0, 0.08, 0.08, 14, wood);
-  m.box(0.2, 0.2, 14, 0.6, 0.6, 3, { top: seat, left: darken(seat), right: darken(seat, 0.6) });
-  const back = grand ? 52 : 38;
+  for (const [x, y] of [[0.22, 0.22], [0.7, 0.22], [0.22, 0.7], [0.7, 0.7]]) m.box(x, y, 0, 0.08, 0.08, SEAT_TOP - 3, wood);
+  m.box(0.2, 0.2, SEAT_TOP - 3, 0.6, 0.6, 3, { top: seat, left: darken(seat), right: darken(seat, 0.6) });
+  const back = SEAT_TOP + (grand ? 38 : 24);
   const by = turned ? 0.72 : 0.2;
   const face = (u: number, v: number) => (u < 0.12 || u > 0.88 || v < 0.1 ? OAK_DARK : grand && v < 0.4 && Math.abs(u - 0.5) < 0.12 ? P.gold : seat);
-  m.box(0.2, by, 14, 0.6, 0.08, back - 14, turned
+  m.box(0.2, by, SEAT_TOP - 3, 0.6, 0.08, back - SEAT_TOP + 3, turned
     // Seen from behind: plain oak with a carved rail.
     ? { top: OAK_LIGHT, left: (u, v) => (u < 0.12 || u > 0.88 || v < 0.1 || Math.abs(v - 0.45) < 0.04 ? OAK_DARK : OAK), right: OAK_DARK }
     : { top: OAK_LIGHT, left: face, right: OAK_DARK });

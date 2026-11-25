@@ -1,5 +1,6 @@
 import { darker, type Tones } from './character';
 import { Detail, Hit, limb, Material, Model, Pose3D, Solid } from './figure3d';
+import { SEAT_TOP } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { MORTEN } from './tollgate';
 
@@ -1318,7 +1319,7 @@ export function pellModel(pose: Pose3D): Model {
 /** Legs for a seated figure: thighs forward from the hips, shins down to the ground, feet flat. */
 export function seatedLegs(width: number, legs: Material, boots: Material, r = 1.9): Solid[] {
   const out: Solid[] = [];
-  const hip = 10;
+  const hip = SEAT_TOP + 1;
   for (const side of [-1, 1]) {
     const x = side * width;
     out.push(...limb([x, hip, -0.5], [x, hip + 0.4, 5], r, r * 0.95, legs));

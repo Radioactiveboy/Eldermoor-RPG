@@ -83,6 +83,14 @@ export function inFrontOf(r: RenderedModel, x: number, y: number): PixelCanvas {
   return out;
 }
 
+/**
+ * How high the top of a seat is drawn (chair, stool, bench, settle): where a
+ * seated figure's thighs rest. Every sitting figure is modelled with its hips
+ * this far up (see seatedLegs in models3d.ts) and is drawn standing on the
+ * floor in front of its seat, so a seat any higher comes up through its lap.
+ */
+export const SEAT_TOP = 9;
+
 export class IsoModel {
   private readonly faces: Face[] = [];
   /**

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TILE_HEIGHT } from '../config';
 import { MODEL_ART, registerModel } from './interior';
-import { IsoModel, planks, Shader } from './IsoModel';
+import { IsoModel, planks, SEAT_TOP, Shader } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { smoothNoise } from './scorch';
@@ -650,7 +650,7 @@ function brigandTable(): IsoModel {
 /** A stool, a rough round of log on three legs. */
 function stool(): IsoModel {
   const m = new IsoModel();
-  m.cylinder(0.5, 0.5, 0, 0.2, 13, (u) => dim(OAK, 0.8 + (1 - u) * 0.3), (u, v) => (Math.floor(Math.hypot(u - 0.5, v - 0.5) * 12) % 2 ? 0xb8946a : 0x9a7a52));
+  m.cylinder(0.5, 0.5, 0, 0.2, SEAT_TOP, (u) => dim(OAK, 0.8 + (1 - u) * 0.3), (u, v) => (Math.floor(Math.hypot(u - 0.5, v - 0.5) * 12) % 2 ? 0xb8946a : 0x9a7a52));
   return m;
 }
 

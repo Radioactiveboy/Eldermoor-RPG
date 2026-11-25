@@ -256,7 +256,7 @@ export function buildPruettMap(): MapData {
       { gx: 2.4, gy: 1.4, z: 30, radius: 90, flicker: 0.7 },
     ],
     // She is always here. She has nowhere else to be.
-    npcs: [{ id: 'nan', gx: 1.55, gy: 1.5, looking: { x: 1, y: 0 }, seated: true }],
+    npcs: [{ id: 'nan', gx: 1.45, gy: 1.5, looking: { x: 1, y: 0 }, seated: true }],
     seats: [],
     sights: [],
     drips: [],

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, SEAT_TOP, Shader } from './IsoModel';
 import { MODEL_ART, registerModel, WALL_HEIGHT } from './interior';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
@@ -925,19 +925,17 @@ function rushBundle(): IsoModel {
   return m;
 }
 
-/** Nan's chair, facing her table and the fire: a rush-seated armchair, its arms worn pale where her hands go, a cushion, a shawl over the back. */
+/** Nan's chair, facing her table and the fire: low and rush-seated, a cushion, a shawl over its back. */
 function armchair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: DEAL_LIGHT, left: DEAL, right: DEAL_DARK };
-  // A low old chair, smaller than a tavern's: the seat at a knee's height, the back no higher than her shoulders.
-  for (const [x, y] of [[0.24, 0.24], [0.7, 0.24], [0.24, 0.7], [0.7, 0.7]]) m.box(x, y, 0, 0.06, 0.06, 13, wood);
-  m.box(0.22, 0.22, 13, 0.56, 0.56, 3, { top: (u, v) => ((Math.floor(u * 8) + Math.floor(v * 8)) % 2 ? STRAW : STRAW_DARK), left: DEAL, right: DEAL_DARK });
-  m.box(0.3, 0.28, 16, 0.4, 0.44, 2, { top: PATCH_RED, left: 0x6a2a24, right: 0x5a2420 });
-  // The back, and its two arms, worn pale on top.
-  m.box(0.22, 0.22, 16, 0.05, 0.56, 20, { top: DEAL_LIGHT, left: DEAL_DARK, right: (u) => ((u * 4) % 1 < 0.5 ? DEAL : DEAL_DARK) });
-  for (const y of [0.22, 0.73]) m.box(0.22, y, 16, 0.56, 0.05, 7, { top: 0xc8a880, left: DEAL, right: DEAL_DARK });
-  // The shawl over the top of the back.
-  m.box(0.21, 0.26, 28, 0.07, 0.48, 9, { top: 0x4a5a3a, left: 0x2e3a24, right: (u, v) => ((Math.floor(u * 6) + Math.floor(v * 4)) % 2 ? 0x5a6a46 : 0x3e4a30) });
+  const seat = SEAT_TOP - 2;
+  for (const [x, y] of [[0.24, 0.26], [0.68, 0.26], [0.24, 0.68], [0.68, 0.68]]) m.box(x, y, 0, 0.06, 0.06, seat, wood);
+  m.box(0.22, 0.24, seat, 0.54, 0.52, 2, { top: (u, v) => ((Math.floor(u * 8) + Math.floor(v * 8)) % 2 ? STRAW : STRAW_DARK), left: DEAL, right: DEAL_DARK });
+  m.box(0.3, 0.3, SEAT_TOP, 0.4, 0.4, 1, { top: PATCH_RED, left: 0x6a2a24, right: 0x5a2420 });
+  // The back, behind her, its uprights worn pale on top; the shawl over it.
+  m.box(0.2, 0.24, seat, 0.05, 0.52, 17, { top: DEAL_LIGHT, left: DEAL_DARK, right: (u) => ((u * 4) % 1 < 0.5 ? DEAL : DEAL_DARK) });
+  m.box(0.19, 0.3, seat + 9, 0.07, 0.4, 9, { top: 0x4a5a3a, left: 0x2e3a24, right: (u, v) => ((Math.floor(u * 6) + Math.floor(v * 4)) % 2 ? 0x5a6a46 : 0x3e4a30) });
   return m;
 }
 
