@@ -187,11 +187,11 @@ export const QUESTS: Record<string, QuestDef> = {
     kind: 'main',
     giver: 'Myself',
     summary:
-      'The orb woke in the night. Two voices on the other side of it, and neither one meant for me: the cold one from the brood hall, and ' +
-      'another, older, that was afraid of it. "The boy lives still," the cold one said. "We must send them to Gloomhaven then, on the ' +
-      'marshes." Gloomhaven is a marsh town out past the edge of the shire, much bigger than Adowvale, and full of the sort of people the ' +
-      'carters lower their voices about. Whoever is behind the glass is sending knives there to wait for me. And they said the fen closed ' +
-      'over Father.',
+      'The orb woke in the night, and I overheard two voices through it. One was the cold voice from the brood hall; the other called ' +
+      'him Astarix, and spoke of Daejonguk. The orb is a seeing stone, one of a pair, and he holds its twin. Adowvale has cost him the ' +
+      'goblins\' Mother, so he is turning to Gloomhaven, a marsh town out past the edge of the shire, much bigger than Adowvale and full of ' +
+      'the sort of people the carters lower their voices about. He means to buy it from the inside, and every road out of the marshes ' +
+      'runs to some other door. Ours among them. Somebody has to get there before he does.',
     objectives: [{ id: 'way', text: 'Find the way to Gloomhaven, a town on the marshes beyond the shire of Adowvale' }],
     xp: 400,
   },
