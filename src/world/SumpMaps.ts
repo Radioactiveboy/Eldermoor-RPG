@@ -266,7 +266,7 @@ export function buildPruettMap(): MapData {
   add('sp-ragrug-small', 1, 3, { w: 2, flat: true });
   add('br-mud-1', 1, 3, { w: 2, flat: true });
   add('sp-rushbundle', 0, 0, { shapes: [box(0.1, 0.1, 0.9, 0.7)] });
-  add('sp-armchair', 1, 1, { shapes: [box(0.12, 0.12, 0.88, 0.88)] });
+  add('sp-armchair', 1, 1, { shapes: [box(0.2, 0.2, 0.8, 0.8)] });
   add('sp-hearth-peat', 2, 0, { anim: 'sp-hearth-peat-fire' });
   add('br-chest', 3, 0, { shapes: [box(0.1, 0.2, 0.9, 0.8)] });
   add('sp-cot', 4, 0, { h: 2 });

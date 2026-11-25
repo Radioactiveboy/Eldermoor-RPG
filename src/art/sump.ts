@@ -929,13 +929,15 @@ function rushBundle(): IsoModel {
 function armchair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: DEAL_LIGHT, left: DEAL, right: DEAL_DARK };
-  for (const [x, y] of [[0.16, 0.16], [0.78, 0.16], [0.16, 0.78], [0.78, 0.78]]) m.box(x, y, 0, 0.06, 0.06, 15, wood);
-  m.box(0.14, 0.14, 15, 0.72, 0.72, 3, { top: (u, v) => ((Math.floor(u * 10) + Math.floor(v * 10)) % 2 ? STRAW : STRAW_DARK), left: DEAL, right: DEAL_DARK });
-  m.box(0.22, 0.22, 18, 0.56, 0.5, 3, { top: PATCH_RED, left: 0x6a2a24, right: 0x5a2420 });
+  // A low old chair, smaller than a tavern's: the seat at a knee's height, the back no higher than her shoulders.
+  for (const [x, y] of [[0.24, 0.24], [0.7, 0.24], [0.24, 0.7], [0.7, 0.7]]) m.box(x, y, 0, 0.06, 0.06, 13, wood);
+  m.box(0.22, 0.22, 13, 0.56, 0.56, 3, { top: (u, v) => ((Math.floor(u * 8) + Math.floor(v * 8)) % 2 ? STRAW : STRAW_DARK), left: DEAL, right: DEAL_DARK });
+  m.box(0.28, 0.3, 16, 0.44, 0.4, 2, { top: PATCH_RED, left: 0x6a2a24, right: 0x5a2420 });
   // The back, and its two arms, worn pale on top.
-  m.box(0.14, 0.14, 18, 0.72, 0.06, 32, { top: DEAL_LIGHT, left: (u) => ((u * 4) % 1 < 0.5 ? DEAL : DEAL_DARK), right: DEAL_DARK });
-  for (const x of [0.14, 0.8]) m.box(x, 0.14, 18, 0.06, 0.72, 10, { top: 0xc8a880, left: DEAL, right: DEAL_DARK });
-  m.box(0.2, 0.15, 34, 0.6, 0.06, 14, { top: 0x4a5a3a, left: (u, v) => ((Math.floor(u * 6) + Math.floor(v * 4)) % 2 ? 0x5a6a46 : 0x3e4a30), right: 0x2e3a24 });
+  m.box(0.22, 0.22, 16, 0.56, 0.05, 20, { top: DEAL_LIGHT, left: (u) => ((u * 4) % 1 < 0.5 ? DEAL : DEAL_DARK), right: DEAL_DARK });
+  for (const x of [0.22, 0.73]) m.box(x, 0.22, 16, 0.05, 0.56, 7, { top: 0xc8a880, left: DEAL, right: DEAL_DARK });
+  // The shawl over the top of the back.
+  m.box(0.26, 0.21, 28, 0.48, 0.07, 9, { top: 0x4a5a3a, left: (u, v) => ((Math.floor(u * 6) + Math.floor(v * 4)) % 2 ? 0x5a6a46 : 0x3e4a30), right: 0x2e3a24 });
   return m;
 }
 
