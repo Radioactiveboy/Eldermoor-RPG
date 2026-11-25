@@ -41,7 +41,7 @@ export class OrbWhisperScene extends Phaser.Scene {
   private full = '';
   private line?: WhisperLine;
   private lineIndex = -1;
-  /** How eager the orb is: 0 calm, 1 speaking, more as it leans in close. */
+  /** How stirred the orb is: 0 calm, 1 a voice coming through it. */
   private eager = 0;
   private stage: 'opening' | 'voices' | 'waking' | 'done' = 'opening';
   private advance?: Phaser.Time.TimerEvent;
@@ -112,7 +112,7 @@ export class OrbWhisperScene extends Phaser.Scene {
     this.stir.setFrame(ORB_PORTRAIT.frames + f);
     if (this.stage === 'voices' && this.line) {
       const speaking = this.shown < this.full.length;
-      const want = (this.line.near ? 1.6 : 1) * (speaking ? 1 : 0.55);
+      const want = (this.line.faint ? 0.6 : 1) * (speaking ? 1 : 0.55);
       this.eager += (want - this.eager) * Math.min(1, dt * (want > this.eager ? 4 : 1.5));
       if (speaking) this.type(dt, time);
     } else if (this.stage !== 'voices') {
@@ -182,13 +182,10 @@ export class OrbWhisperScene extends Phaser.Scene {
     const voice = line.voice ? WHISPER_VOICES[line.voice] : undefined;
     this.nameText.setText(voice ? voice.name.toUpperCase() : '');
     this.nameText.setColor(line.voice === 'other' ? '#b9a6d8' : THEME.goldText);
-    this.nameText.setAlpha(0.9);
+    this.nameText.setAlpha(line.faint ? 0.55 : 0.9);
     this.lineText.setText('');
-    this.lineText.setColor(line.near ? '#f4e6ff' : '#e6dcf2');
-    if (line.near) {
-      GameAudio.whisper(1.6);
-      this.cameras.main.shake(900, 0.002);
-    }
+    this.lineText.setColor('#e6dcf2');
+    this.lineText.setAlpha(line.faint ? 0.6 : 1);
   }
 
   /** Types the line out, with the speaker's voice under it. */
@@ -212,29 +209,19 @@ export class OrbWhisperScene extends Phaser.Scene {
     this.advance = this.time.delayedCall(Math.max(1800, captionMs(this.full) - this.full.length * 20), () => this.nextLine());
   }
 
-  /** The last line: the orb flares, close against the glass, and goes out. */
+  /** After the last line: the orb's light fades, and the voices with it. */
   private endVoices(): void {
     this.stage = 'waking';
     this.line = undefined;
-    GameAudio.whisper(3);
-    const { width, height } = this.scale;
-    const flash = this.add.rectangle(0, 0, width, height, 0xd8c0ff, 0).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: [this.orb, this.stir], scale: this.orbScale * 1.5, duration: 700, ease: 'Cubic.easeIn' });
-    this.tweens.add({
-      targets: flash,
-      alpha: 0.85,
-      duration: 650,
-      ease: 'Cubic.easeIn',
-      onComplete: () => {
-        this.orb.setVisible(false);
-        this.stir.setVisible(false);
-        this.glow.setVisible(false);
-        this.nameText.setVisible(false);
-        this.lineText.setVisible(false);
-        this.tweens.add({ targets: flash, alpha: 0, duration: 1400 });
-        GameAudio.stopMusic();
-        this.time.delayedCall(1800, () => this.dimLines(WHISPER_WAKING, () => this.finish()));
-      },
+    // Nobody on the other side knows anyone was listening: the light just sinks back into the glass.
+    this.tweens.add({ targets: [this.orb, this.stir, this.glow, this.nameText, this.lineText], alpha: 0, duration: 3200, ease: 'Sine.easeIn' });
+    this.tweens.add({ targets: [this.orb, this.stir], scale: this.orbScale * 0.85, duration: 3200, ease: 'Sine.easeIn' });
+    this.time.delayedCall(2400, () => GameAudio.stopMusic());
+    this.time.delayedCall(4200, () => {
+      this.orb.setVisible(false);
+      this.stir.setVisible(false);
+      this.glow.setVisible(false);
+      this.dimLines(WHISPER_WAKING, () => this.finish());
     });
   }
 
