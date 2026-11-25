@@ -21,6 +21,7 @@ import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
 import { syncPlot } from './plot';
 import { lookedAtCamp, lookedAtTrailSign } from './trail';
 import { lookedAtBrazier } from './beacon';
+import { examineAtJetty } from './jetty';
 
 export function startChannel(g: GameScene, channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
   g.walkingTo = undefined;
@@ -156,6 +157,7 @@ export function examine(g: GameScene, sight: Sight): void {
     g.openStation(sight.station);
     return;
   }
+  if (examineAtJetty(g, sight)) return;
   if (sight.thought) {
     g.onHint?.(sight.thought);
     lookedAtTrailSign(sight.id);

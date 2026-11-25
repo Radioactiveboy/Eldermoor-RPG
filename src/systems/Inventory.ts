@@ -426,6 +426,31 @@ export const ITEMS = {
     quest: true,
     stack: 1,
   },
+  // What Maren Tull needs to mend the Grey Heron at Adowvale Jetty (see scenes/game/jetty.ts).
+  'oak-plank': {
+    name: 'Seasoned Oak Plank',
+    description: 'Six foot of oak out of the rafters of the jetty boathouse, dry and true and heavy as sin. A new strake for the Grey Heron.',
+    icon: 'item-oak-plank',
+    category: 'Material',
+    quest: true,
+    stack: 1,
+  },
+  oakum: {
+    name: 'Oakum',
+    description: "Old rope, picked apart by Old Ebb into loose tarry fibres. Hammered into a boat's seams, it swells and keeps the river out.",
+    icon: 'item-oakum',
+    category: 'Material',
+    quest: true,
+    stack: 1,
+  },
+  'pitch-pail': {
+    name: 'Pail of Pitch',
+    description: 'A pail of hot pine pitch from the tar pot on the shingle. It smells of resin and smoke, and it gets on everything.',
+    icon: 'item-pitch-pail',
+    category: 'Material',
+    quest: true,
+    stack: 1,
+  },
   // Growing your own, on the plot Farmer Iran lends (see systems/Farm.ts): seeds from Hilde, and Iran's old tools.
   'carrot-seed': {
     name: 'Carrot Seed',

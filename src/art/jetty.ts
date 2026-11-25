@@ -618,6 +618,8 @@ function hull(m: IsoModel, h: Hull, cx: number, y0: number, paint: { top: number
     const b = stake((i + 1) / stations);
     m.quad({ x: cx - a.w, y: a.y, z: a.z }, { x: -(b.w - a.w), y: b.y - a.y, z: b.z - a.z }, { x: a.w * 0.15, y: 0, z: -6 }, (_u, v) => (v < 0.2 ? OAK_LIGHT : OAK));
   }
+  // Turned, the far side's outside may come round to face the camera too.
+  if (m.isTurned) side(-1, 0.7);
   inside?.();
   side(1, 0.82);
   // The transom at the stern, facing the viewer.
@@ -772,6 +774,81 @@ function tarPot(): IsoModel {
 /** Her hull's shape: 7 tiles long, a little under 2 across. */
 const HERON_HULL: Hull = { length: 6.7, beam: 0.86, freeboard: 16, bowRise: 12, sternRise: 6, transom: 0.62 };
 
+/** The middle of her, on the water, in her 2 x 7 tile footprint: what she turns about when she's under way. */
+export const HERON_PIVOT = { x: 1, y: 0.15 + HERON_HULL.length / 2 };
+
+/** The Grey Heron under way: which way she's heading, and whether her sail is let fall yet (see {@link heronUnderwayKey}). */
+export interface HeronUnderway {
+  /**
+   * Radians clockwise (seen from above) from how she lies at the pier, bow up the screen towards -y:
+   * a quarter turn heads her down the river, towards +x; minus a quarter, up it.
+   */
+  heading: number;
+  sail: boolean;
+}
+
+/** The headings she's drawn at under way, every 15 degrees from a quarter turn one way to a quarter turn the other. */
+export const HERON_HEADINGS = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6].map((k) => (k * Math.PI) / 12);
+
+/** The texture of the Grey Heron at one of her headings (an index into {@link HERON_HEADINGS}), sail set or furled. */
+export function heronUnderwayKey(index: number, sail: boolean): string {
+  return `jt-heron-${sail ? 'sail' : 'furled'}-${index}`;
+}
+
+/**
+ * Draws the Grey Heron under way, at every heading in {@link HERON_HEADINGS}, sail set and furled, for her
+ * leaving a pier (scenes/game/voyages.ts). Each is the same 2 x 7 tile footprint turned about {@link HERON_PIVOT}.
+ * They're drawn the first time they're wanted, which takes a moment, and kept.
+ */
+export function generateHeronUnderway(scene: Phaser.Scene): void {
+  HERON_HEADINGS.forEach((heading, i) => {
+    for (const sail of [false, true]) {
+      const key = heronUnderwayKey(i, sail);
+      if (!scene.textures.exists(key)) registerModel(scene, key, greyHeron({ heading, sail }));
+    }
+  });
+}
+
+/**
+ * Her square sail let fall from the yard and filled by a wind from astern: a broad sheet of tanned
+ * canvas hanging from the yard to a little above the deck, bellied out towards the bow, sewn in
+ * vertical cloths with a reef band across, its foot sheeted down aft on either side.
+ */
+function setSail(m: IsoModel, mast: { x: number; y: number }, yw: number, top: number, foot: number, sheetTo: Vec3): void {
+  const NU = 18;
+  const NV = 14;
+  const half = yw * 0.96;
+  /** A point on the sail: u across from port to starboard, v down from the yard. */
+  const pt = (u: number, v: number): Vec3 => {
+    const belly = 0.42 * Math.sin(Math.PI * u) ** 0.8 * Math.sin(Math.PI * (0.12 + v * 0.8));
+    return { x: mast.x - half + u * half * 2, y: mast.y - 0.08 - belly, z: top - v * (top - foot) };
+  };
+  for (let i = 0; i < NU; i++) {
+    for (let j = 0; j < NV; j++) {
+      const u0 = i / NU;
+      const v0 = j / NV;
+      const a = pt(u0, v0);
+      const b = pt(u0 + 1 / NU, v0);
+      const c = pt(u0, v0 + 1 / NV);
+      // Lit where the belly turns to the sky, shaded where it falls away, with the cloths' seams and the reef band.
+      const lift = Math.sin(Math.PI * (u0 + 0.5 / NU));
+      m.quad(a, { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z }, { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z }, (su, sv) => {
+        const u = u0 + su / NU;
+        const v = v0 + sv / NV;
+        if (Math.abs(((u * 7) % 1) - 0.5) > 0.47) return SAIL_DARK;
+        if (Math.abs(v - 0.3) < 0.012) return ROPE_DARK;
+        if (Math.abs(v - 0.3) < 0.03 && Math.floor(u * 28) % 2 === 0) return ROPE;
+        const weather = smoothNoise(u * 5, v * 7, 4) * 0.2;
+        const c0 = lift > 0.75 ? SAIL_LIGHT : lift > 0.4 ? SAIL : SAIL_DARK;
+        return mix(v > 0.94 ? SAIL_DARK : c0, SAIL_DARK, weather + (v > 0.85 ? 0.25 : 0));
+      });
+    }
+  }
+  // The bolt rope along the foot, and the sheets down to the gunwales aft.
+  for (let i = 0; i < NU; i++) line(m, pt(i / NU, 1), pt((i + 1) / NU, 1), ROPE_DARK, 0.02);
+  for (const [u, k] of [[0, -1], [1, 1]] as const) line(m, pt(u, 1), { x: sheetTo.x + k * 0.7, y: sheetTo.y, z: sheetTo.z + 2 }, 0x2e2a24, 0.018);
+}
+
 /**
  * The Grey Heron, Maren Tull's river boat (2 x 7 tiles, alongside the pier,
  * bow towards the quay): a broad clinker hull in grey-blue with a white band
@@ -781,11 +858,11 @@ const HERON_HULL: Hull = { length: 6.7, beam: 0.86, freeboard: 16, bowRise: 12, 
  * pennant at the masthead, a little cabin aft with a lit window and a stovepipe,
  * the tiller over the stern and a lantern on its post at the transom.
  */
-function greyHeron(): RenderedModel {
-  const m = new IsoModel();
+function greyHeron(under?: HeronUnderway): RenderedModel {
   const h = HERON_HULL;
   const cx = 1;
   const y0 = 0.15;
+  const m = under ? IsoModel.turned(under.heading, HERON_PIVOT) : new IsoModel();
   const yAt = (t: number) => y0 + t * h.length;
   const deckZ = (t: number) => sheer(h, t) - 2;
   // Stays first that run behind things: the backstay off the far side.
@@ -865,10 +942,11 @@ function greyHeron(): RenderedModel {
   }
   line(m, { x: mast.x, y: mast.y, z: yardZ + 20 }, { x: cx, y: y0 - 0.06, z: bowZ + 7 }, 0x2e2a24, 0.02);
   line(m, { x: mast.x, y: mast.y, z: deckZ(mastT) + MAST - 2 }, { x: cx, y: yAt(0.99), z: sheer(h, 1) + 6 }, 0x2e2a24, 0.02);
-  // The yard (across the boat) with the sail in a fat roll along it, and its lashings.
+  // The yard (across the boat) with the sail in a fat roll along it, and its lashings; or, under way, the sail let fall and full of wind.
   const yw = 1.15;
   m.box(mast.x - yw, mast.y - 0.05, yardZ, yw * 2, 0.1, 3, { top: OAK_LIGHT, left: OAK, right: OAK_DARK });
-  const N = 22;
+  if (under?.sail) setSail(m, mast, yw, yardZ, deckZ(mastT) + 20, { x: cx, y: yAt(0.62), z: deckZ(0.62) });
+  const N = under?.sail ? 0 : 22;
   for (let i = 0; i < N; i++) {
     const t = i / N;
     const x = mast.x - yw * 0.92 + t * yw * 1.84;
@@ -909,8 +987,10 @@ function greyHeron(): RenderedModel {
     m.cylinder(cx + w + 0.03, yAt(t), sheer(h, t) - 11, 0.06, 6, (u) => (Math.floor(u * 10) % 2 ? ROPE : ROPE_DARK), ROPE);
   }
   const r = padded(m.render(), 8);
-  waterline(r, hullRing(h, cx, y0), 160);
-  // Her name carved on the transom: a pale little heron, standing on one leg.
+  const ring = hullRing(h, cx, y0);
+  waterline(r, (t) => m.place({ ...ring(t), z: 0 }), 160);
+  // Her name carved on the transom: a pale little heron, standing on one leg (out of sight once she's turned).
+  if (under) return r;
   const tr = at(r, { x: cx, y: yAt(1), z: sheer(h, 1) - 6 });
   for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 1], [0, 2], [1, 2], [2, -1], [3, -2], [3, -3], [4, -3], [5, -3], [0, 3], [0, 4]]) r.canvas.set(tr.x + dx - 1, tr.y + dy - 1, HERON_WHITE);
   return r;
@@ -1565,6 +1645,8 @@ export function generateJetty(scene: Phaser.Scene): void {
   registerModel(scene, 'jt-stool', stool().render());
   registerModel(scene, 'jt-netmend', netHeap().render());
   registerModel(scene, 'jt-heron', greyHeron());
+  // Lying at Gloomhaven, bow upstream (west), as she does under way at a quarter turn back (see GLOOM_HERON).
+  registerModel(scene, heronUnderwayKey(0, false), greyHeron({ heading: HERON_HEADINGS[0], sail: false }));
   registerModel(scene, 'jt-rowboat-0', rowboat(0x4a6e4a, 0xd8c8a0, 1, true));
   registerModel(scene, 'jt-rowboat-1', rowboat(0x3e5a86, 0xe0d8c4, 2, true));
   registerModel(scene, 'jt-rowboat-2', rowboat(0x8a4a32, undefined, 3, true));

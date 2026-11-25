@@ -148,3 +148,9 @@ export const BLACK_ROSE = { tx: 24, ty: 12, w: 10, h: 7, door: { tx: 29, ty: 19 
 export const GLOOM_WELL = { tx: 29, ty: 24 };
 /** The pier out into the river: its stem (two planks wide) from the bank to its head, and the head's two rows. */
 export const GLOOM_PIER = { x0: 29, x1: 30, fromY: 45, headY: 53, headX0: 26, headX1: 33 };
+/**
+ * Where the Grey Heron lies at Gloomhaven, while she's brought the hero down from Adowvale: alongside the
+ * outer face of the pier's cross-head, bow upstream (west). Her art is her 2 x 7 footprint turned a quarter
+ * about its middle (art/jetty.ts, HERON_PIVOT), so that middle, at (tx + 1, ty + 3.5), is (30, 56.5).
+ */
+export const GLOOM_HERON = { tx: 29, ty: 53, w: 2, h: 7 };

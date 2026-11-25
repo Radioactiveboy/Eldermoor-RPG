@@ -53,10 +53,49 @@ export interface RenderedModel {
 
 export class IsoModel {
   private readonly faces: Face[] = [];
+  /**
+   * Turned about the vertical (see {@link turned}): every shape is spun this many radians about `pivot`
+   * as it goes in, and the model is drawn with a depth buffer instead of in call order, so it looks
+   * right from any side.
+   */
+  private yaw?: { cos: number; sin: number; pivot: Vec3 };
+
+  /**
+   * A model that is spun `angle` radians about the vertical line through `pivot` (clockwise as seen from
+   * above, so a bow pointing up the screen's -y swings round towards +x). Shapes are given as if
+   * unturned; boxes and cylinders get all their sides (any may end up facing the camera), and it draws
+   * with a depth buffer. For something that has to be seen heading any way (the Grey Heron, turning).
+   */
+  static turned(angle: number, pivot: { x: number; y: number }): IsoModel {
+    const m = new IsoModel();
+    m.yaw = { cos: Math.cos(angle), sin: Math.sin(angle), pivot: { x: pivot.x, y: pivot.y, z: 0 } };
+    return m;
+  }
+
+  /** Whether it is turned (see {@link turned}), and so needs drawing from every side. */
+  get isTurned(): boolean {
+    return !!this.yaw;
+  }
+
+  /** Where a point given unturned ends up (itself, for a model that isn't turned). */
+  place(p: Vec3): Vec3 {
+    const t = this.yaw;
+    if (!t) return p;
+    const x = p.x - t.pivot.x;
+    const y = p.y - t.pivot.y;
+    return { x: t.pivot.x + x * t.cos - y * t.sin, y: t.pivot.y + x * t.sin + y * t.cos, z: p.z };
+  }
+
+  /** The same, for a direction rather than a point. */
+  private turn(d: Vec3): Vec3 {
+    const t = this.yaw;
+    if (!t) return d;
+    return { x: d.x * t.cos - d.y * t.sin, y: d.x * t.sin + d.y * t.cos, z: d.z };
+  }
 
   /** A flat parallelogram from `origin` spanning `du` and `dv`. Drawn in call order. */
   quad(origin: Vec3, du: Vec3, dv: Vec3, paint: Paint): this {
-    this.faces.push({ origin, du, dv, shade: solid(paint) });
+    this.faces.push({ origin: this.place(origin), du: this.turn(du), dv: this.turn(dv), shade: solid(paint) });
     return this;
   }
 
@@ -67,6 +106,11 @@ export class IsoModel {
    */
   box(x: number, y: number, z: number, sx: number, sy: number, sz: number, paint: BoxPaint): this {
     const top = z + sz;
+    if (this.yaw) {
+      // Turned, the back faces may come round to the front: they take the paint of the faces opposite.
+      this.quad({ x, y, z: top }, { x: sx, y: 0, z: 0 }, { x: 0, y: 0, z: -sz }, paint.left);
+      this.quad({ x, y, z: top }, { x: 0, y: sy, z: 0 }, { x: 0, y: 0, z: -sz }, paint.right);
+    }
     this.quad({ x, y: y + sy, z: top }, { x: sx, y: 0, z: 0 }, { x: 0, y: 0, z: -sz }, paint.left);
     this.quad({ x: x + sx, y, z: top }, { x: 0, y: sy, z: 0 }, { x: 0, y: 0, z: -sz }, paint.right);
     this.quad({ x, y, z: top }, { x: sx, y: 0, z: 0 }, { x: 0, y: sy, z: 0 }, paint.top);
@@ -76,14 +120,16 @@ export class IsoModel {
   /** Upright cylinder (barrels, pots). u goes round the visible side, v from the top down. */
   cylinder(cx: number, cy: number, z: number, r: number, h: number, side: Shader, top: Paint): this {
     // Split the visible half into thin quads so the shader sees a smooth u.
-    const slices = 24;
+    // Turned, the way round it that faces the camera moves: draw it all the way round.
+    const round = this.yaw ? 2 : 1;
+    const slices = 24 * round;
     const from = -Math.PI / 4;
     for (let i = 0; i < slices; i++) {
-      const a0 = from + (Math.PI * i) / slices;
-      const a1 = from + (Math.PI * (i + 1)) / slices;
+      const a0 = from + (Math.PI * round * i) / slices;
+      const a1 = from + (Math.PI * round * (i + 1)) / slices;
       const p0 = { x: cx + Math.cos(a0) * r, y: cy + Math.sin(a0) * r, z: z + h };
       const p1 = { x: cx + Math.cos(a1) * r, y: cy + Math.sin(a1) * r, z: z + h };
-      const u = (i + 0.5) / slices;
+      const u = ((i + 0.5) / 24) % 1;
       this.quad(p0, { x: p1.x - p0.x, y: p1.y - p0.y, z: 0 }, { x: 0, y: 0, z: -h }, (_su, v) => side(u, v));
     }
     const topShade = solid(top);
@@ -120,6 +166,8 @@ export class IsoModel {
     const ox = Math.floor(minX) - pad;
     const oy = Math.floor(minY) - pad;
     const canvas = new PixelCanvas(Math.ceil(maxX) - ox + pad, Math.ceil(maxY) - oy + pad);
+    // A turned model keeps the nearest thing at each pixel (nearer the camera is further along +x, +y and up).
+    const depth = this.yaw ? new Float32Array(canvas.width * canvas.height).fill(-Infinity) : undefined;
 
     for (const f of this.faces) {
       // Sample densely enough that every pixel the face covers gets painted.
@@ -136,6 +184,14 @@ export class IsoModel {
           if (col === null) continue;
           const px = Math.floor(o.x + a.x * u + b.x * v - ox);
           const py = Math.floor(o.y + a.y * u + b.y * v - oy);
+          if (depth) {
+            if (!canvas.inside(px, py)) continue;
+            const d =
+              f.origin.x + f.du.x * u + f.dv.x * v + (f.origin.y + f.du.y * u + f.dv.y * v) + (f.origin.z + f.du.z * u + f.dv.z * v) / HALF_H;
+            const k = py * canvas.width + px;
+            if (d < depth[k] - 0.02) continue;
+            depth[k] = Math.max(d, depth[k]);
+          }
           canvas.set(px, py, col);
         }
       }

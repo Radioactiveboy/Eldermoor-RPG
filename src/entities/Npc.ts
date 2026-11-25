@@ -12,12 +12,12 @@ import { droverScript, PEDLAR, PILGRIM, SheepStage } from '../dialogue/traveller
 import { FeedStage, IRAN_HIDING, iranScript } from '../dialogue/iran';
 import { CARTER, HERBWIFE, tollGuardScript, tollRoadTalk } from '../dialogue/plains';
 import { fishermanScript } from '../dialogue/fisherman';
-import { ebbScript, JettyNews, marenScript, wrenScript } from '../dialogue/jetty';
+import { ebbScript, JettyNews, marenAwayScript, marenScript, wrenScript } from '../dialogue/jetty';
 import {
   brakkScript, crayScript, fitchScript, gutterScript, luskScript, osseryScript, crabbeScript, tallowScript, voskScript, wispScript,
 } from '../dialogue/gloomhaven';
 import { CRAY_FARE, wispPinched } from '../scenes/game/gloomhaven';
-import { openVoyages } from '../systems/Voyages';
+import { heronTalk, HERON_AWAY, HOME_HOURS, openVoyages } from '../systems/Voyages';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
 import { adaScript, COBB, FENWICK, harlanScript, landlordNews, landlordScript, MAID_CHORES, maidScript, pellScript, RatStage, sigrunScript } from '../dialogue/tavern';
@@ -546,7 +546,9 @@ const NPCS: Record<string, NpcDef> = {
     script: () => {
       const first = !met.has('maren');
       met.add('maren');
-      return marenScript(first, jettyNews('maren'), openVoyages(), Inventory.coins);
+      // At Gloomhaven's pier, having brought the hero down, she's waiting to take them home.
+      if (QuestLog.hasFlag(HERON_AWAY)) return marenAwayScript(HOME_HOURS);
+      return marenScript(first, jettyNews('maren'), openVoyages(), Inventory.coins, heronTalk());
     },
   },
   ebb: {
@@ -554,7 +556,8 @@ const NPCS: Record<string, NpcDef> = {
     script: () => {
       const first = !met.has('ebb');
       met.add('ebb');
-      return ebbScript(first, jettyNews('ebb'), Inventory.count('fishing-rod') > 0);
+      const wantsOakum = !!QuestLog.get('fit-to-sail') && !QuestLog.isDone('fit-to-sail', 'mend') && Inventory.count('oakum') === 0;
+      return ebbScript(first, jettyNews('ebb'), Inventory.count('fishing-rod') > 0, wantsOakum);
     },
   },
   wren: {
@@ -682,6 +685,8 @@ export class Npc implements Body {
   scripted = false;
   /** Screen-pixel nudge for the sprite, for a lunge or a flinch while scripted. */
   readonly offset = { x: 0, y: 0 };
+  /** Carried along by something drawn as one piece (Maren at the Heron's tiller): drawn at this depth, with no shadow. */
+  aboard?: { depth: number };
   /**
    * Out of sight but still there to talk to (Mother lying in her bed, which is
    * drawn with her in it): `prompt` is where the talk prompt goes instead.
@@ -1353,8 +1358,9 @@ export class Npc implements Body {
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
     // Seated, drawn in front of the seat (as the player is).
-    const d = (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.seated ? 2 : 0);
+    const d = this.aboard?.depth ?? (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.seated ? 2 : 0);
     this.shadow.setDepth(d - 0.5);
+    if (this.aboard) this.shadow.setVisible(false);
     this.sprite.setDepth(d);
     if (this.def.anim) return;
     const pose = moving ? 'walk' : this.seated ? 'sit' : this.atWork ? 'work' : 'idle';

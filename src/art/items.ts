@@ -3912,6 +3912,176 @@ const ORB_PAINTERS: Record<string, (c: Ctx) => void> = {
 
 Object.assign(PAINTERS, ORB_PAINTERS);
 
+/** What Maren Tull needs to mend the Grey Heron (see dialogue/jetty.ts): a plank of oak, oakum, and pitch. */
+const HERON_PAINTERS: Record<string, (c: Ctx) => void> = {
+  'oak-plank': (c) => {
+    // A length of seasoned oak, lying corner to corner, its grain running along it and its end sawn square.
+    at(c, 64, 66, -0.62, () => {
+      const face = () => roundRect(c, -54, -11, 108, 22, 2);
+      drop(c, () => {
+        face();
+        c.fillStyle = '#8a6438';
+        c.fill();
+      });
+      face();
+      c.fillStyle = lin(c, 0, -11, 0, 11, [
+        [0, '#d6ae78'],
+        [0.45, '#b88a52'],
+        [1, '#7e5a30'],
+      ]);
+      c.fill();
+      clipped(c, () => {
+        // The grain: long wavering lines, and a knot or two.
+        c.strokeStyle = 'rgba(90,56,24,0.55)';
+        c.lineWidth = 1.2;
+        for (let k = 0; k < 6; k++) {
+          c.beginPath();
+          const y = -8 + k * 3.2;
+          c.moveTo(-56, y);
+          for (let x = -56; x <= 56; x += 8) c.lineTo(x, y + Math.sin(x * 0.11 + k * 1.7) * 1.4);
+          c.stroke();
+        }
+        for (const [x, y] of [[-18, -2], [26, 4]]) {
+          ellipse(c, x, y, 4.5, 2.6);
+          c.fillStyle = '#6a4420';
+          c.fill();
+          ellipse(c, x, y, 2, 1.1);
+          c.fillStyle = '#3e260e';
+          c.fill();
+        }
+      });
+      face();
+      ink(c);
+      // The sawn end, showing its rings.
+      roundRect(c, 46, -11, 8, 22, 2);
+      fillInk(c, '#c8a06a', 2.5);
+      c.strokeStyle = 'rgba(110,70,30,0.6)';
+      c.lineWidth = 1;
+      for (const r of [3, 6, 9]) {
+        c.beginPath();
+        c.arc(50, 12, r, Math.PI * 1.1, Math.PI * 1.6);
+        c.stroke();
+      }
+      shine(c, -10, -6, 30, 2.5, 0, 0.35);
+    });
+  },
+  oakum: (c) => {
+    // A twisted hank of old rope picked apart into loose fibres, tarry and brown, tied round the middle.
+    drop(c, () => {
+      ellipse(c, 64, 70, 40, 26, -0.2);
+      c.fillStyle = '#6a5434';
+      c.fill();
+    });
+    for (let k = 0; k < 46; k++) {
+      const a = (k / 46) * Math.PI * 2;
+      const r = 20 + ((k * 37) % 13);
+      c.beginPath();
+      c.moveTo(64 + Math.cos(a) * 6, 70 + Math.sin(a) * 4);
+      c.quadraticCurveTo(64 + Math.cos(a + 0.5) * r * 1.1, 70 + Math.sin(a + 0.5) * r * 0.6, 64 + Math.cos(a + 0.2) * r * 1.6, 70 + Math.sin(a + 0.2) * r * 0.95);
+      c.strokeStyle = k % 3 === 0 ? '#3a2a16' : k % 3 === 1 ? '#8a6c40' : '#a8885a';
+      c.lineWidth = k % 3 === 0 ? 3.2 : 2.4;
+      c.lineCap = 'round';
+      c.stroke();
+    }
+    ellipse(c, 64, 70, 36, 22, -0.2);
+    c.fillStyle = rad(c, 56, 60, 40, [
+      [0, 'rgba(200,170,120,0.6)'],
+      [0.6, 'rgba(120,92,56,0.35)'],
+      [1, 'rgba(60,40,20,0)'],
+    ]);
+    c.fill();
+    // The twine round its waist.
+    roundRect(c, 58, 46, 12, 48, 4);
+    fillInk(c, lin(c, 58, 0, 70, 0, [
+      [0, '#d8c090'],
+      [1, '#8a7448'],
+    ]), 2.5);
+    for (let y = 52; y < 92; y += 6) {
+      c.beginPath();
+      c.moveTo(59, y);
+      c.lineTo(69, y + 3);
+      c.strokeStyle = 'rgba(60,44,20,0.6)';
+      c.lineWidth = 1.2;
+      c.stroke();
+    }
+  },
+  'pitch-pail': (c) => {
+    // A wooden pail of hot pitch, black and glossy, with a stick in it and a wisp of smoke.
+    const pail = () => {
+      c.beginPath();
+      c.moveTo(30, 52);
+      c.lineTo(38, 112);
+      c.quadraticCurveTo(64, 120, 90, 112);
+      c.lineTo(98, 52);
+      c.closePath();
+    };
+    drop(c, () => {
+      pail();
+      c.fillStyle = '#5a3e22';
+      c.fill();
+    });
+    pail();
+    c.fillStyle = lin(c, 30, 0, 98, 0, [
+      [0, '#6a4a2a'],
+      [0.35, '#a87c48'],
+      [1, '#4a301a'],
+    ]);
+    c.fill();
+    clipped(c, () => {
+      // Its staves, and two iron hoops.
+      c.strokeStyle = 'rgba(40,24,10,0.55)';
+      c.lineWidth = 1.5;
+      for (let x = 38; x < 98; x += 10) {
+        c.beginPath();
+        c.moveTo(x, 50);
+        c.lineTo(x + (x - 64) * 0.12, 118);
+        c.stroke();
+      }
+      for (const y of [66, 98]) {
+        c.fillStyle = '#3a3a3e';
+        c.fillRect(20, y, 90, 6);
+        c.fillStyle = 'rgba(200,200,210,0.35)';
+        c.fillRect(20, y, 90, 1.5);
+      }
+      // Pitch dribbled down the side.
+      c.fillStyle = '#141010';
+      for (const [x, l] of [[44, 18], [72, 26], [86, 12]]) {
+        roundRect(c, x, 50, 5, l, 2.5);
+        c.fill();
+      }
+    });
+    pail();
+    ink(c);
+    // The pitch at the brim, and the stirring stick.
+    ellipse(c, 64, 52, 34, 9);
+    fillInk(c, rad(c, 54, 49, 30, [
+      [0, '#3a3634'],
+      [0.4, '#141212'],
+      [1, '#050404'],
+    ]));
+    shine(c, 52, 50, 12, 2.5, -0.1, 0.5);
+    c.beginPath();
+    c.moveTo(74, 52);
+    c.lineTo(96, 14);
+    c.strokeStyle = INK;
+    c.lineWidth = 8;
+    c.lineCap = 'round';
+    c.stroke();
+    c.strokeStyle = '#b08a58';
+    c.lineWidth = 4.5;
+    c.stroke();
+    // A wisp of smoke off it.
+    c.strokeStyle = 'rgba(210,210,205,0.5)';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(50, 46);
+    c.bezierCurveTo(40, 34, 60, 26, 48, 12);
+    c.stroke();
+  },
+};
+
+Object.assign(PAINTERS, HERON_PAINTERS);
+
 /** Which painter makes each texture. */
 const ICONS: Array<[string, string]> = [
   ['item-carrot', 'carrot'],
@@ -4006,6 +4176,9 @@ const ICONS: Array<[string, string]> = [
   ['item-watering-can', 'watering-can'],
   ['item-rag-doll', 'rag-doll'],
   ['item-dark-orb', 'dark-orb'],
+  ['item-oak-plank', 'oak-plank'],
+  ['item-oakum', 'oakum'],
+  ['item-pitch-pail', 'pitch-pail'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {

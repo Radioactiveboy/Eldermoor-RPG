@@ -37,6 +37,11 @@ export class Player implements Hero {
   private pace = 1;
   /** Screen-pixel nudge for the sprite, for lunges and flinches in a fight. */
   readonly offset = { x: 0, y: 0 };
+  /**
+   * Carried along by something drawn as one piece (aboard the Grey Heron, see scenes/game/voyages.ts):
+   * drawn at this depth rather than by where he stands, with no shadow on the ground under him.
+   */
+  aboard?: { depth: number };
   /** In a fight, the fight animation showing ('ready', 'attack', 'hit', 'guard', 'down': see art/fight3d.ts). */
   private fighting?: string;
 
@@ -288,8 +293,8 @@ export class Player implements Hero {
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
     // Seated, draw in front of the seat even when sitting right on its tile.
-    const d = this.map.characterDepth(this.gx, this.gy) + (this.pose === 'sit' ? 2 : 0);
-    this.shadow.setDepth(d - 0.5);
+    const d = this.aboard?.depth ?? this.map.characterDepth(this.gx, this.gy) + (this.pose === 'sit' ? 2 : 0);
+    this.shadow.setDepth(d - 0.5).setVisible(!this.aboard);
     this.sprite.setDepth(d);
   }
 }

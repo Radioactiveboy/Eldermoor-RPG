@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { box, circle, Shape } from './Collision';
 import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
-import { deckKey } from '../art/jetty';
-import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL } from './landmarks';
+import { deckKey, heronUnderwayKey } from '../art/jetty';
+import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL } from './landmarks';
 
 /**
  * Gloomhaven: a marsh town on the river, downstream of Adowvale, where folk go
@@ -52,7 +52,8 @@ const SQUARE = { x0: 20, y0: 19, x1: 42, y1: 31 };
 type Setter = (key: string, tx: number, ty: number, w: number, h: number, more?: Partial<MapObject>) => void;
 type Slim = (key: string, tx: number, ty: number, shapes: Shape[], more?: Partial<MapObject>) => void;
 
-export function buildGloomhavenMap(): MapData {
+/** @param heron the Grey Heron has brought the hero down, and lies at the pier with Maren Tull, to take them home. */
+export function buildGloomhavenMap(heron = false): MapData {
   const W = GLOOM_W;
   const H = GLOOM_H;
   const rnd = new Phaser.Math.RandomDataGenerator(['gloomhaven']);
@@ -183,7 +184,18 @@ export function buildGloomhavenMap(): MapData {
   addStaithe(data, set, slim);
   addMarsh(data, rnd, set, slim);
   addFolk(data);
+  if (heron) addHeron(data, set);
   return data;
+}
+
+/** The Grey Heron alongside the pier head, her sail furled, and Maren Tull on the boards beside her. */
+function addHeron(data: MapData, set: Setter): void {
+  const h = GLOOM_HERON;
+  // She lies on the water, out of everyone's way; the pier head she's alongside stays walkable.
+  set(heronUnderwayKey(0, false), h.tx, h.ty, h.w, h.h, { bob: 1.5, blocks: [], shapes: [] });
+  data.lights!.push({ gx: h.tx + 2.6, gy: h.ty + 3.5, z: 40, radius: 110, flicker: 0.4 });
+  data.landmarks!.push({ gx: h.tx + 1, gy: h.ty + 3.5, name: 'The Grey Heron', range: 2.6 });
+  data.npcs!.push({ id: 'maren', gx: GLOOM_PIER.headX0 + 2.2, gy: GLOOM_PIER.headY + 1.45, looking: { x: 0.3, y: 1 } });
 }
 
 /**

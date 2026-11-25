@@ -192,8 +192,35 @@ export const QUESTS: Record<string, QuestDef> = {
       'marshes." Gloomhaven is a marsh town out past the edge of the shire, much bigger than Adowvale, and full of the sort of people the ' +
       'carters lower their voices about. Whoever is behind the glass is sending knives there to wait for me. And they said the fen closed ' +
       'over Father.',
-    objectives: [{ id: 'way', text: 'Find the way to Gloomhaven, a town on the marshes beyond the shire of Adowvale' }],
+    objectives: [
+      {
+        id: 'way',
+        text: 'Find the way to Gloomhaven, a town on the marshes beyond the shire of Adowvale. Boats go down the river Wend from Adowvale Jetty',
+        target: { area: 'jetty', x: 23.5, y: 30.5, npc: 'maren' },
+      },
+    ],
     xp: 400,
+  },
+  // Maren Tull's, at Adowvale Jetty, once the hero needs to get to Gloomhaven (dialogue/jetty.ts, scenes/game/jetty.ts).
+  'fit-to-sail': {
+    id: 'fit-to-sail',
+    title: 'Fit to Sail',
+    giver: 'Maren Tull',
+    kind: 'side',
+    summary:
+      'Maren Tull will sail me down the Wend to Gloomhaven in her Grey Heron, but the Heron is in no state to go. She ran onto a drowned ' +
+      'oak in the spring floods and sprang a plank below the waterline, and Maren has been pumping her out every morning since. To mend ' +
+      'her she needs a new plank, oakum for the seams and pitch to seal them, and a second pair of hands.',
+    objectives: [
+      { id: 'talk', text: 'Speak with Maren Tull about the Grey Heron', target: { area: 'jetty', x: 23.5, y: 30.5, npc: 'maren' } },
+      {
+        id: 'gather',
+        text: 'Gather what Maren needs: a seasoned oak plank from the boathouse, oakum from Old Ebb, and a pail of pitch from the tar pot on the shingle',
+        target: { area: 'jetty', x: 4, y: 17.6 },
+      },
+      { id: 'mend', text: 'Bring it all to Maren on the pier, and help her mend the Heron', target: { area: 'jetty', x: 23.5, y: 30.5, npc: 'maren' } },
+    ],
+    xp: 120,
   },
   'the-pen': {
     id: 'the-pen',
