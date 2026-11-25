@@ -18,7 +18,7 @@ import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 export const NIBB_SPOT = { x: 6.5, y: 1.45 };
 export const GRILLE_FRONT = { x: 6.5, y: 4.3 };
 /** Where the Reeve stands behind his desk, receiving. */
-export const REEVE_SPOT = { x: 4.5, y: 1.45 };
+export const REEVE_SPOT = { x: 4, y: 1.45 };
 /** The hook by the Reeve's bed where the strongroom key hangs while he sleeps. */
 export const KEY_HOOK = { gx: 7.5, gy: 0.2 };
 
@@ -286,15 +286,15 @@ export function buildTollUpstairsMap(): MapData {
   // The front room: the rug, the great desk, the Reeve's chair behind it, a stool for petitioners, a wine table.
   add('th-rug', 3, 2, { w: 3, h: 2, flat: true });
   add('th-bigdesk', 3, 2, { w: 2, shapes: [box(0.1, 0.15, 1, 0.85), box(1, 0.15, 1.9, 0.85)] });
-  add('th-reevechair', 4, 1, { shapes: [box(0.2, 0.15, 0.8, 0.8)] });
-  add('th-stool', 4, 4, { shapes: stoolShape });
-  add('th-cabinet', 0, 4, { shapes: [box(0.1, 0.1, 0.8, 0.9)] });
+  add('th-reevechair', 3, 1, { w: 2, shapes: [box(0.75, 0.2, 1.25, 0.8)] });
+  add('th-stool', 3, 4, { shapes: stoolShape });
+  add('th-cabinet', 0, 4, { shapes: [box(0.05, 0.1, 0.6, 0.9)] });
   add('th-winetable', 7, 4, { shapes: [circle(0.5, 0.5, 0.32)] });
   add('th-birdcage', 9, 5, { shapes: [circle(0.5, 0.5, 0.22)] });
   // The bedchamber: the bed, the dressing table, the bath, the clothes press.
   add('th-bed', 8, 0, { w: 2, h: 2 });
   add('th-dresser', 6, 0, { shapes: [box(0.05, 0.1, 0.95, 0.7)] });
-  add('th-press', 9, 3, { shapes: [box(0.1, 0.1, 0.9, 0.9)] });
+  add('th-press', 0, 2, { shapes: [box(0.05, 0.1, 0.65, 0.9)] });
   add('th-bath', 1, 5, { w: 2, shapes: [box(0.15, 0.15, 1.85, 0.85)] });
   add('th-furrug', 7, 2, { w: 2, flat: true });
   add('th-pot-gilt', 9, 2, { shapes: [circle(0.5, 0.5, 0.14)] });
@@ -309,7 +309,7 @@ export function buildTollUpstairsMap(): MapData {
     { id: 'toll-bath', gx: 2, gy: 5.6, label: 'Look', z: 22, thought: 'A copper bath. In Gloomhaven. The rest of the town washes in the rain, when it washes at all. There\'s a ring of grey scum round it at the height of a long, thin man.' },
     { id: 'toll-wine', gx: 7.5, gy: 4.5, label: 'Look', z: 24, thought: 'A decanter of wine, red, and a dish of sugared almonds. I haven\'t seen a sugared almond since the fair at Harrowford, and that was a long time ago and I only looked.' },
     { id: 'toll-bird', gx: 9.5, gy: 5.5, label: 'Look', z: 30, thought: 'A goldfinch in a gilt cage, hopping from perch to perch and back. It is the only yellow thing in this house that looks happy about it.' },
-    { id: 'toll-press', gx: 9.5, gy: 3.5, label: 'Look', z: 40, thought: 'A clothes press full of coats: damask, velvet, a fur-lined gown. All new. Under them, folded small and pushed to the back, an old black coat worn through at the elbows. He kept it. I wonder why.' },
+    { id: 'toll-press', gx: 0.5, gy: 2.5, label: 'Look', z: 40, thought: 'A clothes press full of coats: damask, velvet, a fur-lined gown. All new. Under them, folded small and pushed to the back, an old black coat worn through at the elbows. He kept it. I wonder why.' },
     { id: 'toll-window-up', gx: 1.5, gy: 0.2, label: 'Look out', z: 60, thought: 'Over the wall and out across the fen. The causeway runs north into the fog. From up here the Reeve can see every cart on it a mile before it reaches his gate.' },
     { id: 'toll-cabinet', gx: 0.5, gy: 4.5, label: 'Look', z: 40, thought: 'A cabinet of curiosities, or what passes for them: a narwhal\'s horn (a carved cow\'s), a mermaid\'s comb (a fish spine), a stone with a hole in it. A gentleman\'s cabinet, for a man who has been a gentleman since midsummer.' },
   );

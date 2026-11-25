@@ -1191,31 +1191,34 @@ function bigDesk(): IsoModel {
   return m;
 }
 
-/** The Reeve's chair: high-backed, carved, cushioned in yellow, gilt finials. */
+/**
+ * The Reeve's chair: a little higher-backed than a man needs, carved, cushioned in yellow, gilt finials.
+ * Drawn in the middle of a two-tile footprint, so it sits square behind the middle of the great desk.
+ */
 function reeveChair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
-  for (const [x, y] of [[0.22, 0.2], [0.72, 0.2], [0.22, 0.72], [0.72, 0.72]]) m.box(x, y, 0, 0.06, 0.06, 17, wood);
-  m.box(0.2, 0.2, 17, 0.6, 0.6, 3, { top: YELLOW, left: OAK_LIGHT, right: OAK });
-  m.box(0.2, 0.17, 20, 0.6, 0.07, 46, { top: OAK_LIGHT, left: (u, v) => (v > 0.12 && v < 0.8 && u > 0.12 && u < 0.88 ? (Math.floor(u * 8 + v * 8) % 2 ? YELLOW : YELLOW_DARK) : OAK), right: OAK_DARK });
-  for (const x of [0.22, 0.74]) m.cylinder(x + 0.02, 0.2, 66, 0.04, 4, () => GILT, GILT_LIGHT);
+  const x0 = 0.75;
+  for (const [x, y] of [[0, 0.25], [0.44, 0.25], [0, 0.69], [0.44, 0.69]]) m.box(x0 + x, y, 0, 0.06, 0.06, 16, wood);
+  m.box(x0 - 0.02, 0.23, 16, 0.54, 0.54, 3, { top: YELLOW, left: OAK_LIGHT, right: OAK });
+  m.box(x0 - 0.02, 0.2, 19, 0.54, 0.06, 30, { top: OAK_LIGHT, left: (u, v) => (v > 0.14 && v < 0.82 && u > 0.14 && u < 0.86 ? (Math.floor(u * 8 + v * 8) % 2 ? YELLOW : YELLOW_DARK) : OAK), right: OAK_DARK });
+  for (const x of [0, 0.46]) m.cylinder(x0 + x + 0.01, 0.23, 49, 0.035, 3, () => GILT, GILT_LIGHT);
   return m;
 }
 
 /** A cabinet of curiosities: glass-fronted, a narwhal's horn that is a cow's, a mermaid's comb, a stone with a hole in it. */
 function cabinet(): IsoModel {
   const m = new IsoModel();
-  m.box(0.1, 0.1, 0, 0.7, 0.8, 58, {
-    top: OAK_TOP,
-    left: (u, v) => {
+  // Against the side wall: its glass front faces into the room (+x).
+  const glassFront: Shader = (u, v) => {
       if (u < 0.06 || u > 0.94 || v < 0.04 || v > 0.96 || Math.abs(v - 0.5) < 0.02) return OAK_DARK;
       if (v < 0.5 && Math.abs(u - 0.5) < 0.04 && v > 0.08) return 0xe8e0c8; // the horn
       if (v > 0.55 && v < 0.62 && u > 0.2 && u < 0.7 && Math.floor(u * 30) % 2) return 0xd8d0c0; // the comb
       if (Math.hypot(u - 0.7, v - 0.8) < 0.08) return Math.hypot(u - 0.7, v - 0.8) < 0.03 ? 0x1a1414 : 0x7a7670; // the stone
       return (u + v * 0.4) % 0.4 < 0.04 ? GLASS_LIGHT : mixColor(GLASS, 0x2a2420, 0.6);
-    },
-    right: OAK_DARK,
-  });
+  };
+  m.box(0.05, 0.1, 0, 0.55, 0.8, 58, { top: OAK_TOP, left: OAK, right: (u, v) => darken(glassFront(u, v) ?? OAK, 0.82) });
+  m.box(0, 0.05, 58, 0.65, 0.9, 3, { top: OAK_LIGHT, left: OAK, right: OAK_DARK });
   return m;
 }
 
@@ -1282,17 +1285,15 @@ function dresser(): IsoModel {
 /** A tall clothes press, its doors carved with the scales. */
 function press(): IsoModel {
   const m = new IsoModel();
-  m.box(0.1, 0.1, 0, 0.8, 0.8, 76, {
-    top: OAK_TOP,
-    left: (u, v) => {
+  // Against the side wall: its doors face into the room (+x).
+  const doors: Shader = (u, v) => {
       if (u < 0.05 || u > 0.95 || v < 0.03 || v > 0.97 || Math.abs(u - 0.5) < 0.02) return OAK_DARK;
       const s = scalesMark(((u * 2) % 1 - 0.2) / 0.6, (v - 0.2) / 0.3, OAK_LIGHT);
       if (s !== null) return s;
       return Math.abs(u - 0.45) < 0.02 && Math.abs(v - 0.5) < 0.03 ? GILT : OAK;
-    },
-    right: (u) => ((u * 3) % 1 < 0.05 ? darken(OAK_DARK, 0.7) : OAK_DARK),
-  });
-  m.box(0.05, 0.05, 76, 0.9, 0.9, 4, { top: OAK_LIGHT, left: OAK, right: OAK_DARK });
+  };
+  m.box(0.05, 0.1, 0, 0.6, 0.8, 76, { top: OAK_TOP, left: OAK_DARK, right: (u, v) => darken(doors(u, v) ?? OAK, 0.85) });
+  m.box(0, 0.05, 76, 0.7, 0.9, 4, { top: OAK_LIGHT, left: OAK, right: OAK_DARK });
   return m;
 }
 
@@ -1302,11 +1303,25 @@ function bath(): IsoModel {
   const COPPER = 0xb86a3a;
   for (const [x, y] of [[0.25, 0.25], [1.75, 0.25], [0.25, 0.75], [1.75, 0.75]]) m.box(x - 0.04, y - 0.04, 0, 0.08, 0.08, 4, { top: BRASS, left: BRASS, right: BRASS_DARK });
   m.box(0.15, 0.15, 4, 1.7, 0.7, 16, {
-    top: (u, v) => (u > 0.05 && u < 0.95 && v > 0.12 && v < 0.88 ? (Math.hypot(u - 0.3, v - 0.4) < 0.1 ? 0x8a9aa0 : 0x5a6a70) : lighten(COPPER, 0.2)),
+    top: (u, v) => {
+      if (u < 0.03 || u > 0.97 || v < 0.08 || v > 0.92) return lighten(COPPER, 0.35); // the rolled rim
+      if (v < 0.36 || u < 0.08) return darken(COPPER, 0.55); // the inside of the far walls, in shadow
+      if (u > 0.94 || v > 0.86) return darken(COPPER, 0.75);
+      // Grey bathwater, gone cold, a scum of soap on it.
+      return smoothNoise(u * 9, v * 5, 4) > 0.6 ? 0xb8b4a0 : 0x7a7a66;
+    },
     left: (u, v) => (v < 0.1 ? lighten(COPPER, 0.25) : (u * 3 + v) % 1 < 0.08 ? lighten(COPPER, 0.3) : COPPER),
     right: darken(COPPER, 0.7),
   });
+  // A slipper bath: its back end rises in a high roll, for the Reeve to lie back against.
+  m.box(0.15, 0.15, 20, 0.26, 0.7, 8, {
+    top: lighten(COPPER, 0.35),
+    left: (u, v) => (v < 0.2 ? lighten(COPPER, 0.3) : (u * 3 + v) % 1 < 0.08 ? lighten(COPPER, 0.3) : COPPER),
+    right: darken(COPPER, 0.7),
+  });
   m.quad({ x: 1.2, y: 0.85, z: 20 }, { x: 0.3, y: 0, z: 0 }, { x: 0, y: 0.02, z: -12 }, (u, v) => ((u + v) % 0.2 < 0.05 ? 0xd8d0c0 : 0xf0ece0));
+  // A jug of hot water by it, steaming once, cold now.
+  m.cylinder(1.95, 0.6, 0, 0.07, 9, (u) => (u < 0.35 ? 0xe0d8c8 : 0xa8a090), 0x4a5248);
   return m;
 }
 
