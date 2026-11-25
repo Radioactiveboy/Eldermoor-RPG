@@ -1012,9 +1012,12 @@ function stairs(tile: number): IsoModel {
 /** Lusk's desk: green leather gone bald, the day book open, a quill, a candle, the scales, coin stacked in tens, and the black ledger. */
 function desk(): IsoModel {
   const m = new IsoModel();
-  const wood = { top: OAK_TOP, left: (u: number, v: number) => ((u * 4) % 1 < 0.04 || v < 0.08 ? OAK_DARK : (u > 0.12 && u < 0.38 && v > 0.2 && v < 0.5) ? (Math.hypot(u - 0.25, v - 0.35) < 0.03 ? BRASS : OAK_LIGHT) : OAK), right: OAK_DARK };
+  // Its drawers open on Lusk's side (-y, the chair's); the room sees the back of it, panelled, with a modesty board between the pedestals.
+  const panel: Shader = (u, v) => (u < 0.08 || u > 0.92 || v < 0.1 || v > 0.9 ? OAK_DARK : Math.abs(u - 0.5) < 0.03 ? OAK_DARK : v < 0.16 ? OAK_LIGHT : OAK);
+  const wood = { top: OAK_TOP, left: panel, right: OAK_DARK };
   m.box(0.05, 0.15, 0, 0.5, 0.75, 24, wood);
   m.box(1.45, 0.15, 0, 0.5, 0.75, 24, wood);
+  m.box(0.55, 0.8, 6, 0.9, 0.06, 18, { top: OAK, left: (u, v) => (v < 0.1 || (u * 3) % 1 < 0.04 ? OAK_DARK : OAK), right: OAK_DARK });
   m.box(0, 0.1, 24, 2, 0.85, 3, {
     top: (u, v) => (u > 0.06 && u < 0.94 && v > 0.1 && v < 0.9 ? (smoothNoise(u * 9, v * 5, 4) > 0.7 ? 0x3a4a32 : 0x2a3a26) : OAK_TOP),
     left: OAK_LIGHT,
@@ -1127,7 +1130,12 @@ function stashCrate(mark: number, eye = false): IsoModel {
       left: 0x5a5a62, right: 0x4a4a52,
     });
     // Iron straps, and a chain.
-    for (const u of [0.25, 0.75]) m.box(0.1 + u * 0.8 - 0.03, 0.08, 0, 0.06, 0.84, 27, { top: IRON, left: IRON, right: IRON_DARK });
+    // (Thin bands on the faces it shows: over the lid and down the front.)
+    for (const u of [0.25, 0.75]) {
+      const x = 0.1 + u * 0.8 - 0.03;
+      m.box(x, 0.1, 26, 0.06, 0.8, 0.6, { top: IRON, left: IRON, right: IRON_DARK });
+      m.box(x, 0.9, 0, 0.06, 0.02, 26.6, { top: IRON, left: (_u, v) => ((v * 6) % 1 < 0.12 ? IRON_LIGHT : IRON), right: IRON_DARK });
+    }
   }
   return m;
 }

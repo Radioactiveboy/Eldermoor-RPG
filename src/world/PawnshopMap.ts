@@ -124,9 +124,9 @@ export function buildPawnshopMap(state: PawnshopState = { collecting: false, for
   for (let i = 0; i < 3; i++) add(`pw-stairs-${i}`, 8 + i, 0);
   add('pw-bear', 10, 2, { shapes: [box(0.1, 0.1, 0.9, 0.9)] });
 
-  // The armour by the side wall, and the mirror that shows you twice.
-  add('pw-armour', 0, 3, { shapes: [box(0.2, 0.25, 0.8, 0.8)] });
-  add('pw-mirror', 0, 5, { shapes: [box(0.1, 0.35, 0.9, 0.6)] });
+  // The armour by the side wall, and the mirror that shows you twice (both drawn facing +y, so mirrored to face into the room).
+  add('pw-armour', 0, 3, { flipX: true, shapes: [box(0.25, 0.2, 0.8, 0.8)] });
+  add('pw-mirror', 0, 5, { flipX: true, shapes: [box(0.35, 0.1, 0.6, 0.9)] });
   add('pw-cage', 0, 4, { shapes: round(0.18) });
 
   // The middle of the shop: two tables of everything, the swords, the heron, the bell.
@@ -226,7 +226,7 @@ export function buildPawnCountingMap(): MapData {
   add('pw-litter-1', 3, 4, { w: 2, flat: true });
   // Lusk's own things: the clock he winds every night, his strongbox, his boots, and one crate he hasn't sold.
   add('pw-clock', 5, 0, { shapes: [box(0.18, 0.16, 0.82, 0.7)] });
-  add('pw-chest', 0, 5, { shapes: [box(0.12, 0.2, 0.88, 0.8)] });
+  add('pw-chest', 0, 5, { flipX: true, shapes: [box(0.2, 0.12, 0.8, 0.88)] });
   add('pw-boots', 6, 4, { shapes: [box(0.12, 0.12, 0.85, 0.85)] });
   add('pw-crate-0', 6, 5, { shapes: crateShape });
   add('pw-litter-0', 4, 5, { w: 2, flat: true });
