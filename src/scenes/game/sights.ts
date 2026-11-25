@@ -7,7 +7,8 @@ import { cropKey } from '../../art/farm';
 import { GameAudio } from '../../audio/Audio';
 import { Vec2 } from '../../iso/IsoMath';
 import { CROPS, Farm, PICK_SECONDS } from '../../systems/Farm';
-import { Herbs } from '../../systems/Herbs';
+import { HERBS, Herbs } from '../../systems/Herbs';
+import { atPile, clearRubble } from './homestead';
 import { Inventory, ItemId } from '../../systems/Inventory';
 import { NO_ROOM, rollLoot } from '../../systems/Loot';
 import { QuestLog } from '../../systems/Quests';
@@ -157,6 +158,14 @@ export function examine(g: GameScene, sight: Sight): void {
     g.openStation(sight.station);
     return;
   }
+  if (sight.work === 'rubble') {
+    clearRubble(g, sight);
+    return;
+  }
+  if (sight.work === 'pile') {
+    atPile(g);
+    return;
+  }
   if (examineAtJetty(g, sight)) return;
   if (sight.thought) {
     g.onHint?.(sight.thought);
@@ -291,7 +300,8 @@ function gatherHerb(g: GameScene, sight: Sight): void {
         Herbs.pick(sight.id, g.clock.elapsedHours);
         give(g, item, Math.min(regrow!.count, Inventory.room(item)));
         syncGathered(g);
-        if (!QuestLog.hasFlag('gathered-wild-herb')) {
+        // (Timber, reed and stone for the building grow back too, but they're no use at Maud's bench.)
+        if (!QuestLog.hasFlag('gathered-wild-herb') && Object.values(HERBS).some((h) => h.item === item)) {
           QuestLog.setFlag('gathered-wild-herb');
           g.time.delayedCall(700, () => g.onHint?.('That will grow back in a day or two. Old Maud\'s bench in the Tankard\'s cellar could make something of it.'));
         }

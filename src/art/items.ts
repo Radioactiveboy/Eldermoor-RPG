@@ -1782,6 +1782,200 @@ const PAINTERS: Record<string, (c: Ctx) => void> = {
     }
   },
 
+  // ---------------------------------------------------------------- building goods (systems/Homestead.ts)
+  timber: (c) => {
+    // A squared length of pale oak, lying corner-on, its sawn end showing the rings.
+    const beamAt = (dy: number) => {
+      c.beginPath();
+      c.moveTo(14, 70 + dy);
+      c.lineTo(84, 30 + dy);
+      c.lineTo(104, 42 + dy);
+      c.lineTo(34, 82 + dy);
+      c.closePath();
+      fillInk(c, lin(c, 14, 30 + dy, 104, 82 + dy, [[0, '#e6c48c'], [1, '#c29a62']]));
+      c.beginPath();
+      c.moveTo(34, 82 + dy);
+      c.lineTo(104, 42 + dy);
+      c.lineTo(104, 62 + dy);
+      c.lineTo(34, 102 + dy);
+      c.closePath();
+      fillInk(c, lin(c, 34, 62 + dy, 104, 102 + dy, [[0, '#a57b4b'], [1, '#87603d']]));
+      c.beginPath();
+      c.moveTo(14, 70 + dy);
+      c.lineTo(34, 82 + dy);
+      c.lineTo(34, 102 + dy);
+      c.lineTo(14, 90 + dy);
+      c.closePath();
+      fillInk(c, '#d8b47a');
+      c.save();
+      c.strokeStyle = 'rgba(120,80,40,0.55)';
+      c.lineWidth = 1.5;
+      for (const r of [3, 6, 9]) {
+        ellipse(c, 24, 86 + dy, r * 0.8, r);
+        c.stroke();
+      }
+      // The grain along the top.
+      c.strokeStyle = 'rgba(140,96,50,0.45)';
+      for (let i = 0; i < 4; i++) {
+        c.beginPath();
+        c.moveTo(26 + i * 8, 72 + dy - i * 2);
+        c.lineTo(80 + i * 6, 40 + dy - i * 1);
+        c.stroke();
+      }
+      c.restore();
+    };
+    drop(c, () => beamAt(4));
+    beamAt(4);
+  },
+
+  reed: (c) => {
+    // A fat bundle of dried water reed, tied twice, the cut ends fanned at the bottom and the tops tawny.
+    drop(c, () => {
+      c.beginPath();
+      c.moveTo(40, 116);
+      c.lineTo(28, 20);
+      c.lineTo(100, 12);
+      c.lineTo(88, 116);
+      c.closePath();
+      c.fillStyle = '#c8a858';
+      c.fill();
+    });
+    const rnd = rng(71);
+    for (let i = 0; i < 46; i++) {
+      const t = i / 45;
+      const x0 = 42 + t * 44 + (rnd() - 0.5) * 4;
+      const x1 = 28 + t * 72 + (rnd() - 0.5) * 6;
+      c.beginPath();
+      c.moveTo(x0, 116);
+      c.quadraticCurveTo((x0 + x1) / 2, 60, x1, 14 + rnd() * 10);
+      c.strokeStyle = rnd() < 0.3 ? '#9c8040' : rnd() < 0.6 ? '#e4cc84' : '#c8a858';
+      c.lineWidth = 3;
+      c.stroke();
+    }
+    // Tawny seed tops.
+    for (let i = 0; i < 9; i++) {
+      ellipse(c, 32 + i * 8 + rnd() * 3, 18 + rnd() * 8, 3, 7, -0.2 + i * 0.05);
+      c.fillStyle = '#8a6239';
+      c.fill();
+    }
+    for (const y of [48, 86]) {
+      roundRect(c, 34, y, 62, 9, 3);
+      fillInk(c, lin(c, 0, y, 0, y + 9, [[0, '#8a6239'], [1, '#5c3b23']]), 2.5);
+    }
+    c.beginPath();
+    c.moveTo(40, 116);
+    c.lineTo(28, 20);
+    c.moveTo(88, 116);
+    c.lineTo(100, 12);
+    ink(c, 3);
+  },
+
+  nails: (c) => {
+    // A little banded keg, the lid off, square nails heaped in it and a couple spilled.
+    drop(c, () => {
+      c.beginPath();
+      c.moveTo(30, 44);
+      c.quadraticCurveTo(22, 80, 32, 112);
+      c.lineTo(96, 112);
+      c.quadraticCurveTo(106, 80, 98, 44);
+      c.closePath();
+      fillInk(c, lin(c, 24, 0, 104, 0, [[0, '#6b4a30'], [0.35, '#a57b4b'], [0.65, '#93693f'], [1, '#553822']]));
+    });
+    for (const y of [56, 98]) {
+      c.beginPath();
+      c.moveTo(27, y);
+      c.lineTo(101, y);
+      c.lineWidth = 6;
+      c.strokeStyle = '#4a4a54';
+      c.stroke();
+      c.lineWidth = 2;
+      c.strokeStyle = '#7a7a86';
+      c.stroke();
+    }
+    ellipse(c, 64, 44, 34, 10);
+    fillInk(c, '#3a2a1c');
+    const rnd = rng(19);
+    for (let i = 0; i < 16; i++) {
+      const x = 38 + rnd() * 52;
+      const y = 34 + rnd() * 12;
+      at(c, x, y, rnd() * Math.PI, () => {
+        c.fillStyle = '#5a5a66';
+        c.fillRect(-8, -1.5, 16, 3);
+        c.fillStyle = '#9a9aa6';
+        c.fillRect(-9, -3, 4, 6);
+      });
+    }
+    for (const [x, y, a] of [[18, 118, 0.3], [108, 120, -0.5]] as const) {
+      at(c, x, y, a, () => {
+        c.fillStyle = INK;
+        c.fillRect(-11, -3, 22, 6);
+        c.fillStyle = '#6a6a76';
+        c.fillRect(-10, -1.5, 20, 3);
+        c.fillStyle = '#a0a0ac';
+        c.fillRect(-11, -3.5, 5, 7);
+      });
+    }
+  },
+
+  stone: (c) => {
+    // A squared block of grey stone, chisel marks on its faces, a scrap of moss.
+    const face = (pts: Pt[], fill: string | CanvasGradient) => {
+      c.beginPath();
+      c.moveTo(pts[0][0], pts[0][1]);
+      for (const p of pts.slice(1)) c.lineTo(p[0], p[1]);
+      c.closePath();
+      fillInk(c, fill);
+    };
+    drop(c, () => face([[14, 52], [64, 28], [114, 52], [114, 92], [64, 118], [14, 92]], '#7c7a86'));
+    face([[14, 52], [64, 28], [114, 52], [64, 76]], lin(c, 14, 28, 114, 76, [[0, '#b4b2bc'], [1, '#9d9ba6']]));
+    face([[14, 52], [64, 76], [64, 118], [14, 92]], lin(c, 14, 52, 64, 118, [[0, '#8a8894'], [1, '#6c6a76']]));
+    face([[64, 76], [114, 52], [114, 92], [64, 118]], lin(c, 64, 52, 114, 118, [[0, '#646270'], [1, '#4a4856']]));
+    c.save();
+    c.strokeStyle = 'rgba(40,38,48,0.4)';
+    c.lineWidth = 1.5;
+    const rnd = rng(5);
+    for (let i = 0; i < 10; i++) {
+      const x = 22 + rnd() * 36;
+      const y = 62 + rnd() * 40 + (x - 22) * 0.4;
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x + 5, y + 4);
+      c.stroke();
+    }
+    c.restore();
+    ellipse(c, 52, 40, 10, 4, -0.4);
+    c.fillStyle = '#5f7d3c';
+    c.fill();
+  },
+
+  slate: (c) => {
+    // A little stack of thin grey slates, fanned, each with its nail hole.
+    const one = (x: number, y: number, a: number, fill: string) =>
+      at(c, x, y, a, () => {
+        drop(c, () => {
+          roundRect(c, -36, -24, 72, 48, 4);
+          c.fillStyle = fill;
+          c.fill();
+        }, 4, 2);
+        roundRect(c, -36, -24, 72, 48, 4);
+        fillInk(c, lin(c, -36, -24, 36, 24, [[0, '#7a7e8c'], [0.5, fill], [1, '#4c505c']]), 3);
+        c.strokeStyle = 'rgba(255,255,255,0.15)';
+        c.lineWidth = 1;
+        for (const k of [-10, 2, 14]) {
+          c.beginPath();
+          c.moveTo(-30, k);
+          c.lineTo(30, k + 3);
+          c.stroke();
+        }
+        ellipse(c, 0, -15, 3, 3);
+        c.fillStyle = INK;
+        c.fill();
+      });
+    one(60, 86, -0.12, '#585c69');
+    one(66, 70, 0.08, '#626674');
+    one(62, 52, -0.05, '#6b6f7c');
+  },
+
   // ---------------------------------------------------------------- pelts & spoils
   'wolf-pelt': (c) =>
     hide(c, {
@@ -4098,6 +4292,11 @@ const ICONS: Array<[string, string]> = [
   ['item-charm', 'river-stone'],
   ['item-ring', 'silver-ring'],
   ['item-pelt', 'wolf-pelt'],
+  ['item-timber', 'timber'],
+  ['item-reed', 'reed'],
+  ['item-nails', 'nails'],
+  ['item-stone', 'stone'],
+  ['item-slate', 'slate'],
   ['item-cheese', 'cheese'],
   ['item-pie', 'pie'],
   ['item-honeycake', 'honey-cake'],

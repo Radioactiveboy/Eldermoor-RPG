@@ -9,6 +9,7 @@ import type { GameScene } from '../GameScene';
 import { bondAction, companionAction } from './companions';
 import { FISHING_ACTIONS } from './fishing';
 import { HOLLOW_ACTIONS } from './hollow';
+import { HOMESTEAD_ACTIONS } from './homestead';
 import { MEDICINE_ACTIONS } from './medicine';
 import { MONASTERY_ACTIONS } from './monastery';
 import { RAID_ACTIONS } from './raid';
@@ -42,6 +43,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...GLOOM_ACTIONS,
   ...JETTY_ACTIONS,
   ...VOYAGE_ACTIONS,
+  ...HOMESTEAD_ACTIONS,
 };
 
 /** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `beacon-pay:<coins>`, `voyage:<area>` (see voyages.ts), or a named one. */
