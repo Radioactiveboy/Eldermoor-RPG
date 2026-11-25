@@ -566,7 +566,8 @@ export class GameScene extends Phaser.Scene {
   /** Hands control back after a menu closes, a moment later so the closing key press isn't reused. */
   release(): void {
     this.time.delayedCall(80, () => {
-      this.busy = false;
+      // (Unless a fight has broken out in the meantime: the fight hands control back when it's over.)
+      if (!this.inCombat) this.busy = false;
     });
   }
 
