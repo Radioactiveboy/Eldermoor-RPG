@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MODEL_ART, registerModel } from './interior';
-import { IsoModel, project, RenderedModel, Shader, Vec3 } from './IsoModel';
+import { inFrontOf, IsoModel, project, RenderedModel, Shader, Vec3 } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { smoothNoise } from './scorch';
@@ -224,7 +224,12 @@ function at(r: RenderedModel, p: Vec3): { x: number; y: number } {
 function padded(r: RenderedModel, pad: number): RenderedModel {
   const c = new PixelCanvas(r.canvas.width + pad * 2, r.canvas.height + pad * 2);
   c.blit(r.canvas, pad, pad);
-  return { canvas: c, anchorX: r.anchorX + pad, anchorY: r.anchorY + pad };
+  let keys: Float32Array | undefined;
+  if (r.keys) {
+    keys = new Float32Array(c.width * c.height).fill(-Infinity);
+    for (let y = 0; y < r.canvas.height; y++) keys.set(r.keys.subarray(y * r.canvas.width, (y + 1) * r.canvas.width), (y + pad) * c.width + pad);
+  }
+  return { canvas: c, anchorX: r.anchorX + pad, anchorY: r.anchorY + pad, keys };
 }
 
 /**
@@ -796,17 +801,46 @@ export function heronUnderwayKey(index: number, sail: boolean): string {
 }
 
 /**
- * Draws the Grey Heron under way, at every heading in {@link HERON_HEADINGS}, sail set and furled, for her
- * leaving a pier (scenes/game/voyages.ts). Each is the same 2 x 7 tile footprint turned about {@link HERON_PIVOT}.
- * They're drawn the first time they're wanted, which takes a moment, and kept.
+ * Who stands aboard her under way, from her middle unturned (bow towards -y), in tiles, and how high
+ * the deck is under them, in pixels: the hero aft of the hatch, and Maren at the tiller.
  */
-export function generateHeronUnderway(scene: Phaser.Scene): void {
-  HERON_HEADINGS.forEach((heading, i) => {
-    for (const sail of [false, true]) {
-      const key = heronUnderwayKey(i, sail);
-      if (!scene.textures.exists(key)) registerModel(scene, key, greyHeron({ heading, sail }));
+export type HeronRider = 'hero' | 'maren';
+export const HERON_RIDERS: Record<HeronRider, Vec3> = {
+  hero: { x: -0.02, y: 1.57, z: 16.6 },
+  maren: { x: 0.05, y: 3.25, z: 19.7 },
+};
+
+/**
+ * The texture of whatever of her stands in front of one of her riders, at a heading (see
+ * {@link heronUnderwayKey}): drawn over them, it hides them behind the cabin, a gunwale or the sail.
+ */
+export function heronFrontKey(index: number, sail: boolean, rider: HeronRider): string {
+  return `${heronUnderwayKey(index, sail)}-front-${rider}`;
+}
+
+/**
+ * Draws the Grey Heron under way at the headings asked for, sail set or furled, for her leaving a pier
+ * (scenes/game/voyages.ts), each with the parts of her in front of each rider. Each is the same 2 x 7
+ * tile footprint turned about {@link HERON_PIVOT}. They're drawn the first time they're wanted, which
+ * takes a moment, and kept.
+ */
+export function generateHeronUnderway(scene: Phaser.Scene, wanted: ReadonlyArray<{ index: number; sail: boolean }>): void {
+  for (const { index, sail } of wanted) {
+    const key = heronUnderwayKey(index, sail);
+    const fronts = (Object.keys(HERON_RIDERS) as HeronRider[]).map((rider) => ({ rider, key: heronFrontKey(index, sail, rider) }));
+    if (scene.textures.exists(key) && fronts.every((f) => scene.textures.exists(f.key))) continue;
+    const heading = HERON_HEADINGS[index];
+    const r = greyHeron({ heading, sail });
+    if (!scene.textures.exists(key)) registerModel(scene, key, r);
+    const c = Math.cos(heading);
+    const sn = Math.sin(heading);
+    for (const f of fronts) {
+      const p = HERON_RIDERS[f.rider];
+      const x = HERON_PIVOT.x + p.x * c - p.y * sn;
+      const y = HERON_PIVOT.y + p.x * sn + p.y * c;
+      if (!scene.textures.exists(f.key)) registerModel(scene, f.key, { ...r, canvas: inFrontOf(r, x, y) });
     }
-  });
+  }
 }
 
 /**

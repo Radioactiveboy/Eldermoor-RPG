@@ -49,6 +49,38 @@ export interface RenderedModel {
   /** Pixel in the canvas where grid point (0, 0, 0) of the model lands. */
   anchorX: number;
   anchorY: number;
+  /**
+   * For a turned model (drawn with a depth buffer): at each pixel, x + y of the point of the model drawn
+   * there (-Infinity where nothing of the model is, or only its outline). Something standing at a point
+   * whose x + y is less is behind that pixel; see {@link inFrontOf}.
+   */
+  keys?: Float32Array;
+}
+
+/**
+ * The part of a turned model that's in front of someone standing at grid point (x, y) within it: every
+ * pixel whose point is nearer the camera (further along x + y), with the outlines round them. Drawn over
+ * them, it hides whatever of them the model should (a cabin, a gunwale, a sail), as a canvas the same
+ * size as the model's and anchored the same.
+ */
+export function inFrontOf(r: RenderedModel, x: number, y: number): PixelCanvas {
+  const { canvas, keys } = r;
+  const out = new PixelCanvas(canvas.width, canvas.height);
+  if (!keys) return out;
+  const at = x + y + 0.04;
+  const w = canvas.width;
+  const front = (px: number, py: number) => px >= 0 && py >= 0 && px < w && py < canvas.height && keys[py * w + px] > at;
+  for (let py = 0; py < canvas.height; py++) {
+    for (let px = 0; px < w; px++) {
+      const col = canvas.get(px, py);
+      if (col === null) continue;
+      const k = keys[py * w + px];
+      // A pixel of the model in front, or an outline pixel beside one.
+      const near = k > at || (k === -Infinity && (front(px - 1, py) || front(px + 1, py) || front(px, py - 1) || front(px, py + 1)));
+      if (near) out.set(px, py, col);
+    }
+  }
+  return out;
 }
 
 export class IsoModel {
@@ -168,6 +200,7 @@ export class IsoModel {
     const canvas = new PixelCanvas(Math.ceil(maxX) - ox + pad, Math.ceil(maxY) - oy + pad);
     // A turned model keeps the nearest thing at each pixel (nearer the camera is further along +x, +y and up).
     const depth = this.yaw ? new Float32Array(canvas.width * canvas.height).fill(-Infinity) : undefined;
+    const keys = this.yaw ? new Float32Array(canvas.width * canvas.height).fill(-Infinity) : undefined;
 
     for (const f of this.faces) {
       // Sample densely enough that every pixel the face covers gets painted.
@@ -191,13 +224,14 @@ export class IsoModel {
             const k = py * canvas.width + px;
             if (d < depth[k] - 0.02) continue;
             depth[k] = Math.max(d, depth[k]);
+            keys![k] = f.origin.x + f.du.x * u + f.dv.x * v + (f.origin.y + f.du.y * u + f.dv.y * v);
           }
           canvas.set(px, py, col);
         }
       }
     }
     if (outline) canvas.outline();
-    return { canvas, anchorX: -ox, anchorY: -oy };
+    return { canvas, anchorX: -ox, anchorY: -oy, keys };
   }
 }
 

@@ -6,7 +6,7 @@
  * black, the hours pass, and they step ashore at the other end.
  */
 import Phaser from 'phaser';
-import { generateHeronUnderway, HERON_HEADINGS, HERON_PIVOT, heronUnderwayKey } from '../../art/jetty';
+import { generateHeronUnderway, heronFrontKey, HERON_HEADINGS, HERON_PIVOT, HERON_RIDERS, heronUnderwayKey } from '../../art/jetty';
 import { MODEL_ART } from '../../art/interior';
 import { GameAudio } from '../../audio/Audio';
 import { depthAt, gridToScreen, Vec2 } from '../../iso/IsoMath';
@@ -77,9 +77,9 @@ const UPRIVER: Sailing = {
   hours: HOME_HOURS,
 };
 
-/** Where the hero and Maren stand aboard, from her middle unturned (bow towards -y): the hero aft of the hatch, Maren at the tiller. */
-const HERO_ABOARD = { x: -0.02, y: 1.57, z: 16.6 };
-const MAREN_ABOARD = { x: 0.05, y: 3.25, z: 19.7 };
+/** Where the hero and Maren stand aboard (see HERON_RIDERS). */
+const HERO_ABOARD = HERON_RIDERS.hero;
+const MAREN_ABOARD = HERON_RIDERS.maren;
 /** Her stern, for the wake, and her bow, for the wave under it. */
 const STERN = { x: 0, y: 3.4 };
 const BOW = { x: 0, y: -3.3 };
@@ -164,10 +164,17 @@ function sail(g: GameScene, s: Sailing, beforeLeaving?: () => void): void {
   cam.fadeOut(450, 0, 0, 0);
   cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
     // Her art at every heading, drawn the first time it's wanted (while the screen is dark).
-    generateHeronUnderway(g);
+    const lo = Math.min(s.from, s.to);
+    const hi = Math.max(s.from, s.to);
+    const wanted = [{ index: s.from, sail: false }];
+    for (let i = lo; i <= hi; i++) wanted.push({ index: i, sail: true });
+    generateHeronUnderway(g, wanted);
     g.tweens.killTweensOf(moored.sprite);
     moored.sprite.setVisible(false);
     const boat = g.add.sprite(0, 0, heronUnderwayKey(s.from, false));
+    // What of her is in front of each of them, drawn over them so they stand in her rather than on her.
+    const heroFront = g.add.sprite(0, 0, heronFrontKey(s.from, false, 'hero'));
+    const marenFront = g.add.sprite(0, 0, heronFrontKey(s.from, false, 'maren'));
     const maren = g.someone('maren');
     if (maren) maren.scripted = true;
     for (const c of g.companions) c.setShown(false);
@@ -180,13 +187,16 @@ function sail(g: GameScene, s: Sailing, beforeLeaving?: () => void): void {
     let time = 0;
     const started = g.time.now;
     const place = () => {
-      const key = heronUnderwayKey(index, sail);
-      if (boat.texture.key !== key) boat.setTexture(key);
-      const art = MODEL_ART[key];
-      boat.setOrigin(art.originX, art.originY);
       const bob = Math.sin(time * 1.6) * 0.8;
       const p = gridToScreen(s.berth.tx + at.x, s.berth.ty + at.y);
-      boat.setPosition(p.x, p.y + bob);
+      const show = (sprite: Phaser.GameObjects.Sprite, key: string) => {
+        if (sprite.texture.key !== key) sprite.setTexture(key);
+        const art = MODEL_ART[key];
+        sprite.setOrigin(art.originX, art.originY).setPosition(p.x, p.y + bob);
+      };
+      show(boat, heronUnderwayKey(index, sail));
+      show(heroFront, heronFrontKey(index, sail, 'hero'));
+      show(marenFront, heronFrontKey(index, sail, 'maren'));
       const middle = { x: pivot.x + at.x, y: pivot.y + at.y };
       const depth = depthAt(middle.x, middle.y);
       boat.setDepth(depth);
@@ -196,7 +206,14 @@ function sail(g: GameScene, s: Sailing, beforeLeaving?: () => void): void {
         return { x: middle.x + d.x, y: middle.y + d.y };
       };
       const hero = stand(HERO_ABOARD);
-      g.player.aboard = { depth: depth + 0.01 };
+      const her = stand(MAREN_ABOARD);
+      // Whoever's further from the camera is drawn first, each with what of the boat is in front of them over them.
+      const heroFirst = hero.x + hero.y < her.x + her.y;
+      const heroDepth = depth + (heroFirst ? 0.01 : 0.03);
+      const marenDepth = depth + (heroFirst ? 0.03 : 0.01);
+      heroFront.setDepth(heroDepth + 0.01);
+      marenFront.setDepth(marenDepth + 0.01).setVisible(!!maren);
+      g.player.aboard = { depth: heroDepth };
       g.player.offset.x = 0;
       g.player.offset.y = -HERO_ABOARD.z + bob;
       g.player.gx = hero.x;
@@ -205,8 +222,8 @@ function sail(g: GameScene, s: Sailing, beforeLeaving?: () => void): void {
       const ahead = turned(BOW, heading);
       g.player.faceTowards(hero.x + ahead.x, hero.y + ahead.y);
       if (maren) {
-        const m = stand(MAREN_ABOARD);
-        maren.aboard = { depth: depth + 0.02 };
+        const m = her;
+        maren.aboard = { depth: marenDepth };
         maren.offset.y = -MAREN_ABOARD.z + bob;
         maren.pose(m.x, m.y, { x: m.x + ahead.x, y: m.y + ahead.y }, false);
       }
