@@ -1776,3 +1776,7 @@ export function generateGloomhaven(scene: Phaser.Scene): void {
   }
   for (let i = 0; i < 3; i++) FEN_ART.push({ key: `gh-rushes-${i}`, originY: (52 - 8 + 0.5) / 52 });
 }
+
+/** The pieces Gloomhaven's buildings are made of, for the ones drawn in their own files (the Guildhall, art/guildhall.ts). */
+export { block, chimney, line, plasterWall, post, rotSlate, rubbleStone, windowPixel, withDoor, withOpenings };
+export type { Opening };

@@ -58,7 +58,9 @@ export type AreaId =
   // Gloomhaven, the walled marsh town downriver (no way there in play yet: see the debug panel).
   | 'gloomhaven'
   // The Black Rose on Gloomhaven's square: the taproom, the back room behind the curtain, the passage upstairs, and the room to let.
-  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room';
+  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
+  // The Guildhall of the Causeway Merchants on Gloomhaven's Staithe: the great hall, the counting room, and the guildmaster's office.
+  | 'guildhall' | 'guildhall-counting' | 'guildhall-office';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see

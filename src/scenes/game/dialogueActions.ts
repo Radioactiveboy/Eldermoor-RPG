@@ -23,6 +23,7 @@ import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 import { roseAction } from './blackrose';
+import { guildAction } from './guildhall';
 
 /** A named story effect: what happens when a line with this action is said. */
 export type DialogueAction = (g: GameScene) => void;
@@ -53,6 +54,7 @@ export function runDialogueAction(g: GameScene, action: string): void {
     return;
   }
   if (action.startsWith('rose-') && roseAction(g, action)) return;
+  if (action.startsWith('guild-') && guildAction(g, action)) return;
   if (action.startsWith('drink:')) {
     drinkAtBar(g, action.slice(6) as ItemId);
     return;

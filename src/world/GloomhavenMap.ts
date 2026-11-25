@@ -3,7 +3,7 @@ import { box, circle, Shape } from './Collision';
 import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 import { deckKey, heronUnderwayKey } from '../art/jetty';
-import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL } from './landmarks';
+import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL, GUILD_HALL } from './landmarks';
 
 /**
  * Gloomhaven: a marsh town on the river, downstream of Adowvale, where folk go
@@ -179,6 +179,7 @@ export function buildGloomhavenMap(heron = false): MapData {
   addGate(data, set, slim);
   addSquare(data, set, slim);
   addBlackRose(data, set, slim);
+  addGuildHall(data, set, slim);
   addShops(data, set, slim);
   addHouses(data, set, slim);
   addStaithe(data, set, slim);
@@ -356,6 +357,55 @@ function addBlackRose(data: MapData, set: Setter, slim: Slim): void {
 }
 
 /**
+ * The Guildhall of the Causeway Merchants, on the Staithe east of Pier Lane,
+ * where the town's traders meet: a stone ground floor of warehouse arches, a
+ * timbered hall above with tall windows, a bell-turret and a ship for a vane,
+ * a hoist over the loading door, and faded banners over the steps. The second
+ * grandest building in Gloomhaven, and going the way of the rest. Its door is
+ * the way in to the hall (the 'guildhall' area, in world/GuildHallMap.ts).
+ */
+function addGuildHall(data: MapData, set: Setter, slim: Slim): void {
+  const h = GUILD_HALL;
+  set('gh-guildhall', h.tx, h.ty, h.w, h.h);
+  data.chimneys!.push({ gx: h.tx + 6.6, gy: h.ty + 1.4, z: 196 });
+  data.entries!.guildhall = { x: h.door.tx + 0.5, y: h.door.ty + 0.7 };
+  data.doors!.push({ tx: h.door.tx, ty: h.door.ty, to: 'guildhall', entry: 'door', label: 'Go inside', facing: 'back' });
+  data.landmarks!.push({ gx: h.door.tx + 0.5, gy: h.door.ty + 0.5, name: 'The Guildhall', range: 3.5 });
+  // Lanterns either side of the door, the hall's tall windows lit over the waterfront, and the turret's lamp.
+  for (const dx of [-1.2, 1.2]) data.lights!.push({ gx: h.door.tx + 0.5 + dx, gy: h.door.ty + 0.05, z: 50, radius: 120, flicker: 0.4 });
+  for (const gx of [1.6, 6.4]) data.lights!.push({ gx: h.tx + gx, gy: h.ty + h.h + 0.1, z: 70, radius: 100, flicker: 0.25 });
+  // The guild's board by the steps, and its bales waiting on the wharf for a caravan that hasn't gone.
+  set('gh-noticeboard', h.tx + 2, h.ty + h.h, 1, 1, { shapes: [circle(0.25, 0.5, 0.1), circle(0.75, 0.5, 0.1)] });
+  data.sights!.push({
+    id: 'gh-guild-board', gx: h.tx + 2.5, gy: h.ty + h.h + 1.2, label: 'Read the board', z: 50,
+    sign: {
+      heading: 'The Causeway Merchants',
+      lines: [
+        'CARAVAN to the Saltway, by the Fen Road: POSTPONED.',
+        'CARAVAN to Hallowmarket: POSTPONED. (Under it, in chalk: "AGAIN".)',
+        'WANTED: muleteers, outriders, spearmen. Good pay. (The figure has been crossed out and a bigger one written.)',
+        'The Hall sits on the matter of the Fen Road this day. Members only.',
+        'Debts to the Guild are payable at the counting room, to P. Weatherby, clerk.',
+      ],
+    },
+  });
+  set('gd-bales', h.tx + h.w, h.ty + h.h - 1, 1, 1, { shapes: [box(0.08, 0.1, 0.92, 0.9)] });
+  slim('gd-bales-low', h.tx + h.w - 1, h.ty + h.h + 1, [box(0.1, 0.2, 0.9, 0.8)]);
+  data.sights!.push(
+    {
+      id: 'gh-guild-arms', gx: h.door.tx + 0.5, gy: h.door.ty + 0.2, label: 'Look up at the arms', z: 96,
+      thought:
+        'Carved over the door: a ship and a pack-mule either side of a pair of scales, and under them, FIDES IN VIA. ' +
+        'The gilt has mostly come off. Somebody has hung a dead eel from the scales.',
+    },
+    {
+      id: 'gh-guild-bales', gx: h.tx + h.w - 0.5, gy: h.ty + h.h + 1.4, label: 'Look at the bales', z: 20,
+      thought: 'Wool, roped and stamped with a ship, and sacks of salt going hard in the damp. Waiting for a caravan that keeps not leaving.',
+    },
+  );
+}
+
+/**
  * The shops round the square: Ossery's Remedies and Tallow's Chandlery on the
  * west side, facing in across it, and Lusk's on the north-east corner by the
  * gate road. Each keeper serves from a counter in their shopfront, under a
@@ -418,7 +468,6 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
     ['gh-house-5', 25, 33, false, true],
     ['gh-house-2', 32, 33, false, true],
     ['gh-shack-0', 25, 38, false, false],
-    ['gh-house-3', 33, 38, true, true],
     // The east quarter: backs to the square, and on round to the wall.
     ['gh-house-4', 42, 20, true, true],
     ['gh-house-0', 47, 13, false, true],
@@ -428,7 +477,6 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
     ['gh-house-3', 49, 32, false, false],
     ['gh-shack-1', 52, 36, true, true],
     ['gh-house-2', 38, 33, false, false],
-    ['gh-shack-0', 40, 38, true, false],
     // Up by the gate road, opposite Lusk's.
     ['gh-house-5', 30, 6, false, true],
     ['gh-shack-1', 25, 6, false, false],
@@ -454,7 +502,6 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
   set('gh-waterbutt', 8, 27, 1, 1, { shapes: [circle(0.5, 0.5, 0.32)] });
   set('gh-waterbutt', 47, 16, 1, 1, { shapes: [circle(0.5, 0.5, 0.32)] });
   set('gh-woodpile', 18, 9, 1, 1, { shapes: [box(0.1, 0.2, 0.9, 0.8)] });
-  set('gh-woodpile', 36, 36, 1, 1, { shapes: [box(0.1, 0.2, 0.9, 0.8)] });
   set('gh-rubbish', 22, 35, 1, 1, { shapes: [circle(0.5, 0.5, 0.3)] });
   set('gh-rubbish', 50, 27, 1, 1, { shapes: [circle(0.5, 0.5, 0.3)] });
   set('gh-rubbish', 11, 16, 1, 1, { shapes: [circle(0.5, 0.5, 0.3)] });
