@@ -14,11 +14,11 @@ import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
  * Gloomhaven is the surest sign that someone is being robbed.
  */
 
-/** Where Nibb stands at his grille, and where whoever's paying stands across it. */
-export const NIBB_SPOT = { x: 6.5, y: 2.35 };
+/** Where Nibb sits on his high stool behind the grille, and where whoever's paying stands across it. */
+export const NIBB_SPOT = { x: 6.5, y: 1.45 };
 export const GRILLE_FRONT = { x: 6.5, y: 4.3 };
 /** Where the Reeve stands behind his desk, receiving. */
-export const REEVE_SPOT = { x: 4.5, y: 1.35 };
+export const REEVE_SPOT = { x: 4.5, y: 1.45 };
 /** The hook by the Reeve's bed where the strongroom key hangs while he sleeps. */
 export const KEY_HOOK = { gx: 7.5, gy: 0.2 };
 
@@ -85,7 +85,7 @@ export function buildTollHouseMap(): MapData {
       { id: 'nibb', gx: NIBB_SPOT.x, gy: NIBB_SPOT.y, looking: { x: 0, y: 1 }, hours: [7, 20] },
       { id: 'gaff', gx: 10.6, gy: 4.5, looking: { x: -1, y: 0.4 }, hours: [7, 20] },
       { id: 'annet', gx: 0.45, gy: 4.3, looking: { x: 1, y: 0 }, hours: [8, 17] },
-      { id: 'lardy', gx: 9.4, gy: 1.35, looking: { x: 0, y: 1 }, hours: [20, 31] },
+      { id: 'lardy', gx: 9.5, gy: 1.45, looking: { x: 0, y: 1 }, hours: [20, 31] },
     ],
     seats: [],
     sights: [],

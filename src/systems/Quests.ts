@@ -367,7 +367,7 @@ export const QUESTS: Record<string, QuestDef> = {
       "chalked on it, and Annet Marl, an eel-wife, has had her creels taken. Somebody ought to have a word with the Reeve.",
     objectives: [
       { id: 'talk', text: 'Hear Hobb Tallow out about the Flood Toll', target: { area: 'gloomhaven', x: 19.65, y: 26.8, npc: 'tallow' } },
-      { id: 'reeve', text: "Put the small traders' case to the Reeve, upstairs in the toll house (the clerk at the grille takes names for a hearing)", target: { area: 'tollhouse-upstairs', x: 4.5, y: 1.35, npc: 'reeve' } },
+      { id: 'reeve', text: "Put the small traders' case to the Reeve, upstairs in the toll house (the clerk at the grille takes names for a hearing)", target: { area: 'tollhouse-upstairs', x: 4.5, y: 1.45, npc: 'reeve' } },
       { id: 'creels', text: "Get Annet Marl's creels back out of the Reeve's strongroom, and give them to her", target: { area: 'tollhouse', x: 0.45, y: 4.3, npc: 'annet' } },
       { id: 'lifted', text: 'Find something that will make the Reeve back down. Captain Vosk at the gate has no love for him', target: { area: 'gloomhaven', x: 38, y: 6.6, npc: 'vosk' } },
       { id: 'tell', text: 'Tell Hobb Tallow the toll is off', target: { area: 'gloomhaven', x: 19.65, y: 26.8, npc: 'tallow' } },

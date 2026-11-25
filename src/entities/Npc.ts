@@ -596,7 +596,7 @@ const NPCS: Record<string, NpcDef> = {
   cray: { texture: 'folk-cray', talkRange: 2.4, script: firstTime('cray', (first) => crayScript(first, CRAY_FARE, Inventory.coins)) },
   // The Reeve's toll house by the Fen Gate (world/TollHouseMap.ts): Nibb behind the grille, Gaff Tully on the stairs and Annet Marl on
   // the bench by day, Lardy Mott on the strongroom door by night, and the Reeve upstairs at his desk.
-  nibb: { texture: 'folk-nibb', talkRange: 2.6, script: toll('nibb', nibbScript) },
+  nibb: { texture: 'folk-nibb', sits: true, talkRange: 3.3, script: toll('nibb', nibbScript) },
   gaff: { texture: 'folk-gaff', talkRange: 2.2, script: toll('gaff', gaffScript) },
   annet: { texture: 'folk-annet', sits: true, talkRange: 2.2, script: toll('annet', annetScript) },
   lardy: { texture: 'folk-lardy', sits: true, talkRange: 2.4, script: toll('lardy', lardyScript) },
