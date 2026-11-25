@@ -64,10 +64,11 @@ export function hearWhisper(g: GameScene, then: () => void): void {
     onDone: () => {
       if (!QuestLog.has(GLOOMHAVEN_QUEST)) QuestLog.start(GLOOMHAVEN_QUEST);
       QuestLog.writeDiary(
-        'The orb woke in the night. I heard two voices in it, and neither was talking to me, until the end. "The boy lives still," said ' +
-          'the cold one from the brood hall. "We must send them to Gloomhaven then, on the marshes." They are sending knives to wait for me ' +
-          'there. And they said the fen closed over Father, the way it will close over me. Then it said: "Sleep, boy. Gloomhaven is waiting ' +
-          'for you." It knew I was listening. I am going to Gloomhaven.',
+        'The orb woke in the night, and I heard two voices in it, talking to each other. They never knew I was listening. One was the cold ' +
+          'voice from the brood hall; the other called him Astarix, and spoke of Daejonguk. The orb is one of a pair of seeing stones, and he ' +
+          'holds the other. Adowvale has cost him the Mother and her brood, and he has given us up, for now. "We must send them to ' +
+          'Gloomhaven then, on the marshes." He means to buy it from the inside, guild by guild, and from there every road runs to some ' +
+          'other door. Ours among them. I am going to Gloomhaven.',
       );
       then();
     },
