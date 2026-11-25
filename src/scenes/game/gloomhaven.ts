@@ -1,8 +1,8 @@
 /**
  * Gloomhaven (world/GloomhavenMap.ts), the walled marsh town downriver: arriving there, and its folk's
- * doings (their talk is in dialogue/gloomhaven.ts, and who they are in entities/Npc.ts). There's no way
- * there in play yet (the Grey Heron will carry the hero down from Adowvale Jetty one day; see
- * systems/Voyages.ts): the debug panel's teleport, or ?area=gloomhaven. Cray rows the hero back.
+ * doings (their talk is in dialogue/gloomhaven.ts, and who they are in entities/Npc.ts). The Grey Heron
+ * carries the hero down from Adowvale Jetty, once she's mended (systems/Voyages.ts, voyages.ts), and
+ * waits at the pier to take them home; Cray rows the hero back too.
  */
 import { GameAudio } from '../../audio/Audio';
 import { Inventory } from '../../systems/Inventory';

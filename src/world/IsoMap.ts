@@ -614,6 +614,12 @@ export class IsoMap {
     }
   }
 
+  /** The first placed object drawn with this art, and its sprite (the Grey Heron at her pier, to sail her off). */
+  objectByKey(key: string): { obj: MapObject; sprite: Phaser.GameObjects.Sprite } | undefined {
+    for (const [obj, sprite] of this.objectSprites) if (obj.key === key) return { obj, sprite };
+    return undefined;
+  }
+
   /** Show a placed object with different art of the same footprint, e.g. 'mkt-stall-baker-closed'. */
   setObjectArt(obj: MapObject, key: string): void {
     const sprite = this.objectSprites.get(obj);

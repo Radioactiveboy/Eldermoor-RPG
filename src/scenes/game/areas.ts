@@ -24,6 +24,8 @@ import { buryingMother, carryingMother, enteredBroodHall, enteredWarren, outOfWa
 import { gateAftermath } from '../../world/GateAftermath';
 import { enteredMarket } from './market';
 import { enteredJetty } from './jetty';
+import { landed } from './voyages';
+import { HERON_AWAY } from '../../systems/Voyages';
 import { enteredGloomhaven } from './gloomhaven';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
@@ -152,9 +154,21 @@ export const AREAS: Record<AreaId, AreaDef> = {
   warren: lazy(() => import('../../world/WarrenMap'), (m) => m.buildWarrenMap({ prisoner: penPrisoner(), roused: carryingMother() }), { test: true, enter: enteredWarren }),
   broodhall: lazy(() => import('../../world/BroodHallMap'), (m) => m.buildBroodHallMap({ motherDead: QuestLog.hasFlag('mother-dead'), orbTaken: QuestLog.hasFlag('orb-taken') }), { test: true, enter: enteredBroodHall }),
   // Down the lane past the garrison: the landing on the river Wend.
-  jetty: lazy(() => import('../../world/JettyMap'), (m) => m.buildJettyMap(), { test: true, enter: enteredJetty }),
-  // Downriver: the walled marsh town of Gloomhaven (no way there in play yet; the debug panel's teleport goes there).
-  gloomhaven: lazy(() => import('../../world/GloomhavenMap'), (m) => m.buildGloomhavenMap(), { test: true, enter: enteredGloomhaven }),
+  jetty: lazy(() => import('../../world/JettyMap'), (m) => m.buildJettyMap(), {
+    test: true,
+    enter: (g) => {
+      landed(g);
+      enteredJetty(g);
+    },
+  }),
+  // Downriver: the walled marsh town of Gloomhaven, where the Grey Heron sails from the jetty (and lies at the pier while the hero's there).
+  gloomhaven: lazy(() => import('../../world/GloomhavenMap'), (m) => m.buildGloomhavenMap(QuestLog.hasFlag(HERON_AWAY)), {
+    test: true,
+    enter: (g) => {
+      landed(g);
+      enteredGloomhaven(g);
+    },
+  }),
   // The Black Rose on Gloomhaven's square: the taproom, the back room, the passage upstairs, and the Widow's room to let (no ?area= for that).
   blackrose: lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseMap(), { test: true, enter: enteredBlackRose }),
   'blackrose-back': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseBackMap(), { test: true, enter: enteredRoseBack }),

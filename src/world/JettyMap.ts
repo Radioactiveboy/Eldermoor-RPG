@@ -33,8 +33,8 @@ const ISLET = { x: 40, y: 41.5, rx: 3.2, ry: 2 };
  * a smokehouse and a boathouse, with nets hung up to dry, eel traps and creels
  * stacked about, and a cobbled stone quay with a crane. From the quay a timber
  * pier runs out into the stream on piles, and at it lies the Grey Heron, a
- * single-masted river boat (Maren Tull's: one day she'll carry the hero up and
- * down the river; see systems/Voyages.ts), with rowing boats tied up round it.
+ * single-masted river boat (Maren Tull's: once she's mended she carries the hero
+ * down the river to Gloomhaven; see systems/Voyages.ts), with rowing boats tied up round it.
  * West, rowing boats are drawn up on a shingle beach below the boathouse; east,
  * the bank goes to reeds, lilies and an old willow, with a little islet out in
  * the stream. Across the water, the far bank is all woods.
@@ -124,8 +124,9 @@ export function buildJettyMap(): MapData {
     spawn: entry,
     music: 'world',
     decor: 0.3,
-    // Stepping ashore off a boat from downriver (Cray's, from Gloomhaven), at the end of the pier.
-    entries: { market: entry, gloomhaven: { x: PIER.x1 + 0.5, y: PIER.headY + 1.4 } },
+    // Stepping ashore off a boat from downriver (Cray's or the Heron, from Gloomhaven), at the end of the pier; and back on the pier
+    // beside Maren, after mending her boat (scenes/game/jetty.ts).
+    entries: { market: entry, gloomhaven: { x: PIER.x1 + 0.5, y: PIER.headY + 1.4 }, pier: { x: PIER.x1 - 0.4, y: PIER.headY + 0.9 } },
     doors: [],
     sights: [],
     lights: [],

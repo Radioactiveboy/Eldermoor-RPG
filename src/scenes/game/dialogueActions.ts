@@ -1,7 +1,7 @@
 /**
  * Story effects triggered by lines of dialogue (the `action` on a line or reply,
  * see dialogue/Dialogue.ts). The named ones live with their part of the story
- * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts, fishing.ts, beacon.ts, gloomhaven.ts); add new ones there.
+ * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts, fishing.ts, beacon.ts, gloomhaven.ts, jetty.ts, voyages.ts); add new ones there.
  */
 import { ItemId } from '../../systems/Inventory';
 import { ShopId, SHOPS } from '../../systems/Shops';
@@ -16,7 +16,8 @@ import { RAID_ACTIONS } from './raid';
 import { GATE_ACTIONS } from './gate';
 import { TRAIL_ACTIONS } from './trail';
 import { WARREN_ACTIONS } from './broodhall';
-import { sailTo } from './voyages';
+import { sailTo, VOYAGE_ACTIONS } from './voyages';
+import { JETTY_ACTIONS } from './jetty';
 import { GLOOM_ACTIONS } from './gloomhaven';
 import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
@@ -40,6 +41,8 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...ASHES_ACTIONS,
   ...BEACON_ACTIONS,
   ...GLOOM_ACTIONS,
+  ...JETTY_ACTIONS,
+  ...VOYAGE_ACTIONS,
   ...HOMESTEAD_ACTIONS,
 };
 

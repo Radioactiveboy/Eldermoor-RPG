@@ -135,6 +135,12 @@ export class Companion {
   }
 
   /** Stand somewhere at once. */
+  /** Out of sight for a while (gone aboard the Heron with the hero, say), or back again. */
+  setShown(shown: boolean): void {
+    this.sprite.setVisible(shown);
+    this.shadow.setVisible(shown);
+  }
+
   placeAt(gx: number, gy: number): void {
     this.gx = gx;
     this.gy = gy;
