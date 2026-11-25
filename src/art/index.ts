@@ -82,6 +82,9 @@ export const ART_STEPS: ArtStep[] = [
   // After the townsfolk: it redraws the smith's and the baker's working frames.
   { label: 'the smithy and bakery', load: () => import('./workshops').then((m) => m.generateWorkshops) },
   { label: "the garrison and the Headman's house", load: () => import('./garrison').then((m) => m.generateGarrison) },
+  // (Gloomhaven's map also uses the river front's piers, boats, reeds and lilies, drawn below.)
+  { label: 'Gloomhaven', load: () => import('./gloomhaven').then((m) => m.generateGloomhaven) },
+  { label: 'the folk of Gloomhaven', load: () => import('./gloomfolk3d').then((m) => m.generateGloomFolk) },
   // Last: it makes burnt copies of art drawn above.
   { label: 'the river front', load: () => import('./jetty').then((m) => m.generateJetty) },
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },

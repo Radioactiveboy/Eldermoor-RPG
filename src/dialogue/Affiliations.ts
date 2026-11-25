@@ -27,6 +27,8 @@ const MILITIA: Affiliation = { label: 'Adowvale Militia', known: 'sight', factio
 const BROTHER: Affiliation = { label: "Brothers of Saint Elda's", known: 'sight', faction: 'monastery' };
 const VILLAGE: Affiliation = { label: 'Folk of Adowvale', known: 'met', faction: 'adowvale' };
 const MORTEN: Affiliation = { label: "Lord Morten's Men", known: 'sight' };
+const GATE_MEN: Affiliation = { label: 'The Fen Gate Watch', known: 'sight' };
+const GLOOMFOLK: Affiliation = { label: 'Folk of Gloomhaven', known: 'met' };
 
 export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   guard: MILITIA,
@@ -66,6 +68,17 @@ export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   wren: VILLAGE,
   // A river skipper: she belongs to the Wend more than to Adowvale.
   maren: { label: 'Boatfolk of the Wend', known: 'met' },
+  // Gloomhaven: the gate men wear the town's black and red; the rest you learn by talking.
+  vosk: GATE_MEN,
+  brakk: GATE_MEN,
+  fitch: GATE_MEN,
+  crabbe: GATE_MEN,
+  ossery: GLOOMFOLK,
+  tallow: GLOOMFOLK,
+  lusk: GLOOMFOLK,
+  gutter: GLOOMFOLK,
+  wisp: GLOOMFOLK,
+  cray: { label: 'Boatfolk of the Wend', known: 'met' },
   coombe: VILLAGE,
   // His chain of office says it.
   headman: { ...VILLAGE, known: 'sight' },

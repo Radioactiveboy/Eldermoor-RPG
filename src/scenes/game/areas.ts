@@ -24,6 +24,7 @@ import { buryingMother, carryingMother, enteredBroodHall, enteredWarren, outOfWa
 import { gateAftermath } from '../../world/GateAftermath';
 import { enteredMarket } from './market';
 import { enteredJetty } from './jetty';
+import { enteredGloomhaven } from './gloomhaven';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
 import { ashesOver, ashesState } from '../../dialogue/afterAshes';
@@ -151,6 +152,8 @@ export const AREAS: Record<AreaId, AreaDef> = {
   broodhall: lazy(() => import('../../world/BroodHallMap'), (m) => m.buildBroodHallMap({ motherDead: QuestLog.hasFlag('mother-dead'), orbTaken: QuestLog.hasFlag('orb-taken') }), { test: true, enter: enteredBroodHall }),
   // Down the lane past the garrison: the landing on the river Wend.
   jetty: lazy(() => import('../../world/JettyMap'), (m) => m.buildJettyMap(), { test: true, enter: enteredJetty }),
+  // Downriver: the walled marsh town of Gloomhaven (no way there in play yet; the debug panel's teleport goes there).
+  gloomhaven: lazy(() => import('../../world/GloomhavenMap'), (m) => m.buildGloomhavenMap(), { test: true, enter: enteredGloomhaven }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

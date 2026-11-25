@@ -50,6 +50,7 @@ export type SpeakerId =
   | 'wat' | 'snikkit' | 'coombe' | 'orb'
   | 'maren' | 'ebb' | 'wren'
   | 'corwin' | 'garth' | 'teg' | 'linnet'
+  | 'vosk' | 'brakk' | 'fitch' | 'crabbe' | 'ossery' | 'tallow' | 'lusk' | 'gutter' | 'wisp' | 'cray'
   | 'cooper';
 
 export interface Speaker {
@@ -110,6 +111,17 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   maren: { name: 'Maren Tull', portrait: 'portrait-maren', voice: { pitch: 205, spread: 0.08, wave: 'triangle' } },
   ebb: { name: 'Old Ebb', portrait: 'portrait-ebb', voice: { pitch: 112, spread: 0.2, wave: 'triangle' } },
   wren: { name: 'Wren', portrait: 'portrait-wren', voice: { pitch: 430, spread: 0.24, wave: 'triangle' } },
+  // Gloomhaven, downriver (dialogue/gloomhaven.ts).
+  vosk: { name: 'Captain Vosk', portrait: 'portrait-vosk', voice: { pitch: 118, spread: 0.1, wave: 'sawtooth' } },
+  brakk: { name: 'Brakk', portrait: 'portrait-brakk', voice: { pitch: 82, spread: 0.08, wave: 'sawtooth' } },
+  fitch: { name: 'Fitch', portrait: 'portrait-fitch', voice: { pitch: 168, spread: 0.06, wave: 'triangle' } },
+  crabbe: { name: 'Old Crabbe', portrait: 'portrait-crabbe', voice: { pitch: 124, spread: 0.26, wave: 'triangle' } },
+  ossery: { name: 'Mother Ossery', portrait: 'portrait-ossery', voice: { pitch: 262, spread: 0.3, wave: 'triangle' } },
+  tallow: { name: 'Hobb Tallow', portrait: 'portrait-tallow', voice: { pitch: 132, spread: 0.2, wave: 'square' } },
+  lusk: { name: 'Abel Lusk', portrait: 'portrait-lusk', voice: { pitch: 140, spread: 0.05, wave: 'sine' } },
+  gutter: { name: 'Gutter Jack', portrait: 'portrait-gutter', voice: { pitch: 110, spread: 0.34, wave: 'triangle' } },
+  wisp: { name: 'Wisp', portrait: 'portrait-wisp', voice: { pitch: 470, spread: 0.26, wave: 'triangle' } },
+  cray: { name: 'Cray', portrait: 'portrait-cray', voice: { pitch: 96, spread: 0.04, wave: 'sine' } },
   headman: { name: 'Headman Osbert Hale', portrait: 'portrait-headman', voice: { pitch: 135, spread: 0.08, wave: 'sine' } },
   steward: { name: 'Aldwin the Steward', portrait: 'portrait-steward', voice: { pitch: 145, spread: 0.04, wave: 'sine' } },
   housemaid: { name: 'Elsie', portrait: 'portrait-housemaid', voice: { pitch: 380, spread: 0.2, wave: 'triangle' } },

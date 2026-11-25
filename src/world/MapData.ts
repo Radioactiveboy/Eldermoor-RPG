@@ -54,7 +54,9 @@ export type AreaId =
   // On the lane at the south end of Adowvale: the militia garrison, its jail, and the Headman's residence.
   | 'garrison' | 'jail' | 'residence'
   // Down the lane past the garrison: Adowvale's landing on the river Wend, with its pier, boats and fishing huts.
-  | 'jetty';
+  | 'jetty'
+  // Gloomhaven, the walled marsh town downriver (no way there in play yet: see the debug panel).
+  | 'gloomhaven';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -378,6 +380,13 @@ export interface MapData {
   river?: { flow: { x: number; y: number }; speed: number };
   /** Water that can be fished (see systems/Fishing.ts): which water, and roughly where it is. */
   waters?: Array<{ id: WaterId; gx: number; gy: number; r: number }>;
+  /**
+   * A marsh (Gloomhaven): mist that never lifts, at least this thick (0..1) whatever the weather, on top of
+   * whatever the morning brings, and the ground always at least this wet.
+   */
+  fen?: number;
+  /** What grows past the map's edge, if not thick forest: 'fen' is reeds, pools and dead trees. */
+  wilds?: 'fen';
   /** Indoors: no minimap, and lit by the fire rather than the sky. */
   indoor?: boolean;
   /** Indoors with no fire burning (the roofless watchtower): no crackle of one. */
