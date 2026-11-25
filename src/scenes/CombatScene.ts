@@ -2,6 +2,7 @@ import { Display } from '../ui/Display';
 import { pinchZoom } from '../ui/PinchZoom';
 import Phaser from 'phaser';
 import { GameAudio } from '../audio/Audio';
+import { finishFightFrames } from '../art/fight3d';
 import { sheetScale } from '../art/fine3d';
 import { CREATURE_ART, CREATURE_FRAME } from '../art/creatures';
 import { Relationships } from '../systems/Relationships';
@@ -455,6 +456,9 @@ export class CombatScene extends Phaser.Scene {
     for (const f of this.foes) f.creature!.faceTowards(here.x, here.y);
     for (const a of this.allies) a.companion!.faceTowards(first.pos().x, first.pos().y);
     this.world.player.faceTowards(first.pos().x, first.pos().y);
+    // The hero and the companions square up (the fight frames are finished first, if new gear left them half drawn).
+    finishFightFrames();
+    for (const a of [this.hero, ...this.allies]) this.pose(a, 'ready');
     if (this.allies.length > 0) this.log(`${this.allies.map((a) => a.c.name).join(' and ')} ${this.allies.length > 1 ? 'step up beside you' : 'steps up beside you'}.`);
     this.world.frameFight(this.actors.map((a) => a.pos()));
     this.banner(
@@ -511,6 +515,7 @@ export class CombatScene extends Phaser.Scene {
     if (start.stood) {
       this.budget.bonus = false;
       this.float(this.hero, 'On your feet', THEME.text);
+      this.pose(this.hero, 'ready');
       await this.hop(this.hero.offset, 0, -5);
       this.log('You scramble back to your feet. That takes your bonus action.');
     }
@@ -598,6 +603,7 @@ export class CombatScene extends Phaser.Scene {
         stats.restoreStamina(BRACE_STAMINA);
         GameAudio.click();
         this.float(this.hero, 'On guard', '#9cd3ff');
+        this.pose(this.hero, 'guard');
         await this.hop(this.hero.offset, 0, -4);
         this.log(`You raise your guard (armour ${this.battle.armourOf(hero)}) and steady your breathing.`);
         break;
@@ -641,8 +647,10 @@ export class CombatScene extends Phaser.Scene {
         const winding = this.battle.has(target, 'windup');
         const r = this.battle.shove(hero, target);
         await this.rollDie(this.hero, r.roll, signed(hero.toHit));
+        await this.wait(this.world.player.strike());
         GameAudio.swing(false);
         await this.lunge(this.hero, foe, false);
+        this.settle(this.hero, 330);
         const man = !!foe.creature && isOutlaw(foe.creature.kind);
         const sum = `${r.roll} ${signed(hero.toHit)} = ${r.total} against ${man ? 'his' : 'its'} ${r.resistTotal}${r.steady ? ' (it stands firm, with advantage)' : ''}`;
         if (r.success) {
@@ -733,6 +741,7 @@ export class CombatScene extends Phaser.Scene {
         return;
       case 'guard':
         this.battle.defend(ally.c);
+        ally.companion!.fight('guard');
         GameAudio.block();
         this.float(ally, 'On guard', '#9cd3ff');
         await this.hop(ally.offset, 0, -4);
@@ -744,8 +753,10 @@ export class CombatScene extends Phaser.Scene {
         const winding = this.battle.has(action.target, 'windup');
         const r = this.battle.shove(ally.c, action.target);
         await this.rollDie(ally, r.roll, signed(ally.c.toHit));
+        await this.wait(ally.companion!.strike());
         GameAudio.swing(true);
         await this.lunge(ally, foe, true);
+        this.settle(ally, 330);
         const man = !!foe.creature && isOutlaw(foe.creature.kind);
         const sum = `${r.roll} ${signed(ally.c.toHit)} = ${r.total} against ${man ? 'his' : 'its'} ${r.resistTotal}${r.steady ? ', with advantage' : ''}`;
         if (r.success) {
@@ -1095,10 +1106,14 @@ export class CombatScene extends Phaser.Scene {
       if (isArmed(attacker.creature.kind)) GameAudio.swing(false);
       else GameAudio.bite();
     } else {
+      // The hero or a companion draws back and swings (see art/fight3d.ts).
+      const windup = (attacker.companion ?? this.world.player).strike();
+      if (windup) await this.wait(windup);
       GameAudio.swing(!!style.heavy);
     }
     await this.lunge(attacker, target, !!style.heavy);
     if (attacker.creature && attacker.c.hp > 0) this.time.delayedCall(260, () => attacker.c.hp > 0 && !attacker.c.fled && !this.battle.has(attacker.c, 'prone') && attacker.creature!.ready());
+    else this.settle(attacker, 330);
 
     const who = this.nameOf(attacker, true);
     const whom = this.nameOf(target, false);
@@ -1127,6 +1142,10 @@ export class CombatScene extends Phaser.Scene {
         this.time.delayedCall(420, () => {
           if (target.c.hp > 0 && !target.c.fled && !this.battle.has(target.c, 'prone')) target.creature!.ready();
         });
+      } else if (!target.creature && !r.killed) {
+        // The hero or a companion reels from the blow, and gets their guard back up.
+        this.pose(target, 'hit');
+        this.settle(target, 420);
       }
       const how = r.crit ? 'A natural 20, a critical hit!' : 'Hit!';
       this.log(`${who} ${verb} ${whom}: ${sum}. ${how} ${r.damage} damage.${r.charged ? ' The charge puts weight behind it.' : ''}${r.set ? ` ${spear} spear is set against its charge (+${r.set} to hit).` : ''}`);
@@ -1163,6 +1182,11 @@ export class CombatScene extends Phaser.Scene {
       else GameAudio.miss();
       this.float(target, 'Miss', '#d8c8a4');
       void this.hop(target.offset, target === this.hero ? -6 : 6, 0);
+      // The hero or a companion turns the blow aside.
+      if (!target.creature) {
+        this.pose(target, 'guard');
+        this.settle(target, 520);
+      }
       const how = r.roll === 1 ? 'A 1: a clumsy miss.' : 'Miss.';
       this.log(`${who} ${verb} ${whom}: ${sum}. ${how}${r.set ? ` (${spear} spear was set against its charge: +${r.set} to hit.)` : ''}`);
     }
@@ -1214,10 +1238,12 @@ export class CombatScene extends Phaser.Scene {
     } else if (this.battle.standing('party').length > 0) {
       // Someone is still fighting: the hero is down, but it isn't over.
       GameAudio.death();
+      this.pose(this.hero, 'down');
       this.hero.sprite.setTint(0x777777);
       this.log(`Your legs give way and you go down. ${this.battle.standing('party').map((c) => c.name).join(' and ')} fight${this.battle.standing('party').length > 1 ? '' : 's'} on over you...`);
     } else {
       GameAudio.death();
+      this.pose(this.hero, 'down');
       this.log('Your legs give way and the world goes dark...');
     }
     this.drawOrder();
@@ -1235,7 +1261,9 @@ export class CombatScene extends Phaser.Scene {
       actor.creature.setFrame(CREATURE_FRAME.hurt);
       void this.nudge(actor.offset, 0, 5, 120);
     } else {
-      void this.nudge(actor.offset, 0, 4, 120);
+      // Down on one knee (see art/fight3d.ts).
+      this.pose(actor, 'down');
+      void this.nudge(actor.offset, 0, 2, 120);
     }
     this.drawOrder();
   }
@@ -1243,6 +1271,7 @@ export class CombatScene extends Phaser.Scene {
   private standUp(actor: Actor): void {
     if (actor.creature) actor.creature.ready();
     actor.companion?.setDown(false);
+    if (!actor.creature) this.pose(actor, 'ready');
     void this.nudge(actor.offset, 0, 0, 120);
   }
 
@@ -1276,10 +1305,12 @@ export class CombatScene extends Phaser.Scene {
     await this.wait(1700);
     this.hero.sprite.clearTint();
     this.hero.offset.x = this.hero.offset.y = 0;
+    this.world.player.fight();
     for (const f of this.foes) f.offset.x = f.offset.y = 0;
     for (const a of this.allies) {
       a.offset.x = a.offset.y = 0;
       a.companion!.setDown(false);
+      a.companion!.fight();
     }
     this.tweens.add({
       targets: [this.orderBar, this.logBox, this.menuBox, this.hotbar, this.tooltip, this.hintText, this.menuTitle],
@@ -2151,6 +2182,23 @@ export class CombatScene extends Phaser.Scene {
     if (!friendly) t.setColor('#e8a07a');
     this.tweens.add({ targets: t, alpha: 1, scale: { from: 0.85, to: 1 }, duration: 180, ease: 'Back.easeOut' });
     this.tweens.add({ targets: t, alpha: 0, delay: 800, duration: 300, onComplete: () => t.destroy() });
+  }
+
+  /**
+   * The hero or a companion shows a fight animation (see art/fight3d.ts):
+   * 'ready', 'attack', 'hit', 'guard' or 'down'. Beasts have their own (see Creature).
+   */
+  private pose(actor: Actor, anim: string): void {
+    if (actor.companion) actor.companion.fight(anim);
+    else if (actor === this.hero) this.world.player.fight(anim);
+  }
+
+  /** Back to the fighting crouch after a blow or a flinch, unless they've been knocked down or out meanwhile. */
+  private settle(actor: Actor, ms: number): void {
+    if (actor.creature) return;
+    this.time.delayedCall(ms, () => {
+      if (actor.c.hp > 0 && !actor.c.fled && !this.battle.has(actor.c, 'prone')) this.pose(actor, 'ready');
+    });
   }
 
   /** Lunge towards the target and back (a heavy blow winds up first). */

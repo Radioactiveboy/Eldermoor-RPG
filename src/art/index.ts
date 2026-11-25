@@ -8,6 +8,7 @@ import { generateFolk } from './folk';
 import { generateBrigands } from './brigands3d';
 import { generateGoblins } from './goblins3d';
 import { generateHenFarm } from './henfarm';
+import { generateFightStances } from './fightStances';
 import { generateHero } from './hero3d';
 import { generateInterior } from './interior';
 import { generateStationArt } from './stations';
@@ -71,6 +72,7 @@ export const ART_STEPS: ArtStep[] = [
   { label: 'the willow', load: () => import('./willow').then((m) => m.generateWillow) },
   { label: 'Mother', load: () => import('./mother3d').then((m) => m.generateMother) },
   { label: 'goblins', draw: generateGoblins },
+  { label: 'swordplay', draw: generateFightStances },
   { label: 'brigands', draw: generateBrigands },
   { label: 'wild herbs', load: () => import('./herbs').then((m) => m.generateHerbs) },
   { label: 'the north woods', load: () => import('./northwoods').then((m) => m.generateNorthWoods) },

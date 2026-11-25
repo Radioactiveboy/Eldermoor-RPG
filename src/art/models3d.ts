@@ -85,7 +85,6 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   baker: bakerModel,
   smith: smithModel,
   tanner: tannerModel,
-  guard: guardModel,
   tollguard: tollGuardModel,
   iran: iranModel,
   coombe: coombeModel,
@@ -113,7 +112,6 @@ export const MODELS_3D: Record<string, (pose: Pose3D) => Model> = {
   cobb: cobbModel,
   pip: pipModel,
   hetty: hettyModel,
-  sergeant: sergeantModel,
   prisoner: prisonerModel,
   headman: headmanModel,
   steward: stewardModel,
@@ -387,7 +385,7 @@ function mailRings(h: Hit, mail: Tones, ring: Tones): Tones {
   return (Math.floor(h.x * 0.9 + h.z * 0.9) + Math.floor(h.y * 1.1)) % 2 ? mail : ring;
 }
 
-/** How a spearman is turned out: the militia, or Lord Morten's men at the toll gate. */
+/** How a spearman is turned out: Lord Morten's men at the toll gate (the militia are drawn finely, in militia3d.ts). */
 interface SoldierLook {
   tabard: Tones;
   /** The tabard's hem. */
@@ -404,17 +402,6 @@ interface SoldierLook {
   badge: { color: number; at: Array<[number, number]> };
 }
 
-const MILITIA: SoldierLook = {
-  tabard: [0x2e4a7a, 0x1e3256, 0x40629a],
-  trim: [P.gold, 0xb08830, P.goldLight],
-  helm: [P.ironLight, P.iron, P.stoneLight],
-  trouser: [0x3a3032, 0x241c1e, 0x50444a],
-  skin: [P.skin, P.skinShade, 0xf4cfa8],
-  hair: [0x4a3020, 0x2e1e14, 0x664430],
-  boots: [P.leatherDark, P.barkDark, P.leather],
-  badge: { color: P.gold, at: [[0, 23], [0, 22], [-1, 22], [1, 22], [0, 21]] },
-};
-
 /** Lord Morten's toll guards: a blackened helm, mail under his crimson, a black cloak, and black beards. */
 const TOLL_GUARD: SoldierLook = {
   tabard: [MORTEN.crimson, MORTEN.crimsonDark, MORTEN.crimsonLight],
@@ -429,24 +416,6 @@ const TOLL_GUARD: SoldierLook = {
   // A black lozenge.
   badge: { color: MORTEN.black, at: [[0, 23.5], [-1, 22.5], [0, 22.5], [1, 22.5], [-1, 21.5], [0, 21.5], [1, 21.5], [0, 20.5]] },
 };
-
-/** The village militia: a kettle helm with a wide brim, a shirt of mail, a blue tabard edged in gold, and a spear. */
-export function guardModel(pose: Pose3D): Model {
-  return soldierModel(pose, MILITIA);
-}
-
-/** Sergeant Brannock: the militia's blue and gold, a dark blue cloak, and a short grey beard. */
-export function sergeantModel(pose: Pose3D): Model {
-  return soldierModel(pose, {
-    ...MILITIA,
-    skin: [0xe0aa86, 0xb88262, 0xf0c4a0],
-    hair: [0x8a827c, 0x6a625c, 0xa8a09a],
-    beard: [0x8a827c, 0x6a625c, 0xa8a09a],
-    cloak: [0x1e3256, 0x14223e, 0x2e4a7a],
-    // Three gold chevrons for his rank.
-    badge: { color: P.gold, at: [[-1, 23], [0, 22.5], [1, 23], [-1, 21.5], [0, 21], [1, 21.5]] },
-  });
-}
 
 /** Lord Morten's men at the toll gate. */
 export function tollGuardModel(pose: Pose3D): Model {

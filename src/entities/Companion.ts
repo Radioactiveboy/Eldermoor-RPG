@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import { sheetScale } from '../art/fine3d';
+import { FIGHT_ORIGIN_Y, WINDUP_MS } from '../art/fight3d';
 import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_SPEED, SPRINT_MULTIPLIER } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
@@ -89,6 +90,8 @@ export class Companion {
   private still = 0;
   private gone = false;
   private moving = false;
+  /** In a fight, the fight animation showing ('ready', 'attack', 'hit', 'guard', 'down': see art/fight3d.ts). */
+  private fighting?: string;
 
   constructor(scene: Phaser.Scene, map: IsoMap, id: CompanionId, gx: number, gy: number, place: number) {
     this.id = id;
@@ -228,6 +231,31 @@ export class Companion {
     this.sync();
   }
 
+  /**
+   * Squares up for a fight (or, with nothing, stands easy again), like the hero
+   * (see Player.fight). Knocked down, they show 'down' whatever this says.
+   */
+  fight(anim?: string): void {
+    this.fighting = anim;
+    if (anim) this.sprite.anims.stop();
+    this.sync();
+  }
+
+  ready(): void {
+    if (this.fighting !== 'ready') this.fight('ready');
+  }
+
+  /** Wind up and swing; returns how long the wind-up takes, in ms. */
+  strike(): number {
+    this.fight('attack');
+    return this.showingFight ? WINDUP_MS : 0;
+  }
+
+  /** Whether they're in a fight and have the frames for it (see art/fight3d.ts). */
+  private get showingFight(): boolean {
+    return !!this.fighting && this.sprite.scene.anims.exists(`${this.def.texture}-ready-s`);
+  }
+
   /** Off back to where they wait: a few steps away, fading as they go, and gone. */
   leave(away: Vec2, then?: () => void): void {
     this.gone = true;
@@ -269,10 +297,18 @@ export class Companion {
     if (!this.sprite.active) return;
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
-    this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y + (this.down ? 5 : 0));
+    const fightFrames = this.showingFight;
+    // Knocked down in a fight, they're drawn on one knee; otherwise sat, and sunk a little.
+    this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y + (this.down && !fightFrames ? 5 : 0));
     const d = this.map.characterDepth(this.gx, this.gy);
     this.shadow.setDepth(d - 0.5);
     this.sprite.setDepth(d);
+    if (fightFrames && !this.moving) {
+      const key = `${this.def.texture}-${this.down ? 'down' : this.fighting}-${DIRECTIONS_8[this.facing].name}`;
+      if (this.sprite.anims.currentAnim?.key !== key) this.sprite.setOrigin(0.5, FIGHT_ORIGIN_Y).play(key);
+      return;
+    }
+    this.sprite.setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H);
     const pose = this.down ? 'sit' : this.moving ? 'walk' : 'idle';
     const key = `${this.def.texture}-${pose}-${DIRECTIONS_8[this.facing].name}`;
     if (pose === 'idle') this.sprite.play({ key, frameRate: IDLE_FRAME_RATE }, true);
