@@ -60,15 +60,15 @@ export function buildSlaughterhouseMap(): MapData {
     indoor: true,
     groundShade: RAW,
     walls: {
-      back: wall('shk', 'back', ['plain', 'brace', 'hoist', 'hooks', 'plain', 'window', 'brace', 'hooks', 'sausages', 'plain', 'tools', 'window']),
+      back: wall('shk', 'back', ['plain', 'brace', 'plain', 'hoist', 'hooks', 'window', 'brace', 'plain', 'hooks', 'sausages', 'tools', 'window']),
       side: wall('shk', 'side', ['plain', 'window', 'notches', 'brace', 'tools', 'plain', 'door', 'plain', 'window']),
       corner: 'shk-wall-corner',
     },
     doors: [{ tx: 0, ty: 6, to: 'gloomhaven', entry: 'slaughterhouse', label: 'Go outside' }],
     entries: { door },
     lights: [
-      { gx: 5.5, gy: 0.9, z: 10, radius: 160, flicker: 1 },
-      { gx: 2.5, gy: 1.2, z: 56, radius: 110, flicker: 0.5 },
+      { gx: 6, gy: 0.9, z: 10, radius: 160, flicker: 1 },
+      { gx: 3.5, gy: 1.2, z: 56, radius: 110, flicker: 0.5 },
       { gx: 9.5, gy: 5.2, z: 50, radius: 140, flicker: 0.4 },
       { gx: 5.5, gy: 0.2, z: 60, radius: 120, flicker: 0, daylight: true },
       { gx: 11.5, gy: 0.2, z: 60, radius: 120, flicker: 0, daylight: true },
@@ -91,14 +91,13 @@ export function buildSlaughterhouseMap(): MapData {
   add('sh-sawdust', 9, 6, { w: 2, flat: true });
   add('sh-sawdust', 9, 7, { w: 2, flat: true });
   // The killing floor along the back wall.
-  add('sh-killpen', 0, 0);
-  add('sh-killpen', 1, 0);
-  add('sh-hookframe', 2, 1, { w: 2, shapes: [box(0.1, 0.4, 0.3, 0.6), box(1.7, 0.4, 1.9, 0.6)] });
-  add('sh-scaldvat', 4, 0, { w: 2 });
-  add('sh-bloodtub', 6, 1, { shapes: roundShape });
+  add('sh-killpen', 0, 0, { w: 2, h: 2 });
+  add('sh-hookframe', 3, 0, { w: 2, shapes: [box(0.1, 0.4, 0.3, 0.6), box(1.7, 0.4, 1.9, 0.6)] });
+  add('sh-scaldvat', 5, 0, { w: 2 });
+  add('sh-bloodtub', 2, 2, { shapes: roundShape });
   add('sh-block', 4, 3, { shapes: roundShape });
-  add('sh-carcassrail', 7, 0, { w: 2, shapes: [box(0.1, 0.3, 1.9, 0.7)] });
-  add('sh-bones', 9, 0);
+  add('sh-carcassrail', 8, 0, { w: 2, shapes: [box(0.1, 0.3, 1.9, 0.7)] });
+  add('sh-bones', 7, 1);
   add('furn-barrels', 10, 0, { shapes: barrelShape });
   add('sh-bloodtub', 11, 0, { shapes: roundShape });
   // The shop end: the cutting bench and the counter, joints laid out on it.
@@ -108,14 +107,14 @@ export function buildSlaughterhouseMap(): MapData {
   add('sh-counter-2', 11, 5);
   add('sh-bones', 11, 8);
   data.sights!.push(
-    { id: 'shk-killpen', gx: 1, gy: 0.6, label: 'Look', z: 20, thought: 'A pen of rails, the straw in it trodden to muck. Whatever waits here waits where it can see the hook. They put it there on purpose, or they never thought about it at all. I don\'t know which is worse.' },
-    { id: 'shk-hoist', gx: 2.5, gy: 0.15, label: 'Look', z: 70, thought: 'A block and tackle up in the rafters, the rope black and stiff. The hook on the end of it is as big as my hand, and it\'s been scrubbed clean. The only clean thing on this wall.' },
-    { id: 'shk-scald', gx: 5, gy: 0.7, label: 'Look', z: 30, thought: 'The scalding vat, steaming over its fire. A grey scum of bristles floats on the water. The heat of it hits my face from here, and the smell sits at the back of my throat.' },
-    { id: 'shk-rail', gx: 8, gy: 0.5, label: 'Look', z: 60, thought: 'Halves of pig on the rail, split nose to tail, swinging very slightly. There are more halves than there are pigs in the pen. There are always more halves than pigs.' },
+    { id: 'shk-killpen', gx: 1, gy: 1.2, label: 'Look', z: 20, thought: 'A pen of rails, the straw in it trodden to muck. Whatever waits here waits where it can see the hook. They put it there on purpose, or they never thought about it at all. I don\'t know which is worse.' },
+    { id: 'shk-hoist', gx: 3.5, gy: 0.15, label: 'Look', z: 70, thought: 'A block and tackle up in the rafters, the rope black and stiff. The hook on the end of it is as big as my hand, and it\'s been scrubbed clean. The only clean thing on this wall.' },
+    { id: 'shk-scald', gx: 6, gy: 0.7, label: 'Look', z: 30, thought: 'The scalding vat, steaming over its fire. A grey scum of bristles floats on the water. The heat of it hits my face from here, and the smell sits at the back of my throat.' },
+    { id: 'shk-rail', gx: 9, gy: 0.5, label: 'Look', z: 60, thought: 'Halves of pig on the rail, split nose to tail, swinging very slightly. There are more halves than there are pigs in the pen. There are always more halves than pigs.' },
     { id: 'shk-drain', gx: 6.5, gy: 4.5, label: 'Look', z: 2, thought: 'A channel in the flags, running down to an iron grate. It\'s been sluiced, but not well enough. Something pink is stuck in the bars. I stop looking.' },
     { id: 'shk-notches', gx: 0.15, gy: 2.5, label: 'Look', z: 46, thought: 'Three cleaver notches cut in a doorpost that isn\'t a door any more. The Red Aprons\' mark. Under it, smaller, rows and rows of tally scratches. Rendle doesn\'t write his debts down, they say. Somebody here does.' },
     { id: 'shk-counter', gx: 10.5, gy: 5.5, label: 'Look', z: 26, thought: 'Joints laid out on the counter on a bed of dock leaves, and a chalk price above each. "MUTTON". It isn\'t. The legs are too long for mutton. I have eaten "mutton" at the Rose.' },
-    { id: 'shk-sausages', gx: 8.5, gy: 0.15, label: 'Look', z: 62, thought: 'Strings of black sausages hung up on the wall to dry, and a cloud of flies keeping them company. The flies look well fed.' },
+    { id: 'shk-sausages', gx: 9.5, gy: 0.15, label: 'Look', z: 62, thought: 'Strings of black sausages hung up on the wall to dry, and a cloud of flies keeping them company. The flies look well fed.' },
     { id: 'shk-tools', gx: 10.5, gy: 0.15, label: 'Look', z: 50, thought: 'Knives, saws, a poleaxe and the knacker\'s hammers, hung in order of size on pegs, every one of them oiled and sharp. Rendle\'s hands are very clean. His tools are cleaner.' },
   );
   return data;
