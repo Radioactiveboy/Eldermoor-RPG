@@ -66,7 +66,7 @@ export function buildGarrisonMap(): MapData {
     sights: [
       {
         id: 'garrison-roster', gx: 4.5, gy: 0.2, label: 'Read the roster', z: 66,
-        sign: {
+        sign: { style: 'slate',
           heading: 'Chalked on the board',
           lines: [
             'GATE: Cooper\'s boys (both). Dusk till the bell.',
@@ -79,9 +79,19 @@ export function buildGarrisonMap(): MapData {
       },
       {
         id: 'garrison-watchbook', gx: 8, gy: 2.6, label: 'Read the watch book', z: 30,
-        thought:
-          'The watch book, in the sergeant\'s square hand. "Quiet." "Quiet." "Geese loose on the green, three taken up." ' +
-          '"Wolves heard on the Hollow road." Page after page of a village where nothing much ever happens.',
+        sign: {
+          style: 'book',
+          heading: 'The watch book',
+          lines: [
+            'In the sergeant\'s square hand, a line for every night:',
+            '"Quiet."',
+            '"Quiet."',
+            '"Geese loose on the green, three taken up."',
+            '"Quiet."',
+            '"Wolves heard on the Hollow road."',
+            'Page after page of a village where nothing much ever happens.',
+          ],
+        },
       },
     ],
   };

@@ -164,7 +164,7 @@ export function buildMonasteryMap(open = false): MapData {
   }
   data.sights!.push({
     id: 'monastery-gate', gx: gateMid, gy: WALL_Y + 0.9, label: 'Read the carving', z: 92,
-    sign: { heading: 'Carved over the gate', lines: ['PAX INTRANTIBUS', 'SALUS EXEUNTIBUS', '', '"Peace to all who enter,', 'and health to all who leave."'] },
+    sign: { style: 'stone', heading: 'Carved over the gate', lines: ['PAX INTRANTIBUS', 'SALUS EXEUNTIBUS', '', '"Peace to all who enter,', 'and health to all who leave."'] },
   });
   for (const x of [GATE_X - 2, GATE_X + 5]) {
     clear(x, WALL_Y + 1, x, WALL_Y + 1);
@@ -202,7 +202,7 @@ export function buildMonasteryMap(open = false): MapData {
   placeObject(data, { key: 'mon-statue', tx: gateMid - 1, ty: Math.floor(court.y) - 1, w: 2, h: 2 });
   data.sights!.push({
     id: 'monastery-statue', gx: gateMid, gy: Math.floor(court.y) + 1.1, label: 'Read the plinth', z: 30,
-    sign: { heading: 'Saint Elda', lines: ['Healer of the sick', 'who took no payment but a prayer.', '', 'Her well is within.'] },
+    sign: { style: 'stone', heading: 'Saint Elda', lines: ['Healer of the sick', 'who took no payment but a prayer.', '', 'Her well is within.'] },
   });
 
   // The vegetable beds, fenced, one either side of the road below the forecourt, each with a gate onto the road.
@@ -269,7 +269,7 @@ export function buildMonasteryMap(open = false): MapData {
     clear(s.x - 1, s.y - 1, s.x + 1, s.y + 1);
     placeObject(data, { key: `mon-shrine-${i % 2}`, tx: s.x, ty: s.y, w: 1, h: 1, shapes: [box(0.15, 0.15, 0.85, 0.85)] });
     data.lights!.push({ gx: s.x + 0.5, gy: s.y + 0.6, z: 44, radius: 80, flicker: 0.7 });
-    data.sights!.push({ id: `monastery-shrine-${i}`, gx: s.x + 0.5, gy: s.y + 1, label: 'Read the shrine', z: 70, sign: { heading: 'A wayside shrine', lines: s.lines } });
+    data.sights!.push({ id: `monastery-shrine-${i}`, gx: s.x + 0.5, gy: s.y + 1, label: 'Read the shrine', z: 70, sign: { style: 'stone', heading: 'A wayside shrine', lines: s.lines } });
   });
 
   // The road runs back west across the plains.

@@ -288,7 +288,7 @@ export function buildPlainsMap(beaconKept = true): MapData {
   placeObject(data, { key: 'mkt-signpost', tx: sign.tx, ty: sign.ty, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
   data.sights!.push({
     id: 'signpost-crossroads', gx: sign.tx + 0.5, gy: sign.ty + 0.5, label: 'Read the sign', z: 58,
-    sign: {
+    sign: { style: 'post',
       heading: 'The crossroads',
       lines: ["→  East: Saint Elda's Monastery", '←  West: Harrowford', '↑  North: the Greyfells', '↓  South: Adowvale (toll gate)'],
     },
