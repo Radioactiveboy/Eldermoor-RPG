@@ -840,18 +840,24 @@ function desk(): IsoModel {
   return m;
 }
 
+/**
+ * Where a seat's top must be for a seated figure's hips to rest on it (seatedLegs puts them at 9-10px).
+ * The same value as SEAT_TOP in IsoModel.ts once that lands; kept here so these seats don't wait on it.
+ */
+const SEAT_TOP = 9;
+
+/** Nibb's stool behind the grille: a clerk's stool, three-legged, worn smooth. */
 function highStool(): IsoModel {
   const m = new IsoModel();
-  for (const [x, y] of [[0.36, 0.36], [0.6, 0.36], [0.36, 0.6], [0.6, 0.6]]) m.box(x, y, 0, 0.04, 0.04, 26, { top: OAK, left: OAK, right: OAK_DARK });
-  m.box(0.36, 0.36, 10, 0.28, 0.04, 1.5, { top: OAK, left: OAK_DARK, right: OAK_DARK });
-  m.cylinder(0.5, 0.5, 26, 0.17, 3, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
+  for (const [x, y] of [[0.36, 0.36], [0.62, 0.4], [0.46, 0.62]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2.5, { top: OAK, left: OAK, right: OAK_DARK });
+  m.cylinder(0.5, 0.5, SEAT_TOP - 2.5, 0.18, 2.5, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
   return m;
 }
 
 function stool(): IsoModel {
   const m = new IsoModel();
-  for (const [x, y] of [[0.38, 0.38], [0.58, 0.38], [0.38, 0.58], [0.58, 0.58]]) m.box(x, y, 0, 0.04, 0.04, 15, { top: OAK, left: OAK, right: OAK_DARK });
-  m.cylinder(0.5, 0.5, 15, 0.16, 2.5, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
+  for (const [x, y] of [[0.38, 0.38], [0.58, 0.38], [0.38, 0.58], [0.58, 0.58]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2.5, { top: OAK, left: OAK, right: OAK_DARK });
+  m.cylinder(0.5, 0.5, SEAT_TOP - 2.5, 0.16, 2.5, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
   return m;
 }
 
@@ -908,11 +914,11 @@ function lanternPost(): IsoModel {
 /** The bench along the wall for those waiting: hard, narrow, polished by everybody who has waited on it. */
 function bench(): IsoModel {
   const m = new IsoModel();
-  for (const y of [0.15, 1.0, 1.85]) m.box(0.15, y - 0.05, 0, 0.4, 0.1, 14, { top: OAK, left: OAK_DARK, right: OAK_DARK });
-  m.box(0.1, 0.05, 14, 0.5, 1.9, 2.5, { top: (u, v) => (smoothNoise(u * 3, v * 9, 3) > 0.55 ? OAK_LIGHT : OAK_TOP), left: OAK, right: OAK_DARK });
+  for (const y of [0.15, 1.0, 1.85]) m.box(0.15, y - 0.05, 0, 0.4, 0.1, SEAT_TOP - 2.5, { top: OAK, left: OAK_DARK, right: OAK_DARK });
+  m.box(0.1, 0.05, SEAT_TOP - 2.5, 0.5, 1.9, 2.5, { top: (u, v) => (smoothNoise(u * 3, v * 9, 3) > 0.55 ? OAK_LIGHT : OAK_TOP), left: OAK, right: OAK_DARK });
   // A shawl someone left, and a basket with nothing in it.
-  m.box(0.14, 1.3, 16.5, 0.4, 0.3, 1, { top: 0x5a4a6a, left: 0x4a3a5a, right: 0x3a2a4a });
-  m.cylinder(0.35, 0.45, 16.5, 0.14, 6, (u, v) => (Math.floor(v * 4 + u * 8) % 2 ? WICKER : WICKER_DARK), WICKER_DARK);
+  m.box(0.14, 0.2, SEAT_TOP, 0.4, 0.3, 1, { top: 0x5a4a6a, left: 0x4a3a5a, right: 0x3a2a4a });
+  m.cylinder(0.35, 1.75, SEAT_TOP, 0.14, 6, (u, v) => (Math.floor(v * 4 + u * 8) % 2 ? WICKER : WICKER_DARK), WICKER_DARK);
   return m;
 }
 
@@ -1199,10 +1205,11 @@ function reeveChair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
   const x0 = 0.75;
-  for (const [x, y] of [[0, 0.25], [0.44, 0.25], [0, 0.69], [0.44, 0.69]]) m.box(x0 + x, y, 0, 0.06, 0.06, 16, wood);
-  m.box(x0 - 0.02, 0.23, 16, 0.54, 0.54, 3, { top: YELLOW, left: OAK_LIGHT, right: OAK });
-  m.box(x0 - 0.02, 0.2, 19, 0.54, 0.06, 30, { top: OAK_LIGHT, left: (u, v) => (v > 0.14 && v < 0.82 && u > 0.14 && u < 0.86 ? (Math.floor(u * 8 + v * 8) % 2 ? YELLOW : YELLOW_DARK) : OAK), right: OAK_DARK });
-  for (const x of [0, 0.46]) m.cylinder(x0 + x + 0.01, 0.23, 49, 0.035, 3, () => GILT, GILT_LIGHT);
+  // Seat at SEAT_TOP, no arms: the sitter is drawn in front of the whole chair.
+  for (const [x, y] of [[0, 0.25], [0.44, 0.25], [0, 0.69], [0.44, 0.69]]) m.box(x0 + x, y, 0, 0.06, 0.06, SEAT_TOP - 3, wood);
+  m.box(x0 - 0.02, 0.23, SEAT_TOP - 3, 0.54, 0.54, 3, { top: YELLOW, left: OAK_LIGHT, right: OAK });
+  m.box(x0 - 0.02, 0.2, SEAT_TOP, 0.54, 0.06, 34, { top: OAK_LIGHT, left: (u, v) => (v > 0.14 && v < 0.82 && u > 0.14 && u < 0.86 ? (Math.floor(u * 8 + v * 8) % 2 ? YELLOW : YELLOW_DARK) : OAK), right: OAK_DARK });
+  for (const x of [0, 0.46]) m.cylinder(x0 + x + 0.01, 0.23, SEAT_TOP + 34, 0.035, 3, () => GILT, GILT_LIGHT);
   return m;
 }
 
