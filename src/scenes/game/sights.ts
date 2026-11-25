@@ -2,6 +2,7 @@
  * Doing things in the world: few-second actions (channels), picking crops,
  * shaking trees, examining, searching and gathering, and putting things in the satchel.
  */
+import { examineInShambles } from './shambles';
 import Phaser from 'phaser';
 import { cropKey } from '../../art/farm';
 import { GameAudio } from '../../audio/Audio';
@@ -125,6 +126,7 @@ export function examine(g: GameScene, sight: Sight): void {
   g.walkingTo = undefined;
   g.player.setPath([]);
   g.player.faceTowards(sight.gx, sight.gy);
+  if (examineInShambles(g, sight)) return;
   if (sight.id === BOUNTY_BOARD.id) {
     readBountyBoard(g);
     return;

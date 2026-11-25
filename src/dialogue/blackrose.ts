@@ -1,4 +1,5 @@
 import { HERO_NAME } from '../config';
+import { type TamFate, type WidowTam, widowTamNodes } from './shambles';
 import { itemDef, ItemId } from '../systems/Inventory';
 import { BACK_ROOM_FEE, HOLLIS_DRINK, ROSE_DRINKS, ROSE_FOOD, ROSE_MENU, ROSE_RENT, SILAS_STAKE } from '../systems/BlackRose';
 import type { DialogueChoice, DialogueScript, SpeakerId } from './Dialogue';
@@ -43,6 +44,9 @@ export interface WidowState {
   /** The hero may go through the curtain into the back room. */
   backOk: boolean;
   news: RoseNews;
+  /** Her errand about Tam Rudd, who owes her three silver (see dialogue/shambles.ts), and how it went. */
+  tam?: WidowTam;
+  tamFate?: TamFate;
 }
 
 /** What the Widow has heard, depending on how far the hero has got. */
@@ -56,6 +60,20 @@ export function widowRumours(n: RoseNews): string[] {
   if (n.raidOver) lines.push("Goblins burnt a farm up Adowvale way, I hear. Goblins don't burn farms. Goblins steal hens. Somebody told them to.");
   if (n.slewWolfMother) lines.push('They say a lad from Adowvale killed the white wolf on the plains. Half my room wants to buy him a drink. The other half wants to know what he charges.');
   return lines;
+}
+
+/** What to ask the Widow about Tam Rudd, as her errand stands. */
+function tamChoice(s: WidowState): DialogueChoice[] {
+  switch (s.tam) {
+    case 'none':
+      return [{ text: 'The notice outside. Tam Rudd, three silver?', next: 'tam-ask' }];
+    case 'asked':
+      return [{ text: 'About Tam Rudd...', next: 'tam-still' }];
+    case 'report':
+      return [{ text: 'About Tam Rudd.', next: 'tam-report', key: true }];
+    default:
+      return [];
+  }
 }
 
 export function widowScript(s: WidowState): DialogueScript {
@@ -73,6 +91,7 @@ export function widowScript(s: WidowState): DialogueScript {
   return {
     start: s.first ? 'greet' : s.late ? 'late' : 'again',
     nodes: {
+      ...widowTamNodes(s.tamFate ?? 'hiding'),
       greet: {
         speaker: 'thorne',
         lines: [
@@ -99,6 +118,7 @@ export function widowScript(s: WidowState): DialogueScript {
           { text: "I'll have a drink. Or something to eat.", next: 'drinks' },
           { text: 'Do you buy things? Or sell them?', action: 'shop:blackrose' },
           s.renting ? { text: 'About my room...', next: 'room-have' } : { text: 'Do you have a room?', next: 'rooms' },
+          ...tamChoice(s),
           { text: "What's behind the curtain?", next: s.backOk ? 'curtain-ok' : 'curtain' },
           { text: 'Heard anything?', next: 'news' },
           { text: 'Tell me about Gloomhaven.', next: 'town' },

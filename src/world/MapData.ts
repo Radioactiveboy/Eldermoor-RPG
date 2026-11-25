@@ -1,3 +1,4 @@
+import type { HoundSpawn } from '../entities/Hound';
 import type { HillField } from './greyfellsHills';
 import type { TrackName } from '../audio/Audio';
 import type { HenKind } from '../art/henfarm';
@@ -58,7 +59,9 @@ export type AreaId =
   // Gloomhaven, the walled marsh town downriver (no way there in play yet: see the debug panel).
   | 'gloomhaven'
   // The Black Rose on Gloomhaven's square: the taproom, the back room behind the curtain, the passage upstairs, and the room to let.
-  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room';
+  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
+  // The Shambles, Gloomhaven's east quarter: Rendle's slaughterhouse, Vetch's tannery and its drying loft, Old Scritch's den, and the Red Aprons' dog pit.
+  | 'slaughterhouse' | 'tannery' | 'tannery-loft' | 'ratden' | 'dogpit';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -352,6 +355,8 @@ export interface MapData {
   /** Where crows come down to pick about, in tiles (the ruined farm, after the raid). */
   crows?: Array<{ gx: number; gy: number }>;
   /** Goats grazing in a paddock (the Hollow's, once it's built: see world/Homestead.ts). */
+  /** Dogs (entities/Hound.ts): Nothing about Scritch's den, the pit dogs on their chains. */
+  hounds?: HoundSpawn[];
   goats?: Array<{ gx: number; gy: number }>;
   landmarks?: Landmark[];
   musings?: Musing[];

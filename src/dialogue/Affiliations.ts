@@ -29,6 +29,8 @@ const VILLAGE: Affiliation = { label: 'Folk of Adowvale', known: 'met', faction:
 const MORTEN: Affiliation = { label: "Lord Morten's Men", known: 'sight' };
 const GATE_MEN: Affiliation = { label: 'The Fen Gate Watch', known: 'sight' };
 const GLOOMFOLK: Affiliation = { label: 'Folk of Gloomhaven', known: 'met' };
+/** Rendle's gang: the stained leather aprons give them away (see the shared cast of Gloomhaven's gangs). */
+const RED_APRONS: Affiliation = { label: 'The Red Aprons', known: 'sight' };
 
 export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   guard: MILITIA,
@@ -79,6 +81,13 @@ export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   gutter: GLOOMFOLK,
   wisp: GLOOMFOLK,
   cray: { label: 'Boatfolk of the Wend', known: 'met' },
+  rendle: RED_APRONS,
+  flay: RED_APRONS,
+  gristle: RED_APRONS,
+  lugs: RED_APRONS,
+  vetch: GLOOMFOLK,
+  scritch: GLOOMFOLK,
+  tam: GLOOMFOLK,
   coombe: VILLAGE,
   // His chain of office says it.
   headman: { ...VILLAGE, known: 'sight' },

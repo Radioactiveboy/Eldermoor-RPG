@@ -250,6 +250,16 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     banner: 'Brigands!',
     flee: 'scrambles away up the stair and out of sight!',
   },
+  apronflay: {
+    start: 'Ned Flay drops his chain and slides the flaying knife out of his apron. "All right, then. Fresh stock." The dogs in the pens go mad.',
+    banner: 'The Red Aprons!',
+    flee: 'backs off over the pit wall, swearing, and is gone out of the door!',
+  },
+  apronknacker: {
+    start: "Gristle sets down whatever he was eating and picks up the knacker's maul.",
+    banner: 'The Red Aprons!',
+    flee: 'lumbers out of the barn door, clutching his head!',
+  },
 };
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
@@ -435,6 +445,8 @@ export class CombatScene extends Phaser.Scene {
         ? 'Goblins swarm round you, shrieking and cackling!'
         : this.foes.some((f) => f.creature!.kind === 'brigandcaptain')
         ? FOE_TEXT.brigandcaptain.start
+        : this.foes.some((f) => f.creature!.kind === 'apronflay')
+        ? FOE_TEXT.apronflay.start
         : this.foes.length > 1 && isOutlaw(first.creature!.kind)
         ? FOE_TEXT.footpad.start
         : this.foes.length > 1

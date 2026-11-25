@@ -1004,6 +1004,36 @@ export const FOES = {
     outlaw: true,
     skittish: 0.05,
   },
+  // The Red Aprons in their pit barn in the Shambles (see world/ShamblesMap.ts), if it comes to a fight over Scritch's dog:
+  // Ned Flay with his flaying knife, quick and nasty, and his knacker, slow and very heavy. Gang men, not soldiers: a step
+  // softer than the brigands on Corbie Tor.
+  apronflay: {
+    name: 'Ned Flay',
+    maxHp: 44,
+    ac: 13,
+    toHit: 6,
+    damage: { count: 2, sides: 4, bonus: 3 },
+    quickness: 4,
+    verb: 'slashes his flaying knife at',
+    xp: 95,
+    packs: true,
+    outlaw: true,
+    traits: [{ kind: 'rend', damage: 2, turns: 2 }, { kind: 'grudge' }],
+  },
+  apronknacker: {
+    name: 'Gristle',
+    maxHp: 52,
+    ac: 12,
+    toHit: 6,
+    damage: { count: 2, sides: 6, bonus: 3 },
+    quickness: 1,
+    verb: "swings his knacker's maul at",
+    xp: 100,
+    packs: true,
+    outlaw: true,
+    stubborn: true,
+    traits: [{ kind: 'smash', cooldown: 3, dc: 12 }],
+  },
 } satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean; goblin?: boolean }>;
 
 /**

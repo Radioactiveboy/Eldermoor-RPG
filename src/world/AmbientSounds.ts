@@ -88,6 +88,12 @@ const PLACES: Record<AreaId, Place> = {
   'blackrose-back': { tavern: 0.25, cave: 0.15, echo: 0.3 },
   'blackrose-upstairs': { tavern: 0.3, echo: 0.25 },
   'blackrose-room': { tavern: 0.15, echo: 0.1 },
+  // The Shambles: the slaughterhouse's fire under the scalding vat and the stone throwing the noise back; the tannery's copper; the loft open to the wind; the barn's talk.
+  slaughterhouse: { fire: 0.45, clatter: 0.3, echo: 0.45 },
+  tannery: { fire: 0.4, echo: 0.25 },
+  'tannery-loft': { echo: 0.1 },
+  ratden: { fire: 0.4, echo: 0.1 },
+  dogpit: { tavern: 0.35, echo: 0.35 },
   smithy: { fire: 0.85, echo: 0.3 },
   bakery: { fire: 0.55, echo: 0.15 },
   garrison: { fire: 0.6, echo: 0.35 },

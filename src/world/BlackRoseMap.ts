@@ -1,3 +1,4 @@
+import { QuestLog } from '../systems/Quests';
 import { box, circle } from './Collision';
 import { MapData, MapObject, placeObject, Prop, Seat, Terrain } from './MapData';
 
@@ -90,6 +91,8 @@ export function buildBlackRoseMap(): MapData {
       { id: 'silas', gx: 7.5, gy: 8.5, looking: { x: 1, y: 0 }, hours: [17, 29] },
       { id: 'ferret', gx: 2.5, gy: 7.5, looking: { x: 1, y: 0 }, hours: [18, 28] },
       { id: 'dunn', gx: 5.5, gy: 7.5, looking: { x: -1, y: 0 }, hours: [18, 28] },
+      // Tam Rudd, working off his slate behind the bar, once he's come in from the Shambles (see dialogue/shambles.ts).
+      ...(QuestLog.hasFlag('tam-potboy') ? [{ id: 'tam', gx: 10.6, gy: 1.5, looking: { x: 0, y: 1 }, hours: [7, 25] as [number, number] }] : []),
     ],
     seats: [],
     sights: [],

@@ -52,7 +52,8 @@ export type SpeakerId =
   | 'corwin' | 'garth' | 'teg' | 'linnet'
   | 'thorne' | 'grubb' | 'midge' | 'silas' | 'hollis' | 'sedge' | 'dunn' | 'ferret' | 'vane'
   | 'vosk' | 'brakk' | 'fitch' | 'crabbe' | 'ossery' | 'tallow' | 'lusk' | 'gutter' | 'wisp' | 'cray'
-  | 'cooper';
+  | 'cooper'
+  | 'rendle' | 'vetch' | 'scritch' | 'tam' | 'flay' | 'lugs' | 'gristle';
 
 export interface Speaker {
   name: string;
@@ -145,4 +146,12 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   dunn: { name: 'Dunn', portrait: 'portrait-dunn', voice: { pitch: 88, spread: 0.04, wave: 'sawtooth' } },
   ferret: { name: 'Ferret', portrait: 'portrait-ferret', voice: { pitch: 265, spread: 0.3, wave: 'square' } },
   vane: { name: 'Vane', portrait: 'portrait-vane', voice: { pitch: 120, spread: 0.02, wave: 'sine' } },
+  // The Shambles, Gloomhaven's east quarter (see dialogue/shambles.ts): the Red Aprons, the tanner, the rat-catcher, and Tam Rudd.
+  rendle: { name: 'Saul Rendle', portrait: 'portrait-rendle', voice: { pitch: 96, spread: 0.02, wave: 'sine' } },
+  vetch: { name: 'Morrow Vetch', portrait: 'portrait-vetch', voice: { pitch: 128, spread: 0.1, wave: 'triangle' } },
+  scritch: { name: 'Old Scritch', portrait: 'portrait-scritch', voice: { pitch: 205, spread: 0.3, wave: 'square' } },
+  tam: { name: 'Tam Rudd', portrait: 'portrait-tam', voice: { pitch: 190, spread: 0.26, wave: 'triangle' } },
+  flay: { name: 'Ned Flay', portrait: 'portrait-flay', voice: { pitch: 150, spread: 0.18, wave: 'sawtooth' } },
+  lugs: { name: 'Lugs', portrait: 'portrait-lugs', voice: { pitch: 175, spread: 0.22, wave: 'triangle' } },
+  gristle: { name: 'Gristle', portrait: 'portrait-gristle', voice: { pitch: 74, spread: 0.04, wave: 'sawtooth' } },
 };

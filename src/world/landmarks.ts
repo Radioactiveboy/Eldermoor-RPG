@@ -154,3 +154,18 @@ export const GLOOM_PIER = { x0: 29, x1: 30, fromY: 45, headY: 53, headX0: 26, he
  * about its middle (art/jetty.ts, HERON_PIVOT), so that middle, at (tx + 1, ty + 3.5), is (30, 56.5).
  */
 export const GLOOM_HERON = { tx: 29, ty: 53, w: 2, h: 7 };
+
+/**
+ * The Shambles, Gloomhaven's east quarter (world/ShamblesYard.ts): Saul Rendle's slaughterhouse on the north
+ * side of the lane, facing it; behind the lane, Morrow Vetch's tannery with its yard of pits on its far (south)
+ * side, the barn where the Red Aprons keep their dog pit beside it against the east wall, and Old Scritch the
+ * rat-catcher's den on the corner by the road down to the Staithe. Each is a back corner, a footprint, and the
+ * tile in front of its door. Inside are the 'slaughterhouse', 'tannery', 'ratden' and 'dogpit' areas.
+ */
+export const SHAMBLES = {
+  slaughterhouse: { tx: 44, ty: 23, w: 5, h: 4, door: { tx: 46, ty: 27 } },
+  tannery: { tx: 48, ty: 31, w: 5, h: 4, door: { tx: 49, ty: 35 } },
+  pitbarn: { tx: 53, ty: 31, w: 3, h: 3, door: { tx: 54, ty: 34 } },
+  // Turned to face the road (+x), so its door is in its east wall.
+  ratden: { tx: 42, ty: 31, w: 3, h: 3, door: { tx: 45, ty: 32 } },
+} as const;

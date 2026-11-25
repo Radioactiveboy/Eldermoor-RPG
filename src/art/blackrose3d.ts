@@ -64,7 +64,9 @@ export interface RoseLook {
   /** A ring of keys at the belt. */
   keys?: boolean;
   /** What the right hand (screen-left) holds, and what the left does. */
-  right?: 'tankard' | 'cudgel' | 'pipe' | 'rag' | 'knife' | 'dice' | 'none';
+  right?: 'tankard' | 'cudgel' | 'pipe' | 'rag' | 'knife' | 'dice' | 'cleaver' | 'hammer' | 'ratpole' | 'none';
+  /** Old blood (or tan liquor) soaked into the apron in blotches, in this colour (the Shambles' people). */
+  stain?: number;
   left?: 'hip' | 'swing' | 'folded';
   /** Ragged and patched (Hollis's habit, Midge's dress). */
   ragged?: boolean;
@@ -144,6 +146,7 @@ export function roseModel(pose: Pose3D, look: RoseLook): Model {
   }
 
   // --- The skirt: a dress or habit to the floor, a coat's skirts to the knee, a smock to mid-thigh.
+  const stained = (h: Hit, t: Tones): Tones => (C.stain !== undefined && speck(h, 0.9) < 0.3 ? [C.stain, darker(C.stain), C.stain] : t);
   const apronFront = (h: Hit, y: number) => C.apron && h.nz > 0.4 && Math.abs(h.x) < 3.4 * w + (15 - y) * 0.06 && y > (C.garment === 'dress' ? 4 : 8);
   if (!sit) {
     const from = long ? 1.6 : C.garment === 'coat' ? 6.6 : 9.6;
@@ -153,7 +156,7 @@ export function roseModel(pose: Pose3D, look: RoseLook): Model {
       solids.push({
         cx: 0, cy: y + up - b * 0.5, cz: s * 0.28 * t * 3 + belly * 0.5, rx: (4.6 + flare) * w, ry: 0.8, rz: (3.6 + flare * 0.8 + belly * 0.6) * w,
         material: (h) => {
-          if (apronFront(h, y)) return y < from + 1 ? shade(C.apron!) : speck(h, 1.4) < 0.12 ? shade(C.apron!) : C.apron!;
+          if (apronFront(h, y)) return y < from + 1 ? shade(C.apron!) : speck(h, 1.4) < 0.12 ? shade(C.apron!) : stained(h, C.apron!);
           // A coat open down the front, the shirt-tails and breeches showing between.
           if (C.garment === 'coat' && h.nz > 0.7 && Math.abs(h.x) < 0.9 + t * 1.8) return C.trouser;
           if (y < from + 0.6) return shade(C.outer);
@@ -179,7 +182,7 @@ export function roseModel(pose: Pose3D, look: RoseLook): Model {
       if (h.nz > 0.85 && Math.abs(h.x) < 0.8) return Math.abs(h.x) < 0.35 && Math.abs(dy) < 0.3 ? C.belt : PEWTER;
       return Math.abs(dy) > 0.4 ? shade(C.belt) : C.belt;
     }
-    if (C.apron && h.nz > 0.5 && Math.abs(h.x) < 3 * w && h.y < Y(22) && h.y > waist) return C.apron;
+    if (C.apron && h.nz > 0.5 && Math.abs(h.x) < 3 * w && h.y < Y(22) && h.y > waist) return stained(h, C.apron);
     const open = 0.7 + Math.max(0, h.y - waist) * 0.12;
     switch (C.garment) {
       case 'coat':
@@ -282,7 +285,7 @@ export function roseModel(pose: Pose3D, look: RoseLook): Model {
       // Raised a little in front: about to drink, to puff, to throw.
       elbow = [side * 6 * w, Y(19.8), 1.2 + lean(20)];
       hand = holds === 'pipe' ? [side * 3.4 * w, Y(24.6), 4.4 + lean(24)] : [side * 4.6 * w, Y(19.6), 4.8 + lean(20)];
-    } else if (right && (holds === 'cudgel' || holds === 'knife')) {
+    } else if (right && (holds === 'cudgel' || holds === 'knife' || holds === 'cleaver' || holds === 'hammer' || holds === 'ratpole')) {
       elbow = [side * 6.4 * w, Y(20.2), 0.8];
       hand = [side * 6.6 * w, Y(17.2), 2.6];
     } else if (right && holds === 'rag') {
@@ -331,6 +334,35 @@ export function roseModel(pose: Pose3D, look: RoseLook): Model {
       const d = norm([-0.05, 0.9, 0.4]);
       solids.push(...limb(rightHand, along(rightHand, d, 1.6), 0.5, 0.5, [0x4a2c1b, 0x2e1a10, 0x6e4228], 0.3));
       solids.push(...limb(along(rightHand, d, 1.8), along(rightHand, d, 5.4), 0.55, 0.15, [0xc8ccd4, 0x8a8e98, 0xf0f4fc], 0.3));
+      break;
+    }
+    case 'cleaver': {
+      // A butcher's cleaver: a short oak haft and a broad square blade, its edge bright.
+      const d = norm([-0.05, -0.9, 0.42]);
+      solids.push(...limb(along(rightHand, d, -1.2), along(rightHand, d, 2.4), 0.5, 0.55, OAK, 0.3));
+      const c = along(rightHand, d, 4.4);
+      solids.push({ cx: c[0], cy: c[1], cz: c[2] + 0.9, rx: 0.3, ry: 2.2, rz: 1.9, material: (h) => (h.z > c[2] + 2.4 ? [0xe0e4ec, 0xa0a4ac, 0xffffff] : IRON) });
+      mark([c[0] - 0.3, c[1] - 1.2, c[2] + 1.8], 0x6a1a16);
+      break;
+    }
+    case 'hammer': {
+      // A knacker's poll-hammer: a long ash handle and an iron head.
+      const d = norm([-0.1, -0.9, 0.42]);
+      solids.push(...limb(along(rightHand, d, -1.4), along(rightHand, d, 6.4), 0.5, 0.55, OAK, 0.3));
+      const c = along(rightHand, d, 6.8);
+      solids.push({ cx: c[0], cy: c[1], cz: c[2], rx: 0.9, ry: 0.9, rz: 2.2, material: IRON });
+      break;
+    }
+    case 'ratpole': {
+      // The rat-catcher's pole, held upright, a string of dead rats hung off its crook.
+      const top: V3 = [px - 0.4, py + 12, pz + 0.6];
+      solids.push(...limb([px, py - 6, pz], top, 0.4, 0.4, OAK, 0.3));
+      solids.push(...limb(top, [px - 2.2, py + 11, pz + 0.6], 0.35, 0.35, OAK, 0.3));
+      const FUR: Tones = [0x5a4c44, 0x3a302a, 0x7a6a60];
+      for (const [dx, dy] of [[-1.8, 8.4], [-2.6, 7.6], [-1.2, 7.2]]) {
+        solids.push({ cx: px + dx, cy: py + dy, cz: pz + 0.8, rx: 0.7, ry: 1.6, rz: 0.7, material: FUR });
+        solids.push(...limb([px + dx, py + dy - 1.4, pz + 0.8], [px + dx + 0.2, py + dy - 3.4, pz + 0.9], 0.15, 0.1, [0xb89080, 0x8a6a5e, 0xd0a898], 0.2));
+      }
       break;
     }
     case 'pipe':
