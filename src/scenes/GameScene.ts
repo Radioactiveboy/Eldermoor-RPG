@@ -65,6 +65,7 @@ import { leftHome } from './game/medicine';
 import { standUp, updateSitting } from './game/sitting';
 import { loadSave, wakingThought } from './game/sleep';
 import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
+import { updatePawnshop } from './game/pawnshop';
 import { updateBlackRose } from './game/blackrose';
 import { checkMusings, checkRoadExits } from './game/travel';
 import { checkGateAttack, gateTestStart, wokeAfterGate } from './game/gate';
@@ -210,6 +211,8 @@ export class GameScene extends Phaser.Scene {
   raidFight = false;
   /** The night the goblins come for Adowvale, while it's on (see game/gate.ts). */
   gateAttack?: GateAttack;
+  /** The Hooks at Lusk's, once their scene has begun: collecting of an evening, or come for the stash (see game/pawnshop.ts). */
+  pawnScene?: 'collecting' | 'stash';
   /** Waiting for the area's map to download (see waitForArea): nothing else is set up yet. */
   waiting = false;
 
@@ -473,6 +476,7 @@ export class GameScene extends Phaser.Scene {
     updateFocus(this);
     updateSitting(this, dt);
     updateTavern(this, dt);
+    updatePawnshop(this, dt);
     updateBlackRose(this, dt);
 
     this.cropTimer -= dt;

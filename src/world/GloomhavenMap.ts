@@ -386,6 +386,9 @@ function addShops(data: MapData, set: Setter, slim: Slim): void {
   data.chimneys!.push({ gx: 42.6, gy: 15.5, z: 178 });
   data.lights!.push({ gx: 44, gy: 18.1, z: 40, radius: 100, flicker: 0.4 });
   data.landmarks!.push({ gx: 44, gy: 18.5, name: "Lusk's", range: 2.6 });
+  // The way in, under the brass balls (world/PawnshopMap.ts): Lusk is inside now, behind his counter.
+  data.doors!.push({ tx: 43, ty: 18, to: 'pawnshop', entry: 'door', label: "Go into Lusk's", facing: 'back' });
+  data.entries!.pawnshop = { x: 43.5, y: 18.7 };
   slim('gh-pawnjunk', 46, 17, [circle(0.4, 0.5, 0.3)]);
   data.sights!.push({
     id: 'gh-pawnjunk', gx: 46.5, gy: 18, label: 'Look at the junk', z: 20,
@@ -671,7 +674,6 @@ function addFolk(data: MapData): void {
     // The keepers at their counters (Ossery and Tallow face the square across theirs).
     { id: 'ossery', gx: 19.65, gy: 22.4, looking: { x: 1, y: 0 }, hours: [7, 22] },
     { id: 'tallow', gx: 19.65, gy: 26.8, looking: { x: 1, y: 0.2 }, hours: [6, 21] },
-    { id: 'lusk', gx: 44.2, gy: 18.65, looking: { x: 0, y: 1 }, hours: [9, 26] },
     // About the square.
     { id: 'gutter', gx: 27.5, gy: 25.62, looking: { x: 0, y: 1 }, seated: true },
     { id: 'wisp', gx: 32.5, gy: 27.5 },

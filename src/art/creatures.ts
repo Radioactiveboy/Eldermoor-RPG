@@ -19,7 +19,7 @@ import {
 } from './beasts3d';
 import { BRUTE_SIZE, GOBLIN_COLS, GOBLIN_RES, goblinShownSpec } from './goblins3d';
 import { footpadSpec } from './wayfarers3d';
-import { BRIGAND_COLS, BRIGAND_RES, brigandShownSpec } from './brigands3d';
+import { BRIGAND_COLS, BRIGAND_RES, brigandShownSpec, shownSpec } from './brigands3d';
 
 /**
  * The wild animals, each modelled in 3D and drawn as pixel art (see
@@ -38,7 +38,7 @@ const WOLF_MOTHER_SIZE = 1.45;
  * systems/Combat.ts FOES).
  */
 export const CREATURE_ART: Record<
-  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'wildcat' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute' | 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher',
+  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'wildcat' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute' | 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher' | 'hookgaff' | 'hookbrute',
   {
     w: number;
     h: number;
@@ -78,6 +78,9 @@ export const CREATURE_ART: Record<
   brigandbrute: { ...brigandShownSpec('brigandbrute'), eight: true, tall: 48, res: BRIGAND_RES, cols: BRIGAND_COLS },
   brigandcutter: { ...brigandShownSpec('brigandcutter'), eight: true, tall: 42, res: BRIGAND_RES, cols: BRIGAND_COLS },
   brigandarcher: { ...brigandShownSpec('brigandarcher'), eight: true, tall: 40, res: BRIGAND_RES, cols: BRIGAND_COLS },
+  // Two of Gloomhaven's Hooks, on the brigands' frame (their sheets are drawn in pawnfolk3d.ts).
+  hookgaff: { ...shownSpec(false), eight: true, tall: 42, res: BRIGAND_RES, cols: BRIGAND_COLS },
+  hookbrute: { ...shownSpec(true), eight: true, tall: 48, res: BRIGAND_RES, cols: BRIGAND_COLS },
 };
 
 export function generateCreatures(scene: Phaser.Scene): void {

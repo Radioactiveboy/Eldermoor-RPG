@@ -1,7 +1,7 @@
 /**
  * Story effects triggered by lines of dialogue (the `action` on a line or reply,
  * see dialogue/Dialogue.ts). The named ones live with their part of the story
- * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts, fishing.ts, beacon.ts, gloomhaven.ts, jetty.ts, voyages.ts); add new ones there.
+ * (medicine.ts, hollow.ts, monastery.ts, tavern.ts, raid.ts, fishing.ts, beacon.ts, gloomhaven.ts, pawnshop.ts, jetty.ts, voyages.ts); add new ones there.
  */
 import { ItemId } from '../../systems/Inventory';
 import { ShopId, SHOPS } from '../../systems/Shops';
@@ -23,6 +23,7 @@ import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 import { roseAction } from './blackrose';
+import { PAWN_ACTIONS } from './pawnshop';
 
 /** A named story effect: what happens when a line with this action is said. */
 export type DialogueAction = (g: GameScene) => void;
@@ -44,6 +45,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...JETTY_ACTIONS,
   ...VOYAGE_ACTIONS,
   ...HOMESTEAD_ACTIONS,
+  ...PAWN_ACTIONS,
 };
 
 /** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `beacon-pay:<coins>`, `voyage:<area>` (see voyages.ts), or a named one. */

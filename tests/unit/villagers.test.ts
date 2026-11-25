@@ -9,6 +9,7 @@ import { WAYFARER_MODELS } from '../../src/art/wayfarers3d';
 import { CROWD_MODELS } from '../../src/art/townsfolk3d';
 import { ROSE_FOLK } from '../../src/art/blackrose3d';
 import { GLOOM_FOLK } from '../../src/art/gloomfolk3d';
+import { PAWN_FOLK } from '../../src/art/pawnfolk3d';
 import type { PixelCanvas } from '../../src/art/PixelCanvas';
 import npcSource from '../../src/entities/Npc.ts?raw';
 
@@ -17,7 +18,7 @@ vi.mock('phaser', () => ({ default: {} }));
 
 /** Every 3D person, by the 'folk-<id>' texture they're registered as. */
 const MODELS: Record<string, (pose: Pose3D) => Model> = {
-  ...MODELS_3D, ...FINE_FOLK, ...WAYFARER_MODELS, ...ROSE_FOLK, ...GLOOM_FOLK, mother: motherModel,
+  ...MODELS_3D, ...FINE_FOLK, ...WAYFARER_MODELS, ...ROSE_FOLK, ...GLOOM_FOLK, ...PAWN_FOLK, mother: motherModel,
   ...Object.fromEntries(Object.entries(BRIGAND_FOLK).map(([id, look]) => [id, brigandFolkModel(look)])),
   ...Object.fromEntries(Object.entries(CROWD_MODELS).map(([id, m]) => [`crowd-${id}`, m])),
 };

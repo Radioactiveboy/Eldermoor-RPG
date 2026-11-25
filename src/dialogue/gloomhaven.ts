@@ -6,7 +6,7 @@ import type { DialogueChoice, DialogueScript } from './Dialogue';
  * are in their own file. At the Fen Gate, Captain Vosk and his gate men: Brakk,
  * Fitch and Old Crabbe, a rag-tag of heavies paid out of the tolls, who keep the
  * gate shut and the fen out. Round the square: Mother Ossery the apothecary,
- * Hobb Tallow the chandler, and Abel Lusk, who buys anything and asks nothing.
+ * Hobb Tallow the chandler, and Abel Lusk, who buys anything and asks nothing (he's in his shop now: dialogue/pawnshop.ts).
  * By the well, Gutter Jack; about the square, Wisp, whose fingers are quicker
  * than her grin; and at the end of the pier, Cray, who rows folk about the
  * river for a price, and back up it to Adowvale.
@@ -373,58 +373,6 @@ export function tallowScript(first: boolean): DialogueScript {
       bye: {
         speaker: 'tallow',
         lines: ['Light your way, friend. Buy a candle next time!'],
-      },
-    },
-  };
-}
-
-/** Abel Lusk, in his doorway: buys anything, asks nothing, and remembers everything. */
-export function luskScript(first: boolean): DialogueScript {
-  return {
-    start: first ? 'greet' : 'again',
-    nodes: {
-      greet: {
-        speaker: 'lusk',
-        lines: [
-          "Ah. Do come in. I don't believe we've done business. We will. Everyone does, sooner or later. Abel Lusk, buyer and seller of the unwanted.",
-          "Whatever you have, I'll take it off your hands. Whatever you need, I may have it. And whatever passes between us stays between us. That's the whole of my trade.",
-        ],
-        next: 'ask',
-      },
-      again: {
-        speaker: 'lusk',
-        lines: ["Welcome back. I knew you'd return. They always do."],
-        next: 'ask',
-      },
-      ask: {
-        speaker: 'lusk',
-        lines: ['Buying, or selling?'],
-        choices: [
-          { text: 'Show me what you have.', action: 'shop:pawnbroker' },
-          { text: 'Where does all this come from?', next: 'where' },
-          { text: 'Why the bars on the windows?', next: 'bars' },
-          { text: 'Neither. Goodbye.', next: 'bye' },
-        ],
-      },
-      where: {
-        speaker: 'lusk',
-        lines: [
-          "From people who no longer need it. A ring from a widow. A sword from a man who decided he wasn't a soldier after all. A pair of boots from a gentleman the river took, that the river gave back.",
-          "I don't ask. That is what I'm for. If I asked, they would go to the Rose, and the Rose pays half what I do and remembers twice as much.",
-        ],
-        next: 'ask',
-      },
-      bars: {
-        speaker: 'lusk',
-        lines: [
-          "To keep what's inside in, and what's outside out. Half this town has sold me something it would now like back, at no cost to itself.",
-          "The bars are iron, the door's oak, and I sleep on the counter with a cudgel. Nobody's tried in four years. Well. Nobody's tried twice.",
-        ],
-        next: 'ask',
-      },
-      bye: {
-        speaker: 'lusk',
-        lines: ["Until next time. There is always a next time."],
       },
     },
   };

@@ -76,6 +76,10 @@ export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   ossery: GLOOMFOLK,
   tallow: GLOOMFOLK,
   lusk: GLOOMFOLK,
+  nettle: GLOOMFOLK,
+  // The Hooks' rust-red rag at the throat says it.
+  dace: { label: 'The Hooks', known: 'sight' },
+  orm: { label: 'The Hooks', known: 'sight' },
   gutter: GLOOMFOLK,
   wisp: GLOOMFOLK,
   cray: { label: 'Boatfolk of the Wend', known: 'met' },

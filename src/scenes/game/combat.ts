@@ -29,6 +29,7 @@ import { standUp } from './sitting';
 import { checkCellarClear } from './tavern';
 import { beatenUnderground, checkBroodHall } from './broodhall';
 import { checkBeaconFight } from './beacon';
+import { checkPawnFight } from './pawnshop';
 
 /** The wolves of the den at home: once they're all gone, Brother Wystan hears of it. */
 export const CAVE_WOLVES = ['cave-wolf-1', 'cave-wolf-2', 'cave-wolf-3'];
@@ -61,6 +62,9 @@ export const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   brigandbrute: [['ale', 2]],
   brigandcutter: [['hatchet', 1]],
   brigandarcher: [['hunting-knife', 1]],
+  // What's on the Hooks is counted out at Lusk's (see scenes/game/pawnshop.ts).
+  hookgaff: [],
+  hookbrute: [],
 };
 
 /** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
@@ -88,6 +92,8 @@ export const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> =
   brigandbrute: { slain: 'Big Garth goes down like a felled oak, and the floor shakes.', fled: 'He lumbers off into the grass, cursing.' },
   brigandcutter: { slain: 'Teg lies still. Even now his scarf is over his face.', fled: 'Gone, quick and quiet, out of the door.' },
   brigandarcher: { slain: 'The lookout is down. Her bow lies across the stair.', fled: 'Gone up the stair and out of reach.' },
+  hookgaff: { slain: 'Nim Dace goes down among the boots, and his gaff skitters away under the counter. Even now his rag is tied in a bow.', fled: 'Out of the door and into the dark, quick as an eel.' },
+  hookbrute: { slain: 'Orm goes over like a mast coming down, and takes a shelf of clocks with him. Every one of them starts to chime.', fled: 'He walks out of the door, slowly, and does not look back.' },
 };
 
 /** Out on the plains: chance meetings on the road, with the people, beasts, talk and fights they need from the game. */
@@ -281,6 +287,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     checkCampCleared(g);
     checkBroodHall(g, result.slain);
     checkBeaconFight(g, slain);
+    checkPawnFight(g, foes);
     if (g.gateAttack?.active) {
       g.release();
       g.gateAttack.won();

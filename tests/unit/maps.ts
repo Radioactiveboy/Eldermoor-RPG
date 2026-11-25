@@ -40,6 +40,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { buildBroodHallMap } = await import('../../src/world/BroodHallMap');
   const beacon = await import('../../src/world/BeaconMap');
   const rose = await import('../../src/world/BlackRoseMap');
+  const pawn = await import('../../src/world/PawnshopMap');
   const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
@@ -77,6 +78,9 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     'blackrose-back': rose.buildBlackRoseBackMap(),
     'blackrose-upstairs': rose.buildBlackRoseUpstairsMap(),
     'blackrose-room': rose.buildBlackRoseRoomMap(),
+    pawnshop: pawn.buildPawnshopMap(),
+    'pawn-counting': pawn.buildPawnCountingMap(),
+    'pawn-attic': pawn.buildPawnAtticMap(),
     warren: buildWarrenMap({ prisoner: 'hilde' }),
     broodhall: buildBroodHallMap(),
   };

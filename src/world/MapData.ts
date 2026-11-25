@@ -58,7 +58,9 @@ export type AreaId =
   // Gloomhaven, the walled marsh town downriver (no way there in play yet: see the debug panel).
   | 'gloomhaven'
   // The Black Rose on Gloomhaven's square: the taproom, the back room behind the curtain, the passage upstairs, and the room to let.
-  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room';
+  | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
+  // Lusk's, the pawnshop on the square's north-east corner: the shop floor, the counting room upstairs, and the stash under the roof.
+  | 'pawnshop' | 'pawn-counting' | 'pawn-attic';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see

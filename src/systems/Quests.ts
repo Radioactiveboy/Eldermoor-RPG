@@ -282,6 +282,27 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 320,
   },
+  // Lusk's pawnshop on Gloomhaven's square (systems/Pawnshop.ts, scenes/game/pawnshop.ts): the Hooks, and what Lusk pays them.
+  protection: {
+    id: 'protection',
+    title: 'Protection',
+    giver: 'Abel Lusk',
+    kind: 'side',
+    summary:
+      "There is a bell in Abel Lusk's pawnshop that I last heard ringing over the gate of Saint Elda's. Lusk says it came in with the " +
+      "\"river's tithe\": the stolen cargo a gang called the Hooks make him buy off them, at their price, along with what they charge " +
+      'him to keep his windows whole. He calls it protection. He says it as if it were funny.',
+    objectives: [
+      { id: 'bell', text: "Ask Lusk where he got Saint Elda's bell", target: { area: 'pawnshop', x: 4.5, y: 1.7, npc: 'lusk' } },
+      { id: 'evening', text: "Come back to Lusk's of an evening, when the Hooks come collecting", target: { area: 'pawnshop', x: 4.5, y: 4.6 } },
+      { id: 'talk', text: 'Talk to Lusk, once the Hooks have gone', target: { area: 'pawnshop', x: 4.5, y: 1.7, npc: 'lusk' } },
+      { id: 'ledger', text: "Read the black ledger on Lusk's desk, upstairs in his counting room", target: { area: 'pawn-counting', x: 3.1, y: 2.4 } },
+      { id: 'choose', text: 'Help Lusk slip the Hooks\' leash, or squeeze him yourself', target: { area: 'pawnshop', x: 4.5, y: 1.7, npc: 'lusk' } },
+      { id: 'dace', text: "Be at Lusk's after dark, when Nim Dace comes for the stash", target: { area: 'pawnshop', x: 8.5, y: 3.6 } },
+      { id: 'done', text: 'Go back to Lusk', target: { area: 'pawnshop', x: 4.5, y: 1.7, npc: 'lusk' } },
+    ],
+    xp: 260,
+  },
   // Putting the Hollow right (systems/Homestead.ts, scenes/game/homestead.ts): the cottage first, then better than it was, and Iran's stead.
   'hearth-and-home': {
     id: 'hearth-and-home',

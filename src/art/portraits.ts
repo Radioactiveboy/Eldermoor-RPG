@@ -2456,6 +2456,134 @@ const cray = townsfolk({
   },
 });
 
+/** A rust-red rag knotted at the throat: the mark of the Hooks, the waterfront gang. */
+function hooksRag(c: PixelCanvas, y0: number, bow: boolean): void {
+  const r = ramp(0x8a3a22);
+  for (let y = y0; y < y0 + 6; y++) {
+    const half = 15 - (y - y0) * 0.6;
+    for (let x = Math.round(CX - half); x <= Math.round(CX + half); x++) c.set(x, y, tone(r, lightness((x - CX) / 16, (y - y0 - 3) / 4) + Math.sin(x * 0.9) * 0.06, x, y));
+  }
+  // The knot, and either a careful bow or two hanging ends.
+  blob(c, CX + 3, y0 + 6, 3, 2.5, r, 0.05);
+  if (bow) {
+    blob(c, CX - 3, y0 + 5, 4, 2.5, r, 0);
+    blob(c, CX + 10, y0 + 5, 4, 2.5, r, 0);
+  }
+  for (let y = y0 + 8; y < y0 + 16; y++) {
+    c.set(CX + 2 - Math.round((y - y0) * 0.2), y, r[1]);
+    c.set(CX + 5 + Math.round((y - y0) * 0.15), y, r[2]);
+  }
+}
+
+/** Nettle, Lusk's shop girl: fourteen, small and sullen, black hair hacked short, freckles, ink on her cheek, a man's waistcoat over a grey dress. */
+const nettle = townsfolk({
+  skin: 0xe8c8b0, hair: 0x1e1a1c, style: 'short', cloth: 0x5a5a5e, shirt: 0xd0c8b4,
+  iris: 0x4a5a6a, brow: 'stern', smile: 0, width: 13.5, jaw: 5, freckles: true, lashes: true, look: -1,
+  over: (c) => {
+    // Hair hacked short with a knife: ragged tufts over the brow and at the ears.
+    const hair = ramp(0x1e1a1c);
+    for (const [x, y, rx, ry] of [[CX - 9, 31, 4, 4], [CX - 2, 30, 4, 5], [CX + 6, 31, 4, 4], [CX - 15, 40, 2.5, 5], [CX + 14, 40, 2.5, 5]]) blob(c, x, y, rx, ry, hair, 0.02);
+    // The waistcoat, far too big, hanging open over the dress, its pockets stuffed with tickets.
+    const coat = ramp(0x4a3a2a);
+    for (let y = 80; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const dx = Math.abs(x + 0.5 - CX);
+        if (dx < 9 + (y - 80) * 0.15 || c.get(x, y) === null) continue;
+        c.set(x, y, tone(coat, lightness((x - CX) / 30, (y - 88) / 16), x, y));
+      }
+    }
+    for (const [x, y] of [[CX - 20, 90], [CX + 14, 91]]) {
+      for (let dy = 0; dy < 5; dy++) for (let dx = 0; dx < 4; dx++) c.set(x + dx, y + dy, dy === 0 ? 0xe8e0c8 : 0xd8d0b4);
+    }
+    // A smear of ink along one cheekbone.
+    for (let i = 0; i < 5; i++) c.set(CX + 7 + i, EYE_Y + 8 + (i >> 1), mix(c.get(CX + 7 + i, EYE_Y + 8) ?? 0xe8c8b0, 0x1a2234, 0.55));
+  },
+});
+
+/** Nim Dace of the Hooks: neat and thin and smiling, a waxed moustache, a black oilskin, a sou'wester pushed far back, the rust-red rag in a careful bow. */
+const dace = townsfolk({
+  skin: 0xd8b098, hair: 0x1a1618, style: 'short', cloth: 0x262a2a, shirt: 0x4a4a46,
+  iris: 0x6a7a5a, brow: 'arched', smile: 1, width: 14.5, jaw: 6, earring: true, look: 1,
+  behind: (c) => {
+    // The sou'wester's brim, pushed far back: it stands up behind the head like a dark halo.
+    const hat = ramp(0x2a2e2e);
+    for (let y = 6; y < 40; y++) {
+      for (let x = 0; x < S; x++) {
+        const d = Math.hypot((x + 0.5 - CX) / 24, (y + 0.5 - 21) / 13);
+        if (d > 1) continue;
+        c.set(x, y, tone(hat, lightness((x - CX) / 24, (y - 16) / 13) + (d > 0.9 ? 0.14 : d < 0.7 ? -0.12 : 0), x, y));
+      }
+    }
+  },
+  over: (c) => {
+    // The crown of the sou'wester, on the back of the head, the front of its brim just showing above the hair.
+    const hat = ramp(0x2a2e2e);
+    for (let y = 9; y < 21; y++) {
+      for (let x = 0; x < S; x++) {
+        const d = Math.hypot((x + 0.5 - CX) / 13, (y + 0.5 - 20) / 11);
+        if (d > 1) continue;
+        c.set(x, y, tone(hat, lightness((x - CX) / 16, (y - 12) / 10) + Math.sin(x * 0.7) * 0.03, x, y));
+      }
+    }
+    for (let x = CX - 14; x <= CX + 14; x++) {
+      c.set(x, 19, hat[2]);
+      c.set(x, 20, hat[0]);
+    }
+    // The moustache, waxed to two fine points that turn up at the ends.
+    const m = 0x141012;
+    for (let x = CX - 5; x <= CX + 5; x++) {
+      c.set(x, EYE_Y + 11, Math.abs(x - CX) < 4 ? 0x2a2224 : m);
+      c.set(x, EYE_Y + 12, m);
+      c.set(x, EYE_Y + 13, m);
+    }
+    for (let i = 0; i < 7; i++) {
+      const y = EYE_Y + 13 - Math.round(i * i * 0.08);
+      c.set(CX - 6 - i, y, m);
+      c.set(CX + 6 + i, y, m);
+      if (i < 3) {
+        c.set(CX - 6 - i, y - 1, m);
+        c.set(CX + 6 + i, y - 1, m);
+      }
+    }
+    hooksRag(c, 78, true);
+  },
+});
+
+/** Orm of the Hooks, who never speaks: huge and shaven, stubble, a broken nose, an old scar, hooks inked up his neck, the rag knotted any old how. */
+const orm = townsfolk({
+  skin: 0xc89a7e, hair: 0x3a2e26, style: 'bald', cloth: 0x262a2a, shirt: 0xc89a7e,
+  iris: 0x5a5a4a, brow: 'heavy', smile: 0, width: 20.5, jaw: 13, nose: 2, scar: true, look: 0,
+  over: (c) => {
+    // No fringe: he shaves it all, and the stubble shows grey on the scalp.
+    const skin = ramp(0xc89a7e);
+    for (let y = 18; y < 44; y++) {
+      for (let x = 0; x < S; x++) {
+        const nx = (x + 0.5 - CX) / 21;
+        const ny = (y + 0.5 - 42) / 24;
+        if (nx * nx + ny * ny > 1 || y > 38) continue;
+        c.set(x, y, tone(skin, lightness(nx, ny) - (hash(x, y) < 0.18 ? 0.08 : 0), x, y));
+      }
+    }
+    // A week's stubble, dark along the jaw and over the lip.
+    for (let y = EYE_Y + 9; y < EYE_Y + 27; y++) {
+      const half = 19 - Math.max(0, y - (EYE_Y + 17)) * 1.3;
+      for (let x = Math.round(CX - half); x <= Math.round(CX + half); x++) {
+        const v = c.get(x, y);
+        if (v === null || hash(x, y) > 0.42) continue;
+        if (y >= EYE_Y + 15 && y <= EYE_Y + 18 && Math.abs(x + 0.5 - CX) < 4.5) continue;
+        c.set(x, y, mix(v, 0x3a2e26, 0.42));
+      }
+    }
+    // Hooks inked up the side of his neck.
+    const ink = 0x2a3a5a;
+    for (const [hx, hy] of [[CX - 14, 76], [CX - 12, 84], [CX + 12, 80]]) {
+      for (let y = 0; y < 6; y++) c.set(hx, hy + y, mix(c.get(hx, hy + y) ?? 0xc89a7e, ink, 0.7));
+      for (let i = 0; i < 4; i++) c.set(hx + 1 + i - (i > 2 ? 1 : 0), hy + 6 - (i > 1 ? i - 1 : 0), mix(c.get(hx + 1, hy + 6) ?? 0xc89a7e, ink, 0.7));
+    }
+    hooksRag(c, 86, false);
+  },
+});
+
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
@@ -2466,6 +2594,7 @@ const PAINTERS: Record<string, Painter> = {
   corwin, garth, teg, linnet,
   thorne, grubb, midge, silas, hollis, sedge, dunn, ferret, vane,
   vosk, brakk, fitch, crabbe, ossery, tallow, lusk, gutter, wisp, cray,
+  nettle, dace, orm,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide (the orb's is its own step; see orbPortrait.ts). */

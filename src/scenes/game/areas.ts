@@ -35,6 +35,8 @@ import { enteredBeacon, enteredBeaconTop } from './beacon';
 import { enteredWorkshop } from './workshops';
 import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 import { enteredBlackRose, enteredRoseBack } from './blackrose';
+import { enteredAttic, enteredCounting, enteredPawnshop } from './pawnshop';
+import { pawnshopState } from '../../systems/Pawnshop';
 import { Homestead } from '../../systems/Homestead';
 import { gatheringWorld, homesteadWorld, northWoodsGathering, restoreStead, snapshotStead } from '../../world/Homestead';
 import { enteredHome } from './homestead';
@@ -174,6 +176,10 @@ export const AREAS: Record<AreaId, AreaDef> = {
   'blackrose-back': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseBackMap(), { test: true, enter: enteredRoseBack }),
   'blackrose-upstairs': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseUpstairsMap(), { test: true }),
   'blackrose-room': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseRoomMap()),
+  // Lusk's pawnshop on the square: the shop (with the Hooks in it, when they're due), the counting room, and the stash under the roof.
+  pawnshop: lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnshopMap(pawnshopState()), { test: true, enter: enteredPawnshop }),
+  'pawn-counting': lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnCountingMap(), { test: true, enter: enteredCounting }),
+  'pawn-attic': lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnAtticMap(), { test: true, enter: enteredAttic }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(
