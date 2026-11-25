@@ -27,7 +27,7 @@ import { corwinScript, garthScript, tegScript, linnetScript } from '../dialogue/
 import { beaconHolders, beaconOutcome, beaconStage, BEACON_QUEST } from '../systems/Beacon';
 import { courierScript, footpadScript, goatherdScript, SHAREABLE_FOOD, tinkerScript, Wayfarers } from '../dialogue/wayfarers';
 import { ROOM_COUNT, Tavern } from '../systems/Tavern';
-import { BlackRose, carriesOrb, ROSE_FLAGS } from '../systems/BlackRose';
+import { BlackRose, ROSE_FLAGS } from '../systems/BlackRose';
 import {
   dunnScript, ferretScript, grubbScript, hollisScript, midgeScript, RoseNews, sedgeScript, silasScript, vaneScript, widowScript,
 } from '../dialogue/blackrose';
@@ -265,7 +265,6 @@ function corwin(): DialogueScript {
 function roseNews(): RoseNews {
   return {
     raidOver: raidIsOver(),
-    hasOrb: carriesOrb(),
     bereaved: QuestLog.hasFlag('mother-dead') || QuestLog.hasFlag('mother-buried'),
     slewWolfMother: QuestLog.hasFlag('slew-wolf-mother'),
   };
@@ -524,7 +523,6 @@ const NPCS: Record<string, NpcDef> = {
         nightsLeft: BlackRose.nightsLeft(NpcWorld.now),
         late: hour % 24 >= 1 && hour % 24 < 6,
         backOk: QuestLog.hasFlag(ROSE_FLAGS.backOk),
-        vaneAsking: carriesOrb() && !QuestLog.hasFlag(ROSE_FLAGS.vaneTold) && !QuestLog.hasFlag(ROSE_FLAGS.vaneOffer),
         news: roseNews(),
       }),
     ),
@@ -533,13 +531,13 @@ const NPCS: Record<string, NpcDef> = {
   midge: { texture: 'folk-midge', roam: 3, bustles: true, script: rose('midge', (first) => midgeScript(first, Inventory.coins)) },
   silas: {
     texture: 'folk-silas', sits: true,
-    script: rose('silas', (first) => silasScript(first, Inventory.coins, QuestLog.hasFlag(ROSE_FLAGS.silasWon), QuestLog.hasFlag(ROSE_FLAGS.silasCaught), roseNews())),
+    script: rose('silas', (first) => silasScript(first, Inventory.coins, QuestLog.hasFlag(ROSE_FLAGS.silasWon), QuestLog.hasFlag(ROSE_FLAGS.silasCaught))),
   },
-  hollis: { texture: 'folk-hollis', sits: true, script: rose('hollis', (first) => hollisScript(first, Inventory.coins, QuestLog.hasFlag(ROSE_FLAGS.hollisGlass), roseNews())) },
-  sedge: { texture: 'folk-sedge', sits: true, script: rose('sedge', (first) => sedgeScript(first, roseNews())) },
+  hollis: { texture: 'folk-hollis', sits: true, script: rose('hollis', (first) => hollisScript(first, Inventory.coins, QuestLog.hasFlag(ROSE_FLAGS.hollisBook))) },
+  sedge: { texture: 'folk-sedge', sits: true, script: rose('sedge', (first) => sedgeScript(first)) },
   dunn: { texture: 'folk-dunn', sits: true, script: rose('dunn', (first) => dunnScript(first, Inventory.coins)) },
   ferret: { texture: 'folk-ferret', sits: true, script: rose('ferret', (first) => ferretScript(first, roseNews())) },
-  vane: { texture: 'folk-vane', sits: true, talkRange: 2.4, script: rose('vane', (first) => vaneScript(first, carriesOrb(), QuestLog.hasFlag(ROSE_FLAGS.vaneOffer))) },
+  vane: { texture: 'folk-vane', sits: true, talkRange: 2.4, script: rose('vane', (first) => vaneScript(first)) },
   // Down at Adowvale Jetty (world/JettyMap.ts): Maren on the pier by her boat, Old Ebb at his nets, and Wren about the smokehouse.
   maren: {
     texture: 'folk-maren', talkRange: 2.2,

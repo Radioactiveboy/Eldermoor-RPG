@@ -8,13 +8,14 @@ import type { DialogueChoice, DialogueScript, SpeakerId } from './Dialogue';
  * Morwen Thorne pours (`rose-drink:<item>`), lets her one room
  * (`rose-rent:<nights>`), and buys what you'd rather not be asked about
  * (`shop:blackrose`). Grubb keeps the curtain to the back room, where a
- * gentleman in grey who calls himself Vane buys curiosities, and has heard of
- * a healer's son from Adowvale. Midge carries the pots and knows everybody;
+ * gentleman in grey who calls himself Vane buys curiosities out of the mud and
+ * the water, and keeps a ledger of who sells. Midge carries the pots and knows everybody;
  * Silas Crane plays dice with loaded bones; Hollis, thrown out of Saint
  * Elda's, will tell what he read there for a drink; Old Sedge talks of the
  * lights out on the fen; and Dunn and Ferret off the wharf are spoiling for
- * trouble. Under all of it, what they say adds up: green glass going upriver
- * in crates, a drowned church out in the marsh, and someone who watches.
+ * trouble. Under all of it, what they say adds up: sealed crates coming in off
+ * the fen at night, a drowned church out in the marsh, and new silver from
+ * somewhere. (Nobody here knows of the orb, and nobody is told.)
  */
 
 const coinText = (n: number) => `${n} coin${n === 1 ? '' : 's'}`;
@@ -24,8 +25,6 @@ const pickOne = (lines: string[]) => lines[Math.floor(Math.random() * lines.leng
 export interface RoseNews {
   /** The goblins burnt the farm in the Hollow (dialogue/afterRaid.ts). */
   raidOver: boolean;
-  /** The hero carries the orb out of the brood hall. */
-  hasOrb: boolean;
   /** The hero's mother is dead and buried. */
   bereaved: boolean;
   /** The great white wolf on Adowvale Plains is dead, by the hero's hand. */
@@ -43,8 +42,6 @@ export interface WidowState {
   late: boolean;
   /** The hero may go through the curtain into the back room. */
   backOk: boolean;
-  /** The gentleman in the back has asked for the hero, and the Widow hasn't passed it on yet. */
-  vaneAsking: boolean;
   news: RoseNews;
 }
 
@@ -57,7 +54,6 @@ export function widowRumours(n: RoseNews): string[] {
     'A crate came up the river last week, nailed shut and sealed with my own rose. I did not seal it. Think on that, while you drink.',
   ];
   if (n.raidOver) lines.push("Goblins burnt a farm up Adowvale way, I hear. Goblins don't burn farms. Goblins steal hens. Somebody told them to.");
-  if (n.hasOrb) lines.push("You've a weight in that satchel you keep a hand on. Whatever it is, don't take it out in here. Some of my regulars collect.");
   if (n.slewWolfMother) lines.push('They say a lad from Adowvale killed the white wolf on the plains. Half my room wants to buy him a drink. The other half wants to know what he charges.');
   return lines;
 }
@@ -75,7 +71,7 @@ export function widowScript(s: WidowState): DialogueScript {
     });
 
   return {
-    start: s.first ? 'greet' : s.vaneAsking ? 'asked-for' : s.late ? 'late' : 'again',
+    start: s.first ? 'greet' : s.late ? 'late' : 'again',
     nodes: {
       greet: {
         speaker: 'thorne',
@@ -94,16 +90,6 @@ export function widowScript(s: WidowState): DialogueScript {
       late: {
         speaker: 'thorne',
         lines: ["(She is still behind the bar, still polishing, as if she never sleeps.) It's the dead hours. Drink quietly or go to bed."],
-        next: 'ask',
-      },
-      'asked-for': {
-        speaker: 'thorne',
-        action: 'rose-vouch',
-        lines: [
-          "(She leans across the bar and lowers her voice.) There's a gentleman in the back room. Grey coat. He's been asking after a young man from Adowvale. A healer's son.",
-          "He didn't say your name. He didn't have to. I've told Grubb to let you through, if you want to go.",
-          "My advice, for nothing, and I don't give much for nothing: don't sit with your back to the door.",
-        ],
         next: 'ask',
       },
       ask: {
@@ -334,7 +320,7 @@ export function midgeScript(first: boolean, coins: number): DialogueScript {
 
 // ---------------------------------------------------------------- Silas
 
-export function silasScript(first: boolean, coins: number, wonOff: boolean, caught: boolean, n: RoseNews): DialogueScript {
+export function silasScript(first: boolean, coins: number, wonOff: boolean, caught: boolean): DialogueScript {
   const play: DialogueChoice =
     coins >= SILAS_STAKE
       ? { text: `Play a round of dice (${coinText(SILAS_STAKE)}).`, action: 'rose-dice' }
@@ -383,9 +369,7 @@ export function silasScript(first: boolean, coins: number, wonOff: boolean, caug
         lines: [
           '(He leans in, and his breath smells of cloves.) Crates. Nailed and sealed. I take them from a boat out at the old causeway, at night, and I bring them here, and the gentleman in grey pays in silver.',
           "I don't open them. Nobody opens them. One of my lads did, at Harrow Bend, and he went quiet after. Sat in the boat staring at nothing. Walked into the river at dawn like he'd been called.",
-          n.hasOrb
-            ? "Funny thing. You've the same look he had, about the eyes. Like you've been looking at something that looked back."
-            : "Green, he said, before he went quiet. Green, and cold, and looking.",
+          'He never did say what he saw. Only that it was cold. Colder than the river.',
         ],
         next: 'ask',
       },
@@ -404,9 +388,9 @@ export function silasScript(first: boolean, coins: number, wonOff: boolean, caug
 
 // ---------------------------------------------------------------- Hollis
 
-export function hollisScript(first: boolean, coins: number, told: boolean, n: RoseNews): DialogueScript {
+export function hollisScript(first: boolean, coins: number, told: boolean): DialogueScript {
   const buy: DialogueChoice =
-    coins >= HOLLIS_DRINK ? { text: `Buy him a drink (${coinText(HOLLIS_DRINK)}).`, action: 'rose-buy-hollis', next: told ? 'thanks' : 'glass' } : { text: "I can't stand you a drink.", next: 'dry' };
+    coins >= HOLLIS_DRINK ? { text: `Buy him a drink (${coinText(HOLLIS_DRINK)}).`, action: 'rose-buy-hollis', next: told ? 'thanks' : 'book' } : { text: "I can't stand you a drink.", next: 'dry' };
   return {
     start: first ? 'greet' : 'again',
     nodes: {
@@ -425,7 +409,7 @@ export function hollisScript(first: boolean, coins: number, told: boolean, n: Ro
         choices: [
           buy,
           { text: "Why did they throw you out of Saint Elda's?", next: 'why' },
-          ...(told ? [{ text: 'Tell me again about the watching glass.', next: 'glass-again' } as DialogueChoice] : []),
+          ...(told ? [{ text: 'Tell me again about the drowned kingdom.', next: 'book-again' } as DialogueChoice] : []),
           { text: 'Goodbye, Brother.', next: 'bye' },
         ],
       },
@@ -439,25 +423,23 @@ export function hollisScript(first: boolean, coins: number, told: boolean, n: Ro
         ],
         next: 'ask',
       },
-      glass: {
+      book: {
         speaker: 'hollis',
-        action: 'rose-hollis-glass',
+        action: 'rose-hollis-book',
         lines: [
-          '(He drinks half of it at once, and wipes his mouth.) The book. Yes. "Of the Watching Glasses." Very old, older than the abbey. It came out of the fens.',
-          'It said the drowned kings, who ruled out there before the sea came in, had their sorcerers make glass that could see. Orbs, smoky, the size of a fist. Seven of them.',
-          'Each one sees what is near it, and hears, and can be spoken through. And one of the seven is the master, and whoever holds the master glass hears all the others, and speaks through all of them, and is obeyed.',
-          n.hasOrb
-            ? "(He goes still, and looks at your satchel.) ...You have one. Don't show me. I can feel it from here. Cold, like the bottom of a well. Put it somewhere far away from your bed, son, and never, ever look into it."
-            : "Fairy tales, the Prior said. Then why burn it? You don't burn a fairy tale. You burn a map.",
+          '(He drinks half of it at once, and wipes his mouth.) The book. Yes. "Of the Drowned Kingdom." Very old, older than the abbey. It came out of the fens.',
+          'Before the sea came in, there were kings out there, on the fen. Rich. Proud. They built a great church of black stone on the Long Mere, with a bell you could hear in Adowvale.',
+          'Then the sea came in, in one night, and took the lot of them. The book said the church is still down there, whole, and the bell still rings when the tide is wrong. And that the kings did not drown so much as... wait.',
+          "Fairy tales, the Prior said. Then why burn it? You don't burn a fairy tale. You burn a map.",
         ],
         next: 'ask',
       },
-      'glass-again': {
+      'book-again': {
         speaker: 'hollis',
         lines: [
-          'Seven glasses, made by the drowned kings. One master. Who holds the master hears and speaks through all the others.',
-          "The book said the master was kept in the kings' great church, out on the fen, and when the sea came in the church went under with it. Drowned. Lost.",
-          "...I used to find that comforting.",
+          'Kings on the fen, a church of black stone, and the sea in one night. The church is still down there. Whole.',
+          "There were drawings in the margins, of men in boats, rowing out to it at low water, with lanterns. Recent ink. That's what frightened me, at the time.",
+          "...It still does, rather.",
         ],
         next: 'ask',
       },
@@ -468,7 +450,7 @@ export function hollisScript(first: boolean, coins: number, told: boolean, n: Ro
 
 // ---------------------------------------------------------------- Old Sedge
 
-export function sedgeScript(first: boolean, n: RoseNews): DialogueScript {
+export function sedgeScript(first: boolean): DialogueScript {
   return {
     start: first ? 'greet' : 'again',
     nodes: {
@@ -514,9 +496,7 @@ export function sedgeScript(first: boolean, n: RoseNews): DialogueScript {
         lines: [
           "Hah. Who told you that? The monk? (She spits into the fire.) There's a bell-tower sticks out of the water at the far end of the Long Mere. Black stone. No church under it you can see.",
           'At low water you can row right up to it and look down, and there\'s windows, under the water. Big ones. And there\'s light in them, some nights. Green.',
-          n.hasOrb
-            ? "(She looks at you sideways.) You've been somewhere dark, hay-boy. You've brought a bit of it back. Don't you go out to that tower. It'll know you're coming."
-            : "Nobody goes there. Some people go there. Them with crates.",
+          "Nobody goes there. Some people go there. Them with crates.",
         ],
         next: 'ask',
       },
@@ -594,10 +574,8 @@ export function ferretScript(first: boolean, n: RoseNews): DialogueScript {
       asking: {
         speaker: 'ferret',
         lines: [
-          '(He glances at the curtain, and lowers his voice.) The grey one. Asks everyone off the river: anyone come down from Adowvale? A young one, a healer\'s brat? Good money in it, he says, for word.',
-          n.hasOrb
-            ? "(He looks you up and down, slowly.) ...Oh, lamb. It's you, isn't it. Well. I've not said nothing. Yet. Silence costs, mind."
-            : "Didn't say what he wanted him for. Didn't need to. Man like that, you don't want him wanting you.",
+          '(He glances at the curtain, and lowers his voice.) The grey one. Asks everyone off the river what they\'ve pulled up out of the mud. Old things. Pays in new silver, and writes your name down when he does.',
+          "Don't know who he buys for. Don't want to. Man like that, you don't want him wanting you.",
         ],
         next: 'ask',
       },
@@ -634,9 +612,9 @@ export function dunnScript(first: boolean, coins: number): DialogueScript {
 
 // ---------------------------------------------------------------- Vane
 
-export function vaneScript(first: boolean, hasOrb: boolean, offered: boolean): DialogueScript {
+export function vaneScript(first: boolean): DialogueScript {
   return {
-    start: hasOrb ? (offered ? 'again-orb' : 'orb') : first ? 'greet' : 'again',
+    start: first ? 'greet' : 'again',
     nodes: {
       greet: {
         speaker: 'vane',
@@ -659,7 +637,7 @@ export function vaneScript(first: boolean, hasOrb: boolean, offered: boolean): D
       },
       who: {
         speaker: 'vane',
-        lines: ['For a collector. Someone who has been waiting a very long time to complete a set.', '(He smiles without showing his teeth.) Patience is the only virtue that pays.'],
+        lines: ['For a collector, a long way from here, with a long memory and a great deal of new silver.', '(He smiles without showing his teeth.) He does not care to be named. Patience is the only virtue that pays.'],
         next: 'ask',
       },
       crate: {
@@ -672,56 +650,6 @@ export function vaneScript(first: boolean, hasOrb: boolean, offered: boolean): D
         lines: ["No. Not yet. But you've a look about you of someone who goes down into places. If you ever bring anything up, I pay better than anyone on this river."],
         next: 'ask',
       },
-      orb: {
-        speaker: 'vane',
-        action: 'rose-vane-offer',
-        lines: [
-          `(He closes the ledger, and for the first time he looks at you, and his eyes are very pale.) There you are. ${HERO_NAME} of the Hollow. The healer's son. Sit down.`,
-          'You took something from under the Greyfells that does not belong to you. It does not belong to the goblins either. It was lent to them.',
-          'My employer would like it back. He is prepared to be generous: five hundred crowns, in new silver, tonight, and no one in Gloomhaven will ever have heard your name.',
-        ],
-        choices: [
-          { text: "It's not for sale.", next: 'refuse' },
-          { text: 'Who is your employer?', next: 'employer' },
-          { text: 'Your employer set the goblins on my village. On my mother.', next: 'mother' },
-        ],
-      },
-      employer: {
-        speaker: 'vane',
-        lines: [
-          'Someone who sees a great deal, and forgets nothing. You have heard his voice already, I think. Through the glass.',
-          'Five hundred crowns. It is a better offer than the goblins had.',
-        ],
-        choices: [
-          { text: "It's not for sale.", next: 'refuse' },
-          { text: 'Your employer set the goblins on my village. On my mother.', next: 'mother' },
-        ],
-      },
-      mother: {
-        speaker: 'vane',
-        lines: [
-          '(Nothing in his face moves.) Your mother was a healer who knew a great deal about old roots and old places, and asked one question too many. That was a pity. It need not be repeated.',
-          'Sell me the glass.',
-        ],
-        choices: [{ text: "It's not for sale. Not to you. Not ever.", next: 'refuse' }],
-      },
-      refuse: {
-        speaker: 'vane',
-        lines: [
-          "(He opens the ledger again, and dips his pen.) Then keep it close. Sleep with it under your pillow, if you dare. Look into it, if you're curious. He would like that.",
-          `Others will not ask as politely as I have. Good night, ${HERO_NAME}.`,
-        ],
-      },
-      'again-orb': {
-        speaker: 'vane',
-        lines: [pickOne(['(He doesn\'t look up.) The offer stands. It will not stand forever.', 'Have you looked into it yet? You will.', `Five hundred crowns, ${HERO_NAME}. Or something less pleasant, later. Those are the two prices.`])],
-        choices: [
-          { text: "It's still not for sale.", next: 'refuse-again' },
-          { text: 'Who is your employer?', next: 'employer-again' },
-        ],
-      },
-      'refuse-again': { speaker: 'vane', lines: ['(He writes something in the ledger. You catch your own name, before he blots it.)'] },
-      'employer-again': { speaker: 'vane', lines: ['Someone who is waiting. Under the water, the drowned say. They say a great deal, the drowned, if you know how to listen.'] },
       bye: { speaker: 'vane', lines: ['(He goes back to his ledger as if you had never been there.)'] },
     },
   };
@@ -746,7 +674,7 @@ export const ROSE_CHATTER: Array<Array<[SpeakerId, string]>> = [
 export const ROSE_MUTTERS: Partial<Record<SpeakerId, string[]>> = {
   thorne: ['(She polishes the same tankard.)', 'Feet.', "Grubb. The door."],
   midge: ['Pots, pots, pots...', "Nobody goes in the cellar. Nobody. Mrs Thorne says.", 'Mind your feet, mister!', "Who's spilt this? Again?"],
-  hollis: ['...et ne nos inducas...', 'Is this empty? This is empty.', 'Seven. There were seven.'],
+  hollis: ['...et ne nos inducas...', 'Is this empty? This is empty.', 'Can you hear a bell? No? Good.'],
   sedge: ['(Puff.) Hah.', 'Tide turns at midnight.', 'Frogs, listen to the frogs...'],
   silas: ['Come on, come on...', 'Bones, bones, be kind.', 'Who wants to lose some money?'],
   ferret: ['(He flicks the knife round his fingers.)', "Pretty boots in here tonight.", "Dunn. Dunn. Look."],

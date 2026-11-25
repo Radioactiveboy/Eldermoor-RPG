@@ -284,7 +284,7 @@ export function buildBlackRoseBackMap(): MapData {
       id: 'rose-trapdoor', gx: 5.5, gy: 3.5, label: 'Try the trapdoor', z: 4, locked: true,
       thought: 'Iron-bound, and barred from underneath. Cold air comes up through the cracks, and it smells of the river. Somewhere far below, water slaps against stone.',
     },
-    { id: 'rose-glow-crate', gx: 7.5, gy: 0.5, label: 'Look', z: 40, thought: 'A crate nailed down tight, sealed in red wax with a rose stamped in it. A cold green light leaks out between the slats, and the air round it is colder than the rest of the room. It feels like the orb did, under the hill.' },
+    { id: 'rose-glow-crate', gx: 7.5, gy: 0.5, label: 'Look', z: 40, thought: 'A crate nailed down tight, sealed in red wax with a rose stamped in it. A cold green light leaks out between the slats, and the air round it is colder than the rest of the room. I do not want to know what is in it, and I very much want to know.' },
     { id: 'rose-chart', gx: 1.5, gy: 0.1, label: 'Look', z: 56, thought: 'A chart of the river and the fens beyond Gloomhaven, the channels drawn in blue ink. Three places out in the marsh are marked in red. One of them is ringed twice, and someone has written beside it: "the old church".' },
     { id: 'rose-crates', gx: 0.5, gy: 0.5, label: 'Look', z: 30, thought: 'Crates stencilled SALT FISH. They do not smell of fish. They do not smell of anything, which is somehow worse.' },
   );
@@ -365,7 +365,7 @@ export function buildBlackRoseRoomMap(): MapData {
     beds: [{ id: 'blackrose-room', ...ROSE_BED }],
     sights: [
       { id: 'rose-room-window', gx: 1.5, gy: 0.3, label: 'Look out', z: 60, thought: 'Over the roofs the marsh runs out flat and grey to nowhere. Far out in it, a pale green light moves, stops, and goes out.' },
-      { id: 'rose-room-bedpost', gx: 3.2, gy: 0.3, label: 'Look', z: 30, thought: 'Somebody has scratched words into the bedpost with a knife, small and careful: IT SEES WHAT YOU SEE. Then, bigger: DONT LOOK IN IT.' },
+      { id: 'rose-room-bedpost', gx: 3.2, gy: 0.3, label: 'Look', z: 30, thought: 'Somebody has scratched a tally into the bedpost with a knife: forty-one marks, then, small and careful, the words NOT ONE MORE NIGHT. There are three more marks after it.' },
       { id: 'rose-room-hole', gx: 0.3, gy: 1.5, label: 'Look', z: 8, thought: 'A rat-hole in the skirting, stuffed with a rag. The rag is moving.' },
     ],
     drips: [{ gx: 1.5, gy: 2.5, z: 90 }],

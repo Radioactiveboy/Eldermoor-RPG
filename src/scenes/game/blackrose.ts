@@ -2,8 +2,8 @@
  * The Black Rose, Gloomhaven's tavern: drinks across the Widow's bar, her room
  * to let, Midge fetching from the bar, Grubb's fee for the back room, dice with
  * Silas Crane (whose bones are loaded until he's caught), arm-wrestling Dunn,
- * a drink for Hollis and what he read, the gentleman in grey's offer for the
- * orb, and the regulars' talk among themselves.
+ * a drink for Hollis and what he read, the gentleman in grey and his ledger,
+ * and the regulars' talk among themselves.
  */
 import { GameAudio } from '../../audio/Audio';
 import { SpeakerId } from '../../dialogue/Dialogue';
@@ -240,10 +240,6 @@ function armWrestle(g: GameScene): void {
 
 /** What the Rose's people need from their conversations (see dialogue/blackrose.ts). */
 const ROSE_ACTIONS: Record<string, (g: GameScene) => void> = {
-  'rose-vouch': () => {
-    QuestLog.setFlag(ROSE_FLAGS.backOk);
-    QuestLog.setFlag(ROSE_FLAGS.vaneTold);
-  },
   'rose-pay-grubb': () => {
     if (QuestLog.hasFlag(ROSE_FLAGS.backOk) || !Inventory.addCoins(-BACK_ROOM_FEE)) return;
     GameAudio.coins();
@@ -260,29 +256,20 @@ const ROSE_ACTIONS: Record<string, (g: GameScene) => void> = {
     QuestLog.writeDiary(
       "Caught Silas Crane's dice out at the Black Rose: loaded, both of them. He gave me my stake back with a grin, and then told me what " +
         'he really carries up the river. Crates, from a boat out at the old causeway, for the gentleman in grey. One of his men opened one. ' +
-        'He saw something green and cold in it that looked back, and walked into the river the next morning.',
+        'He would never say what he saw in it, and he walked into the river the next morning.',
     );
   },
   'rose-buy-hollis': () => {
     if (Inventory.addCoins(-HOLLIS_DRINK)) GameAudio.coins();
   },
-  'rose-hollis-glass': () => {
-    if (QuestLog.hasFlag(ROSE_FLAGS.hollisGlass)) return;
-    QuestLog.setFlag(ROSE_FLAGS.hollisGlass);
+  'rose-hollis-book': () => {
+    if (QuestLog.hasFlag(ROSE_FLAGS.hollisBook)) return;
+    QuestLog.setFlag(ROSE_FLAGS.hollisBook);
     QuestLog.writeDiary(
-      'Hollis, who was a monk at Saint Elda\'s until they caught him in the locked press, told me what the book said: the drowned kings ' +
-        'of the fens had seven glass orbs made that could see and speak across any distance, and one of them was the master. Whoever holds ' +
-        'the master hears all the others, and is obeyed. It was kept in their great church, which went under when the sea came in.',
+      'Hollis, who was a monk at Saint Elda\'s until they caught him in the locked press, told me what the book said: there were kings ' +
+        'out on the fen before the sea came in, and a great church of black stone on the Long Mere. The sea took it all in one night, ' +
+        'but the church is still down there, whole. Someone had drawn boats rowing out to it in the margins, in fresh ink.',
     );
   },
   'rose-armwrestle': (g) => armWrestle(g),
-  'rose-vane-offer': () => {
-    if (QuestLog.hasFlag(ROSE_FLAGS.vaneOffer)) return;
-    QuestLog.setFlag(ROSE_FLAGS.vaneOffer);
-    QuestLog.writeDiary(
-      'A man in grey called Vane was waiting for me in the back room of the Black Rose. He knew my name. He knew about the orb. ' +
-        'He offered me five hundred crowns for it, for his "employer", whose voice I have heard already, he said, through the glass. ' +
-        'He said Mother asked one question too many. I told him it was not for sale. He wrote my name in his ledger.',
-    );
-  },
 };
