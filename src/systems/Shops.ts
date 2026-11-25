@@ -111,6 +111,19 @@ export const SHOPS = {
     wants: { eel: 0.8, barbel: 0.75, grayling: 0.75, pike: 0.7 },
     keeps: { 'smoked-eel': 3 },
   },
+  // The Widow Thorne, at the Black Rose's bar in Gloomhaven (world/BlackRoseMap.ts): drink and food to take away, and, for
+  // those who know to ask, she'll take most things off your hands and not ask where they came from. Cheaply.
+  blackrose: {
+    name: 'The Black Rose',
+    keeper: 'thorne',
+    greeting: "Black ale, bog cider, eel, bread. And if you've anything to sell, put it on the bar, and I won't ask, and you won't tell.",
+    refuse: "I'm not a midden. Take that away.",
+    thanks: ["Mm.", "Don't mention where you got it. Not that you would.", 'Pleasure, I\'m sure.', 'Grubb. See them to the door.'],
+    stock: [['ale', 10], ['cider', 6], ['spiced-wine', 2], ['stew', 3], ['smoked-eel', 5], ['bread', 4], ['hunting-knife', 1], ['wool-hood', 1], ['silver-ring', 1]],
+    buys: ['Food', 'Material', 'Clothing', 'Tool', 'Weapon', 'Armour'],
+    buyRate: 0.35,
+    keeps: { ale: 3 },
+  },
   // Jory, a travelling tinker met now and then on the Lord's Road (see world/PlainsEvents.ts): odds and ends, and he'll buy most anything, cheaply.
   tinker: {
     name: "Jory's Pack",
@@ -121,6 +134,45 @@ export const SHOPS = {
     stock: [['hunting-knife', 1], ['sling', 1], ['cudgel', 1], ['buckler', 1], ['wool-hood', 1], ['walking-staff', 1], ['silver-ring', 1], ['honey-cake', 3], ['cheese', 2], ['mead', 2]],
     buys: ['Food', 'Material', 'Clothing', 'Tool', 'Weapon', 'Armour'],
     buyRate: 0.3,
+  },
+  // Gloomhaven, round the square (world/GloomhavenMap.ts, dialogue/gloomhaven.ts). Nobody's good opinion moves their prices.
+  // Mother Ossery's Remedies: draughts and tinctures, the herbs to make them, and she pays well for wolfsbane.
+  apothecary: {
+    name: "Ossery's Remedies",
+    keeper: 'ossery',
+    greeting: "Mind the jars, dear. That one bites. Everything here will cure you, if you take the right amount.",
+    refuse: "What would I do with that, dear? Bring me herbs, or something that grew.",
+    thanks: ['Two drops in water, dear, not the whole bottle.', "There. Don't come back sicker.", 'Mind it doesn\'t freeze. Or boil. Or get wet.'],
+    stock: [['healing-draught', 4], ['stamina-tonic', 3], ['fever-tincture', 5], ['wolfsbane-oil', 1], ['stout-draught', 2], ['yarrow', 3], ['comfrey', 3], ['sage', 2]],
+    buys: ['Potion', 'Material'],
+    buyRate: 0.45,
+    wants: { wolfsbane: 0.8, moonpetal: 0.75, nettle: 0.7 },
+    keeps: { 'fever-tincture': 2 },
+  },
+  // Hobb Tallow's chandlery: what a fisher, a boatman or a traveller on the fen needs, and a bite to keep them going.
+  chandler: {
+    name: "Tallow's Chandlery",
+    keeper: 'tallow',
+    greeting: "Rope, line, hooks, boots, a hood for the fog and a hatchet for the reeds. Candles I'll give you, if you buy something else.",
+    refuse: "Can't sell that on, friend. Folk here want what keeps them dry and fed.",
+    thanks: ['Hah! Done.', 'That\'ll see you through the wet. Some of it.', 'Light your way, friend.'],
+    stock: [['fishing-rod', 2], ['hatchet', 1], ['spade', 2], ['wool-hood', 2], ['boots', 2], ['walking-staff', 1], ['bread', 4], ['cheese', 3], ['ale', 6]],
+    buys: ['Tool', 'Clothing', 'Food'],
+    buyRate: 0.4,
+    keeps: { 'fishing-rod': 1 },
+  },
+  // Abel Lusk's: anything at all, bought cheap with no questions, and sold dear the same way.
+  pawnbroker: {
+    name: "Lusk's",
+    keeper: 'lusk',
+    greeting: "Have a look. Touch nothing you don't intend to buy. Everything is exactly what it appears to be. Mostly.",
+    refuse: "Even I have standards. Not many. That falls below them.",
+    thanks: ['A pleasure, as ever.', 'Our secret.', "I'll remember you. Fondly, for now."],
+    stock: [['silver-ring', 2], ['hunting-knife', 2], ['cudgel', 1], ['buckler', 1], ['iron-cap', 1], ['jerkin', 1], ['short-sword', 1], ['riding-boots', 1], ['old-boot', 3]],
+    buys: ['Food', 'Potion', 'Material', 'Clothing', 'Tool', 'Weapon', 'Armour'],
+    buyRate: 0.28,
+    // Things that are small and keep their worth, he pays a little over the odds for.
+    wants: { 'silver-ring': 0.5, 'white-hide': 0.45 },
   },
 } satisfies Record<string, ShopDef>;
 

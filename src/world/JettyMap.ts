@@ -124,7 +124,8 @@ export function buildJettyMap(): MapData {
     spawn: entry,
     music: 'world',
     decor: 0.3,
-    entries: { market: entry },
+    // Stepping ashore off a boat from downriver (Cray's, from Gloomhaven), at the end of the pier.
+    entries: { market: entry, gloomhaven: { x: PIER.x1 + 0.5, y: PIER.headY + 1.4 } },
     doors: [],
     sights: [],
     lights: [],

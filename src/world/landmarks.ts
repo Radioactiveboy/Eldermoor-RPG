@@ -127,3 +127,24 @@ export const HERON_BERTH = { tx: 24, ty: 22, w: 2, h: 7 };
  * through the gap in the palisade.
  */
 export const JETTY_LANE = { x0: 11, x1: 12 };
+
+/**
+ * Gloomhaven (GloomhavenMap), the marsh town downriver: its size, and the places other code needs to find in it.
+ * The river runs along its south side, a palisade on a stone footing closes the other three, and the gate is
+ * in the north wall.
+ */
+export const GLOOM_W = 60;
+export const GLOOM_H = 88;
+/** The wall: the rows and columns its north, west and east runs stand on (they run down to the river). */
+export const GLOOM_WALL = { north: 4, west: 3, east: 56 };
+/** The gatehouse in the north wall: its back corner and footprint, and the columns of the way through it. */
+export const GLOOM_GATE = { tx: 35, ty: 3, w: 6, h: 2, road: { x0: 37, x1: 38 } };
+/**
+ * The Black Rose, the big tavern on the north side of the square: its back corner and footprint, and its front
+ * door (in the middle of its +y face). Inside is the 'blackrose' area, once it's built.
+ */
+export const BLACK_ROSE = { tx: 24, ty: 12, w: 10, h: 7, door: { tx: 29, ty: 19 } };
+/** The well in the middle of the square, in front of the Black Rose. */
+export const GLOOM_WELL = { tx: 29, ty: 24 };
+/** The pier out into the river: its stem (two planks wide) from the bank to its head, and the head's two rows. */
+export const GLOOM_PIER = { x0: 29, x1: 30, fromY: 45, headY: 53, headX0: 26, headX1: 33 };

@@ -27,8 +27,13 @@ export interface Voyage {
   opens: string;
 }
 
-/** Every passage the Grey Heron will ever make from Adowvale Jetty. None yet: the river isn't safe (see Maren's talk). */
-export const VOYAGES: Voyage[] = [];
+/**
+ * Every passage the Grey Heron will ever make from Adowvale Jetty. Gloomhaven is the first, but nothing sets its
+ * flag yet: the river isn't safe (see Maren's talk), and the story hasn't got there.
+ */
+export const VOYAGES: Voyage[] = [
+  { to: 'gloomhaven', entry: 'heron', name: 'Gloomhaven', fare: 12, hours: 7, opens: 'passage-gloomhaven' },
+];
 
 /** The passages open now, given the story so far. */
 export function openVoyages(voyages: Voyage[] = VOYAGES, has: (flag: string) => boolean = (f) => QuestLog.hasFlag(f)): Voyage[] {

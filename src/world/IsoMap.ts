@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TILE_WIDTH } from '../config';
 import { MODEL_ART, WALL_HEIGHT } from '../art/interior';
 import { CROP_H, CROP_ORIGIN_Y, cropKey } from '../art/farm';
-import { APPLE_ART, DECOR_KEYS, ROCK_ART, TREE_ART } from '../art/props';
+import { APPLE_ART, DECOR_KEYS, FEN_ART, ROCK_ART, TREE_ART } from '../art/props';
 import { BlendLayer, blendTileKey, EDGE_VARIANTS, TILE_VARIANTS, tileKey } from '../art/tiles';
 import { depthAt, gridToScreen, screenToGrid, Vec2 } from '../iso/IsoMath';
 import { paintHills } from './HillPainter';
@@ -526,8 +526,11 @@ export class IsoMap {
         const edgeProp = props[ey][ex];
         if (t !== Terrain.Grass || (edgeProp === Prop.Blocked && !fenced.has(ey * width + ex))) continue;
         if (this.data.hills && this.data.hills.tileMax(tx, ty) > 1) continue;
-        if (tileHash(tx, ty, 8) > 0.45 + 0.4 * Math.min(1, out / 4)) continue;
-        const art = TREE_ART[Math.floor(tileHash(tx, ty, 6) * TREE_ART.length)];
+        // A fen (see MapData.wilds) runs on as reeds and drowned trees, thinner than a forest.
+        const fen = this.data.wilds === 'fen' && FEN_ART.length > 0;
+        if (tileHash(tx, ty, 8) > (fen ? 0.3 + 0.2 * Math.min(1, out / 4) : 0.45 + 0.4 * Math.min(1, out / 4))) continue;
+        const wilds = fen ? FEN_ART : TREE_ART;
+        const art = wilds[Math.floor(tileHash(tx, ty, 6) * wilds.length)];
         const tree = { tx, ty, x: center.x, y: center.y + 4, art, tint: tint(f), flip: tileHash(tx, ty, 7) < 0.5 };
         (tx >= width || ty >= height ? front : back).push(tree);
       }

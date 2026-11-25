@@ -25,6 +25,7 @@ import { Companions } from '../systems/Companions';
 import { Reputation } from '../systems/Reputation';
 import type { DialogueScript } from '../dialogue/Dialogue';
 import { Tavern } from '../systems/Tavern';
+import { BlackRose } from '../systems/BlackRose';
 import { TimeOfDay } from '../systems/TimeOfDay';
 import { Weather } from '../systems/Weather';
 import { Display } from '../ui/Display';
@@ -61,6 +62,7 @@ import { leftHome } from './game/medicine';
 import { standUp, updateSitting } from './game/sitting';
 import { loadSave, wakingThought } from './game/sleep';
 import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
+import { updateBlackRose } from './game/blackrose';
 import { checkMusings, checkRoadExits } from './game/travel';
 import { checkGateAttack, gateTestStart, wokeAfterGate } from './game/gate';
 import { warrenTestStart, wokeAfterBurial } from './game/warren';
@@ -247,6 +249,7 @@ export class GameScene extends Phaser.Scene {
       Reputation.reset();
       Bounties.reset();
       Tavern.reset();
+      BlackRose.reset();
       Crafting.reset();
       Weather.reset();
       Needs.reset();
@@ -365,7 +368,12 @@ export class GameScene extends Phaser.Scene {
     } else if (data.slept !== undefined) {
       this.time.delayedCall(1000, () => this.onHint?.(wakingThought(this.clock.hour, this.area)));
     } else if (data.load) {
-      const waking = this.area === 'tavern-room' ? 'I wake in my room above the Crooked Tankard. The day is waiting.' : 'I wake in my own bed. The day is waiting.';
+      const waking =
+        this.area === 'tavern-room'
+          ? 'I wake in my room above the Crooked Tankard. The day is waiting.'
+          : this.area === 'blackrose-room'
+            ? 'I wake in the room above the Black Rose, with the chair still under the handle. The day is waiting.'
+            : 'I wake in my own bed. The day is waiting.';
       this.time.delayedCall(1000, () => this.onHint?.(waking));
     }
     if (data.newGame) {
@@ -454,6 +462,7 @@ export class GameScene extends Phaser.Scene {
     updateFocus(this);
     updateSitting(this, dt);
     updateTavern(this, dt);
+    updateBlackRose(this, dt);
 
     this.cropTimer -= dt;
     if (this.cropTimer <= 0) {

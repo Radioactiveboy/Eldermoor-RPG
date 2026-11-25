@@ -5,8 +5,10 @@ import { marketOpen } from '../../systems/MarketHours';
 import { Seat } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import { SERVICE_FIRST } from './tavern';
+import { ROSE_SITTING_THOUGHTS } from '../../dialogue/blackrose';
 
 export const SITTING_THOUGHTS: Record<string, string[]> = {
+  ...ROSE_SITTING_THOUGHTS,
   bench: [
     'The garden could do with weeding again.',
     'Smoke curls up from the chimney and drifts over the trees.',

@@ -49,7 +49,9 @@ export type SpeakerId =
   | 'sergeant' | 'jailer' | 'prisoner' | 'headman' | 'steward' | 'housemaid' | 'housecook'
   | 'wat' | 'snikkit' | 'coombe' | 'orb'
   | 'maren' | 'ebb' | 'wren'
-  | 'corwin' | 'garth' | 'teg' | 'linnet';
+  | 'corwin' | 'garth' | 'teg' | 'linnet'
+  | 'thorne' | 'grubb' | 'midge' | 'silas' | 'hollis' | 'sedge' | 'dunn' | 'ferret' | 'vane'
+  | 'vosk' | 'brakk' | 'fitch' | 'crabbe' | 'ossery' | 'tallow' | 'lusk' | 'gutter' | 'wisp' | 'cray';
 
 export interface Speaker {
   name: string;
@@ -109,6 +111,17 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   maren: { name: 'Maren Tull', portrait: 'portrait-maren', voice: { pitch: 205, spread: 0.08, wave: 'triangle' } },
   ebb: { name: 'Old Ebb', portrait: 'portrait-ebb', voice: { pitch: 112, spread: 0.2, wave: 'triangle' } },
   wren: { name: 'Wren', portrait: 'portrait-wren', voice: { pitch: 430, spread: 0.24, wave: 'triangle' } },
+  // Gloomhaven, downriver (dialogue/gloomhaven.ts).
+  vosk: { name: 'Captain Vosk', portrait: 'portrait-vosk', voice: { pitch: 118, spread: 0.1, wave: 'sawtooth' } },
+  brakk: { name: 'Brakk', portrait: 'portrait-brakk', voice: { pitch: 82, spread: 0.08, wave: 'sawtooth' } },
+  fitch: { name: 'Fitch', portrait: 'portrait-fitch', voice: { pitch: 168, spread: 0.06, wave: 'triangle' } },
+  crabbe: { name: 'Old Crabbe', portrait: 'portrait-crabbe', voice: { pitch: 124, spread: 0.26, wave: 'triangle' } },
+  ossery: { name: 'Mother Ossery', portrait: 'portrait-ossery', voice: { pitch: 262, spread: 0.3, wave: 'triangle' } },
+  tallow: { name: 'Hobb Tallow', portrait: 'portrait-tallow', voice: { pitch: 132, spread: 0.2, wave: 'square' } },
+  lusk: { name: 'Abel Lusk', portrait: 'portrait-lusk', voice: { pitch: 140, spread: 0.05, wave: 'sine' } },
+  gutter: { name: 'Gutter Jack', portrait: 'portrait-gutter', voice: { pitch: 110, spread: 0.34, wave: 'triangle' } },
+  wisp: { name: 'Wisp', portrait: 'portrait-wisp', voice: { pitch: 470, spread: 0.26, wave: 'triangle' } },
+  cray: { name: 'Cray', portrait: 'portrait-cray', voice: { pitch: 96, spread: 0.04, wave: 'sine' } },
   headman: { name: 'Headman Osbert Hale', portrait: 'portrait-headman', voice: { pitch: 135, spread: 0.08, wave: 'sine' } },
   steward: { name: 'Aldwin the Steward', portrait: 'portrait-steward', voice: { pitch: 145, spread: 0.04, wave: 'sine' } },
   housemaid: { name: 'Elsie', portrait: 'portrait-housemaid', voice: { pitch: 380, spread: 0.2, wave: 'triangle' } },
@@ -120,4 +133,14 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   garth: { name: 'Big Garth', portrait: 'portrait-garth', voice: { pitch: 92, spread: 0.06, wave: 'sawtooth' } },
   teg: { name: 'Teg', portrait: 'portrait-teg', voice: { pitch: 215, spread: 0.2, wave: 'square' } },
   linnet: { name: 'Linnet', portrait: 'portrait-linnet', voice: { pitch: 300, spread: 0.1, wave: 'triangle' } },
+  // The Black Rose on Gloomhaven's square (see dialogue/blackrose.ts): the Widow, her doorman, her pot-girl, and the regulars.
+  thorne: { name: 'The Widow Thorne', portrait: 'portrait-thorne', voice: { pitch: 215, spread: 0.04, wave: 'sine' } },
+  grubb: { name: 'Grubb', portrait: 'portrait-grubb', voice: { pitch: 82, spread: 0.05, wave: 'sawtooth' } },
+  midge: { name: 'Midge', portrait: 'portrait-midge', voice: { pitch: 440, spread: 0.26, wave: 'triangle' } },
+  silas: { name: 'Silas Crane', portrait: 'portrait-silas', voice: { pitch: 160, spread: 0.2, wave: 'sawtooth' } },
+  hollis: { name: 'Hollis', portrait: 'portrait-hollis', voice: { pitch: 138, spread: 0.14, wave: 'sine' } },
+  sedge: { name: 'Old Sedge', portrait: 'portrait-sedge', voice: { pitch: 255, spread: 0.22, wave: 'triangle' } },
+  dunn: { name: 'Dunn', portrait: 'portrait-dunn', voice: { pitch: 88, spread: 0.04, wave: 'sawtooth' } },
+  ferret: { name: 'Ferret', portrait: 'portrait-ferret', voice: { pitch: 265, spread: 0.3, wave: 'square' } },
+  vane: { name: 'Vane', portrait: 'portrait-vane', voice: { pitch: 120, spread: 0.02, wave: 'sine' } },
 };

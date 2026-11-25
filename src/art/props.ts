@@ -18,6 +18,8 @@ export const TREE_ART: PropArt[] = [];
 export const ROCK_ART: PropArt[] = [];
 /** Apple trees, for orchards (see MapData.orchards). */
 export const APPLE_ART: PropArt[] = [];
+/** Dead trees and reed beds for the fen past the edge of a marsh map (MapData.wilds 'fen'; drawn by art/gloomhaven.ts). */
+export const FEN_ART: PropArt[] = [];
 /** Small flat details baked into the ground layer (repeated by how common each is). */
 export const DECOR_KEYS: string[] = [];
 
