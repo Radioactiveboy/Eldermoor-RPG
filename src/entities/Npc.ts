@@ -3,6 +3,7 @@ import { FEET_Y, FRAME_H, IDLE_FRAME_RATE } from '../art/character';
 import { sheetScale } from '../art/fine3d';
 import type { DialogueScript, SpeakerId } from '../dialogue/Dialogue';
 import { raidAware, raidIsOver, toldOfRaid } from '../dialogue/afterRaid';
+import { ladAtWork, osricAtWork } from '../dialogue/homestead';
 import { ashesOver, coombeAtTankardScript, hildeAtTankardScript, IRAN_AFTER_ASHES } from '../dialogue/afterAshes';
 import { goblinPrisonerScript, jailerScript, prisonerScript, sergeantScript } from '../dialogue/garrison';
 import { HOUSEMAID_CHORES, headmanScript, housecookScript, housemaidScript, stewardScript } from '../dialogue/residence';
@@ -71,6 +72,8 @@ interface NpcDef {
   leaving?: Partial<Record<Whereabouts, string[]>>;
   /** At work in their workshop (the smith at his anvil, the baker at her trough): the '-work-' frames, unless watching the hero. */
   works?: boolean;
+  /** At work wherever they stand (Osric hammering at the cottage while it's rebuilt): the '-work-' frames, unless watching the hero. */
+  builds?: boolean;
   /** Wanders up and down the road, up to this many steps either side of where it started. */
   wander?: number;
   /** Strolls about anywhere within this many tiles of where it started (the militia on their rounds). */
@@ -435,6 +438,11 @@ const NPCS: Record<string, NpcDef> = {
   'guard-3': { texture: 'folk-militia-recruit', script: guardScript, roam: 5 },
   'guard-4': { texture: 'folk-militia-sword', script: guardScript, roam: 5 },
   'guard-5': { texture: 'folk-militia-veteran', script: guardScript },
+  // Putting the Hollow right (world/Homestead.ts): Osric hammering at the cottage, and the cooper's boys sawing and carrying.
+  'hs-osric': { texture: 'folk-smith', builds: true, script: () => osricAtWork() },
+  'hs-lad-1': { texture: 'folk-crowd-labourer', script: () => ladAtWork(1) },
+  'hs-lad-2': { texture: 'folk-crowd-youth', roam: 2, script: () => ladAtWork(2) },
+  'hs-lad-3': { texture: 'folk-crowd-labourer', roam: 2, script: () => ladAtWork(3) },
   // The garrison: Sergeant Brannock at his table, Hamm on the cells below, and Dickon the poacher in one of them.
   sergeant: {
     texture: 'folk-sergeant',
@@ -893,7 +901,7 @@ export class Npc implements Body {
    * rather than watching the hero, who has come close.
    */
   private get atWork(): boolean {
-    return !!this.def.works && this.keeps === 'workshop' && !this.watching;
+    return ((!!this.def.works && this.keeps === 'workshop') || !!this.def.builds) && !this.watching;
   }
 
   /** Turned to look at the hero (standAbout), which stops work for a moment. */
@@ -1045,7 +1053,7 @@ export class Npc implements Body {
     if (this.def.anim) return;
     const before = this.facing;
     const near = this.distanceTo(player.x, player.y);
-    if (this.def.works && this.keeps === 'workshop') {
+    if ((this.def.works && this.keeps === 'workshop') || this.def.builds) {
       // At work: they look up when the hero comes close, and otherwise keep at it.
       const watching = near < NOTICE_RANGE;
       if (watching) this.face({ x: player.x - this.gx, y: player.y - this.gy });
