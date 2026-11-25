@@ -18,6 +18,8 @@ import {
   brakkScript, crayScript, fitchScript, gutterScript, luskScript, osseryScript, crabbeScript, tallowScript, voskScript, wispScript,
 } from '../dialogue/gloomhaven';
 import { CRAY_FARE, wispPinched } from '../scenes/game/gloomhaven';
+import { annisScript, nanScript, nedScript, wispHomeScript, wispSquareExtra } from '../dialogue/sump';
+import { SUMP_FLAGS, sumpNews } from '../scenes/game/sump';
 import { heronTalk, HERON_AWAY, HOME_HOURS, openVoyages } from '../systems/Voyages';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
@@ -589,9 +591,18 @@ const NPCS: Record<string, NpcDef> = {
   },
   wisp: {
     texture: 'folk-wisp', roam: 4, talkRange: 2.2,
-    script: firstTime('wisp', (first) => wispScript(first, wispPinched(), QuestLog.hasFlag('wisp-returned'))),
+    script: firstTime('wisp', (first) => wispScript(first, wispPinched(), QuestLog.hasFlag('wisp-returned'), first ? undefined : wispSquareExtra(sumpNews()))),
   },
   cray: { texture: 'folk-cray', talkRange: 2.4, script: firstTime('cray', (first) => crayScript(first, CRAY_FARE, Inventory.coins)) },
+  // Homes down Sump Lane (world/SumpMaps.ts): Annis Crowe mending of an evening, Wisp at home of a night (her own self, met again),
+  // the Widow Pruett in her chair, and Ned Wick the lamplighter, in his stilt house by day and out on the lanes after dark.
+  annis: { texture: 'folk-annis', sits: true, talkRange: 2.2, script: firstTime('annis', (first) => annisScript(first, sumpNews())) },
+  'wisp-home': { texture: 'folk-wisp', sits: true, talkRange: 2.2, script: firstTime('wisp-home', (first) => wispHomeScript(first, sumpNews())) },
+  nan: {
+    texture: 'folk-nan', sits: true, talkRange: 2.2,
+    script: firstTime('nan', (first) => nanScript(first, sumpNews(), QuestLog.hasFlag(SUMP_FLAGS.nanCoin), QuestLog.hasFlag(SUMP_FLAGS.nanTold))),
+  },
+  ned: { texture: 'folk-ned', talkRange: 2.4, script: (hour) => firstTime('ned', (first) => nedScript(first, sumpNews(), Npc.within([17, 30], hour)))() },
 };
 
 /** A conversation that opens differently the first time (and marks them met). */

@@ -15,7 +15,7 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const ALL_AREAS = [
   'home', 'world', 'market', 'cave', 'hut', 'plains', 'northwoods', 'watchtower', 'greyfells', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
   'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery', 'garrison', 'jail', 'residence', 'jetty', 'blackrose', 'blackrose-back', 'blackrose-upstairs', 'warren', 'broodhall',
-  'gloomhaven',
+  'gloomhaven', 'sump-crowe', 'sump-stilt', 'sump-pruett', 'sump-ruin',
 ];
 const AREAS = process.env.SMOKE_AREAS ? process.env.SMOKE_AREAS.split(',') : ALL_AREAS;
 /** How many areas load at once. */

@@ -88,6 +88,8 @@ export const ART_STEPS: ArtStep[] = [
   // Last: it makes burnt copies of art drawn above.
   { label: 'the river front', load: () => import('./jetty').then((m) => m.generateJetty) },
   { label: 'the Black Rose', load: () => import('./blackrose').then((m) => m.generateBlackRose) },
+  // After the Black Rose: the Sump's rooms borrow its buckets, puddles, stools and chest.
+  { label: 'the homes in the Sump', load: () => import('./sump').then((m) => m.generateSump) },
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },
   { label: 'the Hollow rebuilt', load: () => import('./homestead').then((m) => m.generateHomestead) },
 ];
