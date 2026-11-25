@@ -1,5 +1,5 @@
 import { SaveGame } from './SaveGame';
-import { Inventory, ItemId } from './Inventory';
+import type { ItemId } from './Inventory';
 
 /**
  * The Black Rose, Gloomhaven's tavern: what the Widow Thorne pours, and the
@@ -58,20 +58,14 @@ export const ROSE_MENU: Partial<Record<ItemId, { price: number; name: string; se
 export const ROSE_DRINKS: ItemId[] = ['ale', 'cider', 'spiced-wine'];
 export const ROSE_FOOD: ItemId[] = ['stew'];
 
-/** Flags: through the curtain; the Widow has passed on Vane's message; Silas has taken the hero's coin with his loaded bones, and been caught. */
+/** Flags: through the curtain; Silas has taken the hero's coin with his loaded bones, and been caught; Hollis has told what was in his book. */
 export const ROSE_FLAGS = {
   backOk: 'rose-back-friend',
-  vaneTold: 'rose-vane-told',
-  vaneOffer: 'rose-vane-offer',
   silasWon: 'rose-silas-won',
   silasCaught: 'rose-silas-caught',
-  hollisGlass: 'rose-hollis-glass',
+  hollisBook: 'rose-hollis-book',
 } as const;
 
-/** Whether the hero carries the orb from the brood hall. */
-export function carriesOrb(): boolean {
-  return Inventory.count('dark-orb') > 0;
-}
 
 class BlackRoseStore {
   /** In-game hours (see TimeOfDay.elapsedHours) when the let runs out; 0 if never let. */
