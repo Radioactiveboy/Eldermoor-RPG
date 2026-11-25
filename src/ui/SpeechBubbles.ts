@@ -13,6 +13,11 @@ export interface Speaker {
 const MAX_WIDTH = 190;
 const PAD = 6;
 const TAIL = 6;
+/**
+ * How solid the bubble's cream is: enough of the world shows through that a
+ * bubble doesn't blot out what's behind it, but the dark text stays easy to read.
+ */
+const FILL_ALPHA = 0.72;
 
 /**
  * Small speech bubbles over the heads of people in the world who are saying
@@ -57,7 +62,7 @@ export class SpeechBubbles {
     this.bubbles.clear();
   }
 
-  /** A cream bubble with a little tail pointing down at the speaker; its origin is the tail's tip. */
+  /** A see-through cream bubble with a little tail pointing down at the speaker; its origin is the tail's tip. */
   private make(text: string): Phaser.GameObjects.Container {
     const label = this.scene.add
       .text(0, 0, text, { fontFamily: UI_FONT, fontSize: '13px', color: '#2a2018', align: 'center', wordWrap: { width: MAX_WIDTH } })
@@ -66,10 +71,10 @@ export class SpeechBubbles {
     const h = label.height + PAD * 2;
     label.setPosition(0, -TAIL - PAD);
     const g = this.scene.add.graphics();
-    g.fillStyle(0x000000, 0.35);
+    g.fillStyle(0x000000, 0.18);
     g.fillRoundedRect(-w / 2 + 1, -TAIL - h + 2, w, h, 6);
-    g.fillStyle(0xf6eedb, 1);
-    g.lineStyle(1, 0x6b5a44, 1);
+    g.fillStyle(0xf6eedb, FILL_ALPHA);
+    g.lineStyle(1, 0x6b5a44, 0.8);
     g.fillRoundedRect(-w / 2, -TAIL - h, w, h, 6);
     g.strokeRoundedRect(-w / 2, -TAIL - h, w, h, 6);
     g.fillTriangle(-5, -TAIL - 1, 5, -TAIL - 1, 0, 0);
