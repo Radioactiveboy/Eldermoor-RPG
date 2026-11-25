@@ -170,7 +170,12 @@ function hired(earnest: boolean): void {
  */
 function fight(g: GameScene): void {
   g.afterTalk = () => {
-    void Promise.all([import('../../entities/Creature'), import('./combat')]).then(([{ Creature }, { startCombat }]) => {
+    const code = Promise.all([import('../../entities/Creature'), import('./combat')]);
+    // The talk's close hands control back a beat later (GameScene.release): start the fight after that, or startCombat
+    // sees the hero still busy talking and calls it off, and the band (who never pick a fight of their own) just stand there.
+    g.time.delayedCall(150, () => void code.then(([{ Creature }, { startCombat }]) => {
+      if (g.inCombat || beaconOutcome()) return;
+      g.busy = false;
       const stamp = Date.now();
       const foes: Creature[] = band(g).map((npc) => {
         const kind = BRIGAND_FOES[npc.id];
@@ -185,7 +190,7 @@ function fight(g: GameScene): void {
         return c;
       });
       if (foes.length > 0) startCombat(g, foes[0], undefined, foes);
-    });
+    }));
   };
 }
 
