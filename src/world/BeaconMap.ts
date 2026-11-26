@@ -51,7 +51,7 @@ export function buildBeaconMap(holders: BeaconHolders = 'brigands'): MapData {
   const sights: Sight[] = [
     {
       id: 'bcn-book', gx: 1.9, gy: 0.95, label: "Read the warden's book", z: 34,
-      sign: {
+      sign: { style: 'book',
         heading: 'The beacon book of Corbie Tor',
         lines: [
           'A great ledger, the watch kept in it every night the beacon was tended. The last pages are in a strong, square hand:',

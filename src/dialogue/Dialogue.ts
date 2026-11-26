@@ -52,6 +52,7 @@ export type SpeakerId =
   | 'corwin' | 'garth' | 'teg' | 'linnet'
   | 'thorne' | 'grubb' | 'midge' | 'silas' | 'hollis' | 'sedge' | 'dunn' | 'ferret' | 'vane'
   | 'vosk' | 'brakk' | 'fitch' | 'crabbe' | 'ossery' | 'tallow' | 'lusk' | 'gutter' | 'wisp' | 'cray'
+  | 'annis' | 'nan' | 'ned'
   | 'cooper'
   | 'wexley' | 'marrable' | 'tunstall' | 'thrale' | 'edric' | 'pim' | 'garrow';
 
@@ -146,6 +147,10 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   dunn: { name: 'Dunn', portrait: 'portrait-dunn', voice: { pitch: 88, spread: 0.04, wave: 'sawtooth' } },
   ferret: { name: 'Ferret', portrait: 'portrait-ferret', voice: { pitch: 265, spread: 0.3, wave: 'square' } },
   vane: { name: 'Vane', portrait: 'portrait-vane', voice: { pitch: 120, spread: 0.02, wave: 'sine' } },
+  // Down Sump Lane in Gloomhaven (see dialogue/sump.ts): Wisp's mam, the Widow at her window, and the lamplighter.
+  annis: { name: 'Annis Crowe', portrait: 'portrait-annis', voice: { pitch: 330, spread: 0.12, wave: 'triangle' } },
+  nan: { name: 'The Widow Pruett', portrait: 'portrait-nan', voice: { pitch: 280, spread: 0.24, wave: 'triangle' } },
+  ned: { name: 'Ned Wick', portrait: 'portrait-ned', voice: { pitch: 170, spread: 0.3, wave: 'triangle' } },
   // The Guildhall of the Causeway Merchants on Gloomhaven's Staithe (see dialogue/guildhall.ts).
   wexley: { name: 'Guildmaster Wexley', portrait: 'portrait-wexley', voice: { pitch: 112, spread: 0.16, wave: 'triangle' } },
   marrable: { name: 'Dame Marrable', portrait: 'portrait-marrable', voice: { pitch: 232, spread: 0.05, wave: 'sine' } },

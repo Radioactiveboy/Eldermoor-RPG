@@ -40,6 +40,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const { buildBroodHallMap } = await import('../../src/world/BroodHallMap');
   const beacon = await import('../../src/world/BeaconMap');
   const rose = await import('../../src/world/BlackRoseMap');
+  const sump = await import('../../src/world/SumpMaps');
   const guild = await import('../../src/world/GuildHallMap');
   const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   return {
@@ -78,6 +79,10 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     'blackrose-back': rose.buildBlackRoseBackMap(),
     'blackrose-upstairs': rose.buildBlackRoseUpstairsMap(),
     'blackrose-room': rose.buildBlackRoseRoomMap(),
+    'sump-crowe': sump.buildCroweMap(),
+    'sump-stilt': sump.buildStiltMap(),
+    'sump-pruett': sump.buildPruettMap(),
+    'sump-ruin': sump.buildSumpRuinMap(),
     guildhall: guild.buildGuildHallMap(),
     'guildhall-counting': guild.buildGuildCountingMap(),
     'guildhall-office': guild.buildGuildOfficeMap(),

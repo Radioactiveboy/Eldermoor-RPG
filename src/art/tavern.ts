@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, Shader, TABLE_TOP } from './IsoModel';
 import { MODEL_ART } from './interior';
 import { PALETTE as P } from './palette';
 
@@ -207,7 +207,7 @@ function tavernTable(seed: number): IsoModel {
   if (seed % 2 === 0) tankard(m, 1.55, 0.65, 30);
   else tankard(m, 1.35, 0.3, 30);
   candle(m, 1.7, 0.25, 30);
-  return m;
+  return m.lower(26, 30 - TABLE_TOP);
 }
 
 /** A washstand: a little table with a basin and a jug of water. */
@@ -226,7 +226,7 @@ function sideTable(): IsoModel {
   m.cylinder(0.5, 0.5, 0, 0.06, 22, (u) => (u < 0.4 ? P.barkLight : P.bark), P.bark);
   m.cylinder(0.5, 0.5, 22, 0.3, 3, (u) => (u < 0.35 ? P.plankLight : P.plankDark), P.plankLight);
   candle(m, 0.46, 0.46, 25);
-  return m;
+  return m.lower(22, 25 - TABLE_TOP);
 }
 
 /** Grain sacks slumped against each other in the cellar. */

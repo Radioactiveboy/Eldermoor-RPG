@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { box, circle, Shape } from './Collision';
-import { MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
+import { AreaId, MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 import { deckKey, heronUnderwayKey } from '../art/jetty';
 import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL, GUILD_HALL } from './landmarks';
@@ -185,6 +185,7 @@ export function buildGloomhavenMap(heron = false): MapData {
   addStaithe(data, set, slim);
   addMarsh(data, rnd, set, slim);
   addFolk(data);
+  addSump(data);
   if (heron) addHeron(data, set);
   return data;
 }
@@ -301,7 +302,7 @@ function addSquare(data: MapData, set: Setter, slim: Slim): void {
   set('gh-noticeboard', 22, 19, 1, 1, { shapes: [circle(0.25, 0.5, 0.1), circle(0.75, 0.5, 0.1)] });
   data.sights!.push({
     id: 'gh-notices', gx: 22.5, gy: 20.2, label: 'Read the notices', z: 50,
-    sign: {
+    sign: { style: 'notices',
       heading: 'Notices',
       lines: [
         'OWING: Tam Rudd, 3 silver, to the Rose. Pay or swim.',
@@ -379,6 +380,7 @@ function addGuildHall(data: MapData, set: Setter, slim: Slim): void {
   data.sights!.push({
     id: 'gh-guild-board', gx: h.tx + 2.5, gy: h.ty + h.h + 1.2, label: 'Read the board', z: 50,
     sign: {
+      style: 'notices',
       heading: 'The Causeway Merchants',
       lines: [
         'CARAVAN to the Saltway, by the Fen Road: POSTPONED.',
@@ -492,7 +494,7 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
   }
   data.chimneys!.push({ gx: 17.4, gy: 35.3, z: 40, ruin: true });
   data.sights!.push({
-    id: 'gh-ruin', gx: 17.5, gy: 37.3, label: 'Look at the house', z: 30,
+    id: 'gh-ruin', gx: 16.6, gy: 37.3, label: 'Look at the house', z: 30,
     thought: "Burnt out, and not long ago: the ash is still wet. There's a rose chalked on what's left of the door, and the chalk isn't burnt.",
   });
   data.landmarks!.push({ gx: 17.5, gy: 36, name: 'The burnt house', range: 3 });
@@ -554,7 +556,7 @@ function addStaithe(data: MapData, set: Setter, slim: Slim): void {
   });
   data.sights!.push({
     id: 'gh-pier-sign', gx: p.x0 - 0.2, gy: p.fromY - 0.6, label: 'Read the board', z: 46,
-    sign: {
+    sign: { style: 'notices',
       heading: 'Gloomhaven Staithe',
       lines: [
         'Mooring: two coppers the night, paid to the Rose.',
@@ -721,8 +723,32 @@ function addFolk(data: MapData): void {
     { id: 'lusk', gx: 44.2, gy: 18.65, looking: { x: 0, y: 1 }, hours: [9, 26] },
     // About the square.
     { id: 'gutter', gx: 27.5, gy: 25.62, looking: { x: 0, y: 1 }, seated: true },
-    { id: 'wisp', gx: 32.5, gy: 27.5 },
+    { id: 'wisp', gx: 32.5, gy: 27.5, hours: [7, 21] },
     // Cray, at the end of the pier, by his boat.
     { id: 'cray', gx: GLOOM_PIER.headX1 - 1.4, gy: GLOOM_PIER.headY + 0.5, looking: { x: 0.4, y: 1 } },
   );
 }
+
+/**
+ * The ways in to the homes down Sump Lane (world/SumpMaps.ts): the Crowes' cottage on the corner (its front on
+ * the lane, +x), Ned Wick's stilt house up its ladder from the boards over the pool, the Widow Pruett's hovel at
+ * the bottom of the lane, and the burnt house. And Ned himself, out on the lanes with his pole after dark.
+ */
+function addSump(data: MapData): void {
+  const ways: Array<{ tx: number; ty: number; to: AreaId; entry: string; label: string; facing: 'wall' | 'back'; out: { x: number; y: number } }> = [
+    { tx: 8, ty: 32, to: 'sump-crowe', entry: 'crowe', label: "Knock at the Crowes' door", facing: 'wall', out: { x: 8.7, y: 32.5 } },
+    { tx: 10, ty: 36, to: 'sump-stilt', entry: 'stilt', label: 'Climb up to the stilt house', facing: 'back', out: { x: 10.8, y: 36.7 } },
+    { tx: 20, ty: 39, to: 'sump-pruett', entry: 'pruett', label: "Knock at the Widow Pruett's", facing: 'back', out: { x: 20.65, y: 39.7 } },
+    { tx: 17, ty: 37, to: 'sump-ruin', entry: 'ruin', label: 'Go in through the burnt door', facing: 'back', out: { x: 17.45, y: 37.7 } },
+  ];
+  for (const w of ways) {
+    data.doors!.push({ tx: w.tx, ty: w.ty, to: w.to, entry: 'door', label: w.label, facing: w.facing });
+    data.entries![w.entry] = w.out;
+  }
+  // The Crowes' door is tucked in behind Ned's stilt house: let it go see-through when someone's behind it.
+  const stilt = data.objects?.find((o) => o.key === 'gh-stilthouse' && o.tx === 9 && o.ty === 33);
+  if (stilt) stilt.fades = true;
+  // Ned on his round of the lanes from dusk till dawn, about the lamp at the top of Sump Lane.
+  data.npcs!.push({ id: 'ned', gx: 13.5, gy: 31.2, hours: [17, 30] });
+}
+

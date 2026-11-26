@@ -14,9 +14,16 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 // 'tavern-room' has no ?area= switch (it needs a room taken first), so it isn't here.
 const ALL_AREAS = [
   'home', 'world', 'market', 'cave', 'hut', 'plains', 'northwoods', 'watchtower', 'greyfells', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
-  'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery', 'garrison', 'jail', 'residence', 'jetty', 'blackrose', 'blackrose-back', 'blackrose-upstairs', 'guildhall', 'guildhall-counting', 'guildhall-office', 'warren', 'broodhall',
-  'gloomhaven',
+  'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery', 'garrison', 'jail', 'residence', 'jetty', 'blackrose', 'blackrose-back', 'blackrose-upstairs', 'warren', 'broodhall',
+  'gloomhaven', 'sump-crowe', 'guildhall',
 ];
+/**
+ * Areas checked in the same page as another, one after the next: rooms that come as a set (the homes down
+ * Sump Lane, the Guildhall's back rooms). The first loads from ?area= like any other; the rest are walked into from there, as the game
+ * does it. That costs a few seconds each, where a page load redraws all the art and costs a minute or two,
+ * and the whole run has to fit in CI's time limit.
+ */
+const THEN = { 'sump-crowe': ['sump-stilt', 'sump-pruett', 'sump-ruin'], guildhall: ['guildhall-counting', 'guildhall-office'] };
 const AREAS = process.env.SMOKE_AREAS ? process.env.SMOKE_AREAS.split(',') : ALL_AREAS;
 /** How many areas load at once. */
 const PARALLEL = Number(process.env.SMOKE_PARALLEL ?? 3);
@@ -59,6 +66,7 @@ async function checkArea(browser, base, area) {
   page.on('requestfailed', (r) => warnings.push(`request failed: ${r.url()} (${r.failure()?.errorText})`));
   page.on('response', (r) => r.status() >= 400 && warnings.push(`HTTP ${r.status()}: ${r.url()}`));
   const started = Date.now();
+  const visited = [];
   try {
     await page.goto(`${base}/?smoke&area=${area}`);
     // Wait for the title screen, then press Enter for a new game (a fresh browser has no save).
@@ -84,11 +92,35 @@ async function checkArea(browser, base, area) {
     await page.waitForTimeout(SETTLE_MS / 2);
     const now = await page.evaluate(() => window.game.scene.getScene('Game').area);
     if (now !== area && !errors.length) warnings.push(`moved on to "${now}" while settling`);
+    // Then the areas that go with it, in the same page (see THEN).
+    for (const next of THEN[area] ?? []) {
+      try {
+        await page.evaluate((to) => void window.game.scene.getScene('Game').scene.restart({ area: to }), next);
+        await page.waitForFunction(
+          (want) => {
+            const game = window.game.scene.getScene('Game');
+            return window.game.scene.isActive('Game') && game.area === want && !!game.player;
+          },
+          next,
+          { timeout: LOAD_TIMEOUT },
+        );
+        await page.keyboard.down('ArrowDown');
+        await page.waitForTimeout(SETTLE_MS / 2);
+        await page.keyboard.up('ArrowDown');
+        await page.waitForTimeout(SETTLE_MS / 2);
+        const after = await page.evaluate(() => window.game.scene.getScene('Game').area);
+        if (after !== next && !errors.length) warnings.push(`moved on from "${next}" to "${after}" while settling`);
+        visited.push(next);
+      } catch (e) {
+        errors.push(`did not get from "${area}" on to "${next}": ${e.message.split('\n')[0]}`);
+        break;
+      }
+    }
   } catch (e) {
     errors.push(`did not reach the game: ${e.message.split('\n')[0]}`);
   }
   await context.close();
-  return { area, errors, warnings, seconds: ((Date.now() - started) / 1000).toFixed(1) };
+  return { area, visited, errors, warnings, seconds: ((Date.now() - started) / 1000).toFixed(1) };
 }
 
 /**
@@ -149,7 +181,7 @@ await Promise.all(
     while (queue.length) {
       const r = await checkArea(browser, base, queue.shift());
       results.push(r);
-      console.log(`${r.errors.length ? 'FAIL' : 'ok  '} ${r.area.padEnd(12)} ${r.seconds}s`);
+      console.log(`${r.errors.length ? 'FAIL' : 'ok  '} ${r.area.padEnd(12)} ${r.seconds}s${r.visited.length ? `  (and on to ${r.visited.join(', ')})` : ''}`);
       for (const e of r.errors) console.log(`       error: ${e}`);
       for (const w of r.warnings) console.log(`       warning: ${w}`);
     }

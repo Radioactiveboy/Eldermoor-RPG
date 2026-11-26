@@ -71,7 +71,7 @@ export function buildWatchtowerMap(): MapData {
       { id: 'nwt-chest', gx: 1.5, gy: 1.05, label: 'Search the chest', z: 22, loot: 'cache' },
       {
         id: 'nwt-logbook', gx: 1.7, gy: 3.55, label: 'Read the logbook', z: 30,
-        sign: {
+        sign: { style: 'book',
           heading: 'The watch log, swollen with damp',
           lines: [
             'Most of the pages have rotted together. A few near the end can still be read:',

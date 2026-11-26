@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { block, chimney, line, rotSlate, rubbleStone, withOpenings } from './gloomhaven';
 import { MODEL_ART, registerModel, WALL_HEIGHT } from './interior';
-import { IsoModel, lipped, planks, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { mixColor, smoothNoise } from './scorch';
@@ -50,10 +50,9 @@ const WOOD_DARK = 0x3a2818;
 const WOOD_LIGHT = 0x7a5838;
 const WOOD_TOP = 0x6a4a30;
 // The guild's colours: a deep blue gone grey, and gold.
-/** The height of a seat's top, where a sitter's hips go (art/IsoModel.ts SEAT_TOP, from the seat-height fix). */
-const SEAT = 9;
-/** The height of a table's top, a little above a sitter's lap (art/IsoModel.ts TABLE_TOP, from the same fix). */
-const TABLE = SEAT + 8;
+/** Where a sitter's hips go, and a table's top (see art/IsoModel.ts). */
+const SEAT = SEAT_TOP;
+const TABLE = TABLE_TOP;
 
 const BLUE = 0x2e3e5a;
 const BLUE_DARK = 0x1e2a40;
