@@ -52,6 +52,7 @@ export type SpeakerId =
   | 'corwin' | 'garth' | 'teg' | 'linnet'
   | 'thorne' | 'grubb' | 'midge' | 'silas' | 'hollis' | 'sedge' | 'dunn' | 'ferret' | 'vane'
   | 'vosk' | 'brakk' | 'fitch' | 'crabbe' | 'ossery' | 'tallow' | 'lusk' | 'gutter' | 'wisp' | 'cray'
+  | 'annis' | 'nan' | 'ned'
   | 'cooper'
   | 'rendle' | 'vetch' | 'scritch' | 'tam' | 'flay' | 'lugs' | 'gristle';
 
@@ -154,4 +155,8 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   flay: { name: 'Ned Flay', portrait: 'portrait-flay', voice: { pitch: 150, spread: 0.18, wave: 'sawtooth' } },
   lugs: { name: 'Lugs', portrait: 'portrait-lugs', voice: { pitch: 175, spread: 0.22, wave: 'triangle' } },
   gristle: { name: 'Gristle', portrait: 'portrait-gristle', voice: { pitch: 74, spread: 0.04, wave: 'sawtooth' } },
+  // Down Sump Lane in Gloomhaven (see dialogue/sump.ts): Wisp's mam, the Widow at her window, and the lamplighter.
+  annis: { name: 'Annis Crowe', portrait: 'portrait-annis', voice: { pitch: 330, spread: 0.12, wave: 'triangle' } },
+  nan: { name: 'The Widow Pruett', portrait: 'portrait-nan', voice: { pitch: 280, spread: 0.24, wave: 'triangle' } },
+  ned: { name: 'Ned Wick', portrait: 'portrait-ned', voice: { pitch: 170, spread: 0.3, wave: 'triangle' } },
 };

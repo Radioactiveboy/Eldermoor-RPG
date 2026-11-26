@@ -159,6 +159,7 @@ function addPitBarn(data: MapData, set: Setter, _slim: Slim): void {
   data.sights!.push({
     id: 'sh-pitboard', gx: b.tx + 0.4, gy: b.ty + b.h + 0.2, label: 'Read the board', z: 30,
     sign: {
+      style: 'slate',
       heading: 'Chalked on a board by the door',
       lines: [
         'PIT NIGHT. DOOR AT DARK. A PENNY TO STAND.',
@@ -193,6 +194,7 @@ function addRatDen(data: MapData, set: Setter, slim: Slim): void {
     {
       id: 'sh-ratsign', gx: r.tx + r.w + 0.1, gy: r.ty + 0.3, label: 'Read the sign', z: 46,
       sign: {
+        style: 'post',
         heading: 'A board with a rat painted on it',
         lines: ['SCRITCH. RATS KILLED. MOLES, WEASELS, ALL VERMIN.', 'DOGS AND FERRETS FOR RATTING.', 'NO RAT TOO BIG', '(Painted over, nearly:) NO JOB TOO SMALL'],
       },

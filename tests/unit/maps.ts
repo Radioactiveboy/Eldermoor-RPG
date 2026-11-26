@@ -41,6 +41,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const beacon = await import('../../src/world/BeaconMap');
   const rose = await import('../../src/world/BlackRoseMap');
   const shambles = await import('../../src/world/ShamblesMap');
+  const sump = await import('../../src/world/SumpMaps');
   const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
@@ -83,6 +84,10 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     'tannery-loft': shambles.buildTanneryLoftMap(),
     ratden: shambles.buildRatDenMap(),
     dogpit: shambles.buildDogPitMap(),
+    'sump-crowe': sump.buildCroweMap(),
+    'sump-stilt': sump.buildStiltMap(),
+    'sump-pruett': sump.buildPruettMap(),
+    'sump-ruin': sump.buildSumpRuinMap(),
     warren: buildWarrenMap({ prisoner: 'hilde' }),
     broodhall: buildBroodHallMap(),
   };

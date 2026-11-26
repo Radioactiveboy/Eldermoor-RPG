@@ -348,7 +348,7 @@ export function buildDogPitMap(): MapData {
   add('sh-bones', 9, 3);
   data.sights!.push(
     { id: 'shp-pit', gx: 5, gy: 4, label: 'Look', z: 24, thought: 'The ring: a wall of boards chest-high to a man, round, the sand inside raked over and still dark in patches. The boards are gnawed at the bottom, all the way round, where things tried to dig their way out.' },
-    { id: 'shp-chalk', gx: 2.5, gy: 0.15, label: 'Read the board', z: 56, sign: { heading: 'Chalked on the boards', lines: ['TONIGHT: BUTCHER v. THE WIDOW\'S CUR', 'RATS — 50 IN THE PIT — BY THE MINUTE', 'NEW STOCK. GREY. ASK NED.', 'NO CREDIT. NO HOOKS.'] } },
+    { id: 'shp-chalk', gx: 2.5, gy: 0.15, label: 'Read the board', z: 56, sign: { style: 'slate', heading: 'Chalked on the boards', lines: ['TONIGHT: BUTCHER v. THE WIDOW\'S CUR', 'RATS — 50 IN THE PIT — BY THE MINUTE', 'NEW STOCK. GREY. ASK NED.', 'NO CREDIT. NO HOOKS.'] } },
     { id: 'shp-pens', gx: 8.5, gy: 0.9, label: 'Look', z: 20, thought: free
       ? 'Two dogs in two bays, brindled, scarred, chained short to rings in the wall. The middle bay is empty now, the chain lying in the straw. They watch me without moving. They have stopped expecting anything else.'
       : 'Three kennel bays. Two brindled pit dogs, scarred, chained short. In the middle one, a grey lurcher, long-legged and thin, straining away from the pit with her chain pulled tight. She answers to nothing. To Nothing. It\'s her.' },

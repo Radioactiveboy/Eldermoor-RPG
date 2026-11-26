@@ -61,7 +61,9 @@ export type AreaId =
   // The Black Rose on Gloomhaven's square: the taproom, the back room behind the curtain, the passage upstairs, and the room to let.
   | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
   // The Shambles, Gloomhaven's east quarter: Rendle's slaughterhouse, Vetch's tannery and its drying loft, Old Scritch's den, and the Red Aprons' dog pit.
-  | 'slaughterhouse' | 'tannery' | 'tannery-loft' | 'ratden' | 'dogpit';
+  | 'slaughterhouse' | 'tannery' | 'tannery-loft' | 'ratden' | 'dogpit'
+  // Homes down Sump Lane in Gloomhaven's west quarter: the Crowes' cottage, Ned Wick's stilt house, the Widow Pruett's hovel, and the burnt house.
+  | 'sump-crowe' | 'sump-stilt' | 'sump-pruett' | 'sump-ruin';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see
@@ -143,6 +145,13 @@ export interface Door {
  * Something to look at closely: the lost ewes in the cave, a signpost, a pile
  * of bones. scenes/game/sights.ts decides what examining it does.
  */
+/**
+ * How a written thing is shown: 'post' is a signpost, read in a banner as the
+ * hero passes; the rest open in the reading window, drawn as a notice board of
+ * pinned slips, a book's page, a chalked slate, or a carved stone.
+ */
+export type ReadingStyle = 'post' | 'notices' | 'book' | 'slate' | 'stone';
+
 export interface Sight {
   id: string;
   gx: number;
@@ -150,8 +159,12 @@ export interface Sight {
   label: string;
   /** Height of the prompt above the ground, in pixels. */
   z: number;
-  /** A signpost: reading it shows where each arm points. */
-  sign?: { heading: string; lines: string[] };
+  /**
+   * Something written to read: a signpost (where each arm points, shown in a
+   * passing banner), or a notice board, book, slate or carving, which opens
+   * close up in its own window to read at leisure (scenes/ReaderScene.ts).
+   */
+  sign?: { heading: string; lines: string[]; style: ReadingStyle };
   /** Can be searched once for a random find (see systems/Loot.ts). */
   loot?: 'bones' | 'cache';
   /** A door that won't open (yet): trying it rattles the lock, and the hero wonders what's behind it. */

@@ -95,7 +95,7 @@ export function buildChapelMap(): MapData {
       }
       data.sights!.push({
         id: 'chapel-book', gx: 6.5, gy: 2.6, label: 'Read the book', z: 40,
-        sign: { heading: 'The great book, open on the lectern', lines: ['"I was sick, and ye visited me."', '', 'Someone has marked the place', 'with a pressed moonpetal.'] },
+        sign: { style: 'book', heading: 'The great book, open on the lectern', lines: ['"I was sick, and ye visited me."', '', 'Someone has marked the place', 'with a pressed moonpetal.'] },
       });
     },
   );
@@ -167,7 +167,7 @@ export function buildScriptoriumMap(): MapData {
       add('furn-chest', 0, 6, { flipX: true });
       data.sights!.push({
         id: 'scriptorium-page', gx: 5.5, gy: 2.9, label: 'Read the page', z: 34,
-        sign: {
+        sign: { style: 'book',
           heading: 'A page, half copied',
           lines: [
             '"...and of the moon-petal: gathered at its flowering',
@@ -210,7 +210,7 @@ export function buildRefectoryMap(): MapData {
       data.sights!.push({ id: 'refectory-hearth', gx: 5, gy: 1.1, label: 'Cook at the hearth', z: 34, station: 'refectory-hearth' });
       data.sights!.push({
         id: 'refectory-board', gx: 0.3, gy: 2.5, label: 'Read the board', z: 30,
-        sign: { heading: 'Chalked on a board', lines: ['MONDAY: pottage', 'TUESDAY: pottage', 'WEDNESDAY: pottage (with leeks)', 'FRIDAY: carp', '', '(Underneath: "MORE LEEKS. -H.")'] },
+        sign: { style: 'slate', heading: 'Chalked on a board', lines: ['MONDAY: pottage', 'TUESDAY: pottage', 'WEDNESDAY: pottage (with leeks)', 'FRIDAY: carp', '', '(Underneath: "MORE LEEKS. -H.")'] },
       });
     },
   );
