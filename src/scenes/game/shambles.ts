@@ -15,6 +15,7 @@ import { NOTHING_QUEST, Shambles, SHAMBLES_FLAGS as F, TAM_QUEST } from '../../s
 import type { Sight } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import type { DialogueAction } from './dialogueActions';
+import { fightAfterTalk } from './talkFight';
 
 /** Which Red Apron fights as which foe. */
 const PIT_FOES: Record<string, FoeKind> = { flay: 'apronflay', gristle: 'apronknacker' };
@@ -95,29 +96,7 @@ function freeNothing(g: GameScene, how: string, diary: string): void {
 
 /** "Fight him." Flay (and Gristle, if he's in) become the foes they fight as, where they stand. */
 function pitFight(g: GameScene): void {
-  g.afterTalk = () => {
-    const code = Promise.all([import('../../entities/Creature'), import('./combat')]);
-    g.time.delayedCall(150, () => void code.then(([{ Creature }, { startCombat }]) => {
-      if (g.inCombat || QuestLog.hasFlag(F.pitFought)) return;
-      g.busy = false;
-      const stamp = Date.now();
-      const foes: Creature[] = Object.keys(PIT_FOES)
-        .map((id) => g.someone(id))
-        .filter((n) => !!n)
-        .map((npc) => {
-          const kind = PIT_FOES[npc!.id];
-          const id = `pit-${npc!.id}-${stamp}`;
-          (g.map.data.creatures ??= []).push({ id, kind, gx: npc!.gx, gy: npc!.gy, respawns: true });
-          const c = new Creature(g, g.map, id, kind, npc!.gx, npc!.gy);
-          g.creatures.push(c);
-          c.faceTowards(g.player.gx, g.player.gy);
-          npc!.destroy();
-          g.npcs = g.npcs.filter((n) => n !== npc);
-          return c;
-        });
-      if (foes.length > 0) startCombat(g, foes[0], undefined, foes);
-    }));
-  };
+  fightAfterTalk(g, { sides: PIT_FOES, tag: 'pit', stillOn: () => !QuestLog.hasFlag(F.pitFought) });
 }
 
 /** After a fight in the barn: if Flay went down, Nothing is out of her pen and away home, and the cash box is open. */
