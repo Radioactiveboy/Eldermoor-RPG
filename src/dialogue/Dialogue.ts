@@ -55,7 +55,8 @@ export type SpeakerId =
   | 'nettle' | 'dace' | 'orm'
   | 'reeve' | 'nibb' | 'gaff' | 'lardy' | 'annet'
   | 'annis' | 'nan' | 'ned'
-  | 'cooper';
+  | 'cooper'
+  | 'wexley' | 'marrable' | 'tunstall' | 'thrale' | 'edric' | 'pim' | 'garrow';
 
 export interface Speaker {
   name: string;
@@ -162,4 +163,12 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   annis: { name: 'Annis Crowe', portrait: 'portrait-annis', voice: { pitch: 330, spread: 0.12, wave: 'triangle' } },
   nan: { name: 'The Widow Pruett', portrait: 'portrait-nan', voice: { pitch: 280, spread: 0.24, wave: 'triangle' } },
   ned: { name: 'Ned Wick', portrait: 'portrait-ned', voice: { pitch: 170, spread: 0.3, wave: 'triangle' } },
+  // The Guildhall of the Causeway Merchants on Gloomhaven's Staithe (see dialogue/guildhall.ts).
+  wexley: { name: 'Guildmaster Wexley', portrait: 'portrait-wexley', voice: { pitch: 112, spread: 0.16, wave: 'triangle' } },
+  marrable: { name: 'Dame Marrable', portrait: 'portrait-marrable', voice: { pitch: 232, spread: 0.05, wave: 'sine' } },
+  tunstall: { name: 'Master Tunstall', portrait: 'portrait-tunstall', voice: { pitch: 178, spread: 0.3, wave: 'triangle' } },
+  thrale: { name: 'Master Thrale', portrait: 'portrait-thrale', voice: { pitch: 132, spread: 0.04, wave: 'sine' } },
+  edric: { name: 'Edric Lowe', portrait: 'portrait-edric', voice: { pitch: 196, spread: 0.22, wave: 'triangle' } },
+  pim: { name: 'Pim the Clerk', portrait: 'portrait-pim', voice: { pitch: 248, spread: 0.12, wave: 'square' } },
+  garrow: { name: 'Nat Garrow', portrait: 'portrait-garrow', voice: { pitch: 104, spread: 0.14, wave: 'sawtooth' } },
 };
