@@ -24,6 +24,7 @@ import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 import { roseAction } from './blackrose';
 import { PAWN_ACTIONS } from './pawnshop';
+import { tollAction } from './tollhouse';
 import { SUMP_ACTIONS } from './sump';
 
 /** A named story effect: what happens when a line with this action is said. */
@@ -57,6 +58,7 @@ export function runDialogueAction(g: GameScene, action: string): void {
     return;
   }
   if (action.startsWith('rose-') && roseAction(g, action)) return;
+  if (action.startsWith('toll-') && tollAction(g, action)) return;
   if (action.startsWith('drink:')) {
     drinkAtBar(g, action.slice(6) as ItemId);
     return;

@@ -2584,6 +2584,153 @@ const orm = townsfolk({
   },
 });
 
+// ---------------------------------------------------------------------------
+// The Reeve's toll house at the Fen Gate (art/tollhouse3d.ts has them in 3D)
+// ---------------------------------------------------------------------------
+
+/** The Reeve's yellow: a band of mustard cloth round the left upper arm (at the picture's right edge), and the tin tally on its cord. */
+function yellowband(c: PixelCanvas, tally = true): void {
+  const band = ramp(0xc8a030);
+  for (let y = 84; y < 92; y++) {
+    for (let x = CX + 26; x < CX + 36; x++) if (c.get(x, y) !== null) c.set(x, y, tone(band, lightness(0.5, (y - 88) / 6) + ((x + y) % 5 === 0 ? -0.12 : 0), x, y));
+  }
+  if (!tally) return;
+  // The cord, and a little stamped tin disc: scales over a wavy line.
+  for (let y = 76; y < 88; y++) {
+    c.set(Math.round(CX - 7 + (y - 76) * 0.55), y, 0x6a5a44);
+    c.set(Math.round(CX + 7 - (y - 76) * 0.55), y, 0x6a5a44);
+  }
+  const tin = ramp(0xa8a8a0);
+  for (let y = 86; y < 95; y++) {
+    for (let x = CX - 5; x <= CX + 5; x++) {
+      const d = Math.hypot(x + 0.5 - CX, y + 0.5 - 90.5);
+      if (d < 4.6) c.set(x, y, tone(tin, lightness((x - CX) / 6, (y - 90) / 6, 0.05), x, y));
+    }
+  }
+  for (let x = CX - 3; x <= CX + 3; x++) c.set(x, 89, 0x4a4a46);
+  c.set(CX, 88, 0x4a4a46);
+  c.set(CX, 90, 0x4a4a46);
+  for (let x = CX - 3; x <= CX + 3; x++) c.set(x, 92 + ((x & 1) ? 0 : -1), 0x4a4a46);
+}
+
+/** Corvin Sallow, the Reeve: long, thin and sallow, lank black hair oiled flat, a fur collar, a gilt chain of office, a pomander. */
+const reeve = townsfolk({
+  skin: 0xd8c690, hair: 0x16141a, style: 'long', cloth: 0x4a2234, shirt: 0xe8e0c8,
+  iris: 0x5a5a3a, brow: 'arched', smile: 1, width: 14, jaw: 5, nose: 2, tired: true, look: -1,
+  over: (c) => {
+    // Oiled flat: a cold sheen in a line down the crown.
+    for (let y = 22; y < 40; y++) c.set(CX - 3 + Math.round((y - 22) * 0.1), y, 0x5a5a6a);
+    // The fur collar, heaped round the shoulders.
+    const fur = ramp(0x6a5440);
+    for (let y = 76; y < S; y++) {
+      for (const side of [-1, 1]) {
+        const x0 = CX + side * (16 + (y - 76) * 0.5);
+        for (let x = Math.round(x0 - 6); x <= Math.round(x0 + 6); x++) if ((x * 7 + y * 5) % 5) c.set(x, y, tone(fur, lightness(side * 0.5, (y - 84) / 12) + ((x * 3 + y) % 4) * 0.05, x, y));
+      }
+    }
+    // The gilt chain of office, in links, and its medallion.
+    for (let x = CX - 15; x <= CX + 15; x++) {
+      const y = 82 + Math.round(Math.sin(((x - CX + 15) / 30) * Math.PI) * 9);
+      c.set(x, y, (x & 1) ? P.gold : 0x9a7a2a);
+    }
+    const gilt = ramp(0xc8a040);
+    for (let y = 90; y < 96; y++) for (let x = CX - 3; x <= CX + 3; x++) if (Math.hypot(x + 0.5 - CX, y + 0.5 - 93) < 3.4) c.set(x, y, tone(gilt, lightness((x - CX) / 4, (y - 93) / 4, 0.1), x, y));
+    // The pomander at his nose's height, held up at the edge: a clove-stuck orange.
+    const orange = ramp(0xc87a2a);
+    for (let y = 60; y < 72; y++) {
+      for (let x = CX - 34; x < CX - 22; x++) {
+        const d = Math.hypot(x + 0.5 - (CX - 28), y + 0.5 - 66);
+        if (d < 5.5) c.set(x, y, (x * 3 + y * 5) % 7 === 0 ? 0x3a2418 : tone(orange, lightness((x - CX + 28) / 6, (y - 66) / 6), x, y));
+      }
+    }
+    const hand = ramp(0xd8c690);
+    for (let y = 71; y < 80; y++) for (let x = CX - 32; x < CX - 24; x++) c.set(x, y, tone(hand, lightness(-0.3, (y - 75) / 6), x, y));
+  },
+});
+
+/** Tobias Nibb, the clerk: short-sighted and frightened, thick spectacles, thin sandy hair, ink on his face, a quill behind one ear. */
+const nibb = townsfolk({
+  skin: 0xe8c8b0, hair: 0xb89a6a, style: 'short', cloth: 0x3a3a42, shirt: 0xc8c0aa,
+  iris: 0x6a7a9a, brow: 'worried', smile: 0, width: 15, jaw: 5, nose: 1, tired: true, blush: [0xd88878, 0.35], look: 1,
+  over: (c) => {
+    specs(c, 'pair', 0x6a5a48);
+    // A smudge of ink on the cheek, where he rubs it.
+    for (const [x, y] of [[CX + 10, 60], [CX + 11, 60], [CX + 11, 61], [CX + 12, 61], [CX + 10, 62]]) c.set(x, y, 0x2a2a3a);
+    // The quill behind his ear: a white feather sticking up past the hair.
+    for (let i = 0; i < 18; i++) {
+      const x = CX + 19 + Math.round(i * 0.35);
+      const y = 48 - i;
+      c.set(x, y, 0xe8e4d8);
+      c.set(x + 1, y, i > 4 ? 0xc8c4b8 : 0x8a8478);
+      if (i > 6 && i < 16) c.set(x - 1, y, 0xd8d4c8);
+    }
+    // Ink-black sleeve-guards over the coat at the bottom edge.
+    for (let y = 90; y < S; y++) for (let x = CX - 34; x < CX - 24; x++) c.set(x, y, (x + y) % 3 ? 0x1e1e24 : 0x2e2e36);
+  },
+});
+
+/** Gaff Tully, a Hook in the Reeve's yellow: wiry, gap-toothed, a sou'wester, a rust-red rag at the throat, a hook tattoo. */
+const gaff = townsfolk({
+  skin: 0xc8946e, hair: 0x4a3a2a, style: 'short', cloth: 0x1e2226, shirt: 0x3a3a36,
+  iris: 0x5a6a5a, brow: 'arched', smile: 2, width: 15.5, jaw: 7, nose: 2, scar: true, earring: true, look: 1,
+  over: (c) => {
+    // The sou'wester, tarred black, its brim turned down at the back.
+    const tar = ramp(0x22262a);
+    for (let y = 14; y < 34; y++) {
+      const half = y < 30 ? 17 * Math.sqrt(Math.max(0, 1 - ((30 - y) / 17) ** 2)) : 24 - (y - 30) * 0.5;
+      for (let x = Math.round(CX - half); x < Math.round(CX + half); x++) c.set(x, y, tone(tar, lightness((x - CX) / 22, (y - 24) / 14, 0.1) + (y === 30 ? 0.2 : 0), x, y));
+    }
+    // A gap in the grin.
+    c.set(CX + 1, 64, 0x2a1418);
+    c.set(CX + 2, 64, 0x2a1418);
+    // The rust-red rag knotted at the throat.
+    const rag = ramp(0x9a3a24);
+    for (let y = 72; y < 84; y++) {
+      const half = 11 - Math.abs(y - 76) * 0.6;
+      for (let x = Math.round(CX - half); x <= Math.round(CX + half); x++) c.set(x, y, tone(rag, lightness((x - CX) / 12, (y - 76) / 8) + ((x + y * 2) % 5 === 0 ? -0.1 : 0), x, y));
+    }
+    for (let y = 80; y < 90; y++) for (let x = CX + 2; x < CX + 6 - Math.floor((y - 80) / 4); x++) c.set(x, y, tone(rag, 0.45, x, y));
+    yellowband(c);
+  },
+});
+
+/** Lardy Mott, a Red Apron on the Reeve's door at night: huge, cropped head, slow small eyes, a stained leather apron, chewing. */
+const lardy = townsfolk({
+  skin: 0xe0a88a, hair: 0x8a6a4a, style: 'bald', cloth: 0x6a6a62, shirt: 0x8a8476, apron: 0x6a3a2a,
+  iris: 0x5a4a3a, brow: 'flat', smile: 0, width: 22, jaw: 14, nose: 3, blush: [0xd86a5a, 0.5], look: 0,
+  over: (c) => {
+    // Stubble of a cropped head.
+    for (let y = 18; y < 36; y++) for (let x = CX - 18; x <= CX + 18; x++) if (c.get(x, y) !== null && (x * 7 + y * 13) % 9 === 0) c.set(x, y, 0x9a7a5a);
+    // Old blood, rust-brown, down the apron.
+    const stain = ramp(0x4a1e18);
+    for (const [cx, cy, r] of [[CX - 8, 90, 4], [CX + 6, 86, 3], [CX + 2, 94, 5]]) {
+      for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (Math.hypot(x - cx, (y - cy) * 1.3) < r && c.get(x, y) !== null) c.set(x, y, tone(stain, 0.4 + ((x + y) % 3) * 0.08, x, y));
+    }
+    yellowband(c, false);
+  },
+});
+
+/** Annet Marl, an eel-wife off the Staithe: weathered, tired, a faded kerchief, a heavy shawl pinned with a fish-bone. */
+const annet = townsfolk({
+  skin: 0xd0a080, hair: 0x6a5240, style: 'bun', cloth: 0x4a5a5a, shirt: 0xa89a80, kerchief: 0x7a5a6a,
+  iris: 0x6a7a6a, brow: 'worried', smile: 1, width: 16, jaw: 7, tired: true, freckles: true, look: -1,
+  over: (c) => {
+    const shawl = ramp(0x5a4a3a);
+    for (let y = 78; y < S; y++) {
+      for (const side of [-1, 1]) {
+        const x0 = CX + side * (20 - (y - 78) * 0.8);
+        for (let x = Math.round(x0 - 6); x <= Math.round(x0 + 6); x++) c.set(x, y, tone(shawl, lightness(side * 0.3, (y - 88) / 12) + ((x * 2 + y) % 5 === 0 ? -0.1 : 0), x, y));
+      }
+    }
+    // The fish-bone pin.
+    for (let x = CX - 4; x <= CX + 4; x++) c.set(x, 90, 0xe8e0cc);
+    for (let x = CX - 3; x <= CX + 3; x += 2) {
+      c.set(x, 89, 0xd8d0bc);
+      c.set(x, 91, 0xd8d0bc);
+    }
+  },
+});
+
 // --- The Sump: homes down Sump Lane, in Gloomhaven's west quarter (see art/sump3d.ts for the same folk in the round) ---
 
 /** Annis Crowe, Wisp's mam: thin and worn, Wisp's red-brown hair pinned up anyhow, freckles, frightened eyes, a grey shawl and the Rose's apron. */
@@ -2667,6 +2814,7 @@ const PAINTERS: Record<string, Painter> = {
   thorne, grubb, midge, silas, hollis, sedge, dunn, ferret, vane,
   vosk, brakk, fitch, crabbe, ossery, tallow, lusk, gutter, wisp, cray,
   nettle, dace, orm,
+  reeve, nibb, gaff, lardy, annet,
   annis, nan, ned,
 };
 

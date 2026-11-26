@@ -61,6 +61,8 @@ export type AreaId =
   | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
   // Lusk's, the pawnshop on the square's north-east corner: the shop floor, the counting room upstairs, and the stash under the roof.
   | 'pawnshop' | 'pawn-counting' | 'pawn-attic'
+  // The Reeve's toll house just inside Gloomhaven's Fen Gate: the toll office, its strongroom, and the Reeve's rooms upstairs.
+  | 'tollhouse' | 'tollhouse-strong' | 'tollhouse-upstairs'
   // Homes down Sump Lane in Gloomhaven's west quarter: the Crowes' cottage, Ned Wick's stilt house, the Widow Pruett's hovel, and the burnt house.
   | 'sump-crowe' | 'sump-stilt' | 'sump-pruett' | 'sump-ruin';
 

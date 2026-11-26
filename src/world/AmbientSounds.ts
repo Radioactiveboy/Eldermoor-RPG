@@ -35,6 +35,10 @@ const ROOFS: Partial<Record<AreaId, number>> = {
   'pawn-counting': 1,
   // Right under the slates: the rain is loud up here.
   'pawn-attic': 0.4,
+  // The toll house is the only dry roof in Gloomhaven; the strongroom has nothing over it but stone.
+  tollhouse: 0.8,
+  'tollhouse-strong': 1,
+  'tollhouse-upstairs': 0.9,
   tavern: 0.45,
   chapel: 0.55,
   cellar: 0.12,
@@ -101,6 +105,10 @@ const PLACES: Record<AreaId, Place> = {
   pawnshop: { tavern: 0.12, echo: 0.2 },
   'pawn-counting': { tavern: 0.06, echo: 0.15 },
   'pawn-attic': { echo: 0.35 },
+  // The toll office: the coal brazier, the stone floor ringing; the strongroom close and still; the Reeve's rooms hushed.
+  tollhouse: { fire: 0.35, echo: 0.35 },
+  'tollhouse-strong': { cave: 0.25, echo: 0.5 },
+  'tollhouse-upstairs': { fire: 0.25, echo: 0.12 },
   // The Sump: a little fire in two of them; the stilt house over the water; the burnt house open to the fen.
   'sump-crowe': { fire: 0.6, echo: 0.1 },
   'sump-stilt': { fire: 0.25, wild: 0.35, echo: 0.15 },

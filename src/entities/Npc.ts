@@ -36,6 +36,8 @@ import { BlackRose, ROSE_FLAGS } from '../systems/BlackRose';
 import {
   dunnScript, ferretScript, grubbScript, hollisScript, midgeScript, RoseNews, sedgeScript, silasScript, vaneScript, widowScript,
 } from '../dialogue/blackrose';
+import { annetScript, gaffScript, gateManTollTalk, lardyScript, nibbScript, reeveScript, tallowTollTalk, TollTalk, voskTollTalk } from '../dialogue/tollhouse';
+import { floodTollStage, reeveSilverStage, TOLL_FLAGS } from '../systems/TollHouse';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { cutAtSeat, seatedDraw } from '../world/Seating';
@@ -581,12 +583,12 @@ const NPCS: Record<string, NpcDef> = {
   },
   // Gloomhaven (world/GloomhavenMap.ts): the gate men at the Fen Gate, the three keepers at their counters, Gutter Jack on the
   // bench by the well, Wisp about the square, and Cray on the pier.
-  vosk: { texture: 'folk-vosk', talkRange: 2.2, script: firstTime('vosk', voskScript) },
-  brakk: { texture: 'folk-brakk', talkRange: 2.2, script: firstTime('brakk', brakkScript) },
-  fitch: { texture: 'folk-fitch', talkRange: 2.4, script: firstTime('fitch', fitchScript) },
-  crabbe: { texture: 'folk-crabbe', talkRange: 2.2, script: firstTime('crabbe', crabbeScript) },
+  vosk: { texture: 'folk-vosk', talkRange: 2.2, script: toll('vosk', (first, t) => voskTollTalk(voskScript(first), t)) },
+  brakk: { texture: 'folk-brakk', talkRange: 2.2, script: toll('brakk', (first, t) => gateManTollTalk('brakk', brakkScript(first), t)) },
+  fitch: { texture: 'folk-fitch', talkRange: 2.4, script: toll('fitch', (first, t) => gateManTollTalk('fitch', fitchScript(first), t)) },
+  crabbe: { texture: 'folk-crabbe', talkRange: 2.2, script: toll('crabbe', (first, t) => gateManTollTalk('crabbe', crabbeScript(first), t)) },
   ossery: { texture: 'folk-ossery', talkRange: 2.6, script: firstTime('ossery', osseryScript) },
-  tallow: { texture: 'folk-tallow', talkRange: 2.6, script: firstTime('tallow', tallowScript) },
+  tallow: { texture: 'folk-tallow', talkRange: 2.6, script: toll('tallow', (first, t) => tallowTollTalk(tallowScript(first), t)) },
   // Lusk's pawnshop on the square (world/PawnshopMap.ts, dialogue/pawnshop.ts): Lusk behind his grille, Nettle at her table, and the
   // Hooks when they come, Nim Dace at the counter and Orm in the door.
   lusk: {
@@ -632,6 +634,13 @@ const NPCS: Record<string, NpcDef> = {
     script: firstTime('wisp', (first) => wispScript(first, wispPinched(), QuestLog.hasFlag('wisp-returned'), first ? undefined : wispSquareExtra(sumpNews()))),
   },
   cray: { texture: 'folk-cray', talkRange: 2.4, script: firstTime('cray', (first) => crayScript(first, CRAY_FARE, Inventory.coins)) },
+  // The Reeve's toll house by the Fen Gate (world/TollHouseMap.ts): Nibb behind the grille, Gaff Tully on the stairs and Annet Marl on
+  // the bench by day, Lardy Mott on the strongroom door by night, and the Reeve upstairs at his desk.
+  nibb: { texture: 'folk-nibb', sits: true, talkRange: 3.3, script: toll('nibb', nibbScript) },
+  gaff: { texture: 'folk-gaff', talkRange: 2.2, script: toll('gaff', gaffScript) },
+  annet: { texture: 'folk-annet', sits: true, talkRange: 2.2, script: toll('annet', annetScript) },
+  lardy: { texture: 'folk-lardy', sits: true, talkRange: 2.4, script: toll('lardy', lardyScript) },
+  reeve: { texture: 'folk-reeve', sits: true, talkRange: 2.6, script: toll('reeve', reeveScript) },
   // Homes down Sump Lane (world/SumpMaps.ts): Annis Crowe mending of an evening, Wisp at home of a night (her own self, met again),
   // the Widow Pruett in her chair, and Ned Wick the lamplighter, in his stilt house by day and out on the lanes after dark.
   annis: { texture: 'folk-annis', sits: true, talkRange: 2.2, script: firstTime('annis', (first) => annisScript(first, sumpNews())) },
@@ -642,6 +651,35 @@ const NPCS: Record<string, NpcDef> = {
   },
   ned: { texture: 'folk-ned', talkRange: 2.4, script: (hour) => firstTime('ned', (first) => nedScript(first, sumpNews(), Npc.within([17, 30], hour)))() },
 };
+
+/** Where the hero stands with the toll house (dialogue/tollhouse.ts). */
+function tollTalk(hour: number): TollTalk {
+  const f = (flag: string) => QuestLog.hasFlag(flag);
+  return {
+    coins: Inventory.coins,
+    hour,
+    hearing: f(TOLL_FLAGS.hearing),
+    flood: floodTollStage(),
+    silver: reeveSilverStage(),
+    nibbTold: f(TOLL_FLAGS.nibbTold),
+    reeveHeard: f(TOLL_FLAGS.reeveHeard),
+    creels: f(TOLL_FLAGS.creels),
+    creelsBack: f(TOLL_FLAGS.creelsBack),
+    fedLardy: f(TOLL_FLAGS.fedLardy),
+    food: SHAREABLE_FOOD.find((id) => !['ale', 'cider', 'mead'].includes(id) && Inventory.count(id) > 0),
+    lifted: f(TOLL_FLAGS.lifted),
+  };
+}
+
+/** A toll house conversation (or one that talks about it), brought up to date after each action. */
+function toll(id: string, script: (first: boolean, t: TollTalk) => DialogueScript): (hour: number) => DialogueScript {
+  return (hour) => {
+    const first = !met.has(id);
+    met.add(id);
+    const build = (opening: boolean): DialogueScript => ({ ...script(opening, tollTalk(hour)), refresh: () => build(false) });
+    return build(first);
+  };
+}
 
 /** A conversation that opens differently the first time (and marks them met). */
 function firstTime(id: string, script: (first: boolean) => DialogueScript): () => DialogueScript {

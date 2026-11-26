@@ -154,3 +154,9 @@ export const GLOOM_PIER = { x0: 29, x1: 30, fromY: 45, headY: 53, headX0: 26, he
  * about its middle (art/jetty.ts, HERON_PIVOT), so that middle, at (tx + 1, ty + 3.5), is (30, 56.5).
  */
 export const GLOOM_HERON = { tx: 29, ty: 53, w: 2, h: 7 };
+/**
+ * The Reeve's toll house, just inside the Fen Gate on the west side of the road: its back corner and footprint
+ * (its art is 5 wide and 4 deep, turned so its front faces the road, +x), and its front door, on the road side.
+ * Inside is the 'tollhouse' area (world/TollHouseMap.ts).
+ */
+export const TOLL_HOUSE = { tx: 29, ty: 5, w: 4, h: 5, door: { tx: 33, ty: 7 } };

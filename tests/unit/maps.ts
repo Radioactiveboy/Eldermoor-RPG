@@ -41,6 +41,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const beacon = await import('../../src/world/BeaconMap');
   const rose = await import('../../src/world/BlackRoseMap');
   const pawn = await import('../../src/world/PawnshopMap');
+  const toll = await import('../../src/world/TollHouseMap');
   const sump = await import('../../src/world/SumpMaps');
   const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   return {
@@ -82,6 +83,9 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     pawnshop: pawn.buildPawnshopMap(),
     'pawn-counting': pawn.buildPawnCountingMap(),
     'pawn-attic': pawn.buildPawnAtticMap(),
+    tollhouse: toll.buildTollHouseMap(),
+    'tollhouse-strong': toll.buildTollStrongMap(),
+    'tollhouse-upstairs': toll.buildTollUpstairsMap(),
     'sump-crowe': sump.buildCroweMap(),
     'sump-stilt': sump.buildStiltMap(),
     'sump-pruett': sump.buildPruettMap(),
