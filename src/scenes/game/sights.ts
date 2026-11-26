@@ -25,6 +25,7 @@ import { syncPlot } from './plot';
 import { lookedAtCamp, lookedAtTrailSign } from './trail';
 import { lookedAtBrazier } from './beacon';
 import { examineAtJetty } from './jetty';
+import { examineAtTollHouse } from './tollhouse';
 import { examineInSump } from './sump';
 
 export function startChannel(g: GameScene, channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
@@ -170,6 +171,7 @@ export function examine(g: GameScene, sight: Sight): void {
     return;
   }
   if (examineAtJetty(g, sight)) return;
+  if (examineAtTollHouse(g, sight)) return;
   if (examineInSump(g, sight)) return;
   if (sight.thought) {
     g.onHint?.(sight.thought);

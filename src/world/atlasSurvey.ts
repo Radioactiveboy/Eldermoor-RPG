@@ -181,7 +181,7 @@ export const SURVEY: Partial<Record<AreaId, AreaSurvey>> = {
       '....................',
     ],
     features: [],
-    names: [["The north-west tower",6,7],["The Fen Gate",38,6],["The town square",29.5,24.5],["The Black Rose",29.5,19.5],["Ossery's Remedies",19.5,22],["Tallow's Chandlery",19.5,27],["Lusk's",44,18.5],["The burnt house",17.5,36],["Rookery Row",9,12],["Sump Lane",9,32],["Pier Lane",30,37],["Rendle's slaughterhouse",46.5,27.5],["Vetch's tannery",50,37],["The tannery yard",50,38.5],["The pit barn",54.5,34.5],["Scritch's den",45.5,32.5],["The Shambles",47,28.5],["The pier",30,53],["The Staithe",20,44],["Heron Eyot",45,64]],
+    names: [["The north-west tower",6,7],["The Fen Gate",38,6],["The Reeve's toll house",33.5,7.5],["The town square",29.5,24.5],["The Black Rose",29.5,19.5],["Ossery's Remedies",19.5,22],["Tallow's Chandlery",19.5,27],["Lusk's",44,18.5],["The burnt house",17.5,36],["Rookery Row",9,12],["Sump Lane",9,32],["Pier Lane",30,37],["Rendle's slaughterhouse",46.5,27.5],["Vetch's tannery",50,37],["The tannery yard",50,38.5],["The pit barn",54.5,34.5],["Scritch's den",45.5,32.5],["The Shambles",47,28.5],["The pier",30,53],["The Staithe",20,44],["Heron Eyot",45,64]],
   },
   "plains": {
     ground: [

@@ -1799,3 +1799,7 @@ export function generateGloomhaven(scene: Phaser.Scene): void {
   }
   for (let i = 0; i < 3; i++) FEN_ART.push({ key: `gh-rushes-${i}`, originY: (52 - 8 + 0.5) / 52 });
 }
+
+// The parts the Reeve's toll house by the Fen Gate is built from (art/tollhouse.ts), so it matches the town.
+export type { Opening };
+export { chimney, darken, lighten, mix, plasterWall, rotSlate, windowPixel, withDoor, withOpenings };

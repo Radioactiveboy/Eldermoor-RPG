@@ -169,3 +169,10 @@ export const SHAMBLES = {
   // Turned to face the road (+x), so its door is in its east wall.
   ratden: { tx: 42, ty: 31, w: 3, h: 3, door: { tx: 45, ty: 32 } },
 } as const;
+
+/**
+ * The Reeve's toll house, just inside the Fen Gate on the west side of the road: its back corner and footprint
+ * (its art is 5 wide and 4 deep, turned so its front faces the road, +x), and its front door, on the road side.
+ * Inside is the 'tollhouse' area (world/TollHouseMap.ts).
+ */
+export const TOLL_HOUSE = { tx: 29, ty: 5, w: 4, h: 5, door: { tx: 33, ty: 7 } };

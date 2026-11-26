@@ -62,6 +62,8 @@ export type AreaId =
   | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
   // The Shambles, Gloomhaven's east quarter: Rendle's slaughterhouse, Vetch's tannery and its drying loft, Old Scritch's den, and the Red Aprons' dog pit.
   | 'slaughterhouse' | 'tannery' | 'tannery-loft' | 'ratden' | 'dogpit'
+  // The Reeve's toll house just inside Gloomhaven's Fen Gate: the toll office, its strongroom, and the Reeve's rooms upstairs.
+  | 'tollhouse' | 'tollhouse-strong' | 'tollhouse-upstairs'
   // Homes down Sump Lane in Gloomhaven's west quarter: the Crowes' cottage, Ned Wick's stilt house, the Widow Pruett's hovel, and the burnt house.
   | 'sump-crowe' | 'sump-stilt' | 'sump-pruett' | 'sump-ruin';
 

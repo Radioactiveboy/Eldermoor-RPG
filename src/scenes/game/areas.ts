@@ -36,6 +36,7 @@ import { enteredWorkshop } from './workshops';
 import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 import { enteredBlackRose, enteredRoseBack } from './blackrose';
 import { enteredShambles } from './shambles';
+import { enteredTollHouse, enteredTollStrong, enteredTollUpstairs } from './tollhouse';
 import { enteredCrowe, enteredPruett, enteredStilt, enteredSumpRuin } from './sump';
 import { Homestead } from '../../systems/Homestead';
 import { gatheringWorld, homesteadWorld, northWoodsGathering, restoreStead, snapshotStead } from '../../world/Homestead';
@@ -181,6 +182,10 @@ export const AREAS: Record<AreaId, AreaDef> = {
   'tannery-loft': lazy(() => import('../../world/ShamblesMap'), (m) => m.buildTanneryLoftMap(), { test: true, enter: enteredShambles }),
   ratden: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildRatDenMap(), { test: true, enter: enteredShambles }),
   dogpit: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildDogPitMap(), { test: true, enter: enteredShambles }),
+  // The Reeve's toll house by the Fen Gate: the toll office, the strongroom behind its iron door, and the Reeve's rooms upstairs.
+  tollhouse: lazy(() => import('../../world/TollHouseMap'), (m) => m.buildTollHouseMap(), { test: true, enter: enteredTollHouse }),
+  'tollhouse-strong': lazy(() => import('../../world/TollHouseMap'), (m) => m.buildTollStrongMap(), { test: true, enter: enteredTollStrong }),
+  'tollhouse-upstairs': lazy(() => import('../../world/TollHouseMap'), (m) => m.buildTollUpstairsMap(), { test: true, enter: enteredTollUpstairs }),
   // Homes down Sump Lane: the Crowes' cottage, Ned Wick's stilt house, the Widow Pruett's hovel, and the burnt house (see game/sump.ts).
   'sump-crowe': lazy(() => import('../../world/SumpMaps'), (m) => m.buildCroweMap(), { test: true, enter: enteredCrowe }),
   'sump-stilt': lazy(() => import('../../world/SumpMaps'), (m) => m.buildStiltMap(), { test: true, enter: enteredStilt }),
