@@ -39,6 +39,8 @@ import { floodTollStage, reeveSilverStage, TOLL_FLAGS } from '../systems/TollHou
 import { edricScript, garrowScript, GuildState, marrableScript, meetingScript, pimScript, thraleScript, tunstallScript, wexleyScript } from '../dialogue/guildhall';
 import { GUILD_FLAGS, GuildWorld } from '../systems/Guild';
 import { TOLL } from '../world/MarketMap';
+import { flayScript, gristleScript, lugsScript, rendleScript, scritchScript, tamPotboyScript, tamScript, vetchScript } from '../dialogue/shambles';
+import { NOTHING_QUEST, Shambles, TAM_QUEST } from '../systems/Shambles';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
 import { cutAtSeat, seatedDraw } from '../world/Seating';
 import { marketOpen } from '../systems/MarketHours';
@@ -563,6 +565,8 @@ const NPCS: Record<string, NpcDef> = {
         late: hour % 24 >= 1 && hour % 24 < 6,
         backOk: QuestLog.hasFlag(ROSE_FLAGS.backOk),
         news: roseNews(),
+        tam: Shambles.widowTam(),
+        tamFate: Shambles.tamFate(),
       }),
     ),
   },
@@ -577,6 +581,40 @@ const NPCS: Record<string, NpcDef> = {
   dunn: { texture: 'folk-dunn', sits: true, script: rose('dunn', (first) => dunnScript(first, Inventory.coins)) },
   ferret: { texture: 'folk-ferret', sits: true, script: rose('ferret', (first) => ferretScript(first, roseNews())) },
   vane: { texture: 'folk-vane', sits: true, talkRange: 2.4, script: rose('vane', (first) => vaneScript(first)) },
+  // The Shambles, Gloomhaven's east quarter (world/ShamblesMap.ts, dialogue/shambles.ts): Rendle on his killing floor, Gristle at the block,
+  // Vetch at his beam, Scritch among his rats, Tam in the tannery loft (or at the Rose), Flay and Lugs in the pit barn.
+  rendle: {
+    texture: 'folk-rendle', talkRange: 2.4,
+    script: firstTime('rendle', (first) =>
+      rendleScript({ first, how: Shambles.nothingHow(), tamHunt: QuestLog.has(TAM_QUEST), tamKnown: Shambles.tamFound(), tam: Shambles.tamFate() }),
+    ),
+  },
+  gristle: { texture: 'folk-gristle', script: firstTime('gristle', gristleScript) },
+  vetch: { texture: 'folk-vetch', script: firstTime('vetch', (first) => vetchScript(first, Shambles.tamFate() === 'hiding', QuestLog.has(TAM_QUEST))) },
+  scritch: {
+    texture: 'folk-scritch', talkRange: 2.2,
+    script: firstTime('scritch', (first) => scritchScript({ first, stage: Shambles.nothingStage(), how: Shambles.nothingHow(), lugs: QuestLog.hasFlag('lugs-apprentice') })),
+  },
+  tam: {
+    texture: 'folk-tam', talkRange: 2.2,
+    script: firstTime('tam', (first) =>
+      Shambles.tamFate() === 'potboy'
+        ? tamPotboyScript()
+        : tamScript({ first, coins: Inventory.coins, widow: QuestLog.has(TAM_QUEST), dog: QuestLog.has(NOTHING_QUEST) && !QuestLog.hasFlag('nothing-free') }),
+    ),
+  },
+  flay: {
+    texture: 'folk-flay', talkRange: 2.4,
+    script: firstTime('flay', (first) =>
+      flayScript({ first, asked: QuestLog.has(NOTHING_QUEST), free: QuestLog.hasFlag('nothing-free'), how: Shambles.nothingHow(), coins: Inventory.coins }),
+    ),
+  },
+  lugs: {
+    texture: 'folk-lugs',
+    script: firstTime('lugs', (first) =>
+      lugsScript({ first, apprentice: QuestLog.hasFlag('lugs-apprentice'), asked: QuestLog.has(NOTHING_QUEST), free: QuestLog.hasFlag('nothing-free') }),
+    ),
+  },
   // Down at Adowvale Jetty (world/JettyMap.ts): Maren on the pier by her boat, Old Ebb at his nets, and Wren about the smokehouse.
   maren: {
     texture: 'folk-maren', talkRange: 2.2,

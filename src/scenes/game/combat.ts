@@ -29,6 +29,7 @@ import { standUp } from './sitting';
 import { checkCellarClear } from './tavern';
 import { beatenUnderground, checkBroodHall } from './broodhall';
 import { checkBeaconFight } from './beacon';
+import { checkPitFight } from './shambles';
 
 /** The wolves of the den at home: once they're all gone, Brother Wystan hears of it. */
 export const CAVE_WOLVES = ['cave-wolf-1', 'cave-wolf-2', 'cave-wolf-3'];
@@ -61,6 +62,9 @@ export const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   brigandbrute: [['ale', 2]],
   brigandcutter: [['hatchet', 1]],
   brigandarcher: [['hunting-knife', 1]],
+  // The pit's takings are counted out separately (see scenes/game/shambles.ts).
+  apronflay: [['hunting-knife', 1]],
+  apronknacker: [],
 };
 
 /** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
@@ -88,6 +92,8 @@ export const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> =
   brigandbrute: { slain: 'Big Garth goes down like a felled oak, and the floor shakes.', fled: 'He lumbers off into the grass, cursing.' },
   brigandcutter: { slain: 'Teg lies still. Even now his scarf is over his face.', fled: 'Gone, quick and quiet, out of the door.' },
   brigandarcher: { slain: 'The lookout is down. Her bow lies across the stair.', fled: 'Gone up the stair and out of reach.' },
+  apronflay: { slain: 'Ned Flay is down in the sawdust, groaning, still trying to make a joke of it. Nobody laughs.', fled: 'He is over the pit wall and out of the door. He will be back, with more of them.' },
+  apronknacker: { slain: 'Gristle goes down like a bullock, and stays down, breathing like a bellows.', fled: 'He lumbers out into the yard, holding his head.' },
 };
 
 /** Out on the plains: chance meetings on the road, with the people, beasts, talk and fights they need from the game. */
@@ -281,6 +287,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     checkCampCleared(g);
     checkBroodHall(g, result.slain);
     checkBeaconFight(g, slain);
+    checkPitFight(g, slain);
     if (g.gateAttack?.active) {
       g.release();
       g.gateAttack.won();

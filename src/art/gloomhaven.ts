@@ -108,7 +108,7 @@ const TARP_DARK = 0x3c3f30;
  * the one below; boards gone grey where the tar's worn off, a few missing (a
  * black slot), newer boards nailed over others, and the bottom green with damp.
  */
-function boardWall(rows: number, seed: number, rot = 0.5): Shader {
+export function boardWall(rows: number, seed: number, rot = 0.5): Shader {
   return (u, v) => {
     const fv = v * rows;
     const row = Math.floor(fv);
@@ -171,7 +171,7 @@ function plasterWall(bays: number, H: number, seed: number, upperFrom = 0): Shad
 }
 
 /** Rough, wet rubble stone in uneven courses, mortared, with moss and slime. */
-function rubbleStone(seed: number, scaleU = 3, courses = 3, moss = 0.35): Shader {
+export function rubbleStone(seed: number, scaleU = 3, courses = 3, moss = 0.35): Shader {
   return (u, v) => {
     const row = Math.floor(v * courses);
     const lv = v * courses - row;
@@ -324,12 +324,12 @@ function withDoor(wall: Shader, H: number, u0: number, u1: number, top: number, 
 // ---------------------------------------------------------------- building parts
 
 /** A box from (x, y, z), w x d x h, its faces painted plainly in three tones. */
-function block(m: IsoModel, x: number, y: number, z: number, w: number, d: number, h: number, base: number, dark = darken(base, 0.72), light = lighten(base, 0.12)): void {
+export function block(m: IsoModel, x: number, y: number, z: number, w: number, d: number, h: number, base: number, dark = darken(base, 0.72), light = lighten(base, 0.12)): void {
   m.box(x, y, z, w, d, h, { top: light, left: base, right: dark });
 }
 
 /** A rough post (a stilt, a pile, a stake): round, barked, darker on its shaded side and slimy at its foot. */
-function post(m: IsoModel, x: number, y: number, r: number, h: number, z = 0, wetTo = 0): void {
+export function post(m: IsoModel, x: number, y: number, r: number, h: number, z = 0, wetTo = 0): void {
   m.cylinder(x, y, z, r, h, (u, v) => {
     const g = hash(Math.floor(v * h / 3), Math.floor(u * 4) + Math.floor(x * 13 + y * 7));
     let c = u < 0.3 ? DEADWOOD_LIGHT : u > 0.7 ? DEADWOOD_DARK : DEADWOOD;
@@ -340,7 +340,7 @@ function post(m: IsoModel, x: number, y: number, r: number, h: number, z = 0, we
 }
 
 /** A straight ribbon between two points: a rope, a strut, a chain. */
-function line(m: IsoModel, a: Vec3, b: Vec3, color: number, w = 0.03): void {
+export function line(m: IsoModel, a: Vec3, b: Vec3, color: number, w = 0.03): void {
   const d = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
   m.quad(a, d, { x: w, y: -w, z: 0 }, color);
   m.quad(a, d, { x: 0, y: 0, z: -1 }, color);
@@ -409,7 +409,7 @@ export interface HovelLook {
  * crooked chimney; windows lit, dark, boarded or shuttered; a door; and
  * whatever's been done to keep it standing. Its front faces +y.
  */
-function hovel(look: HovelLook): IsoModel {
+export function hovel(look: HovelLook): IsoModel {
   const m = new IsoModel();
   const S = look.size;
   const inset = 0.22;
@@ -594,7 +594,7 @@ function hovel(look: HovelLook): IsoModel {
 
 // ---------------------------------------------------------------- signs
 
-type Emblem = 'rose' | 'pestle' | 'candle' | 'balls' | 'blank';
+type Emblem = 'rose' | 'pestle' | 'candle' | 'balls' | 'blank' | 'cleaver' | 'hide' | 'rat';
 
 /**
  * A painted board, bordered, with its trade on it: the Black Rose's black rose,
@@ -632,6 +632,29 @@ function signFace(e: Emblem, u: number, v: number): number | null {
       if (Math.hypot(cu * 2, (v - 0.32) * 1.2) < 0.1) return v < 0.3 ? 0xfff0b0 : 0xf0a040;
       if (Math.abs(cu) < 0.2 && v > 0.82 && v < 0.86) return 0xb08a3a;
       return ground;
+    }
+    case 'cleaver': {
+      // The Shambles' butcher: a cleaver, blade down, over a pig's head (see art/shambles.ts).
+      if (cu > -0.24 && cu < 0.14 && v > 0.22 && v < 0.5) return v < 0.26 || cu > 0.1 ? 0x8a8e98 : cu < -0.18 ? 0xe0e4ec : 0xb8bcc6;
+      if (cu >= 0.14 && cu < 0.36 && Math.abs(v - 0.3) < 0.04) return 0x5a3a22;
+      if (Math.hypot(cu * 1.3, (v - 0.7) * 1.6) < 0.18) return Math.hypot(cu * 1.3 - 0.06, (v - 0.68) * 1.6) < 0.03 ? 0x2a1a1a : 0xd8a090;
+      return 0x4a2420;
+    }
+    case 'hide': {
+      // The tanner's: a hide stretched out flat, legs and all.
+      const hx = Math.abs(cu);
+      const body = hx < 0.2 - Math.abs(v - 0.5) * 0.2 && v > 0.22 && v < 0.8;
+      const legs = (Math.abs(v - 0.3) < 0.05 || Math.abs(v - 0.72) < 0.05) && hx < 0.32;
+      if (body || legs) return (Math.floor(u * 30) + Math.floor(v * 30)) % 7 === 0 ? 0x8a5a32 : 0xb07a48;
+      return 0x3a3426;
+    }
+    case 'rat': {
+      // The rat-catcher's: a rat in profile, tail curled.
+      const r = Math.hypot((cu + 0.04) * 1.1, (v - 0.55) * 2.2);
+      if (r < 0.2) return Math.hypot(cu + 0.18, v - 0.5) < 0.03 ? 0xe04030 : 0x5a5048;
+      if (Math.hypot(cu + 0.24, (v - 0.48) * 1.4) < 0.07) return 0x6a6058;
+      if (Math.abs(Math.hypot(cu - 0.26, v - 0.45) - 0.12) < 0.02 && cu > 0.14) return 0xc89a8a;
+      return 0x3a4030;
     }
     case 'balls': {
       for (const [bx, by] of [[0.35, 0.36], [0.65, 0.36], [0.5, 0.64]]) {
@@ -833,7 +856,7 @@ function pawnshop(): IsoModel {
  * A hovel on a footprint that isn't square: built as a square house of the
  * larger size, then its back trimmed off (the walls' depth is cut to fit).
  */
-function hovelSized(look: HovelLook, w: number, d: number): IsoModel {
+export function hovelSized(look: HovelLook, w: number, d: number): IsoModel {
   // The square builder lays the house out to its size each way; for a w x d shop, build it at w and squash y.
   const sq = hovel({ ...look, size: w });
   if (w === d) return sq;
@@ -1779,4 +1802,4 @@ export function generateGloomhaven(scene: Phaser.Scene): void {
 
 // The parts the Reeve's toll house by the Fen Gate (art/tollhouse.ts) and the Guildhall (art/guildhall.ts) are built from, so they match the town.
 export type { Opening };
-export { block, chimney, darken, lighten, line, mix, plasterWall, post, rotSlate, rubbleStone, windowPixel, withDoor, withOpenings };
+export { chimney, darken, lighten, mix, plasterWall, rotSlate, windowPixel, withDoor, withOpenings };

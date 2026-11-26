@@ -23,6 +23,7 @@ import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 import { roseAction } from './blackrose';
+import { SHAMBLES_ACTIONS } from './shambles';
 import { tollAction } from './tollhouse';
 import { SUMP_ACTIONS } from './sump';
 import { guildAction } from './guildhall';
@@ -47,6 +48,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...JETTY_ACTIONS,
   ...VOYAGE_ACTIONS,
   ...HOMESTEAD_ACTIONS,
+  ...SHAMBLES_ACTIONS,
   ...SUMP_ACTIONS,
 };
 

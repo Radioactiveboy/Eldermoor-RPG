@@ -35,6 +35,7 @@ import { enteredBeacon, enteredBeaconTop } from './beacon';
 import { enteredWorkshop } from './workshops';
 import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 import { enteredBlackRose, enteredRoseBack } from './blackrose';
+import { enteredShambles } from './shambles';
 import { enteredTollHouse, enteredTollStrong, enteredTollUpstairs } from './tollhouse';
 import { enteredCrowe, enteredPruett, enteredStilt, enteredSumpRuin } from './sump';
 import { enteredGuildHall } from './guildhall';
@@ -177,6 +178,11 @@ export const AREAS: Record<AreaId, AreaDef> = {
   'blackrose-back': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseBackMap(), { test: true, enter: enteredRoseBack }),
   'blackrose-upstairs': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseUpstairsMap(), { test: true }),
   'blackrose-room': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseRoomMap()),
+  slaughterhouse: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildSlaughterhouseMap(), { test: true, enter: enteredShambles }),
+  tannery: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildTanneryMap(), { test: true, enter: enteredShambles }),
+  'tannery-loft': lazy(() => import('../../world/ShamblesMap'), (m) => m.buildTanneryLoftMap(), { test: true, enter: enteredShambles }),
+  ratden: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildRatDenMap(), { test: true, enter: enteredShambles }),
+  dogpit: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildDogPitMap(), { test: true, enter: enteredShambles }),
   // The Reeve's toll house by the Fen Gate: the toll office, the strongroom behind its iron door, and the Reeve's rooms upstairs.
   tollhouse: lazy(() => import('../../world/TollHouseMap'), (m) => m.buildTollHouseMap(), { test: true, enter: enteredTollHouse }),
   'tollhouse-strong': lazy(() => import('../../world/TollHouseMap'), (m) => m.buildTollStrongMap(), { test: true, enter: enteredTollStrong }),

@@ -55,6 +55,7 @@ export type SpeakerId =
   | 'reeve' | 'nibb' | 'gaff' | 'lardy' | 'annet'
   | 'annis' | 'nan' | 'ned'
   | 'cooper'
+  | 'rendle' | 'vetch' | 'scritch' | 'tam' | 'flay' | 'lugs' | 'gristle'
   | 'wexley' | 'marrable' | 'tunstall' | 'thrale' | 'edric' | 'pim' | 'garrow';
 
 export interface Speaker {
@@ -154,6 +155,14 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   dunn: { name: 'Dunn', portrait: 'portrait-dunn', voice: { pitch: 88, spread: 0.04, wave: 'sawtooth' } },
   ferret: { name: 'Ferret', portrait: 'portrait-ferret', voice: { pitch: 265, spread: 0.3, wave: 'square' } },
   vane: { name: 'Vane', portrait: 'portrait-vane', voice: { pitch: 120, spread: 0.02, wave: 'sine' } },
+  // The Shambles, Gloomhaven's east quarter (see dialogue/shambles.ts): the Red Aprons, the tanner, the rat-catcher, and Tam Rudd.
+  rendle: { name: 'Saul Rendle', portrait: 'portrait-rendle', voice: { pitch: 96, spread: 0.02, wave: 'sine' } },
+  vetch: { name: 'Morrow Vetch', portrait: 'portrait-vetch', voice: { pitch: 128, spread: 0.1, wave: 'triangle' } },
+  scritch: { name: 'Old Scritch', portrait: 'portrait-scritch', voice: { pitch: 205, spread: 0.3, wave: 'square' } },
+  tam: { name: 'Tam Rudd', portrait: 'portrait-tam', voice: { pitch: 190, spread: 0.26, wave: 'triangle' } },
+  flay: { name: 'Ned Flay', portrait: 'portrait-flay', voice: { pitch: 150, spread: 0.18, wave: 'sawtooth' } },
+  lugs: { name: 'Lugs', portrait: 'portrait-lugs', voice: { pitch: 175, spread: 0.22, wave: 'triangle' } },
+  gristle: { name: 'Gristle', portrait: 'portrait-gristle', voice: { pitch: 74, spread: 0.04, wave: 'sawtooth' } },
   // Down Sump Lane in Gloomhaven (see dialogue/sump.ts): Wisp's mam, the Widow at her window, and the lamplighter.
   annis: { name: 'Annis Crowe', portrait: 'portrait-annis', voice: { pitch: 330, spread: 0.12, wave: 'triangle' } },
   nan: { name: 'The Widow Pruett', portrait: 'portrait-nan', voice: { pitch: 280, spread: 0.24, wave: 'triangle' } },
