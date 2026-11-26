@@ -55,6 +55,7 @@ export const AREA_NAMES: Record<AreaId, string> = {
   greyfells: 'Greyfells Clearing',
   jetty: 'Adowvale Jetty',
   gloomhaven: 'Gloomhaven',
+  fenroad: 'The Fen Road',
   blackrose: 'The Black Rose',
   'blackrose-back': 'The back room of the Black Rose',
   'blackrose-upstairs': 'Upstairs at the Black Rose',

@@ -4338,6 +4338,55 @@ const SUMP_PAINTERS: Record<string, (c: Ctx) => void> = {
     c.stroke();
     shine(c, 46, 46, 14, 8, -0.6, 0.6);
   },
+  'white-scale': (c) => {
+    // A great scale, a rounded shield shape with a ridge down it, pearl-white, ringed with growth lines, a sheen like mother-of-pearl.
+    at(c, 64, 64, 0.35, () => {
+      const scale = () => {
+        c.beginPath();
+        c.moveTo(0, -42);
+        c.bezierCurveTo(34, -40, 40, 6, 0, 44);
+        c.bezierCurveTo(-40, 6, -34, -40, 0, -42);
+        c.closePath();
+      };
+      drop(c, () => {
+        scale();
+        c.fillStyle = '#9aa29a';
+        c.fill();
+      });
+      scale();
+      fillInk(c, rad(c, -10, -14, 60, [
+        [0, '#ffffff'],
+        [0.35, '#eceee2'],
+        [0.75, '#c4ccc0'],
+        [1, '#8a968c'],
+      ]), 3);
+      clipped(c, () => {
+        // Growth rings, and a faint rainbow sheen across them.
+        c.strokeStyle = 'rgba(120,130,120,0.45)';
+        c.lineWidth = 1.4;
+        for (let k = 1; k < 6; k++) {
+          c.beginPath();
+          c.ellipse(0, 30, 8 * k, 13 * k, 0, Math.PI * 1.05, Math.PI * 1.95);
+          c.stroke();
+        }
+        c.fillStyle = lin(c, -30, -30, 30, 30, [
+          [0, 'rgba(180,220,255,0)'],
+          [0.4, 'rgba(200,170,255,0.25)'],
+          [0.6, 'rgba(170,255,210,0.22)'],
+          [1, 'rgba(255,220,170,0)'],
+        ]);
+        c.fillRect(-50, -50, 100, 100);
+        // The ridge down the middle.
+        c.strokeStyle = 'rgba(255,255,255,0.8)';
+        c.lineWidth = 2.5;
+        c.beginPath();
+        c.moveTo(-2, -38);
+        c.quadraticCurveTo(-4, 0, 0, 40);
+        c.stroke();
+      });
+    });
+    shine(c, 52, 40, 12, 6, -0.7, 0.7);
+  },
   'jory-tally': (c) => {
     // A short board, scorched at one corner, scratched all over with little pictures: a church in water, crates, holed coins, a rose,
     // one crate with lines coming off it, and a boat crossed through.
@@ -4541,6 +4590,7 @@ const ICONS: Array<[string, string]> = [
   ['item-pitch-pail', 'pitch-pail'],
   ['item-grey-silver', 'grey-silver'],
   ['item-jory-tally', 'jory-tally'],
+  ['item-white-scale', 'white-scale'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {

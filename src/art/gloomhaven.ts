@@ -1123,7 +1123,7 @@ function wallTower(): IsoModel {
  * oak gates, black and iron-studded, barred shut; torches in cressets on the
  * towers and a skull nailed over the gate.
  */
-function gatehouse(): IsoModel {
+function gatehouse(open = false): IsoModel {
   const m = new IsoModel();
   const H = 92;
   const tower = (x: number) => {
@@ -1142,7 +1142,18 @@ function gatehouse(): IsoModel {
   };
   tower(0);
   // The gates, between the towers: two great leaves of black oak, studded, and the bar across them.
-  m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => {
+  // Open (by Captain Vosk's leave), the way through shows instead: the dark under the arch, and the fen grey beyond it.
+  if (open) {
+    m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => {
+      const y = v * 64;
+      if (y < 10) return Math.floor(u * 9) % 2 ? STONE : STONE_DARK;
+      if (y < 16) return 0x0c0a0a;
+      // Mist out past the arch, the dark bulk of the far trees in it, and the road's mud underfoot.
+      const far = y > 52 ? mix(MUD, MUD_WET, smoothNoise(u * 8, y * 0.2, 9)) : y > 40 - 6 * smoothNoise(u * 4, 1, 3) ? mix(0x3e4438, 0x58604e, (y - 34) / 20) : mix(0x6a7066, 0x7e8478, (y - 16) / 24);
+      const edge = Math.min(u, 1 - u);
+      return edge < 0.06 ? darken(far, 0.45) : edge < 0.12 ? darken(far, 0.7) : far;
+    });
+  } else m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => {
     const y = v * 64;
     // An arch of dressed stone over them.
     if (y < 10) return Math.abs(u - 0.5) * 2 < 1 - (y / 10) ** 0.5 * 0 && y < 2 ? STONE_LIGHT : (Math.floor(u * 9) % 2 ? STONE : STONE_DARK);
@@ -1166,6 +1177,20 @@ function gatehouse(): IsoModel {
   });
   m.quad({ x: 1.5, y: 0.2, z: 96 }, { x: 3, y: 0, z: 0 }, { x: 0, y: 1.9, z: -10 }, rotShingle(151));
   tower(4.4);
+  if (open) {
+    // The two leaves, swung back against the towers, the bar leant up beside one.
+    const leaf: Shader = (u, v) => {
+      const y = v * 64;
+      if (Math.abs(y - 18) < 1.2 || Math.abs(y - 56) < 1.2) return IRON;
+      if (Math.floor(y) % 6 === 0 && Math.floor(u * 20) % 4 === 0) return IRON_LIGHT;
+      let c = Math.floor(u * 8) % 2 ? TAR : mix(TAR, OAK_DARK, 0.4);
+      if (y > 58) c = mix(c, SLIME, 0.5);
+      return c;
+    };
+    m.quad({ x: 1.62, y: 0.95, z: 64 }, { x: 0, y: 1.05, z: 0 }, { x: 0, y: 0, z: -64 }, leaf);
+    m.quad({ x: 4.38, y: 0.95, z: 64 }, { x: 0, y: 1.05, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => darken(leaf(u, v) ?? TAR, 0.72));
+    m.quad({ x: 4.2, y: 2.05, z: 2 }, { x: 0, y: 0, z: 46 }, { x: 0.12, y: 0, z: 0 }, (u) => (u < 0.3 ? OAK_LIGHT : OAK_DARK));
+  }
   return m;
 }
 
@@ -1754,6 +1779,7 @@ export function generateGloomhaven(scene: Phaser.Scene): void {
   put('gh-wallpost', wallPost());
   put('gh-walltower', wallTower());
   put('gh-gatehouse', gatehouse());
+  put('gh-gatehouse-open', gatehouse(true));
   // The square and the streets.
   put('gh-well', smallWell());
   put('gh-lamp', lamp());

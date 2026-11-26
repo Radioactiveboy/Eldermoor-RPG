@@ -29,6 +29,7 @@ import { examineAtJetty } from './jetty';
 import { examineAtTollHouse } from './tollhouse';
 import { examineInSump } from './sump';
 import { examineAtGuild } from './guildhall';
+import { examineOnFenRoad } from './fenroad';
 
 export function startChannel(g: GameScene, channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
   g.walkingTo = undefined;
@@ -177,6 +178,7 @@ export function examine(g: GameScene, sight: Sight): void {
   if (examineAtTollHouse(g, sight)) return;
   if (examineInSump(g, sight)) return;
   if (examineAtGuild(g, sight)) return;
+  if (examineOnFenRoad(g, sight)) return;
   if (sight.thought) {
     g.onHint?.(sight.thought);
     lookedAtTrailSign(sight.id);

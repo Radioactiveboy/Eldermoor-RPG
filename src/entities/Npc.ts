@@ -40,6 +40,10 @@ import { annetScript, gaffScript, gateManTollTalk, lardyScript, nibbScript, reev
 import { floodTollStage, reeveSilverStage, TOLL_FLAGS } from '../systems/TollHouse';
 import { edricScript, garrowScript, GuildState, marrableScript, meetingScript, pimScript, thraleScript, tunstallScript, wexleyScript } from '../dialogue/guildhall';
 import { GUILD_FLAGS, GuildWorld } from '../systems/Guild';
+import { edricWreckTalk, gammerScript, voskFenTalk } from '../dialogue/fenroad';
+import { FEN_FLAGS } from '../systems/FenRoad';
+import { fenReport } from '../scenes/game/fenroad';
+import { FEN_GATE_OPEN } from '../world/landmarks';
 import { TOLL } from '../world/MarketMap';
 import { flayScript, gristleScript, lugsScript, rendleScript, scritchScript, tamPotboyScript, tamScript, vetchScript } from '../dialogue/shambles';
 import { NOTHING_QUEST, Shambles, TAM_QUEST } from '../systems/Shambles';
@@ -647,7 +651,16 @@ const NPCS: Record<string, NpcDef> = {
   },
   // Gloomhaven (world/GloomhavenMap.ts): the gate men at the Fen Gate, the three keepers at their counters, Gutter Jack on the
   // bench by the well, Wisp about the square, and Cray on the pier.
-  vosk: { texture: 'folk-vosk', talkRange: 2.2, script: toll('vosk', (first, t) => voskTollTalk(voskScript(first), t)) },
+  vosk: {
+    texture: 'folk-vosk', talkRange: 2.2,
+    script: toll('vosk', (first, t) => voskFenTalk(voskTollTalk(voskScript(first), t), {
+      open: QuestLog.hasFlag(FEN_GATE_OPEN),
+      hired: QuestLog.hasFlag(GUILD_FLAGS.hired),
+      owed: t.silver === 'done',
+      tracks: QuestLog.hasFlag(FEN_FLAGS.tracks),
+      toldVosk: QuestLog.hasFlag(FEN_FLAGS.toldVosk),
+    })),
+  },
   brakk: { texture: 'folk-brakk', talkRange: 2.2, script: toll('brakk', (first, t) => gateManTollTalk('brakk', brakkScript(first), t)) },
   fitch: { texture: 'folk-fitch', talkRange: 2.4, script: toll('fitch', (first, t) => gateManTollTalk('fitch', fitchScript(first), t)) },
   crabbe: { texture: 'folk-crabbe', talkRange: 2.2, script: toll('crabbe', (first, t) => gateManTollTalk('crabbe', crabbeScript(first), t)) },
@@ -719,7 +732,21 @@ const NPCS: Record<string, NpcDef> = {
   marrable: { texture: 'folk-marrable', talkRange: 2.2, script: guild(marrableScript, 'marrable') },
   tunstall: { texture: 'folk-tunstall', talkRange: 2.2, script: guild(tunstallScript, 'tunstall') },
   thrale: { texture: 'folk-thrale', talkRange: 2.2, script: guild(thraleScript, 'thrale') },
-  edric: { texture: 'folk-edric', talkRange: 2.2, script: guild((s) => edricScript(s, GuildWorld.thraleHere), 'edric') },
+  edric: { texture: 'folk-edric', talkRange: 2.2, script: guild((s) => edricWreckTalk(edricScript(s, GuildWorld.thraleHere), fenReport(GuildWorld.thraleHere)), 'edric') },
+  // Gammer Teal, the reed-cutter on the Fen Road (world/FenRoadMap.ts, dialogue/fenroad.ts), at her hut by the causeway.
+  gammer: {
+    texture: 'folk-gammer', talkRange: 2.4,
+    script: firstTime('gammer', (first) => gammerScript({
+      first,
+      hired: QuestLog.hasFlag(GUILD_FLAGS.hired),
+      wreck: QuestLog.hasFlag(FEN_FLAGS.wreck),
+      tracks: QuestLog.hasFlag(FEN_FLAGS.tracks),
+      scale: Inventory.count('white-scale') > 0,
+      heardWhite: QuestLog.hasFlag(FEN_FLAGS.white),
+      offered: QuestLog.hasFlag(FEN_FLAGS.offered),
+      coins: Inventory.coins,
+    })),
+  },
   garrow: { texture: 'folk-garrow', talkRange: 2.2, script: guild(garrowScript, 'garrow') },
   pim: { texture: 'folk-pim', talkRange: 2.4, script: () => pimScript(guildState('pim')) },
 };

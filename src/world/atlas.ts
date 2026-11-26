@@ -8,6 +8,13 @@
  */
 import type { AreaId } from './MapData';
 
+/**
+ * The Fen Road's way back in through the Fen Gate (the left of its two columns: see world/FenRoadMap.ts), and
+ * where its box goes on the world map so that column sits over Gloomhaven's gate (column 37.5 of its box).
+ */
+const FEN_GATE_X = 23;
+const FEN_BOX_X = -28 + 37.5 / 2 - (FEN_GATE_X + 0.5) / 2;
+
 export interface Spot {
   x: number;
   y: number;
@@ -56,6 +63,8 @@ export const REGIONS: Region[] = [
   { id: 'jetty', tiles: { w: 52, h: 62 }, box: { x: -64.25, y: 40.5, w: 26, h: 31 }, look: 'fields', label: { x: 40, y: 8 } },
   // Downriver from the jetty, days by boat: the marsh town.
   { id: 'gloomhaven', tiles: { w: 60, h: 88 }, box: { x: -28, y: 64, w: 30, h: 44 }, look: 'village', label: { x: 44, y: 10 } },
+  // North out of Gloomhaven's Fen Gate: the causeway over the bog.
+  { id: 'fenroad', tiles: { w: 56, h: 128 }, box: { x: FEN_BOX_X, y: 0, w: 28, h: 64 }, look: 'woods', label: { x: 40, y: 96 } },
   { id: 'plains', tiles: { w: 120, h: 150 }, box: { x: -67.6, y: -34.2, w: 40, h: 50 }, look: 'plains', label: { x: 40, y: 108 } },
   { id: 'monastery', tiles: { w: 64, h: 60 }, box: { x: -24.9, y: -22.2, w: 22, h: 20 }, look: 'grounds', label: { x: 36, y: 42 } },
   { id: 'abbey', tiles: { w: 46, h: 40 }, box: { x: -20.6, y: -34.2, w: 14, h: 12 }, look: 'cloister' },
@@ -108,6 +117,7 @@ export const LINKS: Link[] = [
   link('gloomhaven', { x: 20.5, y: 39.5 }, 'sump-pruett', { x: 0.5, y: 3.5 }),
   link('gloomhaven', { x: 17.5, y: 37.5 }, 'sump-ruin', { x: 0.5, y: 4.5 }),
   link('gloomhaven', { x: 37.5, y: 41.5 }, 'guildhall', { x: 0.5, y: 8.5 }),
+  link('gloomhaven', { x: 37.5, y: 0.5 }, 'fenroad', { x: FEN_GATE_X + 0.5, y: 127.5 }, 'The Fen Road'),
   link('guildhall', { x: 2.5, y: 0.5 }, 'guildhall-counting', { x: 0.5, y: 4.5 }),
   link('guildhall', { x: 10.5, y: 0.5 }, 'guildhall-office', { x: 0.5, y: 3.5 }),
   link('plains', { x: 119, y: 80.5 }, 'monastery', { x: 0.5, y: 44.5 }, "The Lord's Road"),

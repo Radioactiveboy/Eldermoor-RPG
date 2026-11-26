@@ -139,6 +139,41 @@ export const GLOOM_H = 88;
 export const GLOOM_WALL = { north: 4, west: 3, east: 56 };
 /** The gatehouse in the north wall: its back corner and footprint, and the columns of the way through it. */
 export const GLOOM_GATE = { tx: 35, ty: 3, w: 6, h: 2, road: { x0: 37, x1: 38 } };
+/** The Fen Gate's gatehouse's outline for collisions: the two towers, and (shut) the barred gates between them. */
+export function gatehouseShape(open: boolean): { shapes: Shape[]; blocks: Array<[number, number]> } {
+  const towers: Array<[number, number]> = [[0, 0], [1, 0], [0, 1], [1, 1], [4, 0], [5, 0], [4, 1], [5, 1]];
+  return open
+    ? { shapes: [box(0, 0.05, 1.6, 1.95), box(4.4, 0.05, 6, 1.95)], blocks: towers }
+    : { shapes: [box(0, 0.05, 1.6, 1.95), box(4.4, 0.05, 6, 1.95), box(1.6, 0.6, 4.4, 1.2)], blocks: [...towers, [2, 0], [3, 0], [2, 1], [3, 1]] };
+}
+
+/**
+ * The Fen Road (world/FenRoadMap.ts): Marrable's old causeway out of the Fen Gate and north over the bog.
+ * Its size, the line the causeway takes (the middle of it, column by row), and the spots the game needs
+ * while the hero is out there: the wreck at the Drowned Mile, the tracks going off it into the mere, and
+ * where something watches from the water.
+ */
+export const FEN_W = 56;
+export const FEN_H = 128;
+/** The middle of the causeway in row y. */
+export function fenRoadX(y: number): number {
+  return 27 + 5.5 * Math.sin(y * 0.045 + 0.4) + 2.2 * Math.sin(y * 0.13 + 1.1);
+}
+/** The Drowned Mile, where the causeway runs low through the open water: the rows it spans. */
+export const DROWNED_MILE = { y0: 52, y1: 74 };
+/** The wreck of the guild's last caravan, in the middle of the Drowned Mile. */
+export const FEN_WRECK = { y: 63 };
+/** The tracks going off the causeway into the west mere, the white scale by them, and where the watcher comes up. */
+export const FEN_TRACKS = { x: Math.round(fenRoadX(66)) - 3, y: 66 };
+export const FEN_WATCHER = { x: Math.round(fenRoadX(66)) - 6.5, y: 69.5 };
+/** Where the causeway goes under, at the north end: the hero can't go on past it yet. */
+export const FEN_SUNK = { y0: 7, y1: 12 };
+/** The way out through the open Fen Gate, onto the Fen Road: off the top of Gloomhaven's map, up the road through the arch. */
+export function fenGateDoors(): Door[] {
+  return [GLOOM_GATE.road.x0, GLOOM_GATE.road.x1].map((tx) => ({ tx, ty: 0, to: 'fenroad', entry: 'gate', auto: true }));
+}
+/** The flag set when Captain Vosk gives the hero leave to go out by the Fen Gate (dialogue/gloomhaven.ts). */
+export const FEN_GATE_OPEN = 'fen-gate-open';
 /**
  * The Black Rose, the big tavern on the north side of the square: its back corner and footprint, and its front
  * door (in the middle of its +y face). Inside is the 'blackrose' area, once it's built.
