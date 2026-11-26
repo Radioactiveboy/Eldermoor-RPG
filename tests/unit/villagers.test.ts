@@ -8,6 +8,7 @@ import { motherModel } from '../../src/art/mother3d';
 import { WAYFARER_MODELS } from '../../src/art/wayfarers3d';
 import { CROWD_MODELS } from '../../src/art/townsfolk3d';
 import { ROSE_FOLK } from '../../src/art/blackrose3d';
+import { TOLL_FOLK } from '../../src/art/tollhouse3d';
 import { GUILD_FOLK } from '../../src/art/guildhall3d';
 import { GLOOM_FOLK } from '../../src/art/gloomfolk3d';
 import { SUMP_FOLK } from '../../src/art/sump3d';
@@ -19,7 +20,7 @@ vi.mock('phaser', () => ({ default: {} }));
 
 /** Every 3D person, by the 'folk-<id>' texture they're registered as. */
 const MODELS: Record<string, (pose: Pose3D) => Model> = {
-  ...MODELS_3D, ...FINE_FOLK, ...WAYFARER_MODELS, ...ROSE_FOLK, ...GUILD_FOLK, ...GLOOM_FOLK, ...SUMP_FOLK, mother: motherModel,
+  ...MODELS_3D, ...FINE_FOLK, ...WAYFARER_MODELS, ...ROSE_FOLK, ...GUILD_FOLK, ...GLOOM_FOLK, ...TOLL_FOLK, ...SUMP_FOLK, mother: motherModel,
   ...Object.fromEntries(Object.entries(BRIGAND_FOLK).map(([id, look]) => [id, brigandFolkModel(look)])),
   ...Object.fromEntries(Object.entries(CROWD_MODELS).map(([id, m]) => [`crowd-${id}`, m])),
 };

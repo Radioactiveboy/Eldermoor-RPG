@@ -24,6 +24,7 @@ import { syncPlot } from './plot';
 import { lookedAtCamp, lookedAtTrailSign } from './trail';
 import { lookedAtBrazier } from './beacon';
 import { examineAtJetty } from './jetty';
+import { examineAtTollHouse } from './tollhouse';
 import { examineInSump } from './sump';
 import { examineAtGuild } from './guildhall';
 
@@ -169,6 +170,7 @@ export function examine(g: GameScene, sight: Sight): void {
     return;
   }
   if (examineAtJetty(g, sight)) return;
+  if (examineAtTollHouse(g, sight)) return;
   if (examineInSump(g, sight)) return;
   if (examineAtGuild(g, sight)) return;
   if (sight.thought) {

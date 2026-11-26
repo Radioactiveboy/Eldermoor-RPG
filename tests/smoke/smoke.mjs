@@ -15,7 +15,7 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const ALL_AREAS = [
   'home', 'world', 'market', 'cave', 'hut', 'plains', 'northwoods', 'watchtower', 'greyfells', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
   'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery', 'garrison', 'jail', 'residence', 'jetty', 'blackrose', 'blackrose-back', 'blackrose-upstairs', 'warren', 'broodhall',
-  'gloomhaven', 'sump-crowe', 'guildhall',
+  'gloomhaven', 'tollhouse', 'tollhouse-strong', 'tollhouse-upstairs', 'sump-crowe', 'guildhall',
 ];
 /**
  * Areas checked in the same page as another, one after the next: rooms that come as a set (the homes down
