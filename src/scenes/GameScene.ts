@@ -66,6 +66,7 @@ import { standUp, updateSitting } from './game/sitting';
 import { loadSave, wakingThought } from './game/sleep';
 import { fetchOrder, SERVICE_FIRST, syncNpcWorld, updateTavern } from './game/tavern';
 import { updateBlackRose } from './game/blackrose';
+import { updateGuildHall } from './game/guildhall';
 import { checkMusings, checkRoadExits } from './game/travel';
 import { checkGateAttack, gateTestStart, wokeAfterGate } from './game/gate';
 import { warrenTestStart, wokeAfterBurial } from './game/warren';
@@ -474,6 +475,7 @@ export class GameScene extends Phaser.Scene {
     updateSitting(this, dt);
     updateTavern(this, dt);
     updateBlackRose(this, dt);
+    updateGuildHall(this, dt);
 
     this.cropTimer -= dt;
     if (this.cropTimer <= 0) {

@@ -2696,14 +2696,28 @@ export function generatePortraits(scene: Phaser.Scene): void {
     { open: true, blink: false },
     { open: false, blink: true },
   ];
-  for (const [id, paint] of Object.entries(PAINTERS)) {
-    const sheet = new PixelCanvas(S * frames.length, S);
-    frames.forEach((f, i) => {
-      const frame = new PixelCanvas(S, S);
-      paint(frame, f);
-      sheet.blit(frame, i * S, 0);
-    });
-    const tex = sheet.toTexture(scene, `portrait-${id}`);
-    frames.forEach((_f, i) => tex.add(i, 0, i * S, 0, S, S));
-  }
+  for (const [id, paint] of Object.entries(PAINTERS)) paintPortrait(scene, id, paint, frames);
 }
+
+/** Paints one speaker's portrait sheet as 'portrait-<id>' (also for painters kept in their own files, like the Guildhall's). */
+export function paintPortrait(scene: Phaser.Scene, id: string, paint: Painter, frames: Frame[] = PORTRAIT_FRAMES): void {
+  const sheet = new PixelCanvas(S * frames.length, S);
+  frames.forEach((f, i) => {
+    const frame = new PixelCanvas(S, S);
+    paint(frame, f);
+    sheet.blit(frame, i * S, 0);
+  });
+  const tex = sheet.toTexture(scene, `portrait-${id}`);
+  frames.forEach((_f, i) => tex.add(i, 0, i * S, 0, S, S));
+}
+
+/** A portrait's three frames: mouth shut, open, and blinking. */
+const PORTRAIT_FRAMES: Frame[] = [
+  { open: false, blink: false },
+  { open: true, blink: false },
+  { open: false, blink: true },
+];
+
+/** The pieces portraits are painted from, for the painters kept in their own files (art/guildPortraits.ts). */
+export { blob, CX, EYE_DX, EYE_Y, hood, lightness, mix, ramp, S as PORTRAIT_S, specs, tone, townsfolk };
+export type { Frame, Painter, Ramp };

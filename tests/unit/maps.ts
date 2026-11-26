@@ -42,6 +42,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const rose = await import('../../src/world/BlackRoseMap');
   const toll = await import('../../src/world/TollHouseMap');
   const sump = await import('../../src/world/SumpMaps');
+  const guild = await import('../../src/world/GuildHallMap');
   const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
@@ -86,6 +87,9 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     'sump-stilt': sump.buildStiltMap(),
     'sump-pruett': sump.buildPruettMap(),
     'sump-ruin': sump.buildSumpRuinMap(),
+    guildhall: guild.buildGuildHallMap(),
+    'guildhall-counting': guild.buildGuildCountingMap(),
+    'guildhall-office': guild.buildGuildOfficeMap(),
     warren: buildWarrenMap({ prisoner: 'hilde' }),
     broodhall: buildBroodHallMap(),
   };
