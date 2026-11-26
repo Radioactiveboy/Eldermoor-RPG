@@ -5,7 +5,10 @@
  *
  * The story under it, which nobody in the hall knows whole: someone is buying the guild
  * from the inside, a member at a time. The raids on the caravans out at the Drowned Mile are
- * meant to break the ones who won't sell; Master Thrale lends the broken ones silver against
+ * the work of a band of lizard men out of the marsh, led by a great white lizard, set on the road
+ * and paid in new silver by the Astarix's people (the man in grey on the punt is their go-between).
+ * The lizard men grow fat on it, and are making ready for something far larger. The raids are
+ * meant to break the members who won't sell; Master Thrale lends the broken ones silver against
  * their shares, and the silver is new, and it isn't his. (It comes, through Vane and the grey
  * coats of the Black Rose's back room, from the Astarix's people; nobody in Gloomhaven knows
  * of the orb, and nobody is told.) Edric Lowe has half guessed it and nobody will hear him.

@@ -507,7 +507,7 @@ export function edricScript(s: GuildState, thraleHere: boolean): DialogueScript 
         speaker: 'edric',
         lines: [
           'Go and look at the wreck. The last caravan is still out there at the Drowned Mile, where the causeway runs low through the reeds. Nobody has dared go back for it.',
-          'If it was brigands, there will be things missing. If it was not... Garrow says they went back up the causeway towards the town, after. Brigands go back into the fen. Look at which way the tracks run.',
+          'If it was brigands, there will be things missing. If it was not... Garrow says that when it was done they went into the mere, and he never saw one come up. Brigands do not swim. Look at the tracks. Look at what made them.',
           'Out of the Fen Gate and north. And go carefully. Whoever they are, they will know by tonight that the guild has hired someone.',
         ],
         action: 'guild-edric',
@@ -598,7 +598,7 @@ export function garrowScript(s: GuildState): DialogueScript {
         speaker: 'garrow',
         lines: [
           'Fog. You get fog out there like wet wool. Five wagons, and me in front with a lantern on a pole. We come to where the causeway runs low, the Drowned Mile, and the reeds come up taller than the wagons on both sides.',
-          'And out of them come ten, twelve men. Faces wrapped. No shouting. Brigands shout, to frighten you. These never said a word.',
+          'And out of them come ten, twelve of them. Faces wrapped, I thought, or hooded. Low to the ground, and quick in the mud, quicker than a man has any right to be. No shouting. Brigands shout, to frighten you. These only hissed.',
         ],
         next: 'g2',
       },
@@ -613,7 +613,7 @@ export function garrowScript(s: GuildState): DialogueScript {
         speaker: 'garrow',
         lines: [
           "And there was a punt. Out on the mere, in the fog, with a man stood up in it. A good grey coat. He didn't help and he didn't hide. He just watched, like a man at a cattle sale.",
-          'When it was done they went back up the causeway. Towards the town, mark you. Not away.',
+          'When it was done they went off the causeway into the mere. Into the water, mark you, and not one of them came up that I saw. I lay there till dark, waiting for a head. Nothing.',
         ],
         next: 'g4',
       },

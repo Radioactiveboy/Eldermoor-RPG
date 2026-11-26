@@ -169,7 +169,7 @@ const GUILD_ACTIONS: Record<string, (g: GameScene) => void> = {
     QuestLog.complete(GUILD_QUEST, 'garrow');
     QuestLog.writeDiary(
       'Nat Garrow, the caravan master who came back from the Drowned Mile with his head broken, says the raiders never said a word, went straight to the ' +
-        'cloth, spoiled it and took nothing, and went back up the causeway towards the town. A man in a good grey coat watched it all from a punt on the mere. ' +
+        'cloth, spoiled it and took nothing, and hissed instead of shouting, and went into the mere when they were done and never came up. A man in a good grey coat watched it all from a punt. ' +
         'And Garrow found a coin in the mud: new silver, very bright, with a tower on it and a star over the tower.',
     );
   },
@@ -197,7 +197,7 @@ const GUILD_ACTIONS: Record<string, (g: GameScene) => void> = {
     QuestLog.writeDiary(
       "Edric Lowe, away from Thrale, said his piece: the new silver with the tower on it is all over Gloomhaven since the spring, in the Reeve's pay and the Rose's " +
         'back room and Thrale\'s loans, and he saw one once off a ship from somewhere far to the east. He thinks someone means to buy the guild by breaking it first. ' +
-        'He wants me to go and look at the wreck of the last caravan, out of the Fen Gate and along the causeway at the Drowned Mile, and see which way the tracks run.',
+        'He wants me to go and look at the wreck of the last caravan, out of the Fen Gate and along the causeway at the Drowned Mile, and see what made the tracks.',
     );
     g.time.delayedCall(600, () => g.onHint?.('The Drowned Mile, then. Out of the Fen Gate, and north along the causeway.'));
   },
