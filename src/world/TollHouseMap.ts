@@ -118,7 +118,7 @@ export function buildTollHouseMap(): MapData {
   add('th-ledgers', 4, 0, { shapes: [box(0.05, 0.1, 0.95, 0.7)] });
   add('th-scales', 5, 0, { shapes: [box(0.1, 0.1, 0.9, 0.8)] });
   add('th-desk', 5, 1, { shapes: [box(0.1, 0.15, 0.9, 0.85)] });
-  add('th-highstool', 6, 1, { shapes: stoolShape });
+  add('th-clerk-stool', 6, 1, { shapes: stoolShape });
   add('th-tallysticks', 7, 0, { shapes: [box(0.2, 0.1, 0.8, 0.5)] });
   add('th-takings', 9, 0, { shapes: chestShape });
   add('th-cot', 10, 0, { h: 2, shapes: [box(0.1, 0.05, 0.9, 1.95)] });
@@ -286,7 +286,7 @@ export function buildTollUpstairsMap(): MapData {
   // The front room: the rug, the great desk, the Reeve's chair behind it, a stool for petitioners, a wine table.
   add('th-rug', 3, 2, { w: 3, h: 2, flat: true });
   add('th-bigdesk', 3, 2, { w: 2, shapes: [box(0.1, 0.15, 1, 0.85), box(1, 0.15, 1.9, 0.85)] });
-  add('th-reevechair', 3, 1, { w: 2, shapes: [box(0.75, 0.2, 1.25, 0.8)] });
+  add('th-reeve-chair', 3, 1, { w: 2, shapes: [box(0.75, 0.2, 1.25, 0.8)] });
   add('th-stool', 3, 4, { shapes: stoolShape });
   add('th-cabinet', 0, 4, { shapes: [box(0.05, 0.1, 0.6, 0.9)] });
   add('th-winetable', 7, 4, { shapes: [circle(0.5, 0.5, 0.32)] });
@@ -302,7 +302,7 @@ export function buildTollUpstairsMap(): MapData {
   data.sights!.push(
     { id: 'toll-key', gx: KEY_HOOK.gx, gy: KEY_HOOK.gy, label: 'Look at the hook', z: 46 },
     { id: 'toll-bed', gx: 8.9, gy: 1.9, label: 'Look', z: 40 },
-    { id: 'toll-desk', gx: 3.6, gy: 2.6, label: 'Look at the desk', z: 34 },
+    { id: 'toll-desk', gx: 3.6, gy: 2.6, label: 'Look at the desk', z: 24 },
     { id: 'toll-bigportrait', gx: 3.5, gy: 0.15, label: 'Look', z: 72, thought: 'The Reeve again, bigger, in a gilt frame. In this one he has a sword he has never drawn and a horse he has never sat. Behind him the painter has put a Gloomhaven with sunshine and clean streets. It looks like nowhere I have ever been.' },
     { id: 'toll-mirror', gx: 5.5, gy: 0.15, label: 'Look', z: 64, thought: 'A real looking-glass, silvered, not polished tin. There is a mark on it at the height of a tall man\'s mouth, where somebody practises smiling.' },
     { id: 'toll-dresser', gx: 6.5, gy: 0.5, label: 'Look', z: 30, thought: 'Pomanders stuck with cloves, a pot of powder, a pot of rouge, a comb with long black hairs in it, and a little bottle of scent with a stopper of green glass, the label in a script I can\'t read.' },

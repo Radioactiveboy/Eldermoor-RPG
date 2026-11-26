@@ -849,15 +849,15 @@ const SEAT_TOP = 9;
 /** Nibb's stool behind the grille: a clerk's stool, three-legged, worn smooth. */
 function highStool(): IsoModel {
   const m = new IsoModel();
-  for (const [x, y] of [[0.36, 0.36], [0.62, 0.4], [0.46, 0.62]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2.5, { top: OAK, left: OAK, right: OAK_DARK });
-  m.cylinder(0.5, 0.5, SEAT_TOP - 2.5, 0.18, 2.5, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
+  for (const [x, y] of [[0.4, 0.42], [0.58, 0.42], [0.48, 0.58]]) m.box(x, y, 0, 0.03, 0.03, SEAT_TOP - 2.5, { top: OAK, left: OAK, right: OAK_DARK });
+  m.cylinder(0.5, 0.5, SEAT_TOP - 2.5, 0.125, 2.5, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
   return m;
 }
 
 function stool(): IsoModel {
   const m = new IsoModel();
-  for (const [x, y] of [[0.38, 0.38], [0.58, 0.38], [0.38, 0.58], [0.58, 0.58]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2.5, { top: OAK, left: OAK, right: OAK_DARK });
-  m.cylinder(0.5, 0.5, SEAT_TOP - 2.5, 0.16, 2.5, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
+  for (const [x, y] of [[0.41, 0.41], [0.56, 0.41], [0.41, 0.56], [0.56, 0.56]]) m.box(x, y, 0, 0.03, 0.03, SEAT_TOP - 2.5, { top: OAK, left: OAK, right: OAK_DARK });
+  m.cylinder(0.5, 0.5, SEAT_TOP - 2.5, 0.125, 2.5, (u) => (u < 0.4 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
   return m;
 }
 
@@ -1175,24 +1175,24 @@ function bigDesk(): IsoModel {
     if (pu < 0.14 || v < 0.16) return OAK_LIGHT;
     return OAK;
   };
-  m.box(0.1, 0.15, 0, 1.8, 0.7, 26, { top: OAK_TOP, left: front, right: OAK_DARK });
-  m.box(0.05, 0.1, 26, 1.9, 0.8, 3, { top: (u, v) => (u > 0.3 && u < 0.7 && v > 0.15 && v < 0.85 ? 0x2a4a2a : planks(3, OAK_TOP, OAK_DARK, OAK_LIGHT, 5)(u, v) ?? OAK_TOP), left: OAK_LIGHT, right: OAK });
+  m.box(0.1, 0.15, 0, 1.8, 0.7, 14, { top: OAK_TOP, left: front, right: OAK_DARK });
+  m.box(0.05, 0.1, 14, 1.9, 0.8, 3, { top: (u, v) => (u > 0.3 && u < 0.7 && v > 0.15 && v < 0.85 ? 0x2a4a2a : planks(3, OAK_TOP, OAK_DARK, OAK_LIGHT, 5)(u, v) ?? OAK_TOP), left: OAK_LIGHT, right: OAK });
   // Papers fanned out, letters tied with ribbon.
-  for (let i = 0; i < 4; i++) m.box(0.4 + i * 0.14, 0.25 + (i % 2) * 0.12, 29 + i * 0.4, 0.28, 0.36, 0.4, { top: (u, v) => ((v * 8) % 1 < 0.3 && u > 0.1 && u < 0.85 ? INK : PAPER), left: PAPER_DARK, right: PAPER_DARK });
-  m.box(1.05, 0.55, 29, 0.24, 0.18, 2, { top: (u) => (Math.abs(u - 0.5) < 0.08 ? YELLOW : PAPER), left: PAPER_DARK, right: PAPER_DARK });
+  for (let i = 0; i < 4; i++) m.box(0.4 + i * 0.14, 0.25 + (i % 2) * 0.12, 17 + i * 0.4, 0.28, 0.36, 0.4, { top: (u, v) => ((v * 8) % 1 < 0.3 && u > 0.1 && u < 0.85 ? INK : PAPER), left: PAPER_DARK, right: PAPER_DARK });
+  m.box(1.05, 0.55, 17, 0.24, 0.18, 2, { top: (u) => (Math.abs(u - 0.5) < 0.08 ? YELLOW : PAPER), left: PAPER_DARK, right: PAPER_DARK });
   // A silver inkstand with two quills, the seal, a stick of yellow wax.
-  m.box(1.4, 0.3, 29, 0.3, 0.2, 3, { top: SILVER_LIGHT, left: SILVER, right: SILVER_DARK });
-  line(m, { x: 1.48, y: 0.38, z: 32 }, { x: 1.6, y: 0.32, z: 42 }, 0xf0e8d8, 0.02);
-  line(m, { x: 1.58, y: 0.4, z: 32 }, { x: 1.72, y: 0.36, z: 41 }, 0xe0d8c8, 0.02);
-  m.cylinder(1.3, 0.65, 29, 0.04, 6, (u) => (u < 0.4 ? GILT_LIGHT : GILT_DARK), GILT);
-  m.box(1.5, 0.66, 29, 0.14, 0.03, 1.2, { top: YELLOW_LIGHT, left: YELLOW, right: YELLOW_DARK });
+  m.box(1.4, 0.3, 17, 0.3, 0.2, 3, { top: SILVER_LIGHT, left: SILVER, right: SILVER_DARK });
+  line(m, { x: 1.48, y: 0.38, z: 20 }, { x: 1.6, y: 0.32, z: 30 }, 0xf0e8d8, 0.02);
+  line(m, { x: 1.58, y: 0.4, z: 20 }, { x: 1.72, y: 0.36, z: 29 }, 0xe0d8c8, 0.02);
+  m.cylinder(1.3, 0.65, 17, 0.04, 6, (u) => (u < 0.4 ? GILT_LIGHT : GILT_DARK), GILT);
+  m.box(1.5, 0.66, 17, 0.14, 0.03, 1.2, { top: YELLOW_LIGHT, left: YELLOW, right: YELLOW_DARK });
   // The candelabrum of three.
-  m.cylinder(0.25, 0.4, 29, 0.06, 2, () => SILVER, SILVER_LIGHT);
-  m.cylinder(0.25, 0.4, 31, 0.02, 12, () => SILVER, SILVER_LIGHT);
-  m.box(0.13, 0.38, 42, 0.24, 0.04, 1.5, { top: SILVER_LIGHT, left: SILVER, right: SILVER_DARK });
+  m.cylinder(0.25, 0.4, 17, 0.06, 2, () => SILVER, SILVER_LIGHT);
+  m.cylinder(0.25, 0.4, 19, 0.02, 12, () => SILVER, SILVER_LIGHT);
+  m.box(0.13, 0.38, 30, 0.24, 0.04, 1.5, { top: SILVER_LIGHT, left: SILVER, right: SILVER_DARK });
   for (const dx of [0.14, 0.24, 0.34]) {
-    m.box(dx - 0.015, 0.385, 43.5, 0.03, 0.03, 6, { top: 0xf0e8d0, left: 0xf0e8d0, right: 0xc8c0a8 });
-    m.box(dx - 0.008, 0.392, 49.5, 0.016, 0.016, 2.5, { top: P.fireYellow, left: P.fireOrange, right: P.fireYellow });
+    m.box(dx - 0.015, 0.385, 31.5, 0.03, 0.03, 6, { top: 0xf0e8d0, left: 0xf0e8d0, right: 0xc8c0a8 });
+    m.box(dx - 0.008, 0.392, 37.5, 0.016, 0.016, 2.5, { top: P.fireYellow, left: P.fireOrange, right: P.fireYellow });
   }
   return m;
 }
@@ -1204,12 +1204,15 @@ function bigDesk(): IsoModel {
 function reeveChair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
-  const x0 = 0.75;
-  // Seat at SEAT_TOP, no arms: the sitter is drawn in front of the whole chair.
-  for (const [x, y] of [[0, 0.25], [0.44, 0.25], [0, 0.69], [0.44, 0.69]]) m.box(x0 + x, y, 0, 0.06, 0.06, SEAT_TOP - 3, wood);
-  m.box(x0 - 0.02, 0.23, SEAT_TOP - 3, 0.54, 0.54, 3, { top: YELLOW, left: OAK_LIGHT, right: OAK });
-  m.box(x0 - 0.02, 0.2, SEAT_TOP, 0.54, 0.06, 34, { top: OAK_LIGHT, left: (u, v) => (v > 0.14 && v < 0.82 && u > 0.14 && u < 0.86 ? (Math.floor(u * 8 + v * 8) % 2 ? YELLOW : YELLOW_DARK) : OAK), right: OAK_DARK });
-  for (const x of [0, 0.46]) m.cylinder(x0 + x + 0.01, 0.23, SEAT_TOP + 34, 0.035, 3, () => GILT, GILT_LIGHT);
+  // Seat at SEAT_TOP, about a third of a tile square, centred; no arms: the sitter is drawn in front of the whole chair.
+  const x0 = 0.83;
+  const y0 = 0.33;
+  const w = 0.34;
+  for (const [x, y] of [[0, 0], [w - 0.05, 0], [0, w - 0.05], [w - 0.05, w - 0.05]]) m.box(x0 + x, y0 + y, 0, 0.05, 0.05, SEAT_TOP - 2.5, wood);
+  m.box(x0, y0, SEAT_TOP - 2.5, w, w, 2.5, { top: YELLOW, left: OAK_LIGHT, right: OAK });
+  // A back a little higher than most chairs', as befits a Reeve, gilt-knobbed.
+  m.box(x0, y0 - 0.05, SEAT_TOP, w, 0.05, 16, { top: OAK_LIGHT, left: (u, v) => (v > 0.14 && v < 0.8 && u > 0.14 && u < 0.86 ? (Math.floor(u * 6 + v * 6) % 2 ? YELLOW : YELLOW_DARK) : OAK), right: OAK_DARK });
+  for (const x of [0.02, w - 0.02]) m.cylinder(x0 + x, y0 - 0.025, SEAT_TOP + 16, 0.03, 2.5, () => GILT, GILT_LIGHT);
   return m;
 }
 
@@ -1392,7 +1395,7 @@ export function generateTollHouse(scene: Phaser.Scene): void {
   put(scene, 'th-ledgers', ledgers());
   put(scene, 'th-scales', scales());
   put(scene, 'th-desk', desk());
-  put(scene, 'th-highstool', highStool());
+  put(scene, 'th-clerk-stool', highStool());
   put(scene, 'th-stool', stool());
   put(scene, 'th-tallysticks', tallySticks());
   put(scene, 'th-takings', takings());
@@ -1417,7 +1420,7 @@ export function generateTollHouse(scene: Phaser.Scene): void {
   put(scene, 'th-candle-floor', floorCandle());
   // The Reeve's rooms.
   put(scene, 'th-bigdesk', bigDesk());
-  put(scene, 'th-reevechair', reeveChair());
+  put(scene, 'th-reeve-chair', reeveChair());
   put(scene, 'th-cabinet', cabinet());
   put(scene, 'th-winetable', wineTable());
   put(scene, 'th-birdcage', birdcage());
