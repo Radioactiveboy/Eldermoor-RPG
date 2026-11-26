@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MODEL_ART, registerModel } from './interior';
-import { IsoModel, RenderedModel, Shader, Vec3 } from './IsoModel';
+import { IsoModel, RenderedModel, SEAT_TOP, Shader, Vec3 } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { FEN_ART } from './props';
@@ -1339,8 +1339,8 @@ function brokenCart(): IsoModel {
 /** A rough bench of a plank on two stumps. */
 function bench(): IsoModel {
   const m = new IsoModel();
-  for (const x of [0.2, 0.8]) m.cylinder(x, 0.68, 0, 0.09, 9, (u) => (u < 0.3 ? DEADWOOD_LIGHT : u > 0.7 ? DEADWOOD_DARK : DEADWOOD), DEADWOOD_LIGHT);
-  m.box(0.06, 0.56, 9, 0.88, 0.24, 2.5, { top: (u) => (hash(Math.floor(u * 20), 3) < 0.1 ? OAK_DARK : OAK), left: OAK_DARK, right: BLACK_OAK });
+  for (const x of [0.2, 0.8]) m.cylinder(x, 0.68, 0, 0.09, SEAT_TOP - 2.5, (u) => (u < 0.3 ? DEADWOOD_LIGHT : u > 0.7 ? DEADWOOD_DARK : DEADWOOD), DEADWOOD_LIGHT);
+  m.box(0.06, 0.56, SEAT_TOP - 2.5, 0.88, 0.24, 2.5, { top: (u) => (hash(Math.floor(u * 20), 3) < 0.1 ? OAK_DARK : OAK), left: OAK_DARK, right: BLACK_OAK });
   return m;
 }
 

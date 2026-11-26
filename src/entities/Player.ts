@@ -5,6 +5,7 @@ import { DIRECTIONS_8 } from '../art/figure3d';
 import { PLAYER_RADIUS, PLAYER_SPEED } from '../config';
 import { gridToScreen, Vec2 } from '../iso/IsoMath';
 import { Hero, IsoMap } from '../world/IsoMap';
+import { cutAtSeat, seatedDraw } from '../world/Seating';
 import { GridPoint } from '../systems/Pathfinding';
 
 /** The walk animation's speed at walking pace: 9 frames a second slowed to 7, two steps each four frames. */
@@ -292,9 +293,12 @@ export class Player implements Hero {
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
-    // Seated, draw in front of the seat even when sitting right on its tile.
-    const d = this.aboard?.depth ?? this.map.characterDepth(this.gx, this.gy) + (this.pose === 'sit' ? 2 : 0);
-    this.shadow.setDepth(d - 0.5).setVisible(!this.aboard);
+    // Seated, drawn with the seat: over it, behind its back, or cut off at its top (see Seating.ts).
+    const standing = this.map.characterDepth(this.gx, this.gy);
+    const sat = this.pose === 'sit' && !this.aboard ? seatedDraw(this.map.seatAt(this.gx, this.gy), standing, this.facing) : undefined;
+    const d = this.aboard?.depth ?? sat?.depth ?? standing;
+    this.shadow.setDepth(sat?.shadow ?? d - 0.5).setVisible(!this.aboard);
     this.sprite.setDepth(d);
+    cutAtSeat(this.sprite, !!sat?.cut);
   }
 }

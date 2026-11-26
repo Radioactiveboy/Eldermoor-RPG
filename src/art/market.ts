@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, planks, Shader } from './IsoModel';
+import { IsoModel, planks, SEAT_TOP, Shader } from './IsoModel';
 import { MODEL_ART } from './interior';
 import { PALETTE as P } from './palette';
 
@@ -581,11 +581,11 @@ function lampPost(): IsoModel {
 function bench(): IsoModel {
   const m = new IsoModel();
   const leg = { top: P.plank, left: (u: number) => (u < 0.3 ? P.plankLight : P.plank), right: P.plankDark };
-  m.box(0.16, 0.4, 0, 0.09, 0.08, 10, leg);
-  m.box(0.75, 0.4, 0, 0.09, 0.08, 10, leg);
-  m.box(0.2, 0.42, 4, 0.6, 0.04, 2, { top: P.plank, left: P.plankDark, right: P.plankDark });
-  m.box(0.16, 0.57, 0, 0.09, 0.08, 10, leg);
-  m.box(0.75, 0.57, 0, 0.09, 0.08, 10, leg);
+  m.box(0.16, 0.4, 0, 0.09, 0.08, SEAT_TOP - 3, leg);
+  m.box(0.75, 0.4, 0, 0.09, 0.08, SEAT_TOP - 3, leg);
+  m.box(0.2, 0.42, 2, 0.6, 0.04, 2, { top: P.plank, left: P.plankDark, right: P.plankDark });
+  m.box(0.16, 0.57, 0, 0.09, 0.08, SEAT_TOP - 3, leg);
+  m.box(0.75, 0.57, 0, 0.09, 0.08, SEAT_TOP - 3, leg);
   // Two seat boards, worn paler where people sit, with a gap between them.
   const seat = (shift: number): Shader => (u, v) => {
     const grain = Math.sin(u * 60 + v * 3 + shift) * Math.sin(u * 23 + shift);
@@ -593,8 +593,8 @@ function bench(): IsoModel {
     if (grain > 0.85) return P.plankDark;
     return worn ? mix(P.plankLight, 0xc8a078, 0.3) : P.plankLight;
   };
-  m.box(0.08, 0.35, 10, 0.84, 0.17, 3, { top: seat(0), left: P.plank, right: P.plankDark });
-  m.box(0.08, 0.53, 10, 0.84, 0.17, 3, { top: seat(2), left: (u) => (u < 0.02 || u > 0.98 ? P.plankDark : P.plank), right: P.plankDark });
+  m.box(0.08, 0.35, SEAT_TOP - 3, 0.84, 0.17, 3, { top: seat(0), left: P.plank, right: P.plankDark });
+  m.box(0.08, 0.53, SEAT_TOP - 3, 0.84, 0.17, 3, { top: seat(2), left: (u) => (u < 0.02 || u > 0.98 ? P.plankDark : P.plank), right: P.plankDark });
   return m;
 }
 

@@ -18,6 +18,8 @@ import {
   brakkScript, crayScript, fitchScript, gutterScript, luskScript, osseryScript, crabbeScript, tallowScript, voskScript, wispScript,
 } from '../dialogue/gloomhaven';
 import { CRAY_FARE, wispPinched } from '../scenes/game/gloomhaven';
+import { annisScript, nanScript, nedScript, wispHomeScript, wispSquareExtra } from '../dialogue/sump';
+import { SUMP_FLAGS, sumpNews } from '../scenes/game/sump';
 import { heronTalk, HERON_AWAY, HOME_HOURS, openVoyages } from '../systems/Voyages';
 import { GARDENER, NOVICE, porterScript, SILENT, WolfStage } from '../dialogue/monastery';
 import { anselmScript, cookScript, HerbStage, LEOFRIC, PRIOR, SCRIBE } from '../dialogue/abbey';
@@ -34,6 +36,7 @@ import {
 } from '../dialogue/blackrose';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
+import { cutAtSeat, seatedDraw } from '../world/Seating';
 import { marketOpen } from '../systems/MarketHours';
 import { inHours, isVillager, Villager, Whereabouts, whereabouts } from '../systems/VillageDay';
 import { Inventory, itemDef } from '../systems/Inventory';
@@ -589,9 +592,18 @@ const NPCS: Record<string, NpcDef> = {
   },
   wisp: {
     texture: 'folk-wisp', roam: 4, talkRange: 2.2,
-    script: firstTime('wisp', (first) => wispScript(first, wispPinched(), QuestLog.hasFlag('wisp-returned'))),
+    script: firstTime('wisp', (first) => wispScript(first, wispPinched(), QuestLog.hasFlag('wisp-returned'), first ? undefined : wispSquareExtra(sumpNews()))),
   },
   cray: { texture: 'folk-cray', talkRange: 2.4, script: firstTime('cray', (first) => crayScript(first, CRAY_FARE, Inventory.coins)) },
+  // Homes down Sump Lane (world/SumpMaps.ts): Annis Crowe mending of an evening, Wisp at home of a night (her own self, met again),
+  // the Widow Pruett in her chair, and Ned Wick the lamplighter, in his stilt house by day and out on the lanes after dark.
+  annis: { texture: 'folk-annis', sits: true, talkRange: 2.2, script: firstTime('annis', (first) => annisScript(first, sumpNews())) },
+  'wisp-home': { texture: 'folk-wisp', sits: true, talkRange: 2.2, script: firstTime('wisp-home', (first) => wispHomeScript(first, sumpNews())) },
+  nan: {
+    texture: 'folk-nan', sits: true, talkRange: 2.2,
+    script: firstTime('nan', (first) => nanScript(first, sumpNews(), QuestLog.hasFlag(SUMP_FLAGS.nanCoin), QuestLog.hasFlag(SUMP_FLAGS.nanTold))),
+  },
+  ned: { texture: 'folk-ned', talkRange: 2.4, script: (hour) => firstTime('ned', (first) => nedScript(first, sumpNews(), Npc.within([17, 30], hour)))() },
 };
 
 /** A conversation that opens differently the first time (and marks them met). */
@@ -1363,11 +1375,14 @@ export class Npc implements Body {
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
-    // Seated, drawn in front of the seat (as the player is).
-    const d = this.aboard?.depth ?? (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.seated ? 2 : 0);
-    this.shadow.setDepth(d - 0.5);
+    // Seated, drawn with the seat (as the player is): over it, behind its back, or cut off at its top (see Seating.ts).
+    const standing = this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy);
+    const sat = this.seated && !this.aboard ? seatedDraw(this.map.seatAt(this.gx, this.gy), standing, this.facing) : undefined;
+    const d = this.aboard?.depth ?? sat?.depth ?? standing;
+    this.shadow.setDepth(sat?.shadow ?? d - 0.5);
     if (this.aboard) this.shadow.setVisible(false);
     this.sprite.setDepth(d);
+    cutAtSeat(this.sprite, !!sat?.cut && !moving);
     if (this.def.anim) return;
     const pose = moving ? 'walk' : this.seated ? 'sit' : this.atWork ? 'work' : 'idle';
     // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored,

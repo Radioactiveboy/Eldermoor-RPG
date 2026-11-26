@@ -35,6 +35,11 @@ const ROOFS: Partial<Record<AreaId, number>> = {
   chapel: 0.55,
   cellar: 0.12,
   jail: 0.12,
+  // The Sump's roofs: thatch with a hole in it, boards, cob; and the burnt house has none.
+  'sump-crowe': 1,
+  'sump-stilt': 1,
+  'sump-pruett': 1,
+  'sump-ruin': 0.05,
   // No roof left at all: the rain comes straight in.
   watchtower: 0.05,
 };
@@ -88,6 +93,11 @@ const PLACES: Record<AreaId, Place> = {
   'blackrose-back': { tavern: 0.25, cave: 0.15, echo: 0.3 },
   'blackrose-upstairs': { tavern: 0.3, echo: 0.25 },
   'blackrose-room': { tavern: 0.15, echo: 0.1 },
+  // The Sump: a little fire in two of them; the stilt house over the water; the burnt house open to the fen.
+  'sump-crowe': { fire: 0.6, echo: 0.1 },
+  'sump-stilt': { fire: 0.25, wild: 0.35, echo: 0.15 },
+  'sump-pruett': { fire: 0.5, echo: 0.05 },
+  'sump-ruin': { open: true, wind: 0.35, wild: 0.5, echo: 0.1 },
   smithy: { fire: 0.85, echo: 0.3 },
   bakery: { fire: 0.55, echo: 0.15 },
   garrison: { fire: 0.6, echo: 0.35 },
