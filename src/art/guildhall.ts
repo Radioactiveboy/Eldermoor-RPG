@@ -52,6 +52,8 @@ const WOOD_TOP = 0x6a4a30;
 // The guild's colours: a deep blue gone grey, and gold.
 /** The height of a seat's top, where a sitter's hips go (art/IsoModel.ts SEAT_TOP, from the seat-height fix). */
 const SEAT = 9;
+/** The height of a table's top, a little above a sitter's lap (art/IsoModel.ts TABLE_TOP, from the same fix). */
+const TABLE = SEAT + 8;
 
 const BLUE = 0x2e3e5a;
 const BLUE_DARK = 0x1e2a40;
@@ -784,15 +786,15 @@ function tablePiece(part: number, end: 'w' | 'e' | 'none', row: 'n' | 's'): IsoM
   const m = new IsoModel();
   const legs = { top: WOOD_DARK, left: (_u: number, v: number) => (Math.sin(v * 18) > 0.6 ? WOOD_LIGHT : WOOD), right: WOOD_DARK };
   const ly = row === 'n' ? 0.12 : 0.76;
-  if (end === 'w') m.box(0.1, ly, 0, 0.12, 0.12, 26, legs);
-  if (end === 'e') m.box(0.78, ly, 0, 0.12, 0.12, 26, legs);
+  if (end === 'w') m.box(0.1, ly, 0, 0.12, 0.12, TABLE - 3, legs);
+  if (end === 'e') m.box(0.78, ly, 0, 0.12, 0.12, TABLE - 3, legs);
   // A stretcher low down, end to end.
-  m.box(0, 0.47, 6, 1, 0.06, 2.5, { top: WOOD, left: WOOD_DARK, right: WOOD_DARK });
+  m.box(0, 0.47, 3, 1, 0.06, 2, { top: WOOD, left: WOOD_DARK, right: WOOD_DARK });
   const x0 = end === 'w' ? 0.04 : 0;
   const x1 = end === 'e' ? 0.96 : 1;
   const y0 = row === 'n' ? 0.06 : 0;
   const y1 = row === 's' ? 0.94 : 1;
-  m.box(x0, y0, 26, x1 - x0, y1 - y0, 4, {
+  m.box(x0, y0, TABLE - 3, x1 - x0, y1 - y0, 3, {
     top: (u, v) => {
       const c = planks(2, WOOD_TOP, WOOD_DARK, WOOD_LIGHT, 7 + part)(v, u) ?? WOOD_TOP;
       // Wax rings, ink blots, polish.
@@ -803,7 +805,7 @@ function tablePiece(part: number, end: 'w' | 'e' | 'none', row: 'n' | 's'): IsoM
     left: (_u, v) => (v < 0.3 ? WOOD_LIGHT : row === 's' ? WOOD : WOOD_DARK),
     right: (_u, v) => (v < 0.3 ? WOOD : WOOD_DARK),
   });
-  const z = 30;
+  const z = TABLE;
   switch (part) {
     case 0:
       // The head of the table: the gavel on its block, the minute book, a candle.
@@ -856,12 +858,15 @@ function chair(facing: 'n' | 's', pushed = 0): IsoModel {
   const m = new IsoModel();
   const wood = { top: WOOD_LIGHT, left: WOOD, right: WOOD_DARK };
   const oy = pushed * (facing === 's' ? -1 : 1);
-  for (const [x, y] of [[0.25, 0.25], [0.7, 0.25], [0.25, 0.7], [0.7, 0.7]]) m.box(x, y + oy, 0, 0.06, 0.06, SEAT - 3, wood);
-  m.box(0.22, 0.22 + oy, SEAT - 3, 0.56, 0.56, 3, { top: (u, v) => (u < 0.08 || u > 0.92 || v < 0.08 || v > 0.92 ? WOOD_LIGHT : BLUE), left: WOOD, right: WOOD_DARK });
-  const by = facing === 's' ? 0.2 : 0.74;
-  m.box(0.22, by + oy, SEAT, 0.56, 0.06, 34, {
+  // A seat about a third of a tile square, centred, at the sitter's height; a low carved back.
+  const a = 0.34;
+  const b = 0.66;
+  for (const [x, y] of [[a, a], [b - 0.05, a], [a, b - 0.05], [b - 0.05, b - 0.05]]) m.box(x, y + oy, 0, 0.05, 0.05, SEAT - 2, wood);
+  m.box(a, a + oy, SEAT - 2, b - a, b - a, 2, { top: (u, v) => (u < 0.1 || u > 0.9 || v < 0.1 || v > 0.9 ? WOOD_LIGHT : BLUE), left: WOOD, right: WOOD_DARK });
+  const by = facing === 's' ? a - 0.01 : b - 0.04;
+  m.box(a, by + oy, SEAT, b - a, 0.05, 13, {
     top: WOOD_LIGHT,
-    left: (u, v) => (v < 0.15 ? WOOD_LIGHT : u > 0.2 && u < 0.8 && v > 0.25 && v < 0.75 ? (Math.floor(v * 10) % 2 ? WOOD : BLUE_DARK) : WOOD),
+    left: (u, v) => (v < 0.18 ? WOOD_LIGHT : u > 0.2 && u < 0.8 && v > 0.3 && v < 0.8 ? (Math.floor(v * 8) % 2 ? WOOD : BLUE_DARK) : WOOD),
     right: WOOD_DARK,
   });
   return m;
@@ -872,9 +877,9 @@ function fallenChair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: WOOD_LIGHT, left: WOOD, right: WOOD_DARK };
   // The back flat on the floor, the seat standing up from it, the legs in the air.
-  m.box(0.15, 0.2, 0, 0.6, 0.56, 2, { top: (u, v) => (u > 0.2 && u < 0.8 && v > 0.2 && v < 0.8 ? BLUE_DARK : WOOD), left: WOOD, right: WOOD_DARK });
-  m.box(0.7, 0.22, 0, 0.06, 0.56, 16, { top: WOOD_LIGHT, left: (u) => (u > 0.1 && u < 0.9 ? BLUE : WOOD), right: WOOD_DARK });
-  for (const y of [0.25, 0.7]) m.box(0.76, y, 12, 0.2, 0.06, 3, wood);
+  m.box(0.2, 0.34, 0, 0.42, 0.32, 2, { top: (u, v) => (u > 0.2 && u < 0.8 && v > 0.2 && v < 0.8 ? BLUE_DARK : WOOD), left: WOOD, right: WOOD_DARK });
+  m.box(0.62, 0.34, 0, 0.05, 0.32, 9, { top: WOOD_LIGHT, left: (u) => (u > 0.1 && u < 0.9 ? BLUE : WOOD), right: WOOD_DARK });
+  for (const y of [0.35, 0.61]) m.box(0.67, y, 6, 0.16, 0.05, 2, wood);
   return m;
 }
 

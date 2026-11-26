@@ -83,7 +83,7 @@ export function buildGuildHallMap(met = false): MapData {
     lights: [
       // The fire, the candelabrum on the table, the two candlestands, the candle by the roll, the window's grey daylight.
       { gx: 12, gy: 0.9, z: 14, radius: 280, flicker: 1 },
-      { gx: 6.5, gy: 4.5, z: 44, radius: 170, flicker: 0.4 },
+      { gx: 6.5, gy: 4.5, z: 30, radius: 170, flicker: 0.4 },
       { gx: 2.5, gy: 7.5, z: 60, radius: 140, flicker: 0.5 },
       { gx: 11.5, gy: 7.5, z: 60, radius: 140, flicker: 0.5 },
       { gx: 4.2, gy: 4.3, z: 36, radius: 70, flicker: 0.5 },
@@ -173,7 +173,7 @@ export function buildGuildHallMap(met = false): MapData {
       thought: 'The guild\'s great scales, brass, polished where hands go. One pan has a pinch of salt in it, and it\'s gone down. Someone\'s idea of a joke, or a sermon.',
     },
     {
-      id: 'gd-table', gx: 6.5, gy: 4.6, label: 'Look at the papers', z: 36,
+      id: 'gd-table', gx: 6.5, gy: 4.6, label: 'Look at the papers', z: 22,
       thought:
         'Reports, spread out and pushed about. "Caravan of six wagons, Marrable and Tunstall, set upon at the Drowned Mile, two men dead." ' +
         '"Caravan of four, Cobley, set upon at the Drowned Mile, all goods destroyed." "Caravan of five, Marrable, Lowe and Tunstall..." Always the Drowned Mile. Never Master Thrale\'s name.',
