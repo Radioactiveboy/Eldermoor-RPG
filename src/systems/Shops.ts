@@ -180,6 +180,18 @@ export const SHOPS = {
     // Things that are small and keep their worth, he pays a little over the odds for.
     wants: { 'silver-ring': 0.5, 'white-hide': 0.45 },
   },
+  // Lusk's, once the hero has seen the Hooks off for him (or squeezed him): the same goods, his best prices.
+  'lusk-best': {
+    name: "Lusk's",
+    keeper: 'lusk',
+    greeting: 'For you, my best prices. Not good prices. My best ones. There is a difference, and it is my living.',
+    refuse: "Even for you, no. Even I have standards. One or two.",
+    thanks: ['Our secret.', 'A pleasure. Genuinely. Which is unsettling.', "Don't tell anyone what I gave you for that."],
+    stock: [['silver-ring', 2], ['hunting-knife', 2], ['cudgel', 1], ['buckler', 1], ['iron-cap', 1], ['jerkin', 1], ['short-sword', 1], ['riding-boots', 1], ['old-boot', 3]],
+    buys: ['Food', 'Potion', 'Material', 'Clothing', 'Tool', 'Weapon', 'Armour'],
+    buyRate: 0.38,
+    wants: { 'silver-ring': 0.6, 'white-hide': 0.55 },
+  },
 } satisfies Record<string, ShopDef>;
 
 export type ShopId = keyof typeof SHOPS;

@@ -31,6 +31,10 @@ const ROOFS: Partial<Record<AreaId, number>> = {
   // The Rose's roof leaks: the rain is half in the taproom already.
   blackrose: 0.6,
   'blackrose-upstairs': 0.85,
+  pawnshop: 1,
+  'pawn-counting': 1,
+  // Right under the slates: the rain is loud up here.
+  'pawn-attic': 0.4,
   // The toll house is the only dry roof in Gloomhaven; the strongroom has nothing over it but stone.
   tollhouse: 0.8,
   'tollhouse-strong': 1,
@@ -100,6 +104,10 @@ const PLACES: Record<AreaId, Place> = {
   'blackrose-back': { tavern: 0.25, cave: 0.15, echo: 0.3 },
   'blackrose-upstairs': { tavern: 0.3, echo: 0.25 },
   'blackrose-room': { tavern: 0.15, echo: 0.1 },
+  // Lusk's: quiet, close and ticking, the square muffled through the bars.
+  pawnshop: { tavern: 0.12, echo: 0.2 },
+  'pawn-counting': { tavern: 0.06, echo: 0.15 },
+  'pawn-attic': { echo: 0.35 },
   // The Shambles: the slaughterhouse's fire under the scalding vat and the stone throwing the noise back; the tannery's copper; the loft open to the wind; the barn's talk.
   slaughterhouse: { fire: 0.45, clatter: 0.3, echo: 0.45 },
   tannery: { fire: 0.4, echo: 0.25 },

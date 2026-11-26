@@ -15,8 +15,10 @@ import { CARTER, HERBWIFE, tollGuardScript, tollRoadTalk } from '../dialogue/pla
 import { fishermanScript } from '../dialogue/fisherman';
 import { ebbScript, JettyNews, marenAwayScript, marenScript, wrenScript } from '../dialogue/jetty';
 import {
-  brakkScript, crayScript, fitchScript, gutterScript, luskScript, osseryScript, crabbeScript, tallowScript, voskScript, wispScript,
+  brakkScript, crayScript, fitchScript, gutterScript, osseryScript, crabbeScript, tallowScript, voskScript, wispScript,
 } from '../dialogue/gloomhaven';
+import { daceCollectingScript, daceIdleScript, daceStashScript, luskScript, nettleScript, ormScript } from '../dialogue/pawnshop';
+import { PAWN_FLAGS, protectionOutcome, protectionStage, STASH_HOURS } from '../systems/Pawnshop';
 import { CRAY_FARE, wispPinched } from '../scenes/game/gloomhaven';
 import { annisScript, nanScript, nedScript, wispHomeScript, wispSquareExtra } from '../dialogue/sump';
 import { SUMP_FLAGS, sumpNews } from '../scenes/game/sump';
@@ -651,7 +653,42 @@ const NPCS: Record<string, NpcDef> = {
   crabbe: { texture: 'folk-crabbe', talkRange: 2.2, script: toll('crabbe', (first, t) => gateManTollTalk('crabbe', crabbeScript(first), t)) },
   ossery: { texture: 'folk-ossery', talkRange: 2.6, script: firstTime('ossery', osseryScript) },
   tallow: { texture: 'folk-tallow', talkRange: 2.6, script: toll('tallow', (first, t) => tallowTollTalk(tallowScript(first), t)) },
-  lusk: { texture: 'folk-lusk', talkRange: 2.4, script: firstTime('lusk', luskScript) },
+  // Lusk's pawnshop on the square (world/PawnshopMap.ts, dialogue/pawnshop.ts): Lusk behind his grille, Nettle at her table, and the
+  // Hooks when they come, Nim Dace at the counter and Orm in the door.
+  lusk: {
+    texture: 'folk-lusk', talkRange: 2.6,
+    script: (hour) => {
+      const first = !met.has('lusk');
+      met.add('lusk');
+      const stage = protectionStage();
+      return luskScript({
+        first,
+        stage,
+        sawBell: QuestLog.hasFlag(PAWN_FLAGS.sawBell),
+        outcome: protectionOutcome(),
+        sawEye: QuestLog.hasFlag(PAWN_FLAGS.sawEye),
+        toldEye: QuestLog.hasFlag(PAWN_FLAGS.toldOfEye),
+        hooksHere: stage === 'stash' && Npc.within(STASH_HOURS, hour),
+        late: hour % 24 < 6,
+      });
+    },
+  },
+  nettle: {
+    texture: 'folk-nettle', talkRange: 2.2,
+    script: firstTime('nettle', (first) =>
+      nettleScript({ first, stage: protectionStage(), sawBell: QuestLog.hasFlag(PAWN_FLAGS.sawBell), outcome: protectionOutcome() }),
+    ),
+  },
+  dace: {
+    texture: 'folk-dace', talkRange: 2.4,
+    script: () => {
+      const stage = protectionStage();
+      if (stage === 'evening') return daceCollectingScript();
+      if (stage === 'stash') return daceStashScript(QuestLog.hasFlag(PAWN_FLAGS.readLedger));
+      return daceIdleScript();
+    },
+  },
+  orm: { texture: 'folk-orm', talkRange: 2.4, script: () => ormScript(protectionStage() === 'stash') },
   gutter: {
     texture: 'folk-gutter', sits: true,
     script: firstTime('gutter', (first) => gutterScript(first, Inventory.count('ale') > 0, QuestLog.hasFlag('gutter-told'))),

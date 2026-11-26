@@ -91,6 +91,9 @@ export const LINKS: Link[] = [
   link('blackrose', { x: 4.5, y: 1.5 }, 'blackrose-upstairs', { x: 0.5, y: 1.5 }),
   link('blackrose', { x: 7.5, y: 0.5 }, 'blackrose-back', { x: 0.5, y: 5.5 }),
   link('blackrose-upstairs', { x: 4.5, y: 0.5 }, 'blackrose-room', { x: 0.5, y: 3.5 }),
+  link('gloomhaven', { x: 43.5, y: 18.5 }, 'pawnshop', { x: 0.5, y: 7.5 }),
+  link('pawnshop', { x: 8.5, y: 0.5 }, 'pawn-counting', { x: 0.5, y: 4.5 }),
+  link('pawn-counting', { x: 4.5, y: 0.5 }, 'pawn-attic', { x: 4.5, y: 1.5 }),
   // The Shambles (world/ShamblesYard.ts, world/ShamblesMap.ts).
   link('gloomhaven', { x: 46.5, y: 27.5 }, 'slaughterhouse', { x: 0.5, y: 6.5 }),
   link('gloomhaven', { x: 49.5, y: 35.5 }, 'tannery', { x: 0.5, y: 5.5 }),

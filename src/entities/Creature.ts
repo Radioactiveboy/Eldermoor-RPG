@@ -37,6 +37,9 @@ const WAYS: Record<FoeKind, { shy: boolean; notice: number; leash: number; speed
   brigandbrute: { shy: false, notice: 0, leash: 1, speed: 1.2 },
   brigandcutter: { shy: false, notice: 0, leash: 1, speed: 1.6 },
   brigandarcher: { shy: false, notice: 0, leash: 1, speed: 1.6 },
+  // The Hooks at Lusk's only fight when the talk comes to it (see scenes/game/pawnshop.ts).
+  hookgaff: { shy: false, notice: 0, leash: 1, speed: 1.6 },
+  hookbrute: { shy: false, notice: 0, leash: 1, speed: 1.2 },
   // The Red Aprons in the pit barn, the same (see scenes/game/shambles.ts).
   apronflay: { shy: false, notice: 0, leash: 1, speed: 1.6 },
   apronknacker: { shy: false, notice: 0, leash: 1, speed: 1.2 },
@@ -108,8 +111,8 @@ export class Creature implements Body {
     const scale = art.scale ?? 1;
     this.cols = art.cols ?? BEAST_COLS;
     const small = kind === 'hare' || kind === 'rat' || kind === 'wildcat';
-    const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin') || kind.startsWith('brigand') || kind.startsWith('apron');
-    const big = kind === 'goblinbrute' || kind === 'brigandbrute' || kind === 'apronknacker';
+    const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin') || kind.startsWith('brigand') || kind.startsWith('apron') || kind.startsWith('hook');
+    const big = kind === 'goblinbrute' || kind === 'brigandbrute' || kind === 'apronknacker' || kind === 'hookbrute';
     this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : big ? 1.5 : upright ? 1 : 1.4) * scale, (small ? 0.6 : big ? 1.3 : 1) * scale);
     // A sheet drawn finer than it's shown (the goblins') is scaled down by as much.
     this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale / (art.res ?? 1));

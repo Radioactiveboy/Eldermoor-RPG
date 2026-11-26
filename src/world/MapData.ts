@@ -60,6 +60,8 @@ export type AreaId =
   | 'gloomhaven'
   // The Black Rose on Gloomhaven's square: the taproom, the back room behind the curtain, the passage upstairs, and the room to let.
   | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
+  // Lusk's, the pawnshop on the square's north-east corner: the shop floor, the counting room upstairs, and the stash under the roof.
+  | 'pawnshop' | 'pawn-counting' | 'pawn-attic'
   // The Shambles, Gloomhaven's east quarter: Rendle's slaughterhouse, Vetch's tannery and its drying loft, Old Scritch's den, and the Red Aprons' dog pit.
   | 'slaughterhouse' | 'tannery' | 'tannery-loft' | 'ratden' | 'dogpit'
   // The Reeve's toll house just inside Gloomhaven's Fen Gate: the toll office, its strongroom, and the Reeve's rooms upstairs.

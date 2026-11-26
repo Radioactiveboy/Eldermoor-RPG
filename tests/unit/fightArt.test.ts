@@ -97,11 +97,12 @@ describe('fighting stances', () => {
         }
       }
     }
-  });
+    // (It renders every fighter in every pose from eight sides: about 3s here, and past vitest's 5s default on a busy CI runner.)
+  }, 20_000);
 
   it('can be drawn in every piece of gear', () => {
     for (const [id, look] of Object.entries(GEAR_LOOKS)) {
       for (const pose of FIGHT_POSES) expect(pixels(renderFrame(heroModel(pose, [look!]), 90, HERO_FIGHT_SPEC)), `${id} ${pose.fight}`).toBeGreaterThan(500);
     }
-  });
+  }, 20_000);
 });

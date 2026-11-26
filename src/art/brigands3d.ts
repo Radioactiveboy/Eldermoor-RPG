@@ -30,7 +30,8 @@ import { PALETTE as P } from './palette';
 /** What a brigand is doing, in a fight: how the weapon arm goes and the body leans. */
 type Act = 'rest' | 'ready' | 'windup' | 'strike' | 'follow' | 'hurt' | 'reel' | 'taunt' | 'slump';
 
-type Weapon = 'falchion' | 'hatchets' | 'bow' | 'maul';
+/** What they fight with: also a Hook's gaff (a short haft with an iron hook) and a boathook (a long pole, hooked and spiked, used two-handed). */
+type Weapon = 'falchion' | 'hatchets' | 'bow' | 'maul' | 'gaff' | 'boathook';
 
 /** The little things that change from frame to frame of a loop. */
 interface Flicker {
@@ -45,7 +46,7 @@ export interface BrigandLook {
   grey?: Tones;
   /** Cut short and swept back and tied at the nape, cropped, or shaved bare. */
   hairStyle: 'tied' | 'crop' | 'bald';
-  beard?: 'full' | 'stubble' | 'none';
+  beard?: 'full' | 'stubble' | 'none' | 'moustache';
   /** The body garment: a tabard over mail, a fur-trimmed vest on bare arms, a strapped jerkin, or a jerkin under a short hooded cloak. */
   torso: 'tabard' | 'vest' | 'jerkin' | 'archer';
   cloth: Tones;
@@ -61,6 +62,10 @@ export interface BrigandLook {
   hood?: Tones;
   /** A scarf tied over the nose and mouth. */
   mask?: Tones;
+  /** A waterman's sou'wester, its brim wide and its back long (the Hooks', Gloomhaven's waterfront gang). */
+  souwester?: Tones;
+  /** A rag knotted at the throat (the Hooks wear rust-red). */
+  rag?: Tones;
   /** Tattoo bands on bare arms. */
   tattoo?: number;
   freckles?: number;
@@ -384,7 +389,7 @@ function brigandModel(pose: Pose3D, look: BrigandLook, act: Act = 'rest', fx: Fl
         elbow = [elbow[0], elbow[1], elbow[2] + swing * 0.4];
         hand = [hand[0], hand[1], hand[2] + swing * 0.6];
       }
-    } else if (C.weapon === 'maul' && !struck(act)) {
+    } else if ((C.weapon === 'maul' || C.weapon === 'boathook') && !struck(act)) {
       // Both hands on the maul's haft, the left lower down.
       const wa = WEAPON_ARM[act];
       const right: V3 = [-wa.hand[0] * w, wa.hand[1] - b, sz + wa.hand[2]];
@@ -505,6 +510,31 @@ function brigandModel(pose: Pose3D, look: BrigandLook, act: Act = 'rest', fx: Fl
     solids.push({ cx: 0, cy: hy - 6, cz: hz + 2.4, rx: 2.4, ry: 2, rz: 1.8, material: hair, soft: true });
     // A moustache over the mouth.
     for (const side of [-1, 1]) solids.push({ cx: side * 1.2, cy: hy - 1.5, cz: hz + 4.9, rx: 1.3, ry: 0.55, rz: 0.6, material: hair, soft: true });
+  }
+  // A waxed moustache, curled at the ends.
+  if (C.beard === 'moustache') {
+    for (const side of [-1, 1]) {
+      solids.push({ cx: side * 1.1, cy: hy - 1.4, cz: hz + 4.9, rx: 1.2, ry: 0.45, rz: 0.55, material: hair, soft: true });
+      solids.push({ cx: side * 2.3, cy: hy - 1.0, cz: hz + 4.4, rx: 0.5, ry: 0.5, rz: 0.4, material: hair, soft: true });
+    }
+  }
+  // A sou'wester: a round crown, and a wide brim that runs long down the back of the neck.
+  if (C.souwester) {
+    const sw = C.souwester;
+    const wet = (h: Hit): Tones => (speck(h, 1.2) < 0.1 ? lit(sw) : h.ny < -0.2 ? shade(sw) : sw);
+    solids.push({ cx: 0, cy: hy + 3, cz: hz - 0.5, rx: 5.6, ry: 3.6, rz: 5.4, material: wet });
+    solids.push({ cx: 0, cy: hy + 2.2, cz: hz - 1.6, rx: 7.6, ry: 0.6, rz: 7.8, material: wet });
+    solids.push({ cx: 0, cy: hy + 0.6, cz: hz - 5.4, rx: 5.8, ry: 1.8, rz: 2.4, material: wet });
+  }
+  // A rag knotted at the throat, its ends hanging.
+  if (C.rag) {
+    const rg = C.rag;
+    for (let i = 0; i < 10; i++) {
+      const a = Math.PI * 0.1 + (i / 9) * Math.PI * 1.8;
+      solids.push(knob([Math.cos(a) * 2.5, 26.9 - b, Math.sin(a) * 2.3 + lean(27) + 0.3], 1, i % 2 ? rg : shade(rg)));
+    }
+    solids.push(knob([0.4, 26.6 - b, 2.8 + lean(27)], 1.2, rg));
+    solids.push(...limb([0.4, 26.2 - b, 3 + lean(26)], [1.2, 23.4 - b, 3.6 + lean(23)], 0.6, 0.4, shade(rg), 0.3));
   }
   // The hood, up over the head and falling round the shoulders.
   if (C.hood) {
@@ -630,6 +660,35 @@ function weaponSolids(weapon: Weapon, h: V3, off: V3, act: Act, blade: V3, mark:
         out.push({ cx: tip[0], cy: tip[1] - 0.2, cz: tip[2] + 1.1, rx: 0.45, ry: 1.7, rz: 1.5, material: (hh) => (hh.z > tip[2] + 1.9 ? [0xe8ecf4, STEEL[0], 0xffffff] : DARK_IRON), soft: true });
         out.push(knob(along(hand, d, 4.2), 0.55, shade(WOOD)));
       }
+      return out;
+    }
+    case 'gaff': {
+      // A short ash haft, bound with tarred twine, ending in an iron hook with a bright point.
+      const d = aim(h[1], 9, blade);
+      const top = along(h, d, 6);
+      out.push(...limb(along(h, d, -1.2), top, 0.5, 0.45, (hh) => (speck(hh, 0.6) < 0.25 ? [0x2a221e, 0x1a1412, 0x3e3430] : WOOD), 0.3));
+      const up: V3 = norm([-d[0] * d[1], 1 - d[1] * d[1], -d[2] * d[1]]);
+      const curve: V3[] = [top, along(top, d, 1.6), along(along(top, d, 2.4), up, 0.9), along(along(top, d, 2.2), up, 2.1), along(along(top, d, 1.2), up, 2.6), along(along(top, d, 0.4), up, 2.3)];
+      out.push(...chain(curve, [0.55, 0.5, 0.45, 0.4, 0.32, 0.22], (hh) => (speck(hh, 0.5) < 0.2 ? [0x8a5a3a, 0x5e3c26, 0xb07a4e] : DARK_IRON), 0.3));
+      out.push(knob(curve[5], 0.25, STEEL));
+      return out;
+    }
+    case 'boathook': {
+      // A boathook: a long ash pole, an iron spike at the end and a hook curling back from it.
+      const d = act === 'rest' ? norm([0.06, -0.85, 0.5]) : aim(h[1], 16 * w, blade, 2.6);
+      const head = act === 'rest' ? ([h[0] + 0.4, 1.2, h[2] + 6] as V3) : along(h, d, 12 * w);
+      const pole = norm([head[0] - h[0], head[1] - h[1], head[2] - h[2]]);
+      const butt = along(h, pole, -9);
+      const tipEnd = act === 'rest' ? along(h, norm([0.02, 1, -0.1]), 14) : head;
+      const from = act === 'rest' ? head : butt;
+      out.push(...limb(from, tipEnd, 0.55, 0.55, (hh) => (Math.floor((hh.x + hh.y + hh.z) * 1.4) % 7 === 0 ? [0x2a221e, 0x1a1412, 0x3e3430] : WOOD), 0.4));
+      const dd = norm([tipEnd[0] - from[0], tipEnd[1] - from[1], tipEnd[2] - from[2]]);
+      const side: V3 = norm([dd[2] || 0.001, 0, -dd[0]]);
+      const spike = along(tipEnd, dd, 2.2);
+      out.push(...limb(tipEnd, spike, 0.55, 0.15, DARK_IRON, 0.3));
+      const hook: V3[] = [along(tipEnd, dd, 0.4), along(along(tipEnd, dd, 0.2), side, 1.4), along(along(tipEnd, dd, -0.8), side, 2), along(along(tipEnd, dd, -1.8), side, 1.5)];
+      out.push(...chain(hook, [0.55, 0.45, 0.35, 0.2], DARK_IRON, 0.3));
+      out.push(knob(hook[3], 0.22, STEEL));
       return out;
     }
     case 'maul': {
@@ -861,11 +920,20 @@ export const BRIGAND_RES = 2;
 
 /** A brigand's fighting frame as shown: wide enough to fit them lying down, tall enough for a maul overhead. */
 export function brigandShownSpec(kind: BrigandKind): FrameSpec {
-  return kind === 'brigandbrute' || kind === 'apronknacker' ? { w: 72, h: 72, feetY: 66, groundShade: 5, creases: true } : { w: 64, h: 64, feetY: 58, groundShade: 4, creases: true };
+  return shownSpec(kind === 'brigandbrute' || kind === 'apronknacker');
+}
+
+/** A fighting frame as shown, for anyone on the brigands' frame: a big one (a brute) needs more room. */
+export function shownSpec(big: boolean): FrameSpec {
+  return big ? { w: 72, h: 72, feetY: 66, groundShade: 5, creases: true } : { w: 64, h: 64, feetY: 58, groundShade: 4, creases: true };
 }
 
 export function brigandSpec(kind: BrigandKind): FrameSpec {
-  const shown = brigandShownSpec(kind);
+  return fineSpec(brigandShownSpec(kind));
+}
+
+/** A frame as shown, drawn BRIGAND_RES times finer. */
+export function fineSpec(shown: FrameSpec): FrameSpec {
   const k = BRIGAND_RES;
   return { ...shown, w: shown.w * k, h: shown.h * k, feetY: (shown.feetY + 0.5) * k - 0.5, scale: k };
 }
@@ -874,7 +942,11 @@ export function brigandSpec(kind: BrigandKind): FrameSpec {
 export const BRIGAND_COLS = 24;
 
 export function brigandSheet(kind: BrigandKind): BeastSheet {
-  const look = BRIGAND_LOOKS[kind];
+  return lookSheet(BRIGAND_LOOKS[kind], brigandSpec(kind));
+}
+
+/** A fighting sheet for anyone drawn on the brigands' frame (Gloomhaven's Hooks too: see pawnfolk3d.ts). */
+export function lookSheet(look: BrigandLook, spec: FrameSpec): BeastSheet {
   const k = look.size ?? 1;
   const at = (p: Pose3D, act?: Act, fx: Flicker = {}) => grown(brigandModel(p, look, act, fx), k);
   const walk: Pose3D[] = [
@@ -914,7 +986,7 @@ export function brigandSheet(kind: BrigandKind): BeastSheet {
     at({ stride: 0, bob: 0.3 }, 'rest', { blink: true }),
     at({ stride: 0, bob: -0.3 }, 'rest'),
   ];
-  return { spec: brigandSpec(kind), models };
+  return { spec, models };
 }
 
 const held = (f: number, ms: number) => ({ f, ms });

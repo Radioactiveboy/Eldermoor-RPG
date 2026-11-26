@@ -24,6 +24,7 @@ import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
 import { syncPlot } from './plot';
 import { lookedAtCamp, lookedAtTrailSign } from './trail';
 import { lookedAtBrazier } from './beacon';
+import { examinePawnshop } from './pawnshop';
 import { examineAtJetty } from './jetty';
 import { examineAtTollHouse } from './tollhouse';
 import { examineInSump } from './sump';
@@ -139,6 +140,7 @@ export function examine(g: GameScene, sight: Sight): void {
     lookedAtBrazier(g);
     return;
   }
+  if (examinePawnshop(g, sight)) return;
   if (sight.id === MOPPET_SIGHT.id) {
     foundMoppet(g);
     return;

@@ -245,6 +245,16 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     banner: 'Brigands!',
     flee: 'slips away out of the door without a sound!',
   },
+  hookgaff: {
+    start: 'Nim Dace sighs, and the gaff comes out of his coat. "Orm." Orm takes his boathook off his shoulder.',
+    banner: 'The Hooks!',
+    flee: 'backs out of the door, smiling with his teeth, and is gone into the dark.',
+  },
+  hookbrute: {
+    start: 'Orm takes the boathook in both hands and comes on, without a word.',
+    banner: 'The Hooks!',
+    flee: 'turns and walks out of the door, slowly, as if he had somewhere to be.',
+  },
   brigandarcher: {
     start: 'An arrow thrums past your ear from the stair.',
     banner: 'Brigands!',

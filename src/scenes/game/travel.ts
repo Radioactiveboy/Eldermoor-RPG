@@ -19,6 +19,7 @@ import { residenceOpen } from './garrison';
 import { workshopOpen } from './workshops';
 import { sawPen, warrenDoorAllowed } from './warren';
 import { beaconDoorAllowed, reachedBeacon } from './beacon';
+import { pawnDoorAllowed } from './pawnshop';
 
 /** Walking off the end of a road at the edge of the map goes on to the next area. */
 export function checkRoadExits(g: GameScene): void {
@@ -64,7 +65,7 @@ export function useDoor(g: GameScene, door: Door): void {
  * hero opens (and only while it's paid for).
  */
 export function doorAllowed(g: GameScene, door: Door): boolean {
-  if (!workshopOpen(g, door.to) || !residenceOpen(g, door.to) || !warrenDoorAllowed(g, door) || !beaconDoorAllowed(g, door) || !roseDoorAllowed(g, door) || !tollDoorAllowed(g, door) || !guildDoorAllowed(g, door)) return false;
+  if (!workshopOpen(g, door.to) || !residenceOpen(g, door.to) || !warrenDoorAllowed(g, door) || !beaconDoorAllowed(g, door) || !roseDoorAllowed(g, door) || !pawnDoorAllowed(g, door) || !tollDoorAllowed(g, door) || !guildDoorAllowed(g, door)) return false;
   if (door.id === 'cellar' && !QuestLog.has('cellar-rats') && !QuestLog.hasFlag('may-use-cellar')) {
     GameAudio.rattle();
     g.onHint?.("The trapdoor is bolted, and Godric is watching me over the bar. Not without asking him first.");

@@ -88,6 +88,7 @@ export const ART_STEPS: ArtStep[] = [
   // Last: it makes burnt copies of art drawn above.
   { label: 'the river front', load: () => import('./jetty').then((m) => m.generateJetty) },
   { label: 'the Black Rose', load: () => import('./blackrose').then((m) => m.generateBlackRose) },
+  { label: "Lusk's pawnshop", load: () => import('./pawnshop').then((m) => m.generatePawnshop) },
   { label: 'the Shambles', load: () => import('./shambles').then((m) => m.generateShambles) },
   { label: "the Reeve's toll house", load: () => import('./tollhouse').then((m) => m.generateTollHouse) },
   // After the Black Rose: the Sump's rooms borrow its buckets, puddles, stools and chest.

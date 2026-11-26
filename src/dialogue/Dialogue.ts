@@ -52,6 +52,7 @@ export type SpeakerId =
   | 'corwin' | 'garth' | 'teg' | 'linnet'
   | 'thorne' | 'grubb' | 'midge' | 'silas' | 'hollis' | 'sedge' | 'dunn' | 'ferret' | 'vane'
   | 'vosk' | 'brakk' | 'fitch' | 'crabbe' | 'ossery' | 'tallow' | 'lusk' | 'gutter' | 'wisp' | 'cray'
+  | 'nettle' | 'dace' | 'orm'
   | 'reeve' | 'nibb' | 'gaff' | 'lardy' | 'annet'
   | 'annis' | 'nan' | 'ned'
   | 'cooper'
@@ -124,6 +125,10 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   ossery: { name: 'Mother Ossery', portrait: 'portrait-ossery', voice: { pitch: 262, spread: 0.3, wave: 'triangle' } },
   tallow: { name: 'Hobb Tallow', portrait: 'portrait-tallow', voice: { pitch: 132, spread: 0.2, wave: 'square' } },
   lusk: { name: 'Abel Lusk', portrait: 'portrait-lusk', voice: { pitch: 140, spread: 0.05, wave: 'sine' } },
+  // In Lusk's pawnshop (dialogue/pawnshop.ts): his shop girl, and the two Hooks who come collecting.
+  nettle: { name: 'Nettle', portrait: 'portrait-nettle', voice: { pitch: 380, spread: 0.16, wave: 'triangle' } },
+  dace: { name: 'Nim Dace', portrait: 'portrait-dace', voice: { pitch: 172, spread: 0.12, wave: 'sine' } },
+  orm: { name: 'Orm', portrait: 'portrait-orm', voice: { pitch: 70, spread: 0.03, wave: 'sawtooth' } },
   gutter: { name: 'Gutter Jack', portrait: 'portrait-gutter', voice: { pitch: 110, spread: 0.34, wave: 'triangle' } },
   wisp: { name: 'Wisp', portrait: 'portrait-wisp', voice: { pitch: 470, spread: 0.26, wave: 'triangle' } },
   cray: { name: 'Cray', portrait: 'portrait-cray', voice: { pitch: 96, spread: 0.04, wave: 'sine' } },

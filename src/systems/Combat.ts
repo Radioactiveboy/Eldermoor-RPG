@@ -1034,6 +1034,36 @@ export const FOES = {
     stubborn: true,
     traits: [{ kind: 'smash', cooldown: 3, dc: 12 }],
   },
+  // Two of the Hooks, Gloomhaven's waterfront gang, come to Lusk's pawnshop for the stash (see scenes/game/pawnshop.ts):
+  // waterfront muscle, not soldiers. Nim Dace is quick and nasty with his gaff; Orm is slow, and hits like a falling mast.
+  hookgaff: {
+    name: 'Nim Dace',
+    maxHp: 34,
+    ac: 14,
+    toHit: 6,
+    damage: { count: 2, sides: 4, bonus: 2 },
+    quickness: 5,
+    verb: 'rips his gaff at',
+    xp: 80,
+    packs: true,
+    outlaw: true,
+    skittish: 0.1,
+    traits: [{ kind: 'rend', damage: 2, turns: 2 }],
+  },
+  hookbrute: {
+    name: 'Orm',
+    maxHp: 52,
+    ac: 12,
+    toHit: 6,
+    damage: { count: 2, sides: 6, bonus: 3 },
+    quickness: 1,
+    verb: 'swings his boathook at',
+    xp: 100,
+    packs: true,
+    outlaw: true,
+    stubborn: true,
+    traits: [{ kind: 'smash', cooldown: 3, dc: 12 }, { kind: 'steady' }],
+  },
 } satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean; goblin?: boolean }>;
 
 /**

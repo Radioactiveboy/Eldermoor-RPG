@@ -15,15 +15,15 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const ALL_AREAS = [
   'home', 'world', 'market', 'cave', 'hut', 'plains', 'northwoods', 'watchtower', 'greyfells', 'monastery', 'abbey', 'chapel', 'infirmary', 'scriptorium',
   'refectory', 'den', 'deepden', 'tavern', 'tavern-hall', 'cellar', 'smithy', 'bakery', 'garrison', 'jail', 'residence', 'jetty', 'blackrose', 'blackrose-back', 'blackrose-upstairs', 'warren', 'broodhall',
-  'gloomhaven', 'tollhouse', 'tollhouse-strong', 'tollhouse-upstairs', 'sump-crowe', 'guildhall', 'slaughterhouse',
+  'gloomhaven', 'tollhouse', 'tollhouse-strong', 'tollhouse-upstairs', 'sump-crowe', 'guildhall', 'slaughterhouse', 'pawnshop',
 ];
 /**
  * Areas checked in the same page as another, one after the next: rooms that come as a set (the homes down
- * Sump Lane, the Guildhall's back rooms). The first loads from ?area= like any other; the rest are walked into from there, as the game
+ * Sump Lane, the Guildhall's back rooms, Lusk's three floors). The first loads from ?area= like any other; the rest are walked into from there, as the game
  * does it. That costs a few seconds each, where a page load redraws all the art and costs a minute or two,
  * and the whole run has to fit in CI's time limit.
  */
-const THEN = { 'sump-crowe': ['sump-stilt', 'sump-pruett', 'sump-ruin'], guildhall: ['guildhall-counting', 'guildhall-office'], slaughterhouse: ['tannery', 'tannery-loft', 'ratden', 'dogpit'] };
+const THEN = { 'sump-crowe': ['sump-stilt', 'sump-pruett', 'sump-ruin'], guildhall: ['guildhall-counting', 'guildhall-office'], slaughterhouse: ['tannery', 'tannery-loft', 'ratden', 'dogpit'], pawnshop: ['pawn-counting', 'pawn-attic'] };
 const AREAS = process.env.SMOKE_AREAS ? process.env.SMOKE_AREAS.split(',') : ALL_AREAS;
 /** How many areas load at once. */
 const PARALLEL = Number(process.env.SMOKE_PARALLEL ?? 3);
