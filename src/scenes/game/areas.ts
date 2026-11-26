@@ -37,6 +37,7 @@ import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 import { enteredBlackRose, enteredRoseBack } from './blackrose';
 import { enteredAttic, enteredCounting, enteredPawnshop } from './pawnshop';
 import { pawnshopState } from '../../systems/Pawnshop';
+import { enteredCrowe, enteredPruett, enteredStilt, enteredSumpRuin } from './sump';
 import { Homestead } from '../../systems/Homestead';
 import { gatheringWorld, homesteadWorld, northWoodsGathering, restoreStead, snapshotStead } from '../../world/Homestead';
 import { enteredHome } from './homestead';
@@ -180,6 +181,11 @@ export const AREAS: Record<AreaId, AreaDef> = {
   pawnshop: lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnshopMap(pawnshopState()), { test: true, enter: enteredPawnshop }),
   'pawn-counting': lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnCountingMap(), { test: true, enter: enteredCounting }),
   'pawn-attic': lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnAtticMap(), { test: true, enter: enteredAttic }),
+  // Homes down Sump Lane: the Crowes' cottage, Ned Wick's stilt house, the Widow Pruett's hovel, and the burnt house (see game/sump.ts).
+  'sump-crowe': lazy(() => import('../../world/SumpMaps'), (m) => m.buildCroweMap(), { test: true, enter: enteredCrowe }),
+  'sump-stilt': lazy(() => import('../../world/SumpMaps'), (m) => m.buildStiltMap(), { test: true, enter: enteredStilt }),
+  'sump-pruett': lazy(() => import('../../world/SumpMaps'), (m) => m.buildPruettMap(), { test: true, enter: enteredPruett }),
+  'sump-ruin': lazy(() => import('../../world/SumpMaps'), (m) => m.buildSumpRuinMap(), { test: true, enter: enteredSumpRuin }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

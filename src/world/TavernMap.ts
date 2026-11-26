@@ -180,7 +180,7 @@ export function buildTavernMap(): MapData {
   data.sights!.push(
     {
       id: 'tavern-board', gx: 0.35, gy: 3.5, label: 'Read the notices', z: 56,
-      sign: {
+      sign: { style: 'notices',
         heading: 'Pinned to the board',
         lines: [
           'ROOMS TO LET. By the night or the week. Ask Godric.',

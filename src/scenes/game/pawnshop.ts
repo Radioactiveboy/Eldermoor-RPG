@@ -21,6 +21,7 @@ import {
 import { QuestLog } from '../../systems/Quests';
 import type { Door, Sight } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
+import { readSign } from './sights';
 import { CHATTER_GAP, LINE_GAP } from './tavern';
 
 /** The pawnshop's three floors. */
@@ -173,8 +174,7 @@ export function examinePawnshop(g: GameScene, sight: Sight): boolean {
     return true;
   }
   if (sight.id === 'pawn-ledger') {
-    GameAudio.click();
-    g.onSign?.(BLACK_LEDGER.heading, BLACK_LEDGER.lines);
+    readSign(g, { ...BLACK_LEDGER, style: 'book' });
     if (!QuestLog.hasFlag(PAWN_FLAGS.readLedger)) {
       QuestLog.setFlag(PAWN_FLAGS.readLedger);
       QuestLog.complete(PROTECTION_QUEST, 'ledger');

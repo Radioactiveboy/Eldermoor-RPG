@@ -11,6 +11,7 @@ import { BakedLayer } from './BakedLayer';
 import { closingIn, Round } from './Avoidance';
 import { circle, circleHits, FULL_TILE, isBehind, offsetShape, Shape } from './Collision';
 import { MapData, MapObject, Prop, Terrain, TERRAIN_WALKABLE } from './MapData';
+import { seatAt } from './Seating';
 
 /** Collision outlines of the standing props, by art (see art/props.ts), relative to the tile. */
 const PROP_SHAPES: Record<string, Shape[]> = {
@@ -245,6 +246,11 @@ export class IsoMap {
       if (this.blocked(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, r, false)) return false;
     }
     return true;
+  }
+
+  /** The stool, chair or bench at a spot, if there is one (see Seating.ts). */
+  seatAt(gx: number, gy: number): MapObject | undefined {
+    return seatAt(this.data.objects, gx, gy);
   }
 
   /**

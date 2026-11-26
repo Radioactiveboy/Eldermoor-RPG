@@ -153,6 +153,7 @@ export function buildPawnshopMap(state: PawnshopState = { collecting: false, for
     {
       id: 'pawn-sign', gx: 4.5, gy: 0.15, label: 'Read the sign', z: 70,
       sign: {
+        style: 'post',
         heading: 'Painted on a board behind the counter',
         lines: [
           'A. LUSK',

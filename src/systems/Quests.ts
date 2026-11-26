@@ -377,6 +377,43 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 60,
   },
+  // Down Sump Lane in Gloomhaven (see scenes/game/sump.ts and dialogue/sump.ts).
+  'grey-silver': {
+    id: 'grey-silver',
+    title: 'Grey Silver',
+    giver: 'Wisp',
+    kind: 'side',
+    summary:
+      "Wisp, the little cutpurse of Gloomhaven's square, is frightened for her mam, though she'd bite me for saying so. Annis Crowe scrubs pots " +
+      "at the Black Rose, and since the summer she has been going out after the Rose's bell and coming home before light, crying, with silver: " +
+      'foreign silver, with holes in. Wisp wants to know where it comes from.',
+    objectives: [
+      { id: 'talk', text: 'Hear what is troubling Wisp', target: { area: 'gloomhaven', x: 32.5, y: 27.5, npc: 'wisp' } },
+      { id: 'visit', text: "Go to the Crowes' cottage on Sump Lane, on the corner by the pool", target: { area: 'gloomhaven', x: 8.5, y: 32.5 } },
+      { id: 'find', text: "Look in Annis's sewing box, while she's out", target: { area: 'sump-crowe', x: 4.5, y: 0.6 } },
+      { id: 'annis', text: 'Ask Annis about the coin, when she is home from the Rose of an evening', target: { area: 'sump-crowe', x: 3.5, y: 3.45, npc: 'annis' } },
+      { id: 'tell', text: 'Tell Wisp what you have found out', target: { area: 'gloomhaven', x: 32.5, y: 27.5, npc: 'wisp' } },
+    ],
+    xp: 120,
+  },
+  'chalk-rose': {
+    id: 'chalk-rose',
+    title: 'The Chalk Rose',
+    giver: 'The burnt house',
+    kind: 'side',
+    summary:
+      "There is a burnt house on Sump Lane, black to the ground, and somebody has chalked a rose on its door. The chalk isn't burnt. " +
+      'Somebody lived there, and nobody on the lane will say what became of him. I mean to find out.',
+    objectives: [
+      { id: 'look', text: 'Look at the burnt house on Sump Lane', target: { area: 'gloomhaven', x: 17.5, y: 37.5 } },
+      { id: 'ask', text: 'Ask the neighbours who lived there. The Widow Pruett, at the bottom of the lane, sees everything', target: { area: 'sump-pruett', x: 1.5, y: 1.55, npc: 'nan' } },
+      { id: 'chalk', text: 'Look closely at the chalk rose on the burnt door', target: { area: 'gloomhaven', x: 16.7, y: 37.3 } },
+      { id: 'ned', text: 'Find Ned Wick, the lamplighter: his stilt house over the pool by day, the lanes after dark', target: { area: 'sump-stilt', x: 2.5, y: 1.5, npc: 'ned' } },
+      { id: 'hearth', text: 'Lift the hearthstone in the burnt house', target: { area: 'sump-ruin', x: 1.5, y: 0.75 } },
+      { id: 'tell', text: 'Show Ned Wick what Jory hid', target: { area: 'sump-stilt', x: 2.5, y: 1.5, npc: 'ned' } },
+    ],
+    xp: 150,
+  },
 };
 
 export interface QuestState {

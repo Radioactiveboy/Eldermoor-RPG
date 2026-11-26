@@ -17,6 +17,7 @@ import { BOUNTY_BOARD, MOPPET_SIGHT } from '../../world/landmarks';
 import { readBountyBoard } from './bounties';
 import { foundMoppet } from './speckle';
 import type { GameScene } from '../GameScene';
+import type { ReaderSceneData } from '../ReaderScene';
 import type { Channel } from './interactions';
 import { gatheredMoonpetal, gatheredWillowBark } from './medicine';
 import { syncPlot } from './plot';
@@ -24,6 +25,7 @@ import { lookedAtCamp, lookedAtTrailSign } from './trail';
 import { lookedAtBrazier } from './beacon';
 import { examinePawnshop } from './pawnshop';
 import { examineAtJetty } from './jetty';
+import { examineInSump } from './sump';
 
 export function startChannel(g: GameScene, channel: Omit<Channel, 'elapsed'>, towards: Vec2): void {
   g.walkingTo = undefined;
@@ -140,8 +142,7 @@ export function examine(g: GameScene, sight: Sight): void {
     return;
   }
   if (sight.sign) {
-    GameAudio.click();
-    g.onSign?.(sight.sign.heading, sight.sign.lines);
+    readSign(g, sight.sign);
     return;
   }
   if (sight.loot) {
@@ -169,6 +170,7 @@ export function examine(g: GameScene, sight: Sight): void {
     return;
   }
   if (examineAtJetty(g, sight)) return;
+  if (examineInSump(g, sight)) return;
   if (sight.thought) {
     g.onHint?.(sight.thought);
     lookedAtTrailSign(sight.id);
@@ -211,6 +213,23 @@ export function examine(g: GameScene, sight: Sight): void {
       : 'Found two dead ewes at the back of a wolves\' den in the hill, a bell on one scratched "BESS". Someone on the road ' +
           'must be missing them.',
   );
+}
+
+/**
+ * Something written: a signpost is read in passing, in a banner; a notice
+ * board, book, slate or carving opens close up, to read at leisure
+ * (scenes/ReaderScene.ts), and the world waits until it's put down.
+ */
+export function readSign(g: GameScene, sign: NonNullable<Sight['sign']>): void {
+  if (sign.style === 'post') {
+    GameAudio.click();
+    g.onSign?.(sign.heading, sign.lines);
+    return;
+  }
+  if (!g.takeControls()) return;
+  const data: ReaderSceneData = { heading: sign.heading, lines: sign.lines, style: sign.style };
+  g.scene.launch('Reader', data);
+  g.scene.get('Reader').events.once('reader-closed', () => g.release());
 }
 
 /**

@@ -4276,6 +4276,167 @@ const HERON_PAINTERS: Record<string, (c: Ctx) => void> = {
 
 Object.assign(PAINTERS, HERON_PAINTERS);
 
+/** Down Sump Lane in Gloomhaven (see scenes/game/sump.ts): the grey men's holed silver, and Jory Cotter's tally. */
+const SUMP_PAINTERS: Record<string, (c: Ctx) => void> = {
+  'grey-silver': (c) => {
+    // A thick silver coin, a square hole through its middle, writing like birds' feet round it, and a tiny rose scratched on.
+    const coin = () => {
+      ellipse(c, 64, 66, 40, 40);
+    };
+    drop(c, () => {
+      coin();
+      c.fillStyle = '#8a8c94';
+      c.fill();
+    });
+    // Its edge, for thickness.
+    ellipse(c, 64, 70, 40, 40);
+    fillInk(c, '#6a6c74', 3);
+    coin();
+    fillInk(c, rad(c, 50, 50, 52, [
+      [0, '#f4f4f8'],
+      [0.45, '#c8cad2'],
+      [1, '#7a7c86'],
+    ]), 3.5);
+    // A raised rim.
+    ellipse(c, 64, 66, 33, 33);
+    c.strokeStyle = 'rgba(70,72,82,0.7)';
+    c.lineWidth = 2;
+    c.stroke();
+    // The writing: four little clusters of strokes, one each side of the hole.
+    c.strokeStyle = 'rgba(60,62,72,0.85)';
+    c.lineWidth = 1.8;
+    c.lineCap = 'round';
+    for (const [x, y] of [[64, 42], [88, 66], [64, 90], [40, 66]] as const) {
+      const r = rng(x * 7 + y);
+      for (let k = 0; k < 5; k++) {
+        c.beginPath();
+        const ax = x - 7 + r() * 14;
+        const ay = y - 6 + r() * 12;
+        c.moveTo(ax, ay);
+        c.lineTo(ax + (r() - 0.5) * 8, ay + (r() - 0.3) * 7);
+        c.stroke();
+      }
+    }
+    // The square hole.
+    roundRect(c, 54, 56, 20, 20, 1.5);
+    fillInk(c, '#1c1a20', 3);
+    c.beginPath();
+    c.moveTo(56, 74);
+    c.lineTo(72, 74);
+    c.strokeStyle = 'rgba(255,255,255,0.35)';
+    c.lineWidth = 1.5;
+    c.stroke();
+    // The rose, scratched in fine and shallow below the hole.
+    c.strokeStyle = 'rgba(90,40,48,0.8)';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.arc(80, 86, 4, 0, Math.PI * 1.7);
+    c.moveTo(80, 86);
+    c.arc(80, 86, 2, 0, Math.PI * 1.5);
+    c.moveTo(80, 90);
+    c.lineTo(79, 97);
+    c.stroke();
+    shine(c, 46, 46, 14, 8, -0.6, 0.6);
+  },
+  'jory-tally': (c) => {
+    // A short board, scorched at one corner, scratched all over with little pictures: a church in water, crates, holed coins, a rose,
+    // one crate with lines coming off it, and a boat crossed through.
+    at(c, 64, 66, -0.12, () => {
+      const board = () => roundRect(c, -50, -34, 100, 68, 4);
+      drop(c, () => {
+        board();
+        c.fillStyle = '#5a4028';
+        c.fill();
+      });
+      board();
+      c.fillStyle = lin(c, 0, -34, 0, 34, [
+        [0, '#b89268'],
+        [0.5, '#9a7650'],
+        [1, '#7a5a3a'],
+      ]);
+      c.fill();
+      clipped(c, () => {
+        // The grain, and the scorched corner.
+        c.strokeStyle = 'rgba(70,46,24,0.4)';
+        c.lineWidth = 1;
+        for (let k = 0; k < 7; k++) {
+          c.beginPath();
+          c.moveTo(-52, -28 + k * 9);
+          for (let x = -52; x <= 52; x += 8) c.lineTo(x, -28 + k * 9 + Math.sin(x * 0.12 + k) * 1.2);
+          c.stroke();
+        }
+        c.fillStyle = rad(c, 50, 34, 40, [
+          [0, 'rgba(20,12,8,0.95)'],
+          [0.5, 'rgba(40,24,12,0.6)'],
+          [1, 'rgba(40,24,12,0)'],
+        ]);
+        c.fillRect(0, 0, 60, 40);
+        // The scratches, pale where the knife went in.
+        c.strokeStyle = '#e8d8b8';
+        c.lineWidth = 1.6;
+        c.lineCap = 'round';
+        // The church in its water: a little house with a cross, wavy lines under.
+        c.beginPath();
+        c.moveTo(-42, -10);
+        c.lineTo(-42, -20);
+        c.lineTo(-36, -26);
+        c.lineTo(-30, -20);
+        c.lineTo(-30, -10);
+        c.moveTo(-36, -26);
+        c.lineTo(-36, -32);
+        c.moveTo(-39, -30);
+        c.lineTo(-33, -30);
+        for (const y of [-6, -2]) {
+          c.moveTo(-46, y);
+          for (let x = -46; x <= -26; x += 4) c.lineTo(x + 2, y + (x % 8 === 0 ? -2 : 2));
+        }
+        // Crates and holed coins, three rows.
+        for (let row = 0; row < 3; row++) {
+          const y = -26 + row * 12;
+          for (let k = 0; k < 3 + (row === 2 ? 1 : 0); k++) c.rect(-18 + k * 8, y, 6, 6);
+          c.moveTo(18 + 4, y + 3);
+          c.arc(18, y + 3, 4, 0, Math.PI * 2);
+          c.rect(16.5, y + 1.5, 3, 3);
+        }
+        // The rose.
+        c.moveTo(34, -20);
+        c.arc(30, -20, 4, 0, Math.PI * 1.8);
+        c.moveTo(30, -16);
+        c.lineTo(30, -8);
+        c.stroke();
+        // The one crate on its own, with lines coming off it.
+        c.strokeStyle = '#f0e4c8';
+        c.beginPath();
+        c.rect(-14, 14, 9, 9);
+        for (const [dx, dy] of [[-4, -3], [0, -5], [4, -3]]) {
+          c.moveTo(-9.5 + dx, 12 + dy);
+          c.lineTo(-9.5 + dx * 1.6, 7 + dy);
+        }
+        // The boat, crossed through.
+        c.moveTo(4, 18);
+        c.lineTo(24, 18);
+        c.lineTo(20, 23);
+        c.lineTo(8, 23);
+        c.closePath();
+        c.moveTo(2, 12);
+        c.lineTo(26, 28);
+        c.moveTo(26, 12);
+        c.lineTo(2, 28);
+        c.stroke();
+      });
+      board();
+      ink(c);
+      // A nail hole at one end.
+      ellipse(c, -44, 26, 2.5, 2.5);
+      c.fillStyle = '#2a1a10';
+      c.fill();
+      shine(c, -20, -24, 30, 3, 0, 0.3);
+    });
+  },
+};
+
+Object.assign(PAINTERS, SUMP_PAINTERS);
+
 /** Which painter makes each texture. */
 const ICONS: Array<[string, string]> = [
   ['item-carrot', 'carrot'],
@@ -4378,6 +4539,8 @@ const ICONS: Array<[string, string]> = [
   ['item-oak-plank', 'oak-plank'],
   ['item-oakum', 'oakum'],
   ['item-pitch-pail', 'pitch-pail'],
+  ['item-grey-silver', 'grey-silver'],
+  ['item-jory-tally', 'jory-tally'],
 ];
 
 export function generateItemIcons(scene: Phaser.Scene): void {
