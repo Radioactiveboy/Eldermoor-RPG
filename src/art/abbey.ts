@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, Shader, TABLE_TOP } from './IsoModel';
 import { MODEL_ART } from './interior';
 import { coping, ELDA, rubble, SLATE, slates } from './monastery';
 import { PALETTE as P } from './palette';
@@ -526,7 +526,7 @@ function desk(): IsoModel {
   });
   m.box(0.75, 0.6, 24, 0.07, 0.07, 4, { top: P.ink, left: P.iron, right: P.ink });
   m.box(0.78, 0.62, 28, 0.02, 0.02, 10, { top: P.flowerWhite, left: P.flowerWhite, right: P.linen });
-  return m;
+  return m.lower(22, 25 - TABLE_TOP);
 }
 
 /** Tall bookshelves against a wall, two tiles long, crammed with books and scrolls. */
@@ -570,7 +570,7 @@ function herbTable(): IsoModel {
   m.cylinder(1.2, 0.55, 24, 0.14, 6, (u) => (u < 0.3 ? P.stoneLight : u > 0.7 ? P.stoneDark : P.stone), P.stoneDark);
   m.box(1.24, 0.5, 26, 0.04, 0.04, 12, { top: P.stoneLight, left: P.stone, right: P.stoneDark });
   m.quad({ x: 1.5, y: 0.4, z: 24.5 }, { x: 0.3, y: 0, z: 0 }, { x: 0, y: 0.3, z: 0 }, (u, v) => (hash(Math.floor(u * 8), Math.floor(v * 8)) < 0.5 ? null : u > 0.6 ? 0xf4f8ff : 0x6a9a8a));
-  return m;
+  return m.lower(20, 24 - TABLE_TOP);
 }
 
 /** A great black pot on a trivet, for the brothers' pottage. */

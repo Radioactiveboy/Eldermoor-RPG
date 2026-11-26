@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, planks, SEAT_TOP, Shader } from './IsoModel';
+import { IsoModel, planks, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { MODEL_ART } from './interior';
 import { PALETTE as P } from './palette';
 import { GARRISON, PANEL_WALL_HEIGHT, RESIDENCE, RESIDENCE_CHIMNEYS } from './sizes';
@@ -494,7 +494,7 @@ function writingTable(rich: boolean): IsoModel {
   m.box(0.22, 0.3, 25, 0.12, 0.12, 2, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
   m.box(0.25, 0.33, 27, 0.06, 0.06, 7, { top: P.flowerWhite, left: P.flowerWhite, right: P.linen });
   m.box(0.25, 0.33, 34, 0.06, 0.06, 3, { top: P.fireYellow, left: P.fireYellow, right: P.fireOrange });
-  return m;
+  return m.lower(22, 25 - TABLE_TOP);
 }
 
 // ---------------------------------------------------------------- inside the residence
@@ -621,7 +621,7 @@ function tablePiece(i: 0 | 1 | 2): IsoModel {
     m.box(cx - 0.03, 0.47, 37, 0.06, 0.06, 7, { top: P.flowerWhite, left: P.flowerWhite, right: P.linen });
     m.box(cx - 0.03, 0.47, 44, 0.06, 0.06, 3, { top: P.fireYellow, left: P.fireYellow, right: P.fireOrange });
   }
-  return m;
+  return m.lower(22, 25 - TABLE_TOP);
 }
 
 /**
@@ -634,16 +634,17 @@ function chair(grand: boolean, turned = false): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
   const seat = grand ? 0x7a2a2a : 0x2e5a3e;
-  for (const [x, y] of [[0.22, 0.22], [0.7, 0.22], [0.22, 0.7], [0.7, 0.7]]) m.box(x, y, 0, 0.08, 0.08, SEAT_TOP - 3, wood);
-  m.box(0.2, 0.2, SEAT_TOP - 3, 0.6, 0.6, 3, { top: seat, left: darken(seat), right: darken(seat, 0.6) });
-  const back = SEAT_TOP + (grand ? 38 : 24);
-  const by = turned ? 0.72 : 0.2;
-  const face = (u: number, v: number) => (u < 0.12 || u > 0.88 || v < 0.1 ? OAK_DARK : grand && v < 0.4 && Math.abs(u - 0.5) < 0.12 ? P.gold : seat);
-  m.box(0.2, by, SEAT_TOP - 3, 0.6, 0.08, back - SEAT_TOP + 3, turned
+  for (const [x, y] of [[0.35, 0.35], [0.61, 0.35], [0.35, 0.61], [0.61, 0.61]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2, wood);
+  m.box(0.34, 0.34, SEAT_TOP - 2, 0.32, 0.32, 2, { top: seat, left: darken(seat), right: darken(seat, 0.6) });
+  // The back comes to a sitter's shoulders (the grand one to the top of their head).
+  const back = SEAT_TOP + (grand ? 20 : 13);
+  const by = turned ? 0.62 : 0.34;
+  const face = (u: number, v: number) => (u < 0.14 || u > 0.86 || v < 0.12 ? OAK_DARK : grand && v < 0.4 && Math.abs(u - 0.5) < 0.14 ? P.gold : seat);
+  m.box(0.34, by, SEAT_TOP - 2, 0.32, 0.04, back - SEAT_TOP + 2, turned
     // Seen from behind: plain oak with a carved rail.
-    ? { top: OAK_LIGHT, left: (u, v) => (u < 0.12 || u > 0.88 || v < 0.1 || Math.abs(v - 0.45) < 0.04 ? OAK_DARK : OAK), right: OAK_DARK }
+    ? { top: OAK_LIGHT, left: (u, v) => (u < 0.14 || u > 0.86 || v < 0.12 || Math.abs(v - 0.45) < 0.06 ? OAK_DARK : OAK), right: OAK_DARK }
     : { top: OAK_LIGHT, left: face, right: OAK_DARK });
-  if (grand) for (const x of [0.2, 0.72]) m.box(x, by, back, 0.08, 0.08, 6, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
+  if (grand) for (const x of [0.34, 0.62]) m.box(x, by, back, 0.04, 0.04, 3, { top: P.goldLight, left: P.gold, right: 0x9a7430 });
   return m;
 }
 

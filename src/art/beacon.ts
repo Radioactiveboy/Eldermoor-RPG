@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TILE_HEIGHT } from '../config';
 import { MODEL_ART, registerModel } from './interior';
-import { IsoModel, planks, SEAT_TOP, Shader } from './IsoModel';
+import { IsoModel, planks, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { smoothNoise } from './scorch';
@@ -644,13 +644,13 @@ function brigandTable(): IsoModel {
   m.quad({ x: 1.6, y: 0.35, z: 37 }, { x: 0.04, y: 0, z: 0 }, { x: 0, y: 0, z: -3 }, 0xfff4c0);
   // A coin or two.
   m.cylinder(0.9, 0.7, 25, 0.04, 0.6, () => GOLD, 0xf7dc84);
-  return m;
+  return m.lower(22, 25 - TABLE_TOP);
 }
 
 /** A stool, a rough round of log on three legs. */
 function stool(): IsoModel {
   const m = new IsoModel();
-  m.cylinder(0.5, 0.5, 0, 0.2, SEAT_TOP, (u) => dim(OAK, 0.8 + (1 - u) * 0.3), (u, v) => (Math.floor(Math.hypot(u - 0.5, v - 0.5) * 12) % 2 ? 0xb8946a : 0x9a7a52));
+  m.cylinder(0.5, 0.5, 0, 0.13, SEAT_TOP, (u) => dim(OAK, 0.8 + (1 - u) * 0.3), (u, v) => (Math.floor(Math.hypot(u - 0.5, v - 0.5) * 12) % 2 ? 0xb8946a : 0x9a7a52));
   return m;
 }
 
@@ -772,7 +772,7 @@ function wardenDesk(): IsoModel {
   m.quad({ x: 0.5, y: 0.3, z: 29.5 }, { x: 0.6, y: 0, z: 0 }, { x: 0, y: 0.4, z: 0 }, page);
   m.cylinder(1.4, 0.4, 29, 0.06, 6, () => HORN_TONE, 0x2a2020);
   m.cylinder(1.65, 0.55, 29, 0.07, 4, () => 0xe8dcc0, 0xe8dcc0);
-  return m;
+  return m.lower(26, 29 - TABLE_TOP);
 }
 const HORN_TONE = 0xd8c8a0;
 

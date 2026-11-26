@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MODEL_ART, registerModel } from './interior';
-import { inFrontOf, IsoModel, project, RenderedModel, Shader, Vec3 } from './IsoModel';
+import { inFrontOf, IsoModel, project, RenderedModel, SEAT_TOP, Shader, Vec3 } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { smoothNoise } from './scorch';
@@ -532,8 +532,8 @@ function signboard(): IsoModel {
 /** A low three-legged stool. */
 function stool(): IsoModel {
   const m = new IsoModel();
-  for (const [x, y] of [[0.4, 0.35], [0.62, 0.45], [0.42, 0.62]]) line(m, { x, y, z: 0 }, { x: 0.5 + (x - 0.5) * 0.4, y: 0.5 + (y - 0.5) * 0.4, z: 8 }, OAK_DARK, 0.05);
-  m.cylinder(0.5, 0.5, 8, 0.18, 2, () => OAK, OAK_LIGHT);
+  for (const [x, y] of [[0.42, 0.38], [0.6, 0.46], [0.44, 0.6]]) line(m, { x, y, z: 0 }, { x: 0.5 + (x - 0.5) * 0.4, y: 0.5 + (y - 0.5) * 0.4, z: SEAT_TOP - 2 }, OAK_DARK, 0.04);
+  m.cylinder(0.5, 0.5, SEAT_TOP - 2, 0.125, 2, () => OAK, OAK_LIGHT);
   return m;
 }
 

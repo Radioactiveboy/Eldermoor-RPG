@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, RenderedModel, SEAT_TOP, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, RenderedModel, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
 import { mixColor, scorch, smoothNoise } from './scorch';
@@ -273,15 +273,16 @@ export function table(): IsoModel {
   m.box(0.45, 0.3, 30, 0.35, 0.22, 6, { top: P.dirtLight, left: P.dirt, right: P.dirtDark });
   m.cylinder(1.25, 0.55, 30, 0.16, 5, (u) => (u < 0.4 ? P.stoneLight : P.stone), P.mortar);
   m.box(1.55, 0.25, 30, 0.08, 0.08, 10, { top: P.fireYellow, left: P.flowerWhite, right: P.linenDark });
-  return m;
+  return m.lower(26, 30 - TABLE_TOP);
 }
 
 export function stool(): IsoModel {
+  // A stool is about as wide as whoever sits on it: any wider and they look perched in the middle of a drum.
   const m = new IsoModel();
-  for (const [x, y] of [[0.3, 0.3], [0.62, 0.3], [0.3, 0.62], [0.62, 0.62]]) {
-    m.box(x, y, 0, 0.08, 0.08, SEAT_TOP - 3, { top: P.bark, left: P.bark, right: P.barkDark });
+  for (const [x, y] of [[0.41, 0.41], [0.55, 0.41], [0.41, 0.55], [0.55, 0.55]]) {
+    m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2, { top: P.bark, left: P.bark, right: P.barkDark });
   }
-  m.cylinder(0.5, 0.5, SEAT_TOP - 3, 0.28, 3, (u) => (u < 0.35 ? P.plankLight : u > 0.75 ? P.plankDark : P.plank), P.plankLight);
+  m.cylinder(0.5, 0.5, SEAT_TOP - 2, 0.125, 2, (u) => (u < 0.35 ? P.plankLight : u > 0.75 ? P.plankDark : P.plank), P.plankLight);
   return m;
 }
 

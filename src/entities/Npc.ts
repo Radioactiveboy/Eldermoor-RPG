@@ -36,6 +36,7 @@ import {
 } from '../dialogue/blackrose';
 import { TOLL } from '../world/MarketMap';
 import { depthAt, gridToScreen, Vec2 } from '../iso/IsoMath';
+import { cutAtSeat, seatedDraw } from '../world/Seating';
 import { marketOpen } from '../systems/MarketHours';
 import { inHours, isVillager, Villager, Whereabouts, whereabouts } from '../systems/VillageDay';
 import { Inventory, itemDef } from '../systems/Inventory';
@@ -1374,11 +1375,14 @@ export class Npc implements Body {
     const p = gridToScreen(this.gx, this.gy);
     this.shadow.setPosition(p.x, p.y);
     this.sprite.setPosition(p.x + this.offset.x, p.y + this.offset.y);
-    // Seated, drawn in front of the seat (as the player is).
-    const d = this.aboard?.depth ?? (this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy)) + (this.seated ? 2 : 0);
-    this.shadow.setDepth(d - 0.5);
+    // Seated, drawn with the seat (as the player is): over it, behind its back, or cut off at its top (see Seating.ts).
+    const standing = this.moves ? this.map.characterDepth(this.gx, this.gy) : depthAt(this.gx, this.gy);
+    const sat = this.seated && !this.aboard ? seatedDraw(this.map.seatAt(this.gx, this.gy), standing, this.facing) : undefined;
+    const d = this.aboard?.depth ?? sat?.depth ?? standing;
+    this.shadow.setDepth(sat?.shadow ?? d - 0.5);
     if (this.aboard) this.shadow.setVisible(false);
     this.sprite.setDepth(d);
+    cutAtSeat(this.sprite, !!sat?.cut && !moving);
     if (this.def.anim) return;
     const pose = moving ? 'walk' : this.seated ? 'sit' : this.atWork ? 'work' : 'idle';
     // Facings 0..4 are drawn (s, se, e, ne, n); 5..7 are the east ones mirrored,

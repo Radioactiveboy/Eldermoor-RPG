@@ -86,10 +86,19 @@ export function inFrontOf(r: RenderedModel, x: number, y: number): PixelCanvas {
 /**
  * How high the top of a seat is drawn (chair, stool, bench, settle): where a
  * seated figure's thighs rest. Every sitting figure is modelled with its hips
- * this far up (see seatedLegs in models3d.ts) and is drawn standing on the
- * floor in front of its seat, so a seat any higher comes up through its lap.
+ * this far up (see seatedLegs in models3d.ts), so a seat any higher comes up
+ * through its lap. Seats are also drawn about as wide as a sitter (a third of
+ * a tile at most), or they look perched on it. See world/Seating.ts for how
+ * the two are drawn together.
  */
 export const SEAT_TOP = 9;
+
+/**
+ * How high a table's top is drawn: a little above a sitter's lap (see SEAT_TOP),
+ * and about waist height on someone standing, so a person behind a table shows
+ * from the waist up and one sitting at it has their arms over it.
+ */
+export const TABLE_TOP = SEAT_TOP + 8;
 
 export class IsoModel {
   private readonly faces: Face[] = [];
@@ -179,6 +188,23 @@ export class IsoModel {
       const dy = v * 2 - 1;
       return dx * dx + dy * dy <= 1 ? topShade(u, v) : null;
     });
+    return this;
+  }
+
+  /**
+   * Takes `by` pixels out of the model's height just below `from`: everything at `from` or above comes
+   * down by that much, and whatever stood in between (legs, mostly) is cut short. For bringing a table
+   * built at one height down to another (see TABLE_TOP) with everything on it.
+   */
+  lower(from: number, by: number): this {
+    if (by <= 0) return this;
+    const f = (z: number) => (z >= from ? z - by : Math.min(z, from - by));
+    for (const face of this.faces) {
+      const z = f(face.origin.z);
+      face.du = { ...face.du, z: f(face.origin.z + face.du.z) - z };
+      face.dv = { ...face.dv, z: f(face.origin.z + face.dv.z) - z };
+      face.origin = { ...face.origin, z };
+    }
     return this;
   }
 

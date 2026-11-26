@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, SEAT_TOP, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { MODEL_ART, registerModel, WALL_HEIGHT } from './interior';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
@@ -745,18 +745,18 @@ function diceTable(): IsoModel {
   // A leather dice cup lying on its side.
   m.box(0.62, 0.62, 28, 0.16, 0.1, 3, { top: P.leatherLight, left: P.leather, right: P.leatherDark });
   bottleCandle(m, 0.3, 0.28, 28);
-  return m;
+  return m.lower(24, 28 - TABLE_TOP);
 }
 
 /** A high-backed settle against the side wall, its seat along y, two tiles long: a booth's bench. */
 function settle(): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_TOP, left: lipped(OAK, OAK_LIGHT), right: OAK_DARK };
-  m.box(0.08, 0.05, 0, 0.14, 1.9, 52, { top: TAR_WORN, left: (u, v) => ((u * 6) % 1 < 0.08 ? TAR_DARK : timber(v * 52, u, 3)), right: TAR_DARK });
-  m.box(0.22, 0.05, 0, 0.5, 1.9, SEAT_TOP - 3, wood);
-  m.box(0.22, 0.05, SEAT_TOP - 3, 0.52, 1.9, 3, { top: (_u, v) => ((v * 4) % 1 < 0.06 ? OAK_DARK : OAK_TOP), left: OAK_LIGHT, right: OAK });
-  // Ends.
-  for (const y of [0.02, 1.86]) m.box(0.08, y, 0, 0.66, 0.12, SEAT_TOP + 12, wood);
+  // The high back against the wall, the box seat no deeper than a lap, and an end at either side.
+  m.box(0.08, 0.05, 0, 0.1, 1.9, SEAT_TOP + 22, { top: TAR_WORN, left: (u, v) => ((u * 6) % 1 < 0.08 ? TAR_DARK : timber(v * 31, u, 3)), right: TAR_DARK });
+  m.box(0.18, 0.05, 0, 0.3, 1.9, SEAT_TOP - 2, wood);
+  m.box(0.18, 0.05, SEAT_TOP - 2, 0.32, 1.9, 2, { top: (_u, v) => ((v * 4) % 1 < 0.06 ? OAK_DARK : OAK_TOP), left: OAK_LIGHT, right: OAK });
+  for (const y of [0.02, 1.9]) m.box(0.08, y, 0, 0.44, 0.08, SEAT_TOP + 8, wood);
   return m;
 }
 
@@ -771,15 +771,15 @@ function boothTable(): IsoModel {
   bottleCandle(m, 0.7, 0.9, 29);
   // A prayer-book, open, upside down: Hollis's.
   m.box(0.25, 1.5, 29, 0.35, 0.25, 1, { top: (u) => (Math.abs(u - 0.5) < 0.04 ? 0x4a3a2a : u < 0.5 ? 0xe0d4b4 : 0xd0c4a4), left: 0x5a2020, right: 0x3a1414 });
-  return m;
+  return m.lower(25, 29 - TABLE_TOP);
 }
 
 /** A wobbly stool, one leg shorter than the others, its seat split. */
 function stool(): IsoModel {
   const m = new IsoModel();
   const leg = { top: TAR, left: TAR_LIGHT, right: TAR_DARK };
-  for (const [x, y] of [[0.32, 0.32], [0.6, 0.32], [0.32, 0.6], [0.6, 0.6]]) m.box(x, y, 0, 0.07, 0.07, SEAT_TOP - 3, leg);
-  m.cylinder(0.5, 0.5, SEAT_TOP - 3, 0.22, 3, (u) => (u < 0.3 ? OAK_LIGHT : u > 0.7 ? OAK_DARK : OAK), (u, v) => (Math.abs(u - v) < 0.03 ? TAR_DARK : OAK_TOP));
+  for (const [x, y] of [[0.41, 0.41], [0.55, 0.41], [0.41, 0.55], [0.55, 0.55]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2, leg);
+  m.cylinder(0.5, 0.5, SEAT_TOP - 2, 0.125, 2, (u) => (u < 0.3 ? OAK_LIGHT : u > 0.7 ? OAK_DARK : OAK), (u, v) => (Math.abs(u - v) < 0.06 ? TAR_DARK : OAK_TOP));
   return m;
 }
 
@@ -787,14 +787,14 @@ function stool(): IsoModel {
 function rocker(): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
-  for (const x of [0.2, 0.74]) m.box(x, 0.12, 0, 0.06, 0.8, 3, { top: OAK_LIGHT, left: (u) => (u < 0.5 ? OAK : OAK_DARK), right: OAK_DARK });
-  for (const [x, y] of [[0.22, 0.3], [0.72, 0.3], [0.22, 0.7], [0.72, 0.7]]) m.box(x, y, 3, 0.06, 0.06, SEAT_TOP - 6, wood);
-  m.box(0.2, 0.25, SEAT_TOP - 3, 0.6, 0.55, 3, { top: OAK_TOP, left: OAK_LIGHT, right: OAK });
+  for (const x of [0.33, 0.63]) m.box(x, 0.24, 0, 0.04, 0.52, 2, { top: OAK_LIGHT, left: (u) => (u < 0.5 ? OAK : OAK_DARK), right: OAK_DARK });
+  for (const [x, y] of [[0.33, 0.34], [0.63, 0.34], [0.33, 0.62], [0.63, 0.62]]) m.box(x, y, 2, 0.04, 0.04, SEAT_TOP - 4, wood);
+  m.box(0.32, 0.33, SEAT_TOP - 2, 0.36, 0.34, 2, { top: OAK_TOP, left: OAK_LIGHT, right: OAK });
   // The back, on the far side, so whoever sits in it faces the room.
-  m.box(0.2, 0.2, SEAT_TOP - 3, 0.6, 0.06, 26, { top: OAK_LIGHT, left: (u) => ((u * 5) % 1 < 0.4 ? OAK : OAK_DARK), right: OAK_DARK });
-  m.box(0.2, 0.18, SEAT_TOP + 23, 0.6, 0.1, 3, wood);
+  m.box(0.32, 0.3, SEAT_TOP - 2, 0.36, 0.04, 17, { top: OAK_LIGHT, left: (u) => ((u * 5) % 1 < 0.4 ? OAK : OAK_DARK), right: OAK_DARK });
+  m.box(0.31, 0.29, SEAT_TOP + 15, 0.38, 0.06, 2, wood);
   // The shawl thrown over it.
-  m.box(0.28, 0.24, SEAT_TOP + 10, 0.44, 0.08, 13, { top: 0x5a4a3a, left: (u, v) => ((Math.floor(u * 8) + Math.floor(v * 6)) % 2 ? 0x6a5a3e : 0x4a3a2a), right: 0x3a2e22 });
+  m.box(0.36, 0.33, SEAT_TOP + 7, 0.28, 0.05, 9, { top: 0x5a4a3a, left: (u, v) => ((Math.floor(u * 8) + Math.floor(v * 6)) % 2 ? 0x6a5a3e : 0x4a3a2a), right: 0x3a2e22 });
   return m;
 }
 
@@ -870,16 +870,16 @@ function cardTable(): IsoModel {
   bottleCandle(m, 1.35, 1.35, 29);
   coins(m, 0.75, 1.3, 29, 4);
   m.cylinder(0.95, 1.4, 29, 0.05, 1, () => PEWTER, PEWTER_LIGHT);
-  return m;
+  return m.lower(25, 29 - TABLE_TOP);
 }
 
 /** A high-backed chair, carved, for the gentleman in grey. */
 function chair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
-  for (const [x, y] of [[0.25, 0.25], [0.7, 0.25], [0.25, 0.7], [0.7, 0.7]]) m.box(x, y, 0, 0.06, 0.06, SEAT_TOP - 3, wood);
-  m.box(0.22, 0.22, SEAT_TOP - 3, 0.56, 0.56, 3, { top: VELVET, left: OAK_LIGHT, right: OAK });
-  m.box(0.22, 0.2, SEAT_TOP - 3, 0.56, 0.06, 32, { top: OAK_LIGHT, left: (u, v) => (v < 0.4 && rosePaint(u * 24, v * 40, 12, 8, 5) !== null ? OAK_DARK : OAK), right: OAK_DARK });
+  for (const [x, y] of [[0.35, 0.35], [0.61, 0.35], [0.35, 0.61], [0.61, 0.61]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2, wood);
+  m.box(0.34, 0.34, SEAT_TOP - 2, 0.32, 0.32, 2, { top: VELVET, left: OAK_LIGHT, right: OAK });
+  m.box(0.34, 0.32, SEAT_TOP - 2, 0.32, 0.04, 19, { top: OAK_LIGHT, left: (u, v) => (v < 0.45 && rosePaint(u * 14, v * 19, 7, 4, 3) !== null ? OAK_DARK : OAK), right: OAK_DARK });
   return m;
 }
 
@@ -961,9 +961,9 @@ function chamberPot(): IsoModel {
 function plainChair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: OAK_LIGHT, left: OAK, right: OAK_DARK };
-  for (const [x, y] of [[0.3, 0.3], [0.66, 0.3], [0.3, 0.66], [0.66, 0.66]]) m.box(x, y, 0, 0.05, 0.05, SEAT_TOP - 2, wood);
-  m.box(0.28, 0.28, SEAT_TOP - 2, 0.44, 0.44, 2, wood);
-  m.box(0.24, 0.28, SEAT_TOP, 0.06, 0.44, 20, { top: OAK_LIGHT, left: (u) => ((u * 4) % 1 < 0.5 ? OAK : null), right: OAK_DARK });
+  for (const [x, y] of [[0.36, 0.36], [0.6, 0.36], [0.36, 0.6], [0.6, 0.6]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2, wood);
+  m.box(0.35, 0.35, SEAT_TOP - 2, 0.3, 0.3, 2, wood);
+  m.box(0.33, 0.35, SEAT_TOP, 0.04, 0.3, 12, { top: OAK_LIGHT, left: (u) => ((u * 4) % 1 < 0.5 ? OAK : null), right: OAK_DARK });
   return m;
 }
 
@@ -985,7 +985,7 @@ function sideTable(): IsoModel {
   m.cylinder(0.5, 0.5, 0, 0.06, 22, (u) => (u < 0.4 ? TAR_LIGHT : TAR), TAR);
   m.cylinder(0.5, 0.5, 22, 0.3, 3, (u) => (u < 0.35 ? OAK_LIGHT : OAK_DARK), OAK_TOP);
   bottleCandle(m, 0.46, 0.46, 25);
-  return m;
+  return m.lower(22, 25 - TABLE_TOP);
 }
 
 /** A battered sea-chest at the foot of the bed. */

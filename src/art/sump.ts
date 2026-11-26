@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, SEAT_TOP, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { MODEL_ART, registerModel, WALL_HEIGHT } from './interior';
 import { PALETTE as P } from './palette';
 import { PixelCanvas, seededRandom } from './PixelCanvas';
@@ -746,7 +746,7 @@ function table(): IsoModel {
   m.box(0.29, 0.61, 32, 0.02, 0.02, 3, { top: P.fireYellow, left: P.fireOrange, right: P.fireYellow });
   // Mending: a child's smock folded, a needle stuck in it.
   m.box(0.55, 0.62, 27, 0.25, 0.18, 2, { top: (u) => (Math.floor(u * 8) % 3 === 0 ? 0x8a8a9a : 0x9aa0b0), left: 0x8a8a9a, right: 0x7a7a8a });
-  return m;
+  return m.lower(24, 27 - TABLE_TOP);
 }
 
 /** Wisp's pallet on the floor: a straw tick, a patched blanket, a rag fox on the pillow. */
@@ -840,7 +840,7 @@ function wickBench(): IsoModel {
   m.box(1.72, 0.25, 29, 0.14, 0.14, 2, { top: P.iron, left: P.iron, right: 0x2a2a30 });
   m.box(1.73, 0.26, 31, 0.12, 0.12, 8, { top: P.iron, left: (u) => (u < 0.15 || u > 0.85 ? P.iron : P.glassLit), right: (u) => (u < 0.15 || u > 0.85 ? 0x2a2a30 : 0xe8b860) });
   m.box(1.72, 0.25, 39, 0.14, 0.14, 2, { top: P.iron, left: P.iron, right: 0x2a2a30 });
-  return m;
+  return m.lower(26, 32 - TABLE_TOP);
 }
 
 /** A sailcloth hammock slung under the window between two hooks, a blanket knotted in the bottom of it, a boat-hook hung above. */
@@ -930,12 +930,11 @@ function armchair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: DEAL_LIGHT, left: DEAL, right: DEAL_DARK };
   const seat = SEAT_TOP - 2;
-  for (const [x, y] of [[0.24, 0.26], [0.68, 0.26], [0.24, 0.68], [0.68, 0.68]]) m.box(x, y, 0, 0.06, 0.06, seat, wood);
-  m.box(0.22, 0.24, seat, 0.54, 0.52, 2, { top: (u, v) => ((Math.floor(u * 8) + Math.floor(v * 8)) % 2 ? STRAW : STRAW_DARK), left: DEAL, right: DEAL_DARK });
-  m.box(0.3, 0.3, SEAT_TOP, 0.4, 0.4, 1, { top: PATCH_RED, left: 0x6a2a24, right: 0x5a2420 });
-  // The back, behind her, its uprights worn pale on top; the shawl over it.
-  m.box(0.2, 0.24, seat, 0.05, 0.52, 17, { top: DEAL_LIGHT, left: DEAL_DARK, right: (u) => ((u * 4) % 1 < 0.5 ? DEAL : DEAL_DARK) });
-  m.box(0.19, 0.3, seat + 9, 0.07, 0.4, 9, { top: 0x4a5a3a, left: 0x2e3a24, right: (u, v) => ((Math.floor(u * 6) + Math.floor(v * 4)) % 2 ? 0x5a6a46 : 0x3e4a30) });
+  for (const [x, y] of [[0.35, 0.35], [0.61, 0.35], [0.35, 0.61], [0.61, 0.61]]) m.box(x, y, 0, 0.04, 0.04, seat, wood);
+  m.box(0.34, 0.34, seat, 0.32, 0.32, 2, { top: (u, v) => ((Math.floor(u * 6) + Math.floor(v * 6)) % 2 ? STRAW : STRAW_DARK), left: DEAL, right: DEAL_DARK });
+  // The back, behind her, coming to her shoulders; the shawl over it.
+  m.box(0.32, 0.34, seat, 0.04, 0.32, 14, { top: DEAL_LIGHT, left: DEAL_DARK, right: (u) => ((u * 4) % 1 < 0.5 ? DEAL : DEAL_DARK) });
+  m.box(0.31, 0.38, seat + 8, 0.06, 0.24, 7, { top: 0x4a5a3a, left: 0x2e3a24, right: (u, v) => ((Math.floor(u * 6) + Math.floor(v * 4)) % 2 ? 0x5a6a46 : 0x3e4a30) });
   return m;
 }
 
@@ -958,7 +957,7 @@ function rushTable(): IsoModel {
   m.box(0.62, 0.69, 29, 0.02, 0.02, 12, { top: P.iron, left: P.iron, right: 0x2a2a30 });
   m.quad({ x: 0.58, y: 0.7, z: 40 }, { x: 0.12, y: 0, z: 2 }, { x: 0, y: 0, z: -1 }, () => 0xd8ccaa);
   m.box(0.69, 0.69, 41, 0.02, 0.02, 3, { top: P.fireYellow, left: P.fireOrange, right: P.fireYellow });
-  return m;
+  return m.lower(22, 25 - TABLE_TOP);
 }
 
 /** A narrow cot under a patchwork quilt: every patch from a dress, a shirt, a sail. */
@@ -1079,13 +1078,13 @@ function rubble(seed: number): IsoModel {
 function burntChair(): IsoModel {
   const m = new IsoModel();
   const wood = { top: mixColor(DEAL, CHAR, 0.6), left: CHAR_LIGHT, right: CHAR };
-  for (const [x, y] of [[0.25, 0.25], [0.68, 0.25], [0.25, 0.68], [0.68, 0.68]]) m.box(x, y, 0, 0.05, 0.05, 15, wood);
-  m.box(0.22, 0.22, 15, 0.5, 0.5, 2, wood);
-  m.box(0.22, 0.22, 17, 0.06, 0.5, 14, { top: CHAR, left: (u) => ((u * 3) % 1 < 0.5 ? CHAR_LIGHT : null), right: CHAR });
+  for (const [x, y] of [[0.35, 0.35], [0.61, 0.35], [0.35, 0.61], [0.61, 0.61]]) m.box(x, y, 0, 0.04, 0.04, SEAT_TOP - 2, wood);
+  m.box(0.34, 0.34, SEAT_TOP - 2, 0.32, 0.32, 2, wood);
+  m.box(0.34, 0.34, SEAT_TOP, 0.04, 0.32, 12, { top: CHAR, left: (u) => ((u * 3) % 1 < 0.5 ? CHAR_LIGHT : null), right: CHAR });
   // The boots, side by side, tall and buckled, charred.
-  for (const y of [0.78, 0.9]) {
-    m.box(0.45, y, 0, 0.22, 0.09, 3, { top: 0x2a2220, left: 0x1e1816, right: 0x141010 });
-    m.box(0.45, y, 3, 0.09, 0.09, 12, { top: 0x2a2220, left: (_u, v) => (Math.abs(v - 0.3) < 0.08 ? 0x5a5048 : 0x221c1a), right: 0x141010 });
+  for (const y of [0.72, 0.8]) {
+    m.box(0.45, y, 0, 0.14, 0.06, 2, { top: 0x2a2220, left: 0x1e1816, right: 0x141010 });
+    m.box(0.45, y, 2, 0.06, 0.06, 7, { top: 0x2a2220, left: (_u, v) => (Math.abs(v - 0.3) < 0.1 ? 0x5a5048 : 0x221c1a), right: 0x141010 });
   }
   return m;
 }
