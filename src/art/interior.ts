@@ -614,7 +614,7 @@ function cottage(ruined = false, burning = false, look: CottageLook = {}): { mod
   }, 26, 0.6));
   if (swept) {
     // Swept out: the bench by the door scrubbed and set back on its legs, the barrel stood up again.
-    m.box(S + 0.05, 0.25, 0, 0.3, 0.7, 7, { top: 0x3a2e2a, left: 0x2a2224, right: P.ink });
+    m.box(S + 0.05, 0.25, 0, 0.3, 0.7, SEAT_TOP, { top: 0x3a2e2a, left: 0x2a2224, right: P.ink });
     barrel(S + 0.3, 2.55, m, 24);
     return { model: m, windows: [] };
   }
@@ -655,7 +655,7 @@ function cottage(ruined = false, burning = false, look: CottageLook = {}): { mod
     }
     scaffold(m, S, H);
     // The bench stays by the door; the barrel holds the lads' drinking water.
-    m.box(S + 0.05, 0.25, 0, 0.3, 0.7, 12, { top: P.plankLight, left: P.plank, right: P.plankDark });
+    m.box(S + 0.05, 0.25, 0, 0.3, 0.7, SEAT_TOP, { top: P.plankLight, left: P.plank, right: P.plankDark });
     return { model: m, windows: [] };
   }
   // Overhang of the back slope past the gable, then the front slope over everything.
@@ -666,7 +666,7 @@ function cottage(ruined = false, burning = false, look: CottageLook = {}): { mod
   else if (renewed) m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: P.strawLight, left: P.strawDark, right: P.strawDark });
   else m.box(-o, S / 2 - 0.06, H + R - 2, S + o * 2, 0.12, 4, { top: P.thatchLight, left: P.thatchDark, right: P.thatchDark });
   // A bench and a water barrel by the door.
-  m.box(S + 0.05, 0.25, 0, 0.3, 0.7, 12, { top: P.plankLight, left: P.plank, right: P.plankDark });
+  m.box(S + 0.05, 0.25, 0, 0.3, 0.7, SEAT_TOP, { top: P.plankLight, left: P.plank, right: P.plankDark });
   barrel(S + 0.3, 2.55, m, 24);
   return { model: m, windows: frontWindows };
 }

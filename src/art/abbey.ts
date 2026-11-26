@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, Shader, TABLE_TOP } from './IsoModel';
+import { IsoModel, lipped, planks, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { MODEL_ART } from './interior';
 import { coping, ELDA, rubble, SLATE, slates } from './monastery';
 import { PALETTE as P } from './palette';
@@ -476,10 +476,11 @@ function altar(): IsoModel {
 function pew(): IsoModel {
   const m = new IsoModel();
   const wood = { top: P.plankLight, left: P.plank, right: P.plankDark };
-  m.box(0.1, 0.3, 0, 0.08, 0.45, 26, wood);
-  m.box(0.15, 0.3, 11, 1.7, 0.36, 3, wood);
-  m.box(0.15, 0.62, 11, 1.7, 0.07, 16, { top: P.plankLight, left: planks(3, P.plank, P.plankDark, P.plankLight, 4), right: P.plankDark });
-  m.box(1.82, 0.3, 0, 0.08, 0.45, 26, wood);
+  // The seat at a sitter's height (see SEAT_TOP), the back (on the near side: they face the altar) to their shoulders.
+  m.box(0.1, 0.3, 0, 0.08, 0.45, SEAT_TOP + 10, wood);
+  m.box(0.15, 0.3, SEAT_TOP - 3, 1.7, 0.36, 3, wood);
+  m.box(0.15, 0.62, SEAT_TOP - 3, 1.7, 0.07, 12, { top: P.plankLight, left: planks(3, P.plank, P.plankDark, P.plankLight, 4), right: P.plankDark });
+  m.box(1.82, 0.3, 0, 0.08, 0.45, SEAT_TOP + 10, wood);
   return m;
 }
 

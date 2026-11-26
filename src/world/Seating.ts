@@ -14,23 +14,25 @@ import type { MapObject } from './MapData';
  * - Facing away, their legs are behind the seat. They are still drawn over it
  *   (they sit on top of it), but cut off at the seat's top, so its front shows
  *   below them instead of their shins and feet.
- * - On a chair with its back to the camera (a `-turned` one), they are behind
- *   the chair: it is drawn over them, and only what rises above its back shows.
+ * - On a chair with its back to the camera (a `-turned` one, or a pew), they are
+ *   behind the chair: it is drawn over them, and only what rises above its back shows.
  *
  * Sitting on something that isn't a seat (a pallet, the floor), nothing is cut.
  */
 
-/** The keys of things to sit on: the stools, chairs, settles and benches of every area. */
-const SEAT = /(^|-)(stool|chair|plainchair|armchair|rocker|settle|bench)(-|$)/;
-/** Chairs drawn with their backs on the near side: whoever sits in one faces away, behind its back. */
-const BACK_NEAR = /-turned$/;
+/** The keys of things to sit on: the stools, chairs, settles, benches and pews of every area. */
+const SEAT = /(^|-)(stool|chair|plainchair|armchair|rocker|settle|bench|pew)(-|$)/;
+/** Benches that are for working at, not sitting on. */
+const WORKTOP = /kitchen-bench/;
+/** Seats drawn with their backs on the near side (turned chairs, pews): whoever sits in one faces away, behind its back. */
+const BACK_NEAR = /-turned$|(^|-)pew$/;
 
 /** The facings (see Npc.sync: s, se, e, ne, n, nw, w, sw) that look up the screen, away from the camera. */
 const AWAY = [3, 4, 5];
 
 /** The seat at a spot, if there is one: the stool or chair whose tile it is. */
 export function seatAt(objects: readonly MapObject[] | undefined, gx: number, gy: number): MapObject | undefined {
-  return objects?.find((o) => !o.flat && SEAT.test(o.key) && gx >= o.tx && gx < o.tx + o.w && gy >= o.ty && gy < o.ty + o.h);
+  return objects?.find((o) => !o.flat && SEAT.test(o.key) && !WORKTOP.test(o.key) && gx >= o.tx && gx < o.tx + o.w && gy >= o.ty && gy < o.ty + o.h);
 }
 
 export interface SeatedDraw {
