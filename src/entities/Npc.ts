@@ -36,6 +36,8 @@ import {
 } from '../dialogue/blackrose';
 import { annetScript, gaffScript, gateManTollTalk, lardyScript, nibbScript, reeveScript, tallowTollTalk, TollTalk, voskTollTalk } from '../dialogue/tollhouse';
 import { floodTollStage, reeveSilverStage, TOLL_FLAGS } from '../systems/TollHouse';
+import { edricScript, garrowScript, GuildState, marrableScript, meetingScript, pimScript, thraleScript, tunstallScript, wexleyScript } from '../dialogue/guildhall';
+import { GUILD_FLAGS, GuildWorld } from '../systems/Guild';
 import { TOLL } from '../world/MarketMap';
 import { flayScript, gristleScript, lugsScript, rendleScript, scritchScript, tamPotboyScript, tamScript, vetchScript } from '../dialogue/shambles';
 import { NOTHING_QUEST, Shambles, TAM_QUEST } from '../systems/Shambles';
@@ -287,6 +289,30 @@ function rose(id: string, script: (first: boolean, hour: number) => DialogueScri
     met.add(id);
     return script(first, hour);
   };
+}
+
+/** Where the hero stands with the Causeway Merchants (dialogue/guildhall.ts), with whether it's the first time this one's been spoken to since the sitting. */
+function guildState(id: string): GuildState {
+  const first = !met.has(`guild-${id}`);
+  met.add(`guild-${id}`);
+  const f = (flag: string) => QuestLog.hasFlag(flag);
+  return {
+    first,
+    hired: f(GUILD_FLAGS.hired),
+    heardLowe: f(GUILD_FLAGS.heardLowe),
+    garrow: f(GUILD_FLAGS.garrow),
+    pimLeave: f(GUILD_FLAGS.pimLeave),
+    ledger: f(GUILD_FLAGS.ledger),
+    edric: f(GUILD_FLAGS.edric),
+    letters: f(GUILD_FLAGS.letters),
+    marrable: f(GUILD_FLAGS.marrable),
+    tunstall: f(GUILD_FLAGS.tunstall),
+  };
+}
+
+/** One of the guild: until the sitting the hero walked in on is over, whoever's spoken to, it's the sitting that answers. */
+function guild(script: (s: GuildState) => DialogueScript, id: string): () => DialogueScript {
+  return () => (QuestLog.hasFlag(GUILD_FLAGS.met) ? script(guildState(id)) : meetingScript());
 }
 
 /** How Farmer Iran's errand for chicken feed stands (see the 'chicken-feed' quest). */
@@ -651,6 +677,14 @@ const NPCS: Record<string, NpcDef> = {
     script: firstTime('nan', (first) => nanScript(first, sumpNews(), QuestLog.hasFlag(SUMP_FLAGS.nanCoin), QuestLog.hasFlag(SUMP_FLAGS.nanTold))),
   },
   ned: { texture: 'folk-ned', talkRange: 2.4, script: (hour) => firstTime('ned', (first) => nedScript(first, sumpNews(), Npc.within([17, 30], hour)))() },
+  // The Guildhall on the Staithe (world/GuildHallMap.ts): the members at the long table, Garrow by the fire, Pim in the counting room.
+  wexley: { texture: 'folk-wexley', talkRange: 2.2, script: guild(wexleyScript, 'wexley') },
+  marrable: { texture: 'folk-marrable', talkRange: 2.2, script: guild(marrableScript, 'marrable') },
+  tunstall: { texture: 'folk-tunstall', talkRange: 2.2, script: guild(tunstallScript, 'tunstall') },
+  thrale: { texture: 'folk-thrale', talkRange: 2.2, script: guild(thraleScript, 'thrale') },
+  edric: { texture: 'folk-edric', talkRange: 2.2, script: guild((s) => edricScript(s, GuildWorld.thraleHere), 'edric') },
+  garrow: { texture: 'folk-garrow', talkRange: 2.2, script: guild(garrowScript, 'garrow') },
+  pim: { texture: 'folk-pim', talkRange: 2.4, script: () => pimScript(guildState('pim')) },
 };
 
 /** Where the hero stands with the toll house (dialogue/tollhouse.ts). */

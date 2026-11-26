@@ -38,6 +38,7 @@ import { enteredBlackRose, enteredRoseBack } from './blackrose';
 import { enteredShambles } from './shambles';
 import { enteredTollHouse, enteredTollStrong, enteredTollUpstairs } from './tollhouse';
 import { enteredCrowe, enteredPruett, enteredStilt, enteredSumpRuin } from './sump';
+import { enteredGuildHall } from './guildhall';
 import { Homestead } from '../../systems/Homestead';
 import { gatheringWorld, homesteadWorld, northWoodsGathering, restoreStead, snapshotStead } from '../../world/Homestead';
 import { enteredHome } from './homestead';
@@ -191,6 +192,10 @@ export const AREAS: Record<AreaId, AreaDef> = {
   'sump-stilt': lazy(() => import('../../world/SumpMaps'), (m) => m.buildStiltMap(), { test: true, enter: enteredStilt }),
   'sump-pruett': lazy(() => import('../../world/SumpMaps'), (m) => m.buildPruettMap(), { test: true, enter: enteredPruett }),
   'sump-ruin': lazy(() => import('../../world/SumpMaps'), (m) => m.buildSumpRuinMap(), { test: true, enter: enteredSumpRuin }),
+  // The Guildhall on the Staithe: the great hall (mid-meeting the first time in), the counting room, and the guildmaster's office.
+  guildhall: lazy(() => import('../../world/GuildHallMap'), (m) => m.buildGuildHallMap(QuestLog.hasFlag('guild-met')), { test: true, enter: enteredGuildHall }),
+  'guildhall-counting': lazy(() => import('../../world/GuildHallMap'), (m) => m.buildGuildCountingMap(), { test: true }),
+  'guildhall-office': lazy(() => import('../../world/GuildHallMap'), (m) => m.buildGuildOfficeMap(), { test: true }),
   watchtower: lazy(() => import('../../world/WatchtowerMap'), (m) => m.buildWatchtowerMap(), {
     test: true,
     enter: firstVisit(

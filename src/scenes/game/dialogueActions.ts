@@ -26,6 +26,7 @@ import { roseAction } from './blackrose';
 import { SHAMBLES_ACTIONS } from './shambles';
 import { tollAction } from './tollhouse';
 import { SUMP_ACTIONS } from './sump';
+import { guildAction } from './guildhall';
 
 /** A named story effect: what happens when a line with this action is said. */
 export type DialogueAction = (g: GameScene) => void;
@@ -59,6 +60,7 @@ export function runDialogueAction(g: GameScene, action: string): void {
   }
   if (action.startsWith('rose-') && roseAction(g, action)) return;
   if (action.startsWith('toll-') && tollAction(g, action)) return;
+  if (action.startsWith('guild-') && guildAction(g, action)) return;
   if (action.startsWith('drink:')) {
     drinkAtBar(g, action.slice(6) as ItemId);
     return;

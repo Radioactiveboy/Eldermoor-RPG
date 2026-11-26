@@ -144,6 +144,11 @@ export const GLOOM_GATE = { tx: 35, ty: 3, w: 6, h: 2, road: { x0: 37, x1: 38 } 
  * door (in the middle of its +y face). Inside is the 'blackrose' area, once it's built.
  */
 export const BLACK_ROSE = { tx: 24, ty: 12, w: 10, h: 7, door: { tx: 29, ty: 19 } };
+/**
+ * The Guildhall of the Causeway Merchants, on the Staithe east of Pier Lane: its back corner and footprint, and
+ * its front door (in the middle of its +y face, onto the waterfront). Inside is the 'guildhall' area.
+ */
+export const GUILD_HALL = { tx: 33, ty: 36, w: 8, h: 5, door: { tx: 37, ty: 41 } };
 /** The well in the middle of the square, in front of the Black Rose. */
 export const GLOOM_WELL = { tx: 29, ty: 24 };
 /** The pier out into the river: its stem (two planks wide) from the bank to its head, and the head's two rows. */

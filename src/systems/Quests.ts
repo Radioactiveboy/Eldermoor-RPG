@@ -462,6 +462,26 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 150,
   },
+  // The Merchants of the Causeway's, at the Guildhall on Gloomhaven's Staithe (dialogue/guildhall.ts, scenes/game/guildhall.ts).
+  'caravan-raids': {
+    id: 'caravan-raids',
+    title: 'The Drowned Mile',
+    giver: 'Guildmaster Wexley',
+    kind: 'side',
+    summary:
+      "I walked in on the Merchants of the Causeway in the middle of a row. Three of their caravans have been set upon in a month, all at " +
+      'the same place out on the causeway over the fen, the Drowned Mile, and the raiders slashed and burnt the goods and took nothing. ' +
+      'Master Thrale says brigands. Edric Lowe tried to say foreign powers and sabotage, and they shouted him down. The guild has taken me on ' +
+      'to find out who is really behind it, and why.',
+    objectives: [
+      { id: 'meeting', text: 'Offer the guild my services', target: { area: 'guildhall', x: 3.45, y: 4.5, npc: 'wexley' } },
+      { id: 'garrow', text: 'Ask Nat Garrow, the caravan master who came back, what happened at the Drowned Mile', target: { area: 'guildhall', x: 12.5, y: 2.5, npc: 'garrow' } },
+      { id: 'ledger', text: 'Find out who knew when the caravans would leave: Pim the clerk keeps the route book in the counting room', target: { area: 'guildhall-counting', x: 2.5, y: 2.45, npc: 'pim' } },
+      { id: 'edric', text: 'Hear out Edric Lowe, away from Master Thrale', target: { area: 'guildhall', x: 6.5, y: 6.5, npc: 'edric' } },
+      { id: 'wreck', text: 'Go out of the Fen Gate and along the causeway to the Drowned Mile, and look at the wreck of the last caravan', target: { area: 'gloomhaven', x: 37.5, y: 6.5 } },
+    ],
+    xp: 300,
+  },
 };
 
 export interface QuestState {

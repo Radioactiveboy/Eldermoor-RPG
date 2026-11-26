@@ -35,6 +35,9 @@ const ROOFS: Partial<Record<AreaId, number>> = {
   tollhouse: 0.8,
   'tollhouse-strong': 1,
   'tollhouse-upstairs': 0.9,
+  // The Guildhall's slates are sound, and its hall is high.
+  guildhall: 0.5,
+  'guildhall-office': 0.9,
   tavern: 0.45,
   chapel: 0.55,
   cellar: 0.12,
@@ -112,6 +115,10 @@ const PLACES: Record<AreaId, Place> = {
   'sump-stilt': { fire: 0.25, wild: 0.35, echo: 0.15 },
   'sump-pruett': { fire: 0.5, echo: 0.05 },
   'sump-ruin': { open: true, wind: 0.35, wild: 0.5, echo: 0.1 },
+  // The Guildhall: a big fire in a big, high room; the counting room quiet but for the scratch of a pen; the office shut away.
+  guildhall: { fire: 0.6, echo: 0.55 },
+  'guildhall-counting': { fire: 0.25, echo: 0.3 },
+  'guildhall-office': { fire: 0.35, echo: 0.15 },
   smithy: { fire: 0.85, echo: 0.3 },
   bakery: { fire: 0.55, echo: 0.15 },
   garrison: { fire: 0.6, echo: 0.35 },

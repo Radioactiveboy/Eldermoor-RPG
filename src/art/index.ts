@@ -92,6 +92,9 @@ export const ART_STEPS: ArtStep[] = [
   { label: "the Reeve's toll house", load: () => import('./tollhouse').then((m) => m.generateTollHouse) },
   // After the Black Rose: the Sump's rooms borrow its buckets, puddles, stools and chest.
   { label: 'the homes in the Sump', load: () => import('./sump').then((m) => m.generateSump) },
+  // (After Gloomhaven and the faces: it draws with their pieces.)
+  { label: 'the Guildhall', load: () => import('./guildhall').then((m) => m.generateGuildHall) },
+  { label: 'the merchants of the Guildhall', load: () => import('./guildPortraits').then((m) => m.generateGuildPortraits) },
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },
   { label: 'the Hollow rebuilt', load: () => import('./homestead').then((m) => m.generateHomestead) },
 ];
