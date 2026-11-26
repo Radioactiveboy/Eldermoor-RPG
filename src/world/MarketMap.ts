@@ -262,7 +262,7 @@ export function buildMarketMap(gateOpen = false): MapData {
   placeObject(data, { key: 'mkt-signpost', tx: 27, ty: 19, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
   data.sights = [{
     id: 'signpost-market', gx: 27.5, gy: 19.5, label: 'Read the sign', z: 58,
-    sign: { heading: 'Signpost', lines: ['→  East: Adowvale Hollow', '←  West: Adowvale market square', '↑  North: the toll gate and the Lord\'s Road'] },
+    sign: { style: 'post', heading: 'Signpost', lines: ['→  East: Adowvale Hollow', '←  West: Adowvale market square', '↑  North: the toll gate and the Lord\'s Road'] },
   }];
   // The militia's notice board, by the trough, where bounties are posted and paid (see systems/Bounties.ts).
   const board = BOUNTY_BOARD;
@@ -359,7 +359,7 @@ function addTollGate(data: MapData, open: boolean): void {
   placeObject(data, { key: 'mkt-signpost', tx: 26, ty: 7, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
   data.sights!.push({
     id: 'signpost-tollgate', gx: 26.5, gy: 7.5, label: 'Read the sign', z: 58,
-    sign: { heading: 'Signpost', lines: ['↑  North: toll gate, the Lord\'s Road, Adowvale Plains', '↓  South: Adowvale market square'] },
+    sign: { style: 'post', heading: 'Signpost', lines: ['↑  North: toll gate, the Lord\'s Road, Adowvale Plains', '↓  South: Adowvale market square'] },
   });
   data.landmarks!.push({ gx: middle, gy: 1, name: 'The toll gate', range: 6 });
 }
@@ -494,7 +494,7 @@ function addGarrisonLane(data: MapData): void {
   placeObject(data, { key: 'mkt-signpost', tx: 13, ty: 22, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
   data.sights!.push({
     id: 'signpost-garrison', gx: 13.5, gy: 22.5, label: 'Read the sign', z: 58,
-    sign: { heading: 'Signpost', lines: ["↓  South: the militia garrison, and the Headman's house", '↑  North: Adowvale market square'] },
+    sign: { style: 'post', heading: 'Signpost', lines: ["↓  South: the militia garrison, and the Headman's house", '↑  North: Adowvale market square'] },
   });
   // Barrels and a cart by the garrison, and a woodpile against the residence's end wall.
   placeObject(data, { key: 'furn-barrels', tx: g.tx - 1, ty: g.ty + 1, w: 1, h: 1, shapes: [circle(0.3, 0.3, 0.28), circle(0.7, 0.72, 0.26)] });
@@ -525,7 +525,7 @@ function addJettyLane(data: MapData): void {
   placeObject(data, { key: 'mkt-signpost', tx: 14, ty: 40, w: 1, h: 1, shapes: [circle(0.5, 0.5, 0.1)] });
   data.sights!.push({
     id: 'signpost-jetty', gx: 14.5, gy: 40.5, label: 'Read the sign', z: 58,
-    sign: { heading: 'Signpost', lines: ['↓  South: Adowvale Jetty and the river Wend', "↑  North: the garrison, the Headman's house and the market square"] },
+    sign: { style: 'post', heading: 'Signpost', lines: ['↓  South: Adowvale Jetty and the river Wend', "↑  North: the garrison, the Headman's house and the market square"] },
   });
   data.landmarks!.push({ gx: 12, gy: H - 1, name: 'The lane down to the jetty', range: 3.5 });
 }

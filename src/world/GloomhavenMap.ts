@@ -300,7 +300,7 @@ function addSquare(data: MapData, set: Setter, slim: Slim): void {
   set('gh-noticeboard', 22, 19, 1, 1, { shapes: [circle(0.25, 0.5, 0.1), circle(0.75, 0.5, 0.1)] });
   data.sights!.push({
     id: 'gh-notices', gx: 22.5, gy: 20.2, label: 'Read the notices', z: 50,
-    sign: {
+    sign: { style: 'notices',
       heading: 'Notices',
       lines: [
         'OWING: Tam Rudd, 3 silver, to the Rose. Pay or swim.',
@@ -507,7 +507,7 @@ function addStaithe(data: MapData, set: Setter, slim: Slim): void {
   });
   data.sights!.push({
     id: 'gh-pier-sign', gx: p.x0 - 0.2, gy: p.fromY - 0.6, label: 'Read the board', z: 46,
-    sign: {
+    sign: { style: 'notices',
       heading: 'Gloomhaven Staithe',
       lines: [
         'Mooring: two coppers the night, paid to the Rose.',

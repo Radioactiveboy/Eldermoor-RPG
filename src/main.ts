@@ -22,6 +22,7 @@ import { TitleCardScene } from './scenes/TitleCardScene';
 import { OrbWhisperScene } from './scenes/OrbWhisperScene';
 import { SaveWarningScene } from './scenes/SaveWarningScene';
 import { BountyBoardScene } from './scenes/BountyBoardScene';
+import { ReaderScene } from './scenes/ReaderScene';
 import { LetterboxScene } from './scenes/LetterboxScene';
 import { DebugScene } from './scenes/DebugScene';
 import { debugWanted } from './systems/DebugSwitches';
@@ -41,7 +42,7 @@ function startGame(): void {
     // Drawn at the screen's own resolution, with the interface sized to suit it (see ui/Display).
     scale: Display.scaleConfig(),
     // Later scenes draw on top of earlier ones.
-    scene: [BootScene, MainMenuScene, GameScene, UIScene, LetterboxScene, DialogueScene, CombatScene, JournalScene, MapScene, InventoryScene, ShopScene, BountyBoardScene, StationScene, FishingScene, SleepScene, ConfirmScene, InterludeScene, TitleCardScene, OrbWhisperScene, PauseScene, PartyScene, SaveWarningScene, SettingsScene, DebugScene],
+    scene: [BootScene, MainMenuScene, GameScene, UIScene, LetterboxScene, DialogueScene, CombatScene, JournalScene, MapScene, InventoryScene, ShopScene, BountyBoardScene, ReaderScene, StationScene, FishingScene, SleepScene, ConfirmScene, InterludeScene, TitleCardScene, OrbWhisperScene, PauseScene, PartyScene, SaveWarningScene, SettingsScene, DebugScene],
   });
   Display.install(game);
   // Handy for poking at the game from the browser console while developing (and for the smoke test, which adds ?smoke).

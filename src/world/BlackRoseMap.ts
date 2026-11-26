@@ -209,7 +209,7 @@ export function buildBlackRoseMap(): MapData {
     { id: 'rose-bucket', gx: 6.5, gy: 6.5, label: 'Look', z: 14, thought: 'Drip. Drip. Drip. The bucket is half full of rainwater with a scum of soot on top. Nobody is going to empty it.' },
     {
       id: 'rose-board', gx: 0.35, gy: 7.5, label: 'Read the notices', z: 58,
-      sign: {
+      sign: { style: 'notices',
         heading: 'Nailed to the board',
         lines: [
           'WANTED: the man who calls himself "Tanner Jack". For the matter of the boat. Ask at the gate.',
