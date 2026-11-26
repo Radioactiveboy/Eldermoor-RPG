@@ -3,7 +3,7 @@ import { box, circle, Shape } from './Collision';
 import { AreaId, MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 import { deckKey, heronUnderwayKey } from '../art/jetty';
-import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL } from './landmarks';
+import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL, TOLL_HOUSE } from './landmarks';
 
 /**
  * Gloomhaven: a marsh town on the river, downstream of Adowvale, where folk go
@@ -177,6 +177,7 @@ export function buildGloomhavenMap(heron = false): MapData {
 
   addWall(data, set);
   addGate(data, set, slim);
+  addTollHouse(data, set, slim);
   addSquare(data, set, slim);
   addBlackRose(data, set, slim);
   addShops(data, set, slim);
@@ -273,6 +274,51 @@ function addGate(data: MapData, set: Setter, slim: Slim): void {
   data.musings!.push({
     x0: g.road.x0 - 1, y0: g.ty + g.h, x1: g.road.x1 + 2, y1: g.ty + g.h + 2,
     text: "The causeway runs off north across the fen from here, they say, to roads nobody in Adowvale has ever walked. The gate stays shut, and the men on it don't look like they open it for asking.",
+  });
+}
+
+/**
+ * The Reeve's toll house, just inside the gate on the west side of the road
+ * (inside, world/TollHouseMap.ts): squat old stone with a new upper storey,
+ * glass in every window and lit late, the toll window with its grille on the
+ * road, the Reeve's yellow banner and gilt sign. A toll bar stands raised over
+ * the road below the gate, and a board by it tells every carter what he owes.
+ * The gibbet the gate men put up long ago stands at its corner, which nobody in
+ * Gloomhaven thinks is a coincidence.
+ */
+function addTollHouse(data: MapData, set: Setter, slim: Slim): void {
+  const t = TOLL_HOUSE;
+  // The art is 5 wide and 4 deep with its front on +y; turned, the front faces +x, onto the road.
+  set('gh-tollhouse', t.tx, t.ty, t.w, t.h, { flipX: true });
+  data.chimneys!.push({ gx: t.tx + 1.2, gy: t.ty + 1, z: 170 });
+  data.entries!.tollhouse = { x: t.door.tx + 0.7, y: t.door.ty + 0.5 };
+  data.doors!.push({ tx: t.door.tx, ty: t.door.ty, to: 'tollhouse', entry: 'door', label: 'Go into the toll house', facing: 'wall' });
+  data.landmarks!.push({ gx: t.door.tx + 0.5, gy: t.door.ty + 0.5, name: "The Reeve's toll house", range: 3 });
+  // (Turned, the art's x runs down the map's y: the lantern by the door, the lamp behind the toll grille, the lit windows upstairs.)
+  data.lights!.push({ gx: t.door.tx + 0.1, gy: t.ty + 2, z: 32, radius: 120, flicker: 0.5 });
+  data.lights!.push({ gx: t.door.tx + 0.1, gy: t.ty + 3.8, z: 26, radius: 90, flicker: 0.4 });
+  for (const gy of [0.6, 2.5, 4.3]) data.lights!.push({ gx: t.door.tx + 0.2, gy: t.ty + gy, z: 74, radius: 70, flicker: 0.3 });
+  data.sights!.push(
+    { id: 'gh-toll-grille', gx: t.door.tx + 0.3, gy: t.ty + 3.8, label: 'Look at the toll window', z: 30, thought: 'A window onto the road with an iron grille over it, a slot under the grille for coin, and a stone shelf worn smooth by elbows. Behind the bars, a lamp and a bent head, writing. The scratch of the pen does not stop when I look in.' },
+    { id: 'gh-toll-banner', gx: t.door.tx + 0.3, gy: t.ty + 1, label: 'Look at the banner', z: 72, thought: "A banner of mustard yellow with a pair of scales on it, hanging limp in the wet. The only bright thing in Gloomhaven. Somebody must take it in and dry it every night." },
+  );
+  // The toll bar over the road below the gate, raised; the board of tolls beside it.
+  slim('gh-tollbar', 36, 9, [circle(0.5, 0.5, 0.16)]);
+  data.sights!.push({ id: 'gh-tollbar', gx: 36.5, gy: 9.7, label: 'Look at the toll bar', z: 40, thought: 'A pole across the road, painted yellow and black, weighted with a stone so one man can lift it. It is up. From the look of the mud under it, it comes down whenever a cart goes by that has not paid.' });
+  set('gh-tollboard', 35, 10, 1, 1, { shapes: [circle(0.2, 0.5, 0.06), circle(0.8, 0.5, 0.06)] });
+  data.sights!.push({
+    id: 'gh-tollboard', gx: 35.5, gy: 10.8, label: 'Read the board', z: 40,
+    sign: { style: 'notices',
+      heading: 'THE FLOOD TOLL',
+      lines: [
+        'Payable at the toll house, by order of the Reeve.',
+        'Carts 4d the wheel. Beasts 2d. Catch landed: one in five.',
+        'Candles: a half-penny each. Licences: see within.',
+        'Goods on which the toll is owed will be DISTRAINED.',
+        'The Fen Watch keeps the peace. Obey it.',
+        '(Chalked under it, and half scrubbed off: a hook, and three notches, and a word I can\'t read.)',
+      ],
+    },
   });
 }
 
@@ -430,9 +476,9 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
     ['gh-shack-1', 52, 36, true, true],
     ['gh-house-2', 38, 33, false, false],
     ['gh-shack-0', 40, 38, true, false],
-    // Up by the gate road, opposite Lusk's.
-    ['gh-house-5', 30, 6, false, true],
-    ['gh-shack-1', 25, 6, false, false],
+    // Up by the gate road, opposite Lusk's, west of the Reeve's toll house.
+    ['gh-house-5', 25, 6, false, true],
+    ['gh-shack-1', 22, 5, false, false],
     ['gh-house-4', 44, 7, false, true],
   ];
   for (const [key, tx, ty, flip, smokes] of houses) {

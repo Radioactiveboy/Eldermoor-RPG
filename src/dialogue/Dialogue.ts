@@ -52,6 +52,7 @@ export type SpeakerId =
   | 'corwin' | 'garth' | 'teg' | 'linnet'
   | 'thorne' | 'grubb' | 'midge' | 'silas' | 'hollis' | 'sedge' | 'dunn' | 'ferret' | 'vane'
   | 'vosk' | 'brakk' | 'fitch' | 'crabbe' | 'ossery' | 'tallow' | 'lusk' | 'gutter' | 'wisp' | 'cray'
+  | 'reeve' | 'nibb' | 'gaff' | 'lardy' | 'annet'
   | 'annis' | 'nan' | 'ned'
   | 'cooper';
 
@@ -124,6 +125,12 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   gutter: { name: 'Gutter Jack', portrait: 'portrait-gutter', voice: { pitch: 110, spread: 0.34, wave: 'triangle' } },
   wisp: { name: 'Wisp', portrait: 'portrait-wisp', voice: { pitch: 470, spread: 0.26, wave: 'triangle' } },
   cray: { name: 'Cray', portrait: 'portrait-cray', voice: { pitch: 96, spread: 0.04, wave: 'sine' } },
+  // The Reeve's toll house by the Fen Gate (dialogue/tollhouse.ts): the Reeve, his clerk, the two yellowbands of his Watch, and an eel-wife waiting.
+  reeve: { name: 'Corvin Sallow, the Reeve', portrait: 'portrait-reeve', voice: { pitch: 150, spread: 0.03, wave: 'sine' } },
+  nibb: { name: 'Tobias Nibb', portrait: 'portrait-nibb', voice: { pitch: 205, spread: 0.18, wave: 'triangle' } },
+  gaff: { name: 'Gaff Tully', portrait: 'portrait-gaff', voice: { pitch: 178, spread: 0.24, wave: 'square' } },
+  lardy: { name: 'Lardy Mott', portrait: 'portrait-lardy', voice: { pitch: 78, spread: 0.06, wave: 'sawtooth' } },
+  annet: { name: 'Annet Marl', portrait: 'portrait-annet', voice: { pitch: 248, spread: 0.2, wave: 'triangle' } },
   headman: { name: 'Headman Osbert Hale', portrait: 'portrait-headman', voice: { pitch: 135, spread: 0.08, wave: 'sine' } },
   steward: { name: 'Aldwin the Steward', portrait: 'portrait-steward', voice: { pitch: 145, spread: 0.04, wave: 'sine' } },
   housemaid: { name: 'Elsie', portrait: 'portrait-housemaid', voice: { pitch: 380, spread: 0.2, wave: 'triangle' } },
