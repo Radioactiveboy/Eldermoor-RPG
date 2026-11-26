@@ -14,7 +14,7 @@ import type { ConfirmSceneData } from '../ConfirmScene';
 import type { GameScene, GameSceneData } from '../GameScene';
 import type { SleepSceneData } from '../SleepScene';
 import { standUp } from './sitting';
-import { hearWhisper, whisperPending } from './whisper';
+import { hearWhisper, repairWhisper, whisperPending } from './whisper';
 
 /** What the hero thinks on waking, by the hour (and in a rented room at the Crooked Tankard, where). */
 export function wakingThought(hour: number, area: AreaId): string {
@@ -151,4 +151,5 @@ export function loadSave(g: GameScene, save: SaveData): void {
   QuestLog.dayProvider = () => g.clock.day;
   QuestLog.hourProvider = () => g.clock.hour;
   SaveGame.restore(save);
+  repairWhisper();
 }

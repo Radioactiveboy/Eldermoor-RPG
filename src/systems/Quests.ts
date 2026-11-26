@@ -177,7 +177,15 @@ export const QUESTS: Record<string, QuestDef> = {
       'When Mother died, something spoke out of the orb in the brood hall: a cold voice, from very far away, that called the goblins\' ' +
       'mother a failure and told them to kill me and finish Adowvale. The orb is dark now, and in my satchel. Whoever was looking out of it ' +
       'set the goblins on us. On her. I am going to find out who.',
-    objectives: [{ id: 'who', text: 'Find out who spoke through the orb, and set the goblins on Adowvale' }],
+    objectives: [
+      // The orb is dark till the beacon is done: the night after it, the whisper (scenes/game/whisper.ts) answers 'who'.
+      {
+        id: 'hale',
+        text: 'The orb stays dark, and I need work and coin. Ask Headman Hale if there is anything I can do for the village',
+        target: { area: 'residence', x: 13.2, y: 1.35, npc: 'headman' },
+      },
+      { id: 'who', text: 'Find out who spoke through the orb, and set the goblins on Adowvale' },
+    ],
     xp: 500,
   },
   // Heard through the orb the night after the beacon (scenes/game/whisper.ts, dialogue/orbWhisper.ts).

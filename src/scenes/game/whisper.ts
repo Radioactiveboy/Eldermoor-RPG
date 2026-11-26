@@ -6,6 +6,7 @@
  * slip starts the road to Gloomhaven.
  */
 import { GLOOMHAVEN_QUEST, WHISPER_HEARD, WHISPER_PENDING, WHISPER_WAKING_THOUGHTS } from '../../dialogue/orbWhisper';
+import { WATCHER_QUEST, whisperPending } from '../../systems/OrbWhisper';
 import { QuestLog } from '../../systems/Quests';
 import { CHECKOUT_HOUR, Tavern } from '../../systems/Tavern';
 import { TAVERN_BED } from '../../world/landmarks';
@@ -19,8 +20,7 @@ import { standUp } from './sitting';
 /** The Tankard's bed, for being sent straight to it from elsewhere. */
 const TANKARD_BED: Bed = { id: 'tavern-room', ...TAVERN_BED };
 
-/** The next sleep carries the orb's whisper. */
-export const whisperPending = (): boolean => QuestLog.hasFlag(WHISPER_PENDING) && !QuestLog.hasFlag(WHISPER_HEARD);
+export { repairWhisper, whisperPending } from '../../systems/OrbWhisper';
 
 /** The Headman has paid for the beacon: the whisper waits for the next sleep, and the hero is told to go and get some. */
 export function beaconPaidOff(g: GameScene): void {
@@ -62,6 +62,9 @@ export function hearWhisper(g: GameScene, then: () => void): void {
   QuestLog.clearFlag(WHISPER_PENDING);
   const data: OrbWhisperSceneData = {
     onDone: () => {
+      // Who spoke through the orb: the Astarix. The Watcher in the Glass is answered, and the road to Gloomhaven begins.
+      QuestLog.complete(WATCHER_QUEST, 'hale');
+      QuestLog.complete(WATCHER_QUEST, 'who');
       if (!QuestLog.has(GLOOMHAVEN_QUEST)) QuestLog.start(GLOOMHAVEN_QUEST);
       QuestLog.writeDiary(
         'The orb woke in the night, and I heard two voices in it, talking to each other. They never knew I was listening. One was the cold ' +

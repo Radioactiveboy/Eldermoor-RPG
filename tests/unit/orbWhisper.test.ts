@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { GLOOMHAVEN_QUEST, WHISPER_LINES, WHISPER_VOICES } from '../../src/dialogue/orbWhisper';
-import { QUESTS } from '../../src/systems/Quests';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { GLOOMHAVEN_QUEST, WHISPER_HEARD, WHISPER_LINES, WHISPER_VOICES } from '../../src/dialogue/orbWhisper';
+import { repairWhisper, whisperPending } from '../../src/systems/OrbWhisper';
+import { QuestLog, QUESTS } from '../../src/systems/Quests';
 
 describe("the orb's whisper", () => {
   it('lets slip that the boy lives, and Gloomhaven on the marshes', () => {
@@ -24,5 +25,41 @@ describe("the orb's whisper", () => {
 
   it('starts a main quest for the road to Gloomhaven', () => {
     expect(QUESTS[GLOOMHAVEN_QUEST]?.kind).toBe('main');
+  });
+});
+
+describe('older saves and the whisper', () => {
+  const finishBeacon = () => {
+    QuestLog.start('the-beacon');
+    for (const step of QUESTS['the-beacon'].objectives) QuestLog.complete('the-beacon', step.id);
+  };
+
+  beforeEach(() => {
+    QuestLog.reset();
+    QuestLog.start('the-watcher');
+  });
+
+  it('sets the whisper waiting for a beacon reported before the whisper existed', () => {
+    finishBeacon();
+    expect(whisperPending()).toBe(false);
+    repairWhisper();
+    expect(whisperPending()).toBe(true);
+    expect(QuestLog.isDone('the-watcher', 'hale')).toBe(true);
+    expect(QuestLog.get('the-watcher')?.completed).toBe(false);
+  });
+
+  it('leaves the orb dark before the beacon, and points the Watcher at the Headman', () => {
+    repairWhisper();
+    expect(whisperPending()).toBe(false);
+    expect(QuestLog.isDone('the-watcher', 'hale')).toBe(false);
+    expect(QUESTS['the-watcher'].objectives[0].target?.npc).toBe('headman');
+  });
+
+  it('closes the Watcher in the Glass for a hero who has already heard it', () => {
+    finishBeacon();
+    QuestLog.setFlag(WHISPER_HEARD);
+    repairWhisper();
+    expect(whisperPending()).toBe(false);
+    expect(QuestLog.get('the-watcher')?.completed).toBe(true);
   });
 });
