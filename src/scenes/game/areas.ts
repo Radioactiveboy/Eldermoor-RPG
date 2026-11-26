@@ -37,6 +37,7 @@ import { enteredGarrison, enteredJail, enteredResidence } from './garrison';
 import { enteredBlackRose, enteredRoseBack } from './blackrose';
 import { enteredAttic, enteredCounting, enteredPawnshop } from './pawnshop';
 import { pawnshopState } from '../../systems/Pawnshop';
+import { enteredShambles } from './shambles';
 import { enteredTollHouse, enteredTollStrong, enteredTollUpstairs } from './tollhouse';
 import { enteredCrowe, enteredPruett, enteredStilt, enteredSumpRuin } from './sump';
 import { enteredGuildHall } from './guildhall';
@@ -183,6 +184,11 @@ export const AREAS: Record<AreaId, AreaDef> = {
   pawnshop: lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnshopMap(pawnshopState()), { test: true, enter: enteredPawnshop }),
   'pawn-counting': lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnCountingMap(), { test: true, enter: enteredCounting }),
   'pawn-attic': lazy(() => import('../../world/PawnshopMap'), (m) => m.buildPawnAtticMap(), { test: true, enter: enteredAttic }),
+  slaughterhouse: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildSlaughterhouseMap(), { test: true, enter: enteredShambles }),
+  tannery: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildTanneryMap(), { test: true, enter: enteredShambles }),
+  'tannery-loft': lazy(() => import('../../world/ShamblesMap'), (m) => m.buildTanneryLoftMap(), { test: true, enter: enteredShambles }),
+  ratden: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildRatDenMap(), { test: true, enter: enteredShambles }),
+  dogpit: lazy(() => import('../../world/ShamblesMap'), (m) => m.buildDogPitMap(), { test: true, enter: enteredShambles }),
   // The Reeve's toll house by the Fen Gate: the toll office, the strongroom behind its iron door, and the Reeve's rooms upstairs.
   tollhouse: lazy(() => import('../../world/TollHouseMap'), (m) => m.buildTollHouseMap(), { test: true, enter: enteredTollHouse }),
   'tollhouse-strong': lazy(() => import('../../world/TollHouseMap'), (m) => m.buildTollStrongMap(), { test: true, enter: enteredTollStrong }),

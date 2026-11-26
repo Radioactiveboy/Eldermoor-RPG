@@ -38,7 +38,7 @@ const WOLF_MOTHER_SIZE = 1.45;
  * systems/Combat.ts FOES).
  */
 export const CREATURE_ART: Record<
-  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'wildcat' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute' | 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher' | 'hookgaff' | 'hookbrute',
+  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'wildcat' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute' | 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher' | 'apronflay' | 'apronknacker' | 'hookgaff' | 'hookbrute',
   {
     w: number;
     h: number;
@@ -77,6 +77,9 @@ export const CREATURE_ART: Record<
   brigandcaptain: { ...brigandShownSpec('brigandcaptain'), eight: true, tall: 42, res: BRIGAND_RES, cols: BRIGAND_COLS },
   brigandbrute: { ...brigandShownSpec('brigandbrute'), eight: true, tall: 48, res: BRIGAND_RES, cols: BRIGAND_COLS },
   brigandcutter: { ...brigandShownSpec('brigandcutter'), eight: true, tall: 42, res: BRIGAND_RES, cols: BRIGAND_COLS },
+  // The Red Aprons in the Shambles' pit barn (drawn as the brigands are; see art/shamblesfolk3d.ts).
+  apronflay: { ...brigandShownSpec('apronflay'), eight: true, tall: 43, res: BRIGAND_RES, cols: BRIGAND_COLS },
+  apronknacker: { ...brigandShownSpec('apronknacker'), eight: true, tall: 46, res: BRIGAND_RES, cols: BRIGAND_COLS },
   brigandarcher: { ...brigandShownSpec('brigandarcher'), eight: true, tall: 40, res: BRIGAND_RES, cols: BRIGAND_COLS },
   // Two of Gloomhaven's Hooks, on the brigands' frame (their sheets are drawn in pawnfolk3d.ts).
   hookgaff: { ...shownSpec(false), eight: true, tall: 42, res: BRIGAND_RES, cols: BRIGAND_COLS },

@@ -2803,6 +2803,133 @@ const ned = townsfolk({
   },
 });
 
+// --- The Shambles, Gloomhaven's east quarter (see dialogue/shambles.ts).
+
+/** Old blood soaked into a leather apron's bib, in brown-red blotches. */
+function bloodied(c: PixelCanvas, seed: number, stain = 0x5a221c): void {
+  for (let y = 82; y < S; y++) {
+    for (let x = CX - 13; x < CX + 13; x++) {
+      // Soft-edged blotches where it was wiped, and runs down from them.
+      const v = Math.sin(x * 0.31 + seed) * Math.sin(y * 0.23 + seed * 1.7) + Math.sin((x - y) * 0.17 + seed * 0.6) * 0.6;
+      const run = hash(x, seed) < 0.12 && y > 88 && v > 0.2;
+      if (c.get(x, y) === null || (v < 0.75 && !run)) continue;
+      c.set(x, y, v > 1.15 || hash(x, y) < 0.08 ? 0x3a1410 : stain);
+    }
+  }
+}
+
+/** Stubble on the jowls (as on Grubb), in this colour. */
+function stubbled(c: PixelCanvas, color: number, from = CX - 18, to = CX + 18): void {
+  for (let y = EYE_Y + 11; y < 72; y++) {
+    for (let x = from; x <= to; x++) if ((x * 7 + y * 13) % 5 === 0 && c.get(x, y) !== null && Math.abs(x - CX) > 5) c.set(x, y, color);
+  }
+}
+
+/** Saul Rendle, "the Gaffer": wide, bald and pink, a soft little smile, a spotless white shirt buttoned to the throat, an apron stiff with old blood. */
+const rendle = townsfolk({
+  skin: 0xe8c4a8, hair: 0x8a7060, style: 'bald', cloth: 0xf0ece4, shirt: 0xf8f4ec, apron: 0x6a4a34,
+  iris: 0x6a7a8a, brow: 'flat', smile: 1, width: 21, jaw: 12, nose: 2, blush: [0xd8968a, 0.35], look: 0,
+  over: (c) => {
+    bloodied(c, 3);
+    // Buttoned to the throat: the shirt's buttons in a white so clean it hurts.
+    for (let y = 76; y < 82; y += 3) c.set(CX, y, 0xd8d2c8);
+    // Heavy, smooth jowls: a soft shadow under the jaw line.
+    for (let x = CX - 16; x <= CX + 16; x++) if (c.get(x, 71) !== null) c.set(x, 71, 0xc09c84);
+  },
+});
+
+/** Morrow Vetch, the tanner: lean and grey, a short grey beard, a shapeless cap, worried brows, stained brown to the elbows. */
+const vetch = townsfolk({
+  skin: 0xd8b494, hair: 0x8a8278, style: 'short', cloth: 0x7a6a50, shirt: 0x9a8a70, apron: 0x4a3626, cap: 0x5a4e3e,
+  iris: 0x6a5a3a, brow: 'worried', smile: -1, width: 15, jaw: 7, old: true, tired: true, beard: 0xa8a29a, nose: 2, look: -1,
+  over: (c) => {
+    bloodied(c, 11, 0x3e2a1a);
+  },
+});
+
+/** Old Scritch, the rat-catcher: tiny and wizened, wild white hair from under a slouch hat, whiskery, a bright little eye, a rat on his shoulder. */
+const scritch = townsfolk({
+  skin: 0xd8b090, hair: 0xd8d2c8, style: 'curly', cloth: 0x5a5040, shirt: 0x6a3a2a,
+  iris: 0x7a8a6a, brow: 'arched', smile: 2, width: 14.5, jaw: 6, old: true, nose: 3, blush: [0xc8806a, 0.35], look: 1,
+  over: (c) => {
+    stubbled(c, 0xc8c0b4, CX - 15, CX + 15);
+    // The slouch hat, battered, its brim drooping.
+    const felt = ramp(0x4a4038);
+    for (let x = CX - 32; x <= CX + 32; x++) {
+      const dx = (x - CX) / 32;
+      const y0 = Math.round(27 + Math.abs(dx) * 4 + (dx > 0.6 ? 3 : 0));
+      for (let y = y0; y < y0 + 4; y++) c.set(x, y, tone(felt, lightness(dx, (y - y0 - 2) / 3, 0.02), x, y));
+    }
+    for (let y = 9; y < 28; y++) {
+      const half = 19 * Math.sqrt(Math.max(0, 1 - ((28 - y) / 20) ** 2));
+      for (let x = Math.round(CX - half); x < Math.round(CX + half); x++) c.set(x, y, tone(felt, lightness((x - CX) / 22, (y - 18) / 20) + (hash(x, y) < 0.08 ? -0.2 : 0), x, y));
+    }
+    // A rat on his right shoulder (screen-left), its tail hanging down his coat.
+    const fur = ramp(0x5a4c44);
+    blob(c, CX - 26, 80, 6, 4, fur, 0.1);
+    blob(c, CX - 20, 78, 3, 2.6, fur, 0.1);
+    c.set(CX - 18, 77, 0x1a1210);
+    c.set(CX - 17, 79, 0xd8a0a0);
+    for (let y = 82; y < S; y++) c.set(CX - 31 + Math.round(Math.sin(y * 0.3) * 1.5), y, 0xb89080);
+  },
+});
+
+/** Tam Rudd: young, unshaven, frightened, hollow-eyed, straw in his shaggy hair, his good blue jerkin filthy. */
+const tam = townsfolk({
+  skin: 0xe8c4a4, hair: 0x6a4a2e, style: 'curly', cloth: 0x4a5a6a, shirt: 0xc8bca0,
+  iris: 0x5a7a9a, brow: 'worried', smile: -1, width: 15, jaw: 6, tired: true, freckles: true, look: 1,
+  over: (c) => {
+    stubbled(c, 0x9a7a5a, CX - 15, CX + 15);
+    // Straw caught in his hair.
+    for (const [x, y, dx, dy] of [[CX - 10, 24, 1, 0.4], [CX + 6, 22, -1, 0.3], [CX + 14, 30, 0.8, 0.9]] as const) {
+      for (let i = 0; i < 7; i++) c.set(Math.round(x + dx * i), Math.round(y + dy * i), i % 3 ? 0xd8c070 : 0xb89a4a);
+    }
+    // Grime on the jerkin.
+    for (let y = 84; y < S; y++) for (let x = CX - 30; x < CX + 30; x++) if (hash(x, y) < 0.06 && c.get(x, y) !== null) c.set(x, y, 0x3a3430);
+  },
+});
+
+/** Ned Flay, the pit-master: a long face, sunburnt, cropped ginger, a grin that stops at the eyes, a scar, a chain over his shoulder. */
+const flay = townsfolk({
+  skin: 0xe8b898, hair: 0xb4602e, style: 'short', cloth: 0x4a3a2e, shirt: 0x5a4a3a, apron: 0x6a4a34,
+  iris: 0x7a8a6a, brow: 'stern', smile: 2, width: 15, jaw: 9, nose: 2, scar: true, freckles: true, blush: [0xd88a6a, 0.4], look: -1,
+  over: (c) => {
+    bloodied(c, 7);
+    stubbled(c, 0xc87a4a, CX - 15, CX + 15);
+    // The chain leash over his left shoulder (screen-right), link by link.
+    for (let i = 0; i < 12; i++) {
+      const x = CX + 30 - i * 2;
+      const y = 76 + i * 2;
+      c.set(x, y, i % 2 ? 0x8a8a94 : 0x5a5a64);
+      c.set(x + 1, y, 0x3a3a42);
+    }
+  },
+});
+
+/** Lugs, the dog-lad: big soft face, ears like jug handles going red, cropped fair hair, an apron far too big. */
+const lugs = townsfolk({
+  skin: 0xecc8a8, hair: 0x9a7a4a, style: 'short', cloth: 0x8a7a5e, shirt: 0x9a8c70, apron: 0x6a4a34,
+  iris: 0x6a8aa0, brow: 'worried', smile: 0, width: 17, jaw: 6, freckles: true, blush: [0xe0a090, 0.5], look: 0,
+  over: (c) => {
+    bloodied(c, 19);
+    // The ears, sticking out, pink.
+    const ear = ramp(0xf0a898);
+    for (const side of [-1, 1]) blob(c, CX + side * 21, EYE_Y + 3, 4, 6, ear, 0.1);
+  },
+});
+
+/** Gristle, a knacker: a slab of a face, shaved head, small eyes, stubble, chewing; a blood-stiff apron. */
+const gristle = townsfolk({
+  skin: 0xd8a888, hair: 0x3a2e26, style: 'bald', cloth: 0x5a4a3a, shirt: 0x6a5a48, apron: 0x6a4a34,
+  iris: 0x4a3a2a, brow: 'heavy', smile: 0, width: 21, jaw: 14, nose: 3, look: 0,
+  over: (c) => {
+    bloodied(c, 23);
+    stubbled(c, 0x6a5444);
+    // A bulge of something in one cheek.
+    blob(c, CX + 11, 62, 3, 2.4, ramp(0xd8a888), 0.2);
+  },
+});
+
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
@@ -2816,6 +2943,7 @@ const PAINTERS: Record<string, Painter> = {
   nettle, dace, orm,
   reeve, nibb, gaff, lardy, annet,
   annis, nan, ned,
+  rendle, vetch, scritch, tam, flay, lugs, gristle,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide (the orb's is its own step; see orbPortrait.ts). */

@@ -4,6 +4,7 @@ import { AreaId, MapData, MapObject, placeObject, Prop, Terrain } from './MapDat
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 import { deckKey, heronUnderwayKey } from '../art/jetty';
 import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL, TOLL_HOUSE, GUILD_HALL } from './landmarks';
+import { addShambles } from './ShamblesYard';
 
 /**
  * Gloomhaven: a marsh town on the river, downstream of Adowvale, where folk go
@@ -41,7 +42,8 @@ const EYOT = { x: 45, y: 64, rx: 4.2, ry: 2.6 };
 const POOLS: Array<{ x: number; y: number; rx: number; ry: number }> = [
   { x: 8.5, y: 20, rx: 3, ry: 2.2 },
   { x: 12, y: 36.5, rx: 3.4, ry: 2.4 },
-  { x: 49, y: 22.5, rx: 2.6, ry: 2.2 },
+  // Under the stilt house in the east, behind the Shambles' slaughterhouse.
+  { x: 51.5, y: 21.5, rx: 2.6, ry: 2.2 },
   { x: 45.5, y: 37, rx: 3, ry: 2.2 },
   { x: 21, y: 8.5, rx: 2.2, ry: 1.6 },
 ];
@@ -49,8 +51,8 @@ const POOLS: Array<{ x: number; y: number; rx: number; ry: number }> = [
 /** The square, in tiles (x0, y0 inclusive; x1, y1 exclusive), cobbled once, now as much mud as stone. */
 const SQUARE = { x0: 20, y0: 19, x1: 42, y1: 31 };
 
-type Setter = (key: string, tx: number, ty: number, w: number, h: number, more?: Partial<MapObject>) => void;
-type Slim = (key: string, tx: number, ty: number, shapes: Shape[], more?: Partial<MapObject>) => void;
+export type Setter = (key: string, tx: number, ty: number, w: number, h: number, more?: Partial<MapObject>) => void;
+export type Slim = (key: string, tx: number, ty: number, shapes: Shape[], more?: Partial<MapObject>) => void;
 
 /** @param heron the Grey Heron has brought the hero down, and lies at the pier with Maren Tull, to take them home. */
 export function buildGloomhavenMap(heron = false): MapData {
@@ -183,6 +185,7 @@ export function buildGloomhavenMap(heron = false): MapData {
   addGuildHall(data, set, slim);
   addShops(data, set, slim);
   addHouses(data, set, slim);
+  addShambles(data, set, slim);
   addStaithe(data, set, slim);
   addMarsh(data, rnd, set, slim);
   addFolk(data);
@@ -524,9 +527,7 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
     ['gh-house-0', 47, 13, false, true],
     ['gh-house-5', 52, 15, true, false],
     ['gh-stilthouse', 51, 20, false, false],
-    ['gh-house-1', 43, 31, false, true],
-    ['gh-house-3', 49, 32, false, false],
-    ['gh-shack-1', 52, 36, true, true],
+    // (The Shambles, down the lane to the east wall, is world/ShamblesYard.ts.)
     ['gh-house-2', 38, 33, false, false],
     // Up by the gate road, opposite Lusk's, west of the Reeve's toll house.
     ['gh-house-5', 25, 6, false, true],
@@ -549,7 +550,6 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
   data.landmarks!.push({ gx: 17.5, gy: 36, name: 'The burnt house', range: 3 });
   // Washing that will never dry, a rain butt or two, a goat's tether, firewood stacks, rubbish.
   set('mkt-washing', 8, 10, 1, 3, { blocks: [[0, 0], [0, 2]], shapes: [circle(0.5, 0.2, 0.08), circle(0.5, 2.8, 0.08)] });
-  set('mkt-washing', 46, 33, 1, 3, { blocks: [[0, 0], [0, 2]], shapes: [circle(0.5, 0.2, 0.08), circle(0.5, 2.8, 0.08)] });
   set('gh-waterbutt', 8, 27, 1, 1, { shapes: [circle(0.5, 0.5, 0.32)] });
   set('gh-waterbutt', 47, 16, 1, 1, { shapes: [circle(0.5, 0.5, 0.32)] });
   set('gh-woodpile', 18, 9, 1, 1, { shapes: [box(0.1, 0.2, 0.9, 0.8)] });
@@ -564,7 +564,6 @@ function addHouses(data: MapData, set: Setter, slim: Slim): void {
   data.landmarks!.push(
     { gx: 9, gy: 12, name: 'Rookery Row', range: 5 },
     { gx: 9, gy: 32, name: 'Sump Lane', range: 5 },
-    { gx: 48, gy: 30, name: 'The Shambles', range: 5 },
     { gx: 30, gy: 37, name: 'Pier Lane', range: 3.5 },
   );
 }

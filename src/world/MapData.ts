@@ -1,3 +1,4 @@
+import type { HoundSpawn } from '../entities/Hound';
 import type { HillField } from './greyfellsHills';
 import type { TrackName } from '../audio/Audio';
 import type { HenKind } from '../art/henfarm';
@@ -61,6 +62,8 @@ export type AreaId =
   | 'blackrose' | 'blackrose-back' | 'blackrose-upstairs' | 'blackrose-room'
   // Lusk's, the pawnshop on the square's north-east corner: the shop floor, the counting room upstairs, and the stash under the roof.
   | 'pawnshop' | 'pawn-counting' | 'pawn-attic'
+  // The Shambles, Gloomhaven's east quarter: Rendle's slaughterhouse, Vetch's tannery and its drying loft, Old Scritch's den, and the Red Aprons' dog pit.
+  | 'slaughterhouse' | 'tannery' | 'tannery-loft' | 'ratden' | 'dogpit'
   // The Reeve's toll house just inside Gloomhaven's Fen Gate: the toll office, its strongroom, and the Reeve's rooms upstairs.
   | 'tollhouse' | 'tollhouse-strong' | 'tollhouse-upstairs'
   // Homes down Sump Lane in Gloomhaven's west quarter: the Crowes' cottage, Ned Wick's stilt house, the Widow Pruett's hovel, and the burnt house.
@@ -371,6 +374,8 @@ export interface MapData {
   /** Where crows come down to pick about, in tiles (the ruined farm, after the raid). */
   crows?: Array<{ gx: number; gy: number }>;
   /** Goats grazing in a paddock (the Hollow's, once it's built: see world/Homestead.ts). */
+  /** Dogs (entities/Hound.ts): Nothing about Scritch's den, the pit dogs on their chains. */
+  hounds?: HoundSpawn[];
   goats?: Array<{ gx: number; gy: number }>;
   landmarks?: Landmark[];
   musings?: Musing[];

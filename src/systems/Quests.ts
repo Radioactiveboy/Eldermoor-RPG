@@ -377,6 +377,39 @@ export const QUESTS: Record<string, QuestDef> = {
     ],
     xp: 60,
   },
+  // The Shambles, Gloomhaven's east quarter (world/ShamblesMap.ts, scenes/game/shambles.ts).
+  'answers-to-nothing': {
+    id: 'answers-to-nothing',
+    title: 'Answers to Nothing',
+    giver: 'Old Scritch',
+    kind: 'side',
+    summary:
+      'Old Scritch, the rat-catcher of the Shambles, has lost his grey lurcher, Nothing. She never strays, and he thinks the Red Aprons took her ' +
+      "for Ned Flay's dog pit in the barn behind the tannery, to go in the ring first and warm the fighting dogs up.",
+    objectives: [
+      { id: 'talk', text: 'Hear Old Scritch out about his dog', target: { area: 'ratden', x: 3.4, y: 2.6 } },
+      { id: 'find', text: "Find Nothing. Ned Flay's pit barn, behind the tannery, is the place to start", target: { area: 'gloomhaven', x: 54.5, y: 34.5 } },
+      { id: 'free', text: "Get Nothing out of Ned Flay's pit barn: buy her, fight for her, or find someone to open her pen", target: { area: 'dogpit', x: 8.5, y: 1.4 } },
+      { id: 'tell', text: 'Go back to Old Scritch', target: { area: 'ratden', x: 3.4, y: 2.6 } },
+    ],
+    xp: 140,
+  },
+  'pay-or-swim': {
+    id: 'pay-or-swim',
+    title: 'Pay or Swim',
+    giver: 'The Widow Thorne',
+    kind: 'side',
+    summary:
+      "Tam Rudd owes the Black Rose three silver, and the Widow Thorne wants it, or him, to scrub it off at a copper a day. He has not been home " +
+      'in a week, and the Red Aprons are looking for him too: he owes Saul Rendle more.',
+    objectives: [
+      { id: 'talk', text: 'Hear what the Widow Thorne wants with Tam Rudd', target: { area: 'blackrose', x: 12.5, y: 1.4 } },
+      { id: 'find', text: 'Find Tam Rudd. His door, with four notches cut in it, is at the bottom of the square', target: { area: 'gloomhaven', x: 39.5, y: 36.5 } },
+      { id: 'settle', text: "Settle Tam's debt to the Rose, one way or another", target: { area: 'tannery-loft', x: 2.6, y: 2.4 } },
+      { id: 'tell', text: 'Tell the Widow Thorne how it went', target: { area: 'blackrose', x: 12.5, y: 1.4 } },
+    ],
+    xp: 120,
+  },
   'flood-toll': {
     id: 'flood-toll',
     title: 'The Flood Toll',

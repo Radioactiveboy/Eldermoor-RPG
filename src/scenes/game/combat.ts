@@ -30,6 +30,7 @@ import { checkCellarClear } from './tavern';
 import { beatenUnderground, checkBroodHall } from './broodhall';
 import { checkBeaconFight } from './beacon';
 import { checkPawnFight } from './pawnshop';
+import { checkPitFight } from './shambles';
 
 /** The wolves of the den at home: once they're all gone, Brother Wystan hears of it. */
 export const CAVE_WOLVES = ['cave-wolf-1', 'cave-wolf-2', 'cave-wolf-3'];
@@ -65,6 +66,9 @@ export const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   // What's on the Hooks is counted out at Lusk's (see scenes/game/pawnshop.ts).
   hookgaff: [],
   hookbrute: [],
+  // The pit's takings are counted out separately (see scenes/game/shambles.ts).
+  apronflay: [['hunting-knife', 1]],
+  apronknacker: [],
 };
 
 /** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
@@ -94,6 +98,8 @@ export const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> =
   brigandarcher: { slain: 'The lookout is down. Her bow lies across the stair.', fled: 'Gone up the stair and out of reach.' },
   hookgaff: { slain: 'Nim Dace goes down among the boots, and his gaff skitters away under the counter. Even now his rag is tied in a bow.', fled: 'Out of the door and into the dark, quick as an eel.' },
   hookbrute: { slain: 'Orm goes over like a mast coming down, and takes a shelf of clocks with him. Every one of them starts to chime.', fled: 'He walks out of the door, slowly, and does not look back.' },
+  apronflay: { slain: 'Ned Flay is down in the sawdust, groaning, still trying to make a joke of it. Nobody laughs.', fled: 'He is over the pit wall and out of the door. He will be back, with more of them.' },
+  apronknacker: { slain: 'Gristle goes down like a bullock, and stays down, breathing like a bellows.', fled: 'He lumbers out into the yard, holding his head.' },
 };
 
 /** Out on the plains: chance meetings on the road, with the people, beasts, talk and fights they need from the game. */
@@ -288,6 +294,7 @@ export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]):
     checkBroodHall(g, result.slain);
     checkBeaconFight(g, slain);
     checkPawnFight(g, foes);
+    checkPitFight(g, slain);
     if (g.gateAttack?.active) {
       g.release();
       g.gateAttack.won();

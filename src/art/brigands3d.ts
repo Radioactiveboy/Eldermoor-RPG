@@ -80,6 +80,9 @@ export interface BrigandLook {
   /** How much bigger than an ordinary man, and how much broader. */
   size?: number;
   bulk?: number;
+  /** A heavy leather apron from the chest to the knee (the Red Aprons), blotched with old blood in this colour. */
+  apron?: Tones;
+  stain?: number;
 }
 
 const STEEL: Tones = [0xb8bcc6, 0x7a7e8a, 0xe4e8f0];
@@ -225,9 +228,23 @@ function brigandModel(pose: Pose3D, look: BrigandLook, act: Act = 'rest', fx: Fl
     }
   }
 
+  // --- A Red Apron's apron, hanging stiff to the knee.
+  if (!sit && C.apron) {
+    for (let y = 7.4; y <= 14.6; y += 0.5) {
+      solids.push({ cx: 0, cy: y - b * 0.5, cz: 3.2 * w + (14.6 - y) * 0.08 + s * 0.3, rx: 3.3 * w, ry: 0.8, rz: 0.9, material: (h) => (y < 7.9 ? shade(C.apron!) : apronAt({ ...h, y: Math.min(h.y, 20) }) ?? C.apron!) });
+    }
+  }
+
   // --- The body: what each wears over the chest, belted at the waist.
+  const apronAt = (h: Hit): Tones | null => {
+    if (!C.apron || h.nz < 0.45 || Math.abs(h.x) > 3.2 * w || h.y > 23.4 - b) return null;
+    if (C.stain !== undefined && speck(h, 0.9) < 0.3) return [C.stain, darker(C.stain), C.stain];
+    return speck(h, 1.4) < 0.1 ? shade(C.apron) : C.apron;
+  };
   const torso = (h: Hit): Tones => {
     const dy = h.y - waist;
+    const ap = apronAt(h);
+    if (ap && Math.abs(dy) > 0.85) return ap;
     // The belt, with its buckle at the front.
     if (Math.abs(dy) < 0.85) {
       if (h.nz > 0.82 && Math.abs(h.x) < 1.05) return Math.abs(h.x) < 0.4 && Math.abs(dy) < 0.35 ? C.belt : GOLD;
@@ -817,13 +834,70 @@ export const LINNET: BrigandLook = {
 };
 
 /** The brigands as foes (see systems/Combat.ts FOES), and their looks. */
-export type BrigandKind = 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher';
+export type BrigandKind = 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher' | 'apronflay' | 'apronknacker';
+
+/** Red Aprons, the Shambles' gang (see art/shamblesfolk3d.ts): their apron's leather and the old blood on it. */
+const APRON: Tones = [0x6a4a34, 0x4a3224, 0x84603e];
+const OLD_BLOOD = 0x5a221c;
+
+/** Ned Flay, the pit-master: rangy, cropped ginger, forearms laced with dog bites, a flaying knife. */
+export const FLAY: BrigandLook = {
+  skin: [0xe8b898, 0xc08c70, 0xf8d0b0],
+  hair: [0xb4602e, 0x864420, 0xd47c44],
+  hairStyle: 'crop',
+  beard: 'stubble',
+  torso: 'vest',
+  cloth: [0x4a3a2e, 0x30261e, 0x645040],
+  trim: [0x3a2e24, 0x261e18, 0x504034],
+  sleeve: [0xe8b898, 0xc08c70, 0xf8d0b0],
+  trouser: [0x4a4038, 0x322a24, 0x625448],
+  boot: [0x3a2a20, 0x241a14, 0x54402e],
+  belt: [0x3a2a1e, 0x241a12, 0x523c2a],
+  weapon: 'falchion',
+  tattoo: 0xb07a6a,
+  freckles: 0xc8805a,
+  scar: 0xb07a6a,
+  apron: APRON,
+  stain: OLD_BLOOD,
+  iris: 0x7a8a6a,
+  brow: 0xa45628,
+  lip: 0xa06a5a,
+  browSlant: 0.5,
+  bulk: 0.92,
+  size: 1.04,
+};
+
+/** A Red Apron knacker: a cropped slab of a man in a blood-stiff apron, a knacker's maul. */
+export const KNACKER: BrigandLook = {
+  skin: [0xd8a888, 0xb0806a, 0xecbca0],
+  hair: [0x3a2e26, 0x241c18, 0x544438],
+  hairStyle: 'bald',
+  beard: 'stubble',
+  torso: 'vest',
+  cloth: [0x5a4a3a, 0x3e3228, 0x766450],
+  trim: [0x3a2e24, 0x261e18, 0x504034],
+  sleeve: [0xd8a888, 0xb0806a, 0xecbca0],
+  trouser: [0x3e3832, 0x2a2622, 0x56504a],
+  boot: [0x2e2420, 0x1e1814, 0x463830],
+  belt: [0x3a2a1e, 0x241a12, 0x523c2a],
+  weapon: 'maul',
+  apron: APRON,
+  stain: OLD_BLOOD,
+  iris: 0x4a3a2a,
+  brow: 0x2e241e,
+  lip: 0x9a6a5a,
+  browSlant: 0.7,
+  bulk: 1.22,
+  size: 1.08,
+};
 
 export const BRIGAND_LOOKS: Record<BrigandKind, BrigandLook> = {
   brigandcaptain: CORWIN,
   brigandbrute: GARTH,
   brigandcutter: TEG,
   brigandarcher: LINNET,
+  apronflay: FLAY,
+  apronknacker: KNACKER,
 };
 
 /** Every solid and detail scaled up about the feet. */
@@ -846,7 +920,7 @@ export const BRIGAND_RES = 2;
 
 /** A brigand's fighting frame as shown: wide enough to fit them lying down, tall enough for a maul overhead. */
 export function brigandShownSpec(kind: BrigandKind): FrameSpec {
-  return shownSpec(kind === 'brigandbrute');
+  return shownSpec(kind === 'brigandbrute' || kind === 'apronknacker');
 }
 
 /** A fighting frame as shown, for anyone on the brigands' frame: a big one (a brute) needs more room. */
@@ -943,4 +1017,6 @@ export function generateBrigands(scene: Phaser.Scene): void {
   generateBeast(scene, 'brigandbrute', brigandSheet('brigandbrute'), 8, BRIGAND_ANIMS);
   generateBeast(scene, 'brigandcutter', brigandSheet('brigandcutter'), 10, BRIGAND_ANIMS);
   generateBeast(scene, 'brigandarcher', brigandSheet('brigandarcher'), 10, BRIGAND_ANIMS);
+  generateBeast(scene, 'apronflay', brigandSheet('apronflay'), 10, BRIGAND_ANIMS);
+  generateBeast(scene, 'apronknacker', brigandSheet('apronknacker'), 8, BRIGAND_ANIMS);
 }
