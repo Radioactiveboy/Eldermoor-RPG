@@ -284,10 +284,17 @@ async function checkTalkFights(browser, base) {
         if (missing.length) throw new Error(`fight began without ${missing.join(', ')} (had ${state.foes.join(', ')})`);
         if (state.unseen.length) throw new Error(`can't see ${state.unseen.join(', ')}`);
         if (state.left.length) throw new Error(`${state.left.join(', ')} still standing about as well`);
-        // Over at once, to go on to the next.
+        // Over at once, to go on to the next: on the hero's turn (a foe mid-blow would carry on with it), then the
+        // card at the end closed, so the world is back to the hero before the next door.
+        await page.waitForFunction(() => !!window.game.scene.getScene('Combat').menuResolve, null, { timeout: 60_000 });
         await page.evaluate(() => void window.game.scene.getScene('Combat').killAll());
-        await page.waitForFunction(() => !window.game.scene.getScene('Game').inCombat, null, { timeout: 30_000 });
-        await page.waitForTimeout(1500);
+        const closeBy = Date.now() + 60_000;
+        while (await page.evaluate(() => window.game.scene.isActive('Combat') || window.game.scene.getScene('Game').inCombat || window.game.scene.getScene('Game').busy)) {
+          if (Date.now() > closeBy) throw new Error('the fight never ended');
+          await page.waitForTimeout(500);
+          if (await page.evaluate(() => window.game.scene.isActive('Combat') && !window.game.scene.getScene('Game').inCombat)) await page.keyboard.press('Enter');
+        }
+        await page.waitForTimeout(500);
       } catch (e) {
         errors.push(`${fight.name}: ${e.message.split('\n')[0]}`);
       }
