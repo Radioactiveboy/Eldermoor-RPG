@@ -224,7 +224,7 @@ function addQuay(data: MapData, set: Setter, slim: Slim): void {
   set('jt-signboard', JETTY_PATH_X + 2, 15, 1, 1, { shapes: [circle(0.25, 0.5, 0.1), circle(0.75, 0.5, 0.1)] });
   data.sights!.push({
     id: 'jetty-sign', gx: JETTY_PATH_X + 2.5, gy: 15.9, label: 'Read the board', z: 46,
-    sign: {
+    sign: { style: 'notices',
       heading: 'Adowvale Jetty',
       lines: [
         'Wend landing. Tolls to the Headman, Lady Day and Michaelmas.',

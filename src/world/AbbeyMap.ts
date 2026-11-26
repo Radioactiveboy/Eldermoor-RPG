@@ -260,7 +260,7 @@ export function buildAbbeyMap(): MapData {
   }
   data.sights!.push({
     id: 'abbey-grave-hamo', gx: 37.5, gy: 13.8, label: 'Read the stone', z: 24,
-    sign: { heading: 'A headstone', lines: ['BROTHER HAMO', 'Keeper of the bees', '', '"Now he rests,', 'and they are glad of it."'] },
+    sign: { style: 'stone', heading: 'A headstone', lines: ['BROTHER HAMO', 'Keeper of the bees', '', '"Now he rests,', 'and they are glad of it."'] },
   });
 
   // Trees: yews by the graves, an old pear and an apple in the corners, and a few along the walls.

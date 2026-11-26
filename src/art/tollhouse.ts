@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IsoModel, lipped, planks, Shader } from './IsoModel';
+import { IsoModel, lipped, planks, SEAT_TOP, Shader, TABLE_TOP } from './IsoModel';
 import { registerModel, WALL_HEIGHT } from './interior';
 import { PALETTE as P } from './palette';
 import { mixColor, smoothNoise } from './scorch';
@@ -840,12 +840,6 @@ function desk(): IsoModel {
   return m;
 }
 
-/**
- * Where a seat's top must be for a seated figure's hips to rest on it (seatedLegs puts them at 9-10px).
- * The same value as SEAT_TOP in IsoModel.ts once that lands; kept here so these seats don't wait on it.
- */
-const SEAT_TOP = 9;
-
 /** Nibb's stool behind the grille: a clerk's stool, three-legged, worn smooth. */
 function highStool(): IsoModel {
   const m = new IsoModel();
@@ -1175,8 +1169,8 @@ function bigDesk(): IsoModel {
     if (pu < 0.14 || v < 0.16) return OAK_LIGHT;
     return OAK;
   };
-  m.box(0.1, 0.15, 0, 1.8, 0.7, 14, { top: OAK_TOP, left: front, right: OAK_DARK });
-  m.box(0.05, 0.1, 14, 1.9, 0.8, 3, { top: (u, v) => (u > 0.3 && u < 0.7 && v > 0.15 && v < 0.85 ? 0x2a4a2a : planks(3, OAK_TOP, OAK_DARK, OAK_LIGHT, 5)(u, v) ?? OAK_TOP), left: OAK_LIGHT, right: OAK });
+  m.box(0.1, 0.15, 0, 1.8, 0.7, TABLE_TOP - 3, { top: OAK_TOP, left: front, right: OAK_DARK });
+  m.box(0.05, 0.1, TABLE_TOP - 3, 1.9, 0.8, 3, { top: (u, v) => (u > 0.3 && u < 0.7 && v > 0.15 && v < 0.85 ? 0x2a4a2a : planks(3, OAK_TOP, OAK_DARK, OAK_LIGHT, 5)(u, v) ?? OAK_TOP), left: OAK_LIGHT, right: OAK });
   // Papers fanned out, letters tied with ribbon.
   for (let i = 0; i < 4; i++) m.box(0.4 + i * 0.14, 0.25 + (i % 2) * 0.12, 17 + i * 0.4, 0.28, 0.36, 0.4, { top: (u, v) => ((v * 8) % 1 < 0.3 && u > 0.1 && u < 0.85 ? INK : PAPER), left: PAPER_DARK, right: PAPER_DARK });
   m.box(1.05, 0.55, 17, 0.24, 0.18, 2, { top: (u) => (Math.abs(u - 0.5) < 0.08 ? YELLOW : PAPER), left: PAPER_DARK, right: PAPER_DARK });

@@ -24,6 +24,7 @@ import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
 import { roseAction } from './blackrose';
 import { tollAction } from './tollhouse';
+import { SUMP_ACTIONS } from './sump';
 
 /** A named story effect: what happens when a line with this action is said. */
 export type DialogueAction = (g: GameScene) => void;
@@ -45,6 +46,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...JETTY_ACTIONS,
   ...VOYAGE_ACTIONS,
   ...HOMESTEAD_ACTIONS,
+  ...SUMP_ACTIONS,
 };
 
 /** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `beacon-pay:<coins>`, `voyage:<area>` (see voyages.ts), or a named one. */

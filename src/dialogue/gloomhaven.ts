@@ -1,5 +1,5 @@
 import { HERO_NAME } from '../config';
-import type { DialogueChoice, DialogueScript } from './Dialogue';
+import type { DialogueChoice, DialogueNode, DialogueScript } from './Dialogue';
 
 /**
  * The folk of Gloomhaven (world/GloomhavenMap.ts), out of doors; the Black Rose's
@@ -526,9 +526,13 @@ export function gutterScript(first: boolean, ale: boolean, told: boolean): Dialo
  * the hero can call her on it and get them back.
  * @param pinched how many coins she took the first time (0 if none, or none to take)
  * @param returned whether she's already given them back
+ * @param extra more to ask her about, and where it leads (her mam's silver: see dialogue/sump.ts)
  */
-export function wispScript(first: boolean, pinched: number, returned: boolean): DialogueScript {
+export function wispScript(
+  first: boolean, pinched: number, returned: boolean, extra: { choices: DialogueChoice[]; nodes: Record<string, DialogueNode> } = { choices: [], nodes: {} },
+): DialogueScript {
   const choices: DialogueChoice[] = [
+    ...extra.choices,
     { text: 'What are you doing out here on your own?', next: 'alone' },
     { text: 'Who should I watch out for?', next: 'watch' },
   ];
@@ -537,6 +541,7 @@ export function wispScript(first: boolean, pinched: number, returned: boolean): 
   return {
     start: first ? 'greet' : 'again',
     nodes: {
+      ...extra.nodes,
       greet: {
         speaker: 'wisp',
         lines: [

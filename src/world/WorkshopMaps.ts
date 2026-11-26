@@ -60,7 +60,7 @@ export function buildSmithyMap(): MapData {
     sights: [
       {
         id: 'smithy-slate', gx: 7.5, gy: 0.4, label: 'Read the slate', z: 56,
-        sign: {
+        sign: { style: 'slate',
           heading: 'Chalked on the slate',
           lines: [
             'REEVE: 12 spearheads for the militia. WANTED YESTERDAY',

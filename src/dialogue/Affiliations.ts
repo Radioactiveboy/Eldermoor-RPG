@@ -78,6 +78,9 @@ export const AFFILIATIONS: Partial<Record<SpeakerId, Affiliation>> = {
   lusk: GLOOMFOLK,
   gutter: GLOOMFOLK,
   wisp: GLOOMFOLK,
+  annis: GLOOMFOLK,
+  nan: GLOOMFOLK,
+  ned: GLOOMFOLK,
   cray: { label: 'Boatfolk of the Wend', known: 'met' },
   coombe: VILLAGE,
   // His chain of office says it.

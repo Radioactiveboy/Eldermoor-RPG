@@ -141,7 +141,7 @@ export function buildTollHouseMap(): MapData {
   data.sights!.push(
     {
       id: 'toll-table', gx: 5.5, gy: 0.15, label: 'Read the tolls', z: 64,
-      sign: {
+      sign: { style: 'notices',
         heading: 'THE FLOOD TOLL, by order of the Reeve',
         lines: [
           'Every cart through the Fen Gate: 4 coppers the wheel. Every beast: 2.',
@@ -157,7 +157,7 @@ export function buildTollHouseMap(): MapData {
     { id: 'toll-portrait', gx: 7.5, gy: 0.15, label: 'Look', z: 70, thought: 'A portrait of a long yellow man in a fur collar, a chain of office on his chest and one hand on a book. The paint is new. The painter has been kind to his chin and unkind to everything else.' },
     {
       id: 'toll-proclaim', gx: 10.5, gy: 0.15, label: 'Read the proclamation', z: 64,
-      sign: {
+      sign: { style: 'notices',
         heading: 'Proclamation',
         lines: [
           'Be it known that the Fen Watch, wearing the Reeve\'s yellow, is the lawful guard of this town.',
@@ -178,7 +178,7 @@ export function buildTollHouseMap(): MapData {
     { id: 'toll-dice', gx: 10.5, gy: 5.4, label: 'Look', z: 26, thought: 'An upturned barrel, three dice and a little pile of coppers. A boathook is chalked on one side of the barrel, and three notches cut in the other. Two gangs, one barrel. I wonder who wins.' },
     {
       id: 'toll-board', gx: 0.35, gy: 7.5, label: 'Read the notices', z: 58,
-      sign: {
+      sign: { style: 'notices',
         heading: 'Pinned by the door',
         lines: [
           'DISTRAINED, unclaimed, to be SOLD at the Reeve\'s pleasure: 1 handcart, 6 hens (2 dead), 1 bolt blue cloth, creels, 1 cask oil.',

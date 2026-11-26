@@ -451,6 +451,27 @@ export const ITEMS = {
     quest: true,
     stack: 1,
   },
+  // Down Sump Lane in Gloomhaven (see scenes/game/sump.ts): what the men in grey pay in, and what Jory Cotter hid.
+  'grey-silver': {
+    name: 'Holed Silver Coin',
+    description:
+      "A heavy silver coin with a square hole through the middle and writing round it like birds' feet. Nobody in Gloomhaven can read it, " +
+      'and nobody will take it but Lusk, by weight. Someone has scratched a tiny rose into one face.',
+    icon: 'item-grey-silver',
+    category: 'Material',
+    quest: true,
+    stack: 5,
+  },
+  'jory-tally': {
+    name: "Jory's Tally",
+    description:
+      'A board from under Jory Cotter\'s hearthstone, scratched all over with little pictures, because he could not write: a church with ' +
+      'water round it, crates and holed coins, a rose, one crate on its own with something coming off it, and a cross through a boat.',
+    icon: 'item-jory-tally',
+    category: 'Material',
+    quest: true,
+    stack: 1,
+  },
   // Growing your own, on the plot Farmer Iran lends (see systems/Farm.ts): seeds from Hilde, and Iran's old tools.
   'carrot-seed': {
     name: 'Carrot Seed',

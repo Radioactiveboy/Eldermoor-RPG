@@ -2603,6 +2603,78 @@ const annet = townsfolk({
   },
 });
 
+// --- The Sump: homes down Sump Lane, in Gloomhaven's west quarter (see art/sump3d.ts for the same folk in the round) ---
+
+/** Annis Crowe, Wisp's mam: thin and worn, Wisp's red-brown hair pinned up anyhow, freckles, frightened eyes, a grey shawl and the Rose's apron. */
+const annis = townsfolk({
+  skin: 0xf0c8a8, hair: 0x8a4a26, style: 'bun', cloth: 0x5a6a82, shirt: 0xd8ccb4, apron: 0xc8bca0,
+  iris: 0x6a8a4a, brow: 'worried', smile: 0, width: 14.5, jaw: 5, lashes: true, freckles: true, tired: true, blush: [0xe0907a, 0.2], look: -1,
+  over: (c) => {
+    // Strands come loose from the pins, down by her ears.
+    for (const side of [-1, 1]) for (let i = 0; i < 14; i++) c.set(CX + side * (15 + Math.round(Math.sin(i * 0.6) * 1.5)), 36 + i, i % 3 ? 0x8a4a26 : 0x64341a);
+    // The grey shawl round her shoulders, crossed at the breast.
+    const shawl = ramp(0x7a7470);
+    for (let y = 72; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const dx = x - CX;
+        const edge = 10 + (y - 72) * 0.9;
+        if (Math.abs(dx) < edge - 4 || Math.abs(dx) > 40 - (y - 72) * 0.1) continue;
+        if (c.get(x, y) === null && Math.abs(dx) > 36) continue;
+        c.set(x, y, tone(shawl, lightness(dx / 40, (y - 84) / 20) + ((x + y) % 5 === 0 ? -0.15 : 0), x, y));
+      }
+    }
+    // The black rose stitched on the apron's bib.
+    const rose = [0x1a0e12, 0x3a1420, 0x5a1424];
+    for (let r = 3; r >= 0; r--) for (let a = 0; a < 10; a++) {
+      const t = (a / 10) * Math.PI * 2 + r;
+      c.set(Math.round(CX + Math.cos(t) * r), Math.round(S - 8 + Math.sin(t) * r * 0.8), rose[Math.min(2, 3 - r)]);
+    }
+  },
+});
+
+/** The Widow Nan Pruett: past eighty, a walnut of a face under a white linen cap, sharp grey eyes, a dark green shawl, a knowing little smile. */
+const nan = townsfolk({
+  skin: 0xd8b098, hair: 0xe0dcd4, style: 'bun', cloth: 0x3a322c, shirt: 0xd8ccb4, kerchief: 0xe0d8c8,
+  iris: 0x5a6a7a, brow: 'arched', smile: 1, width: 14, jaw: 4, old: true, nose: 2, look: 1,
+  over: (c) => {
+    // Deep lines either side of the mouth and at the eyes.
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 7; i++) c.set(CX + side * (7 + Math.round(i * 0.3)), EYE_Y + 9 + i, 0xb08a72);
+      for (let i = 0; i < 4; i++) c.set(CX + side * (EYE_DX + 6 + i), EYE_Y + 1 + Math.round(i * 0.6) - (i % 2), 0xb08a72);
+    }
+    // The cap's frilled edge round her face.
+    for (let x = CX - 20; x <= CX + 20; x++) c.set(x, 26 + Math.round(Math.abs(x - CX) * 0.12) + (x % 3 === 0 ? 1 : 0), 0xf4f0e8);
+    // The green shawl.
+    const shawl = ramp(0x3e4e36);
+    for (let y = 74; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const dx = x - CX;
+        if (Math.abs(dx) < 8 + (y - 74) * 0.7 || Math.abs(dx) > 38) continue;
+        if (c.get(x, y) === null && Math.abs(dx) > 34) continue;
+        c.set(x, y, tone(shawl, lightness(dx / 38, (y - 86) / 18) + (((x >> 2) + (y >> 2)) % 2 ? -0.1 : 0.05), x, y));
+      }
+    }
+  },
+});
+
+/** Ned Wick the lamplighter: long-faced and gaunt, sandy stubble, a knitted cap down to his ears, worried pale eyes, soot on his cheek. */
+const ned = townsfolk({
+  skin: 0xe0b898, hair: 0xa8865a, style: 'short', cloth: 0x5a4a36, shirt: 0xb8ae98, cap: 0x6a4a3a,
+  iris: 0x7a8a9a, brow: 'worried', smile: 0, width: 13.5, jaw: 7, tired: true, nose: 2, look: -1,
+  over: (c) => {
+    // Sandy stubble on the long jaw.
+    for (let y = EYE_Y + 11; y < 72; y++) {
+      for (let x = CX - 16; x <= CX + 16; x++) if ((x * 7 + y * 11) % 4 === 0 && c.get(x, y) !== null && Math.abs(x - CX) > 4) c.set(x, y, 0xa8865a);
+    }
+    // A smudge of lamp-soot on the cheekbone.
+    for (const [x, y] of [[CX + 11, 52], [CX + 12, 53], [CX + 13, 53], [CX + 12, 54], [CX + 10, 53]]) c.set(x, y, 0x5a4a40);
+    // His pole up the edge of the picture, its brass hook at the top.
+    for (let y = 8; y < S; y++) for (let x = CX - 40; x < CX - 37; x++) c.set(x, y, x === CX - 40 ? 0x957250 : 0x6a4a30);
+    for (let i = 0; i < 6; i++) c.set(CX - 38 + i, 8 - Math.round(i * 0.5), 0xe0c070);
+    for (let y = 8; y < 12; y++) c.set(CX - 39, y, 0xb8903a);
+  },
+});
+
 const PAINTERS: Record<string, Painter> = {
   hero, mother, pedlar, pilgrim, drover, baker, smith, tanner, guard, iran, coombe, tollguard, carter, herbwife,
   fisherman, porter, gardener, silent, novice, prior, anselm, cook, scribe, leofric,
@@ -2614,6 +2686,7 @@ const PAINTERS: Record<string, Painter> = {
   thorne, grubb, midge, silas, hollis, sedge, dunn, ferret, vane,
   vosk, brakk, fitch, crabbe, ossery, tallow, lusk, gutter, wisp, cray,
   reeve, nibb, gaff, lardy, annet,
+  annis, nan, ned,
 };
 
 /** Paints every speaker's portrait as 'portrait-<id>', three frames wide (the orb's is its own step; see orbPortrait.ts). */
