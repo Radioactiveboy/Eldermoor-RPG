@@ -232,6 +232,7 @@ export const BEACON_ACTIONS: Record<string, (g: GameScene) => void> = {
   'beacon-accept': () => {
     if (QuestLog.has(BEACON_QUEST)) return;
     QuestLog.start(BEACON_QUEST, alreadyDone());
+    QuestLog.complete('the-watcher', 'hale');
     QuestLog.writeDiary(
       "Headman Hale has asked me to go up to the old beacon on Corbie Tor, in the far north of the plains, and see if it can be opened again. " +
         "He signed the order that stood its watch down, twelve years ago, and he regrets it. Whatever I do, I am not to light it.",
