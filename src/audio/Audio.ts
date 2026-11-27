@@ -888,6 +888,25 @@ class AudioEngine {
   }
 
   /** Something swung quickly through the air. */
+  /**
+   * The Mere-kin hissing: as they square up, as one rallies its band (`big`, the
+   * war-chief's bellow), or as they jeer.
+   */
+  mereHiss(big = false): void {
+    if (!this.unlocked) return;
+    if (this.sfx!.play(big ? SFX.mereChief : SFX.mereHiss, { gain: big ? 0.75 : 0.6, rate: big ? [0.95, 1.02] : [0.9, 1.1] })) return;
+    // Not loaded yet: a burst of high noise for the hiss.
+    this.noise(this.ctx!.currentTime, big ? 0.9 : 0.6, 'highpass', 2600, 2000, 0.7, big ? 0.4 : 0.3);
+  }
+
+  /** A foe swinging at someone: the Mere-kin's harpoons whirr out on their lines, and they hiss as they strike. */
+  foeSwing(kind: string): void {
+    if (!this.unlocked) return;
+    if (kind === 'mereharpoon' && this.sfx!.play(SFX.harpoon, { gain: 0.6, rate: [0.92, 1.08] })) return;
+    this.swing(kind === 'merechief' || kind === 'mereaxe');
+    if (kind.startsWith('mere') && Math.random() < 0.35) this.sfx!.play(SFX.mereHiss, { gain: 0.35, rate: [1.05, 1.25], delay: 0.05 });
+  }
+
   swing(heavy = false): void {
     if (!this.unlocked) return;
     if (this.sfx!.play(heavy ? SFX.swoosh : SFX.whoosh.slice(3), { gain: heavy ? 0.55 : 0.4 })) return;
@@ -961,7 +980,9 @@ class AudioEngine {
     } else if (v === 'boar') {
       if (!s.play(SFX.pig, { gain: 0.65, rate: [0.62, 0.72] })) this.yelp();
     } else if (v === 'man') s.play(SFX.manHurt, { gain: 0.6 });
-    else this.yelp();
+    else if (v === 'mere' || v === 'merechief') {
+      if (!s.play(SFX.mereHurt, { gain: 0.65, rate: v === 'merechief' ? [0.8, 0.86] : [0.95, 1.1] })) this.mereHiss(v === 'merechief');
+    } else this.yelp();
   }
 
   /** A foe's last cry and the thud of it falling (`kind` is its FOES key), or the hero's if none. */
@@ -972,6 +993,8 @@ class AudioEngine {
     if (v === 'goblin') s.play(SFX.goblinDeath, { gain: 0.7, rate: [1.3, 1.45] });
     else if (v === 'brute') s.play(SFX.bruteDeath, { gain: 0.8 });
     else if (v === 'man' || v === 'hero') s.play(SFX.manDeath, { gain: 0.6 });
+    else if (v === 'mere') s.play(SFX.mereDeath, { gain: 0.7, rate: [0.95, 1.08] });
+    else if (v === 'merechief') s.play(SFX.mereChiefDeath, { gain: 0.8 });
     else if (v === 'boar') s.play(SFX.pig, { gain: 0.6, rate: [0.5, 0.56] });
     else if (v === 'wolf' && !s.play(SFX.snarl, { gain: 0.5, rate: [0.55, 0.6] })) this.yelp();
     else if (v === 'small') this.yelp();

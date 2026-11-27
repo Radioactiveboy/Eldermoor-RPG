@@ -5,7 +5,7 @@
  * steadier numbers, `-- --weapons` for each weapon at level 1, or
  * `-- --markdown` for a table to paste into a pull request, `-- --brute` for
  * the Brute at the door of the brood hall, later on and with companions, or
- * `-- --beacon` for Corwin Haske's band in the beacon on Corbie Tor.
+ * `-- --beacon` for Corwin Haske's band in the beacon on Corbie Tor, `-- --merekin` for the Mere-kin's bands.
  */
 import type { FoeKind } from '../src/systems/Combat';
 import { KIT_BY_LEVEL, LATE_KIT, simulate } from '../src/systems/CombatSim';
@@ -87,5 +87,23 @@ if (flag('beacon')) {
       cell(simulate(level, 'brigandcaptain', 1, { fights, kit: LATE_KIT, escort: { brigandbrute: 1, brigandcutter: 1, brigandarcher: 1 }, allies: [...allies] })).padEnd(20),
     );
     console.log([`L${level}`.padEnd(8), ...cells].join(''));
+  }
+}
+
+if (flag('merekin')) {
+  // The Mere-kin of the fen (see art/merekin3d.ts) in bands of three, in the best kit there is.
+  console.log('\nThe Mere-kin, best kit: alone, with Sigrun, with Sigrun and Wat.\n');
+  const parties = [[], ['sigrun'], ['sigrun', 'wat']] as const;
+  const bands = [
+    ['A hunting band (spear-hunter + harpooner, hookhand)', 'merespear', { mereharpoon: 1, merehook: 1 }],
+    ['Shield-bearer + axeman', 'mereblade', { mereaxe: 1 }],
+    ["The war-chief's band (+ shield-bearer, harpooner)", 'merechief', { mereblade: 1, mereharpoon: 1 }],
+  ] as const;
+  for (const [title, lead, escort] of bands) {
+    console.log(`\n${title}`);
+    for (const level of [9, 10, 11, 12, 13]) {
+      const cells = parties.map((allies) => cell(simulate(level, lead, 1, { fights, kit: LATE_KIT, escort, allies: [...allies] })).padEnd(20));
+      console.log([`L${level}`.padEnd(8), ...cells].join(''));
+    }
   }
 }

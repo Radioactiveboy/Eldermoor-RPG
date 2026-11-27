@@ -99,6 +99,8 @@ export const ART_STEPS: ArtStep[] = [
   // (After Gloomhaven, the river front and the faces: it borrows the town's wall, gate and rushes, the reeds, and the folk's frames.)
   { label: 'the Fen Road', load: () => import('./fenroad').then((m) => m.generateFenRoad) },
   { label: 'the burnt farm', load: () => import('./ruin').then((m) => m.generateRuin) },
+  // The Mere-kin's fighting sheets (nothing else draws from them).
+  { label: 'the Mere-kin', load: () => import('./merekin3d').then((m) => m.generateMereKin) },
   { label: 'the Hollow rebuilt', load: () => import('./homestead').then((m) => m.generateHomestead) },
 ];
 

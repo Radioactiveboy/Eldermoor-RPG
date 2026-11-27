@@ -22,6 +22,13 @@ import { footpadSpec } from './wayfarers3d';
 import { BRIGAND_COLS, BRIGAND_RES, brigandShownSpec, shownSpec } from './brigands3d';
 
 /**
+ * The Mere-kin's fighting frames as shown (see mereShownSpec in merekin3d.ts, kept here so that file can
+ * load later, with the fen's art): they're drawn MERE_RES (2) times finer, with MERE_COLS (28) frames a row.
+ */
+const MERE = { w: 64, h: 68, feetY: 61, groundShade: 4, creases: true, eight: true, tall: 40, res: 2, cols: 28 };
+const MERE_CHIEF = { ...MERE, w: 72, h: 80, feetY: 73, groundShade: 5, tall: 47 };
+
+/**
  * The wild animals, each modelled in 3D and drawn as pixel art (see
  * beasts3d.ts): eight directions of the same twelve frames.
  */
@@ -38,7 +45,7 @@ const WOLF_MOTHER_SIZE = 1.45;
  * systems/Combat.ts FOES).
  */
 export const CREATURE_ART: Record<
-  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'wildcat' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute' | 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher' | 'apronflay' | 'apronknacker' | 'hookgaff' | 'hookbrute',
+  'wolf' | 'wolfmother' | 'deer' | 'hare' | 'boar' | 'wildcat' | 'rat' | 'footpad' | 'cutpurse' | 'goblin' | 'goblinspear' | 'goblintorch' | 'goblinbrute' | 'brigandcaptain' | 'brigandbrute' | 'brigandcutter' | 'brigandarcher' | 'apronflay' | 'apronknacker' | 'hookgaff' | 'hookbrute' | 'merespear' | 'mereharpoon' | 'mereblade' | 'mereaxe' | 'merehook' | 'merechief',
   {
     w: number;
     h: number;
@@ -84,6 +91,13 @@ export const CREATURE_ART: Record<
   // Two of Gloomhaven's Hooks, on the brigands' frame (their sheets are drawn in pawnfolk3d.ts).
   hookgaff: { ...shownSpec(false), eight: true, tall: 42, res: BRIGAND_RES, cols: BRIGAND_COLS },
   hookbrute: { ...shownSpec(true), eight: true, tall: 48, res: BRIGAND_RES, cols: BRIGAND_COLS },
+  // The Mere-kin of the fen (their sheets are drawn finely in merekin3d.ts, with four fight frames of their own).
+  merespear: MERE,
+  mereharpoon: MERE,
+  mereblade: MERE,
+  mereaxe: MERE,
+  merehook: MERE,
+  merechief: MERE_CHIEF,
 };
 
 export function generateCreatures(scene: Phaser.Scene): void {

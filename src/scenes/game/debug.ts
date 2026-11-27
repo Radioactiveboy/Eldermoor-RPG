@@ -13,6 +13,9 @@ import { AreaId } from '../../world/MapData';
 import type { CombatScene } from '../CombatScene';
 import type { GameScene, GameSceneData } from '../GameScene';
 import { companionAction } from './companions';
+import { startCombat } from './combat';
+import { Creature } from '../../entities/Creature';
+import type { FoeKind } from '../../systems/Combat';
 
 /** Scenes left running when the panel jumps somewhere: the world, its HUD, and the panel itself. */
 const KEEP = new Set(['Game', 'UI', 'Debug']);
@@ -148,4 +151,43 @@ export function status(game: Phaser.Game): string {
   ]
     .filter(Boolean)
     .join(' · ');
+}
+
+/** Bands of foes the panel can set on the hero anywhere, to try a fight (the Mere-kin of the fen, see art/merekin3d.ts). */
+export const TEST_BANDS: Record<string, FoeKind[]> = {
+  'Mere-kin: spear, harpoon, hooks': ['merespear', 'mereharpoon', 'merehook'],
+  'Mere-kin: shield and axe': ['mereblade', 'mereaxe'],
+  "Mere-kin: the war-chief's band": ['merechief', 'mereblade', 'mereharpoon'],
+  'Mere-kin spear-hunter': ['merespear'],
+  'Mere-kin harpooner': ['mereharpoon'],
+  'Mere-kin shield-bearer': ['mereblade'],
+  'Mere-kin axeman': ['mereaxe'],
+  'Mere-kin hookhand': ['merehook'],
+  'Mere-kin war-chief': ['merechief'],
+};
+
+let spawned = 0;
+
+/** A band rises out of nowhere a few steps from the hero, and the fight starts. They're never kept in the save. */
+export function spawnBand(game: Phaser.Game, name: string): string {
+  const g = liveGame(game);
+  if (!g) return 'Start a game first.';
+  if (g.inCombat || g.busy) return 'Not now: finish what is going on first.';
+  const kinds = TEST_BANDS[name];
+  if (!kinds) return 'No such band.';
+  closeOverlays(game);
+  if (g.sys.isPaused()) g.scene.resume();
+  const spots = [[2.5, 0], [0, 2.5], [2.2, 2.2], [-2.2, 1.2], [1.2, -2.2]];
+  const band: Creature[] = [];
+  for (const kind of kinds) {
+    const spot = spots.find(([dx, dy]) => g.map.isWalkable(Math.floor(g.player.gx + dx), Math.floor(g.player.gy + dy)) && !band.some((c) => c.distanceTo(g.player.gx + dx, g.player.gy + dy) < 1));
+    const [dx, dy] = spot ?? [1, 1];
+    const id = `debug-${kind}-${++spawned}`;
+    (g.map.data.creatures ??= []).push({ id, kind, gx: g.player.gx + dx, gy: g.player.gy + dy, respawns: true });
+    const c = new Creature(g, g.map, id, kind, g.player.gx + dx, g.player.gy + dy);
+    g.creatures.push(c);
+    band.push(c);
+  }
+  startCombat(g, band[0], undefined, band);
+  return `${name}: fight!`;
 }
