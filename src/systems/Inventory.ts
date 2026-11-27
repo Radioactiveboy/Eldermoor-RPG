@@ -462,6 +462,17 @@ export const ITEMS = {
     quest: true,
     stack: 5,
   },
+  // Out of the mud at the Drowned Mile, by the tracks going into the mere (see scenes/game/fenroad.ts).
+  'white-scale': {
+    name: 'White Scale',
+    description:
+      'A scale as big as my palm, from the mud by the wrecked caravan at the Drowned Mile. Hard as horn and white as a drowned thing, with a sheen like ' +
+      'the inside of a mussel shell, and the growth rings on it like a tree\'s. Whatever it came off is very big, and very old.',
+    icon: 'item-white-scale',
+    category: 'Material',
+    quest: true,
+    stack: 1,
+  },
   'jory-tally': {
     name: "Jory's Tally",
     description:

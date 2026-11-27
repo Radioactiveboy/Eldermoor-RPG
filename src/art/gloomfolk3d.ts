@@ -33,7 +33,7 @@ function along(a: V3, b: V3, t: number): V3 {
 }
 
 /** Every solid and detail scaled about the feet: `k` up, `w` across. */
-function sized(m: Model, k: number, w = k): Model {
+export function sized(m: Model, k: number, w = k): Model {
   if (k === 1 && w === 1) return m;
   const back = (h: Hit): Hit => ({ ...h, x: h.x / w, y: h.y / k, z: h.z / w });
   return {
@@ -148,7 +148,7 @@ const CRABBE: BrigandLook = {
 // ---------------------------------------------------------------------------
 
 /** How one of the town's folk is made up (see {@link townModel}). */
-interface TownLook {
+export interface TownLook {
   skin: Tones;
   hair: Tones;
   /** Bald on top with a fringe, cropped short, long and lank to the shoulders, pinned up in a knot, or hidden. */
@@ -213,7 +213,7 @@ const PAGE: Tones = [0xd8ccb0, 0xaa9e84, 0xf0e6cc];
  * shawl, a cloak), arms doing what their trade has them do, and a head with its
  * hair, beard, hat and face. Patterned on the jetty folk (jettyfolk3d.ts).
  */
-function townModel(pose: Pose3D, look: TownLook): Model {
+export function townModel(pose: Pose3D, look: TownLook): Model {
   const b = pose.bob;
   const s = pose.stride;
   const sit = !!pose.sit;

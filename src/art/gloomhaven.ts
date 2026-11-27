@@ -1123,7 +1123,7 @@ function wallTower(): IsoModel {
  * oak gates, black and iron-studded, barred shut; torches in cressets on the
  * towers and a skull nailed over the gate.
  */
-function gatehouse(): IsoModel {
+function gatehouse(open = false): IsoModel {
   const m = new IsoModel();
   const H = 92;
   const tower = (x: number) => {
@@ -1142,7 +1142,30 @@ function gatehouse(): IsoModel {
   };
   tower(0);
   // The gates, between the towers: two great leaves of black oak, studded, and the bar across them.
-  m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => {
+  // Open (by Captain Vosk's leave), only the arch is left over the way through, and the road shows clear under it.
+  if (open) {
+    m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -12 }, (u, v) => {
+      const y = v * 12;
+      // The arch's stones, coming down a little at either side.
+      if (y < 9) return Math.floor(u * 9) % 2 ? STONE : STONE_DARK;
+      if (Math.min(u, 1 - u) < 0.06) return STONE_DARK;
+      return null;
+    });
+    // The two leaves, swung right back inwards against the towers' inner faces, out of the way.
+    for (const x of [1.6, 4.32]) {
+      m.box(x, 1.0, 0, 0.08, 0.9, 58, {
+        top: OAK_DARK,
+        left: TAR,
+        right: (u, v) => {
+          const y = (1 - v) * 58;
+          if (Math.abs(y - 14) < 1.2 || Math.abs(y - 48) < 1.2) return IRON;
+          if (Math.floor(y) % 6 === 0 && Math.floor(u * 20) % 4 === 0) return IRON_LIGHT;
+          const c = Math.floor(u * 6) % 2 ? TAR : mix(TAR, OAK_DARK, 0.4);
+          return y < 5 ? mix(c, SLIME, 0.5) : c;
+        },
+      });
+    }
+  } else m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => {
     const y = v * 64;
     // An arch of dressed stone over them.
     if (y < 10) return Math.abs(u - 0.5) * 2 < 1 - (y / 10) ** 0.5 * 0 && y < 2 ? STONE_LIGHT : (Math.floor(u * 9) % 2 ? STONE : STONE_DARK);
@@ -1754,6 +1777,7 @@ export function generateGloomhaven(scene: Phaser.Scene): void {
   put('gh-wallpost', wallPost());
   put('gh-walltower', wallTower());
   put('gh-gatehouse', gatehouse());
+  put('gh-gatehouse-open', gatehouse(true));
   // The square and the streets.
   put('gh-well', smallWell());
   put('gh-lamp', lamp());

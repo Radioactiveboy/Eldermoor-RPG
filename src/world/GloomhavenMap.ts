@@ -3,7 +3,7 @@ import { box, circle, Shape } from './Collision';
 import { AreaId, MapData, MapObject, placeObject, Prop, Terrain } from './MapData';
 import { joinDiagonals, paintPath, smoothLine } from './MapGenerator';
 import { deckKey, heronUnderwayKey } from '../art/jetty';
-import { BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL, TOLL_HOUSE, GUILD_HALL } from './landmarks';
+import { fenGateDoors, gatehouseShape, BLACK_ROSE, GLOOM_GATE, GLOOM_H, GLOOM_HERON, GLOOM_PIER, GLOOM_W, GLOOM_WALL, GLOOM_WELL, TOLL_HOUSE, GUILD_HALL } from './landmarks';
 import { addShambles } from './ShamblesYard';
 
 /**
@@ -54,8 +54,11 @@ const SQUARE = { x0: 20, y0: 19, x1: 42, y1: 31 };
 export type Setter = (key: string, tx: number, ty: number, w: number, h: number, more?: Partial<MapObject>) => void;
 export type Slim = (key: string, tx: number, ty: number, shapes: Shape[], more?: Partial<MapObject>) => void;
 
-/** @param heron the Grey Heron has brought the hero down, and lies at the pier with Maren Tull, to take them home. */
-export function buildGloomhavenMap(heron = false): MapData {
+/**
+ * @param heron the Grey Heron has brought the hero down, and lies at the pier with Maren Tull, to take them home.
+ * @param gateOpen Captain Vosk has given the hero leave to go out by the Fen Gate: it stands open, and the road out leads on to the Fen Road.
+ */
+export function buildGloomhavenMap(heron = false, gateOpen = false): MapData {
   const W = GLOOM_W;
   const H = GLOOM_H;
   const rnd = new Phaser.Math.RandomDataGenerator(['gloomhaven']);
@@ -169,6 +172,8 @@ export function buildGloomhavenMap(heron = false): MapData {
   // Arriving by the river, at the end of the pier; and (for the debug panel) by the gate, from inside it.
   data.entries!.heron = { x: GLOOM_PIER.x1 + 0.2, y: GLOOM_PIER.headY + 0.6 };
   data.entries!.gate = { x: gateX, y: GLOOM_WALL.north + 2.2 };
+  // Back in from the Fen Road, through the gate.
+  data.entries!.fenroad = { x: gateX, y: GLOOM_WALL.north + 2.2 };
 
   const set: Setter = (key, tx, ty, w, h, more = {}) => {
     for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) if (props[y]?.[x] === Prop.Tree || props[y]?.[x] === Prop.Rock) props[y][x] = Prop.None;
@@ -178,7 +183,7 @@ export function buildGloomhavenMap(heron = false): MapData {
   const slim: Slim = (key, tx, ty, shapes, more = {}) => set(key, tx, ty, 1, 1, { blocks: [], shapes, ...more });
 
   addWall(data, set);
-  addGate(data, set, slim);
+  addGate(data, set, slim, gateOpen);
   addTollHouse(data, set, slim);
   addSquare(data, set, slim);
   addBlackRose(data, set, slim);
@@ -239,19 +244,19 @@ function addWall(data: MapData, set: Setter): void {
  * rack of spears, a table with dice on it, and a gibbet by the road as a
  * welcome.
  */
-function addGate(data: MapData, set: Setter, slim: Slim): void {
+function addGate(data: MapData, set: Setter, slim: Slim, open: boolean): void {
   const g = GLOOM_GATE;
-  // The gatehouse: the towers at either end block; the gates between are barred (they block too).
-  set('gh-gatehouse', g.tx, g.ty, g.w, g.h, {
-    fence: true,
-    shapes: [box(0, 0.05, 1.6, 1.95), box(4.4, 0.05, 6, 1.95), box(1.6, 0.6, 4.4, 1.2)],
-  });
+  // The gatehouse: the towers at either end block; the gates between are barred (they block too), until Vosk opens them.
+  const shape = gatehouseShape(open);
+  set(open ? 'gh-gatehouse-open' : 'gh-gatehouse', g.tx, g.ty, g.w, g.h, { fence: true, shapes: shape.shapes, blocks: shape.blocks });
+  if (open) data.doors!.push(...fenGateDoors());
   for (const dx of [1.75, 4.25]) data.lights!.push({ gx: g.tx + dx, gy: g.ty + g.h + 0.1, z: 58, radius: 170, flicker: 0.6 });
   data.sights!.push({
     id: 'gh-gate', gx: g.road.x0 + 1, gy: g.ty + g.h + 0.4, label: 'Look at the gate', z: 50,
-    thought:
-      'Oak, black with age, studded with iron and barred with a beam as thick as I am. Whatever is out on the causeway, ' +
-      'the folk of Gloomhaven would rather it stayed there. Or maybe it is the other way about.',
+    thought: open
+      ? 'The bar is off and leant up against the tower, and the two great leaves stand open. Through the arch, the causeway, and the fog, and the trees leaning over it. Vosk\'s lads watch me look, and say nothing.'
+      : 'Oak, black with age, studded with iron and barred with a beam as thick as I am. Whatever is out on the causeway, ' +
+        'the folk of Gloomhaven would rather it stayed there. Or maybe it is the other way about.',
   });
   data.landmarks!.push({ gx: g.road.x0 + 1, gy: g.ty + g.h + 1, name: 'The Fen Gate', range: 4 });
   // The guards' brazier, a table with a game of dice left on it, stools, a rack of spears and their hut.
@@ -274,12 +279,15 @@ function addGate(data: MapData, set: Setter, slim: Slim): void {
     id: 'gh-gibbet', gx: g.tx - 1.5, gy: by + 3, label: 'Look at the gibbet', z: 60,
     thought: 'An iron cage on a post, empty now, swinging a little in the wind. A board nailed under it says TOLD TALES. Someone has scratched NO under that, and someone else a lot of crosses.',
   });
-  // Outside, the causeway runs off north over the fen. Nobody's going out that way yet.
-  data.musings!.push({
-    x0: g.road.x0 - 1, y0: g.ty + g.h, x1: g.road.x1 + 2, y1: g.ty + g.h + 2,
-    text: "The causeway runs off north across the fen from here, they say, to roads nobody in Adowvale has ever walked. The gate stays shut, and the men on it don't look like they open it for asking.",
-  });
+  // Outside, the causeway runs off north over the fen. Nobody's going out that way, without Vosk's leave.
+  if (!open) data.musings!.push(FEN_GATE_SHUT_MUSING);
 }
+
+/** The thought at the shut gate (dropped once Vosk opens it: see scenes/game/fenroad.ts). */
+export const FEN_GATE_SHUT_MUSING = {
+  x0: GLOOM_GATE.road.x0 - 1, y0: GLOOM_GATE.ty + GLOOM_GATE.h, x1: GLOOM_GATE.road.x1 + 2, y1: GLOOM_GATE.ty + GLOOM_GATE.h + 2,
+  text: "The causeway runs off north across the fen from here, they say, to roads nobody in Adowvale has ever walked. The gate stays shut, and the men on it don't look like they open it for asking.",
+};
 
 /**
  * The Reeve's toll house, just inside the gate on the west side of the road

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fen Road preview</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #3a3e30; color: #e8dcc0; font: 13px sans-serif; }
+      .item { display: inline-block; margin: 6px; vertical-align: bottom; text-align: center; }
+      canvas { image-rendering: pixelated; display: block; background: #4a4c3a; }
+    </style>
+  </head>
+  <body>
+    <p>The Fen Road's art (see src/art/fenroad.ts). Run <code>npm run dev</code> and open <code>/tools/fenroad-preview.html</code>; <code>?only=fr-oak</code> shows just the keys starting with that, <code>?scale=3</code> zooms.</p>
+    <div id="out"></div>
+    <script type="module" src="./fenroad-preview.ts"></script>
+  </body>
+</html>

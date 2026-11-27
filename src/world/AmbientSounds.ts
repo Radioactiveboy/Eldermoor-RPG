@@ -91,6 +91,8 @@ const PLACES: Record<AreaId, Place> = {
   jetty: { open: true, wind: 0.55, wild: 0.8 },
   // A marsh town: a dank breeze off the fen, frogs and waterfowl, the river slopping at the pilings.
   gloomhaven: { open: true, wind: 0.4, wild: 0.7 },
+  // Out on the causeway: the wind in the reeds and the oaks' beards, and the fen all round, alive with frogs and birds.
+  fenroad: { open: true, wind: 0.45, wild: 1 },
   monastery: { open: true, wind: 0.5, wild: 0.9, bell: 0.45 },
   abbey: { open: true, wind: 0.35, wild: 0.6, bell: 0.85, echo: 0.2 },
   home: { fire: 0.75, echo: 0.1 },

@@ -69,7 +69,9 @@ export type AreaId =
   // Homes down Sump Lane in Gloomhaven's west quarter: the Crowes' cottage, Ned Wick's stilt house, the Widow Pruett's hovel, and the burnt house.
   | 'sump-crowe' | 'sump-stilt' | 'sump-pruett' | 'sump-ruin'
   // The Guildhall of the Causeway Merchants on Gloomhaven's Staithe: the great hall, the counting room, and the guildmaster's office.
-  | 'guildhall' | 'guildhall-counting' | 'guildhall-office';
+  | 'guildhall' | 'guildhall-counting' | 'guildhall-office'
+  // Out of Gloomhaven's Fen Gate: the Fen Road, Marrable's old causeway north over the bog, with the wreck at the Drowned Mile.
+  | 'fenroad';
 
 /**
  * A building or piece of furniture standing on the grid. Its art (see

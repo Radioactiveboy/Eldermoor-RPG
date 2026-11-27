@@ -14,6 +14,7 @@ import { GUILD_FOLK } from '../../src/art/guildhall3d';
 import { GLOOM_FOLK } from '../../src/art/gloomfolk3d';
 import { PAWN_FOLK } from '../../src/art/pawnfolk3d';
 import { SUMP_FOLK } from '../../src/art/sump3d';
+import { FEN_FOLK } from '../../src/art/fenroad';
 import type { PixelCanvas } from '../../src/art/PixelCanvas';
 import npcSource from '../../src/entities/Npc.ts?raw';
 
@@ -22,7 +23,7 @@ vi.mock('phaser', () => ({ default: {} }));
 
 /** Every 3D person, by the 'folk-<id>' texture they're registered as. */
 const MODELS: Record<string, (pose: Pose3D) => Model> = {
-  ...MODELS_3D, ...FINE_FOLK, ...WAYFARER_MODELS, ...ROSE_FOLK, ...SHAMBLES_FOLK, ...GUILD_FOLK, ...GLOOM_FOLK, ...PAWN_FOLK, ...TOLL_FOLK, ...SUMP_FOLK, mother: motherModel,
+  ...MODELS_3D, ...FINE_FOLK, ...WAYFARER_MODELS, ...ROSE_FOLK, ...SHAMBLES_FOLK, ...GUILD_FOLK, ...GLOOM_FOLK, ...PAWN_FOLK, ...TOLL_FOLK, ...SUMP_FOLK, ...FEN_FOLK, mother: motherModel,
   ...Object.fromEntries(Object.entries(BRIGAND_FOLK).map(([id, look]) => [id, brigandFolkModel(look)])),
   ...Object.fromEntries(Object.entries(CROWD_MODELS).map(([id, m]) => [`crowd-${id}`, m])),
 };

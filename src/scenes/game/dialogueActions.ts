@@ -19,6 +19,7 @@ import { WARREN_ACTIONS } from './broodhall';
 import { sailTo, VOYAGE_ACTIONS } from './voyages';
 import { JETTY_ACTIONS } from './jetty';
 import { GLOOM_ACTIONS } from './gloomhaven';
+import { FEN_ACTIONS } from './fenroad';
 import { ASHES_ACTIONS } from './ashes';
 import { BEACON_ACTIONS, beaconPayAction } from './beacon';
 import { drinkAtBar, placeOrder, rentRoom, TAVERN_ACTIONS } from './tavern';
@@ -52,6 +53,7 @@ const ACTIONS: Record<string, DialogueAction> = {
   ...PAWN_ACTIONS,
   ...SHAMBLES_ACTIONS,
   ...SUMP_ACTIONS,
+  ...FEN_ACTIONS,
 };
 
 /** Runs a dialogue action: `companion:hire|join|leave:<id>`, `bond:...` (see companions.ts), `shop:<id>`, `drink:<item>`, `order:<item>`, `road:<what>`, `rent:<nights>`, `beacon-pay:<coins>`, `voyage:<area>` (see voyages.ts), or a named one. */

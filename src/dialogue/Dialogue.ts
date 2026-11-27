@@ -57,7 +57,7 @@ export type SpeakerId =
   | 'annis' | 'nan' | 'ned'
   | 'cooper'
   | 'rendle' | 'vetch' | 'scritch' | 'tam' | 'flay' | 'lugs' | 'gristle'
-  | 'wexley' | 'marrable' | 'tunstall' | 'thrale' | 'edric' | 'pim' | 'garrow';
+  | 'wexley' | 'marrable' | 'tunstall' | 'thrale' | 'edric' | 'pim' | 'garrow' | 'gammer';
 
 export interface Speaker {
   name: string;
@@ -178,6 +178,7 @@ export const SPEAKERS: Record<SpeakerId, Speaker> = {
   tunstall: { name: 'Master Tunstall', portrait: 'portrait-tunstall', voice: { pitch: 178, spread: 0.3, wave: 'triangle' } },
   thrale: { name: 'Master Thrale', portrait: 'portrait-thrale', voice: { pitch: 132, spread: 0.04, wave: 'sine' } },
   edric: { name: 'Edric Lowe', portrait: 'portrait-edric', voice: { pitch: 196, spread: 0.22, wave: 'triangle' } },
+  gammer: { name: 'Gammer Teal', portrait: 'portrait-gammer', voice: { pitch: 300, spread: 0.2, wave: 'triangle' } },
   pim: { name: 'Pim the Clerk', portrait: 'portrait-pim', voice: { pitch: 248, spread: 0.12, wave: 'square' } },
   garrow: { name: 'Nat Garrow', portrait: 'portrait-garrow', voice: { pitch: 104, spread: 0.14, wave: 'sawtooth' } },
 };

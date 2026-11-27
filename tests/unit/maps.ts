@@ -14,7 +14,7 @@ export async function phaserMock() {
 }
 
 /**
- * Each area's map as it stands with every gate open (the toll paid, Saint Elda's opened), before the raid,
+ * Each area's map as it stands with every gate open (the toll paid, Saint Elda's opened, the Fen Gate opened), before the raid,
  * except the north woods, which has the goblins' trail and the way on up to the Greyfells open.
  */
 export async function allMaps(): Promise<Record<AreaId, MapData>> {
@@ -46,6 +46,7 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
   const sump = await import('../../src/world/SumpMaps');
   const guild = await import('../../src/world/GuildHallMap');
   const { buildGloomhavenMap } = await import('../../src/world/GloomhavenMap');
+  const { buildFenRoadMap } = await import('../../src/world/FenRoadMap');
   return {
     world: generateMap(MAP_WIDTH, MAP_HEIGHT, MAP_SEED),
     // With the goblins' trail and the way on up to the Greyfells open, so every way out is there.
@@ -77,7 +78,8 @@ export async function allMaps(): Promise<Record<AreaId, MapData>> {
     jail: garrison.buildJailMap(true),
     residence: garrison.buildResidenceMap(),
     jetty: buildJettyMap(),
-    gloomhaven: buildGloomhavenMap(),
+    gloomhaven: buildGloomhavenMap(false, true),
+    fenroad: buildFenRoadMap(),
     blackrose: rose.buildBlackRoseMap(),
     'blackrose-back': rose.buildBlackRoseBackMap(),
     'blackrose-upstairs': rose.buildBlackRoseUpstairsMap(),

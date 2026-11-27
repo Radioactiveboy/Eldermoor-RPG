@@ -26,6 +26,7 @@ import { enteredMarket } from './market';
 import { enteredJetty } from './jetty';
 import { landed } from './voyages';
 import { HERON_AWAY } from '../../systems/Voyages';
+import { FEN_GATE_OPEN } from '../../world/landmarks';
 import { enteredGloomhaven } from './gloomhaven';
 import { enteredDen } from './monastery';
 import { enteredCellar, enteredTavern } from './tavern';
@@ -41,6 +42,7 @@ import { enteredShambles } from './shambles';
 import { enteredTollHouse, enteredTollStrong, enteredTollUpstairs } from './tollhouse';
 import { enteredCrowe, enteredPruett, enteredStilt, enteredSumpRuin } from './sump';
 import { enteredGuildHall } from './guildhall';
+import { enteredFenRoad } from './fenroad';
 import { Homestead } from '../../systems/Homestead';
 import { gatheringWorld, homesteadWorld, northWoodsGathering, restoreStead, snapshotStead } from '../../world/Homestead';
 import { enteredHome } from './homestead';
@@ -168,13 +170,15 @@ export const AREAS: Record<AreaId, AreaDef> = {
     },
   }),
   // Downriver: the walled marsh town of Gloomhaven, where the Grey Heron sails from the jetty (and lies at the pier while the hero's there).
-  gloomhaven: lazy(() => import('../../world/GloomhavenMap'), (m) => m.buildGloomhavenMap(QuestLog.hasFlag(HERON_AWAY)), {
+  gloomhaven: lazy(() => import('../../world/GloomhavenMap'), (m) => m.buildGloomhavenMap(QuestLog.hasFlag(HERON_AWAY), QuestLog.hasFlag(FEN_GATE_OPEN)), {
     test: true,
     enter: (g) => {
       landed(g);
       enteredGloomhaven(g);
     },
   }),
+  // Out of the Fen Gate, once Captain Vosk gives leave: the Fen Road over the bog, and the wreck at the Drowned Mile.
+  fenroad: lazy(() => import('../../world/FenRoadMap'), (m) => m.buildFenRoadMap(), { test: true, enter: enteredFenRoad }),
   // The Black Rose on Gloomhaven's square: the taproom, the back room, the passage upstairs, and the Widow's room to let (no ?area= for that).
   blackrose: lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseMap(), { test: true, enter: enteredBlackRose }),
   'blackrose-back': lazy(() => import('../../world/BlackRoseMap'), (m) => m.buildBlackRoseBackMap(), { test: true, enter: enteredRoseBack }),
