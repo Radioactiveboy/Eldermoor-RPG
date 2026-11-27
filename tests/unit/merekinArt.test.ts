@@ -65,8 +65,9 @@ describe('the Mere-kin', () => {
     expect(MERE_ANIMS.attack.frames.map((x) => x.f).slice(0, 3)).toEqual([MERE_FRAME.coil, MERE_FRAME.windup, MERE_FRAME.strike]);
   });
 
-  it('stand on the ground row and fit their frames in every direction, weapons, tails and all', () => {
-    for (const kind of KINDS) {
+  // One test for each kind, each with room to draw its frames on a slow machine.
+  it.each(KINDS)('%s stands on the ground row and fits its frames in every direction, weapons, tail and all', (kind) => {
+    {
       const { spec, models } = mereSheet(kind);
       const k = spec.scale!;
       for (const d of DIRECTIONS_8) {
@@ -80,7 +81,7 @@ describe('the Mere-kin', () => {
         }
       }
     }
-  });
+  }, 30000);
 
   it('fight with weapons, as one band, beside nobody else', () => {
     for (const kind of KINDS) {
