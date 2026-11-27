@@ -23,6 +23,7 @@ import type { Door, Sight } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import { readSign } from './sights';
 import { CHATTER_GAP, LINE_GAP } from './tavern';
+import { fightAfterTalk } from './talkFight';
 
 /** The pawnshop's three floors. */
 export const PAWN_AREAS = ['pawnshop', 'pawn-counting', 'pawn-attic'] as const;
@@ -200,13 +201,6 @@ export function examinePawnshop(g: GameScene, sight: Sight): boolean {
   return false;
 }
 
-/** The Hooks, as they stand about the shop. */
-function hooks(g: GameScene): Npc[] {
-  return Object.keys(HOOK_FOES)
-    .map((id) => g.someone(id))
-    .filter((n): n is Npc => !!n);
-}
-
 /** The Hooks go, out of the street door, Dace first, Orm after, not hurrying. */
 function hooksLeave(g: GameScene, parting?: string): void {
   g.afterTalk = () => {
@@ -219,27 +213,12 @@ function hooksLeave(g: GameScene, parting?: string): void {
 
 /** Each of the Hooks becomes the foe they fight as, where they stand, and the fight is on (as the beacon's band: see beacon.ts). */
 function fight(g: GameScene): void {
-  g.afterTalk = () => {
-    const code = Promise.all([import('../../entities/Creature'), import('./combat')]);
-    g.time.delayedCall(150, () => void code.then(([{ Creature }, { startCombat }]) => {
-      if (g.inCombat || protectionStage() !== 'stash') return;
-      g.busy = false;
-      const stamp = Date.now();
-      g.someone('lusk')?.say('Not the clocks! Not the clocks!', 2.5);
-      const foes: Creature[] = hooks(g).map((npc) => {
-        const kind = HOOK_FOES[npc.id];
-        const id = `pawn-${npc.id}-${stamp}`;
-        (g.map.data.creatures ??= []).push({ id, kind, gx: npc.gx, gy: npc.gy, respawns: true });
-        const c = new Creature(g, g.map, id, kind, npc.gx, npc.gy);
-        g.creatures.push(c);
-        c.faceTowards(g.player.gx, g.player.gy);
-        npc.destroy();
-        g.npcs = g.npcs.filter((n) => n !== npc);
-        return c;
-      });
-      if (foes.length > 0) startCombat(g, foes[0], undefined, foes);
-    }));
-  };
+  fightAfterTalk(g, {
+    sides: HOOK_FOES,
+    tag: 'pawn',
+    stillOn: () => protectionStage() === 'stash',
+    before: () => g.someone('lusk')?.say('Not the clocks! Not the clocks!', 2.5),
+  });
 }
 
 /** After a fight in the shop: the Hooks beaten (or run off), the stash is Lusk's to keep. */

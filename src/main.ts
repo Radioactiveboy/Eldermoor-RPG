@@ -26,6 +26,7 @@ import { ReaderScene } from './scenes/ReaderScene';
 import { LetterboxScene } from './scenes/LetterboxScene';
 import { DebugScene } from './scenes/DebugScene';
 import { debugWanted } from './systems/DebugSwitches';
+import { QuestLog } from './systems/Quests';
 import { Display } from './ui/Display';
 
 // Wait (briefly) for the fonts so text isn't first drawn in a fallback (Phaser won't redraw it when they arrive).
@@ -49,6 +50,8 @@ function startGame(): void {
   const debug = debugWanted(window.location.search);
   if (import.meta.env.DEV || debug || new URLSearchParams(window.location.search).has('smoke')) {
     (window as unknown as { game: Phaser.Game }).game = game;
+    // (The quest log too, so the smoke test can set a story up: the fights that start from a conversation need one.)
+    (window as unknown as { quests: typeof QuestLog }).quests = QuestLog;
   }
   // The testing panel (see scenes/DebugScene.ts), open from the start alongside whatever else is running.
   if (debug) game.events.once(Phaser.Core.Events.READY, () => game.scene.run('Debug'));

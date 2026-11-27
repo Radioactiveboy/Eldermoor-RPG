@@ -177,10 +177,11 @@ export function noise(g: GameScene): number {
 }
 
 /** A beast has spotted the player (or the player has gone after some game): it and any of its pack close by fight. */
-export function startCombat(g: GameScene, first: Creature, raid?: Creature[], band?: Creature[]): void {
+/** Starts a fight with `first` (and its pack, or the raid, or the band given). False if one can't start now (see turnOnHero). */
+export function startCombat(g: GameScene, first: Creature, raid?: Creature[], band?: Creature[]): boolean {
   if (g.busy || g.inCombat) {
     first.disengage();
-    return;
+    return false;
   }
   // A conversation still open (the gate's bands come on mid-word) is cut off: the fight comes first.
   g.closeDialogue();
@@ -209,6 +210,44 @@ export function startCombat(g: GameScene, first: Creature, raid?: Creature[], ba
   const data: CombatSceneData = { foes, doom: raid ? RAID_DOOM : undefined };
   g.scene.launch('Combat', data);
   g.scene.get('Combat').events.once('combat-ended', (result: CombatResult) => endCombat(g, result, foes));
+  return true;
+}
+
+/**
+ * People who were talking to the hero turn on them: each of them (by NPC id, if they're about) becomes the foe they
+ * fight as, where they stand, and the fight is on (see talkFight.ts, which every fight out of a conversation goes
+ * through). The people only leave the map once the fight has begun; if it can't, the foes made for it are taken
+ * away again and the people stay, so nobody ever just vanishes. Returns whether the fight began.
+ */
+export function turnOnHero(g: GameScene, sides: Record<string, FoeKind>, tag: string): boolean {
+  if (g.inCombat) return false;
+  const people = Object.keys(sides)
+    .map((id) => g.someone(id))
+    .filter((n): n is Npc => !!n);
+  if (people.length === 0) return false;
+  const stamp = Date.now();
+  const spawns = (g.map.data.creatures ??= []);
+  const foes = people.map((npc) => {
+    const kind = sides[npc.id];
+    const id = `${tag}-${npc.id}-${stamp}`;
+    // Counted as met by chance, so beating them is kept by the story's flags rather than the list of foes gone for good.
+    spawns.push({ id, kind, gx: npc.gx, gy: npc.gy, respawns: true });
+    const c = new Creature(g, g.map, id, kind, npc.gx, npc.gy);
+    g.creatures.push(c);
+    c.faceTowards(g.player.gx, g.player.gy);
+    return c;
+  });
+  // The talk is over: whatever hold it still has on the hero (it hands control back a beat after closing) is let go.
+  g.busy = false;
+  if (!startCombat(g, foes[0], undefined, foes)) {
+    for (const c of foes) c.destroy();
+    g.creatures = g.creatures.filter((c) => !foes.includes(c));
+    g.map.data.creatures = spawns.filter((s) => !foes.some((c) => c.id === s.id));
+    return false;
+  }
+  for (const npc of people) npc.destroy();
+  g.npcs = g.npcs.filter((n) => !people.includes(n));
+  return true;
 }
 
 export function endCombat(g: GameScene, result: CombatResult, foes: Creature[]): void {

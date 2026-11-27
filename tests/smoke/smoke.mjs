@@ -171,6 +171,141 @@ async function checkDebugPanel(browser, base) {
   return { area: 'debug panel', errors, warnings, seconds: ((Date.now() - started) / 1000).toFixed(1) };
 }
 
+/**
+ * The fights that start out of a conversation, each picked the way a player would, in one page: Ned Flay in his pit
+ * barn, the Hooks at Lusk's, Corwin's band in the beacon. Each must open the fight with every foe standing there to be
+ * fought, and the people they were must be gone (not left behind, and not vanished with no fight). Skipped with
+ * SMOKE_TALK_FIGHTS=0.
+ */
+const TALK_FIGHTS = [
+  {
+    name: 'the pit barn', area: 'dogpit', hour: 23, talkTo: 'flay', foes: ['apronflay', 'apronknacker'], people: ['flay', 'gristle'],
+    story: (q) => q.start('answers-to-nothing', ['talk']),
+    picks: ['The grey dog in the middle pen.', "Let her go, or I'll make you.", 'Fight him.'],
+  },
+  {
+    // The Hooks come in at night when they're due for the stash, and Dace starts the talk himself.
+    name: "Lusk's pawnshop", area: 'pawnshop', hour: 21, foes: ['hookgaff', 'hookbrute'], people: ['dace', 'orm'],
+    story: (q) => q.start('protection', ['evening', 'talk', 'ledger', 'choose']),
+    picks: ['The stash stays where it is.', 'Then come and take it.'],
+  },
+  {
+    // Corwin stops the hero at the door.
+    name: 'the beacon', area: 'beacon', hour: 12, foes: ['brigandcaptain', 'brigandbrute', 'brigandcutter', 'brigandarcher'], people: ['corwin', 'garth', 'teg', 'linnet'],
+    story: () => {},
+    picks: ['Draw my weapon. (Fight)', 'Yes. (Fight)'],
+  },
+];
+
+async function checkTalkFights(browser, base) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  const warnings = [];
+  page.on('pageerror', (e) => errors.push(e.stack || String(e)));
+  page.on('console', (m) => (m.type() === 'error' || m.type() === 'warning') && /fight/i.test(m.text()) && errors.push(m.text()));
+  const started = Date.now();
+  const gameIn = (area) =>
+    page.waitForFunction((want) => {
+      const g = window.game.scene.getScene('Game');
+      return window.game.scene.isActive('Game') && g.area === want && !!g.player && !window.game.scene.isActive('Letterbox');
+    }, area, { timeout: LOAD_TIMEOUT });
+  try {
+    await page.goto(`${base}/?smoke&area=${TALK_FIGHTS[0].area}`);
+    await page.waitForFunction(() => window.game?.scene.isActive('MainMenu') && window.game.scene.getScene('MainMenu').input.enabled, null, { timeout: LOAD_TIMEOUT });
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.game.scene.isActive('Confirm'), null, { timeout: LOAD_TIMEOUT });
+    await page.waitForTimeout(250);
+    await page.keyboard.press('2');
+    await gameIn(TALK_FIGHTS[0].area);
+    for (const fight of TALK_FIGHTS) {
+      try {
+        // The story as it needs to be, the hour, and in through the door (the area is built from the story).
+        await page.evaluate(([story, hour, area]) => {
+          new Function('q', `(${story})(q)`)(window.quests);
+          const g = window.game.scene.getScene('Game');
+          g.clock.setHour(hour);
+          g.scene.restart({ area });
+        }, [fight.story.toString(), fight.hour, fight.area]);
+        await gameIn(fight.area);
+        await page.waitForTimeout(1000);
+        if (fight.talkTo) {
+          await page.evaluate((id) => {
+            const g = window.game.scene.getScene('Game');
+            const npc = g.someone(id);
+            if (!npc) throw new Error(`${id} is not here`);
+            g.startConversation(npc);
+          }, fight.talkTo);
+        }
+        // Through the talk: read on (Space) until the reply wanted is offered, then press its number.
+        for (const want of fight.picks) {
+          const until = Date.now() + 30_000;
+          for (;;) {
+            if (Date.now() > until) throw new Error(`never offered "${want}"`);
+            const at = await page.evaluate((text) => {
+              if (!window.game.scene.isActive('Dialogue')) return 'none';
+              const d = window.game.scene.getScene('Dialogue');
+              if (d.typing || d.closing || !d.choices?.length) return 'read';
+              const row = d.rows.findIndex((r) => typeof r === 'number' && d.choices[r].text === text);
+              if (row >= 0) return row;
+              return d.rows.includes('more') ? 'more' : 'missing';
+            }, want);
+            if (typeof at === 'number') {
+              await page.waitForTimeout(250);
+              await page.keyboard.press(String(at + 1));
+              break;
+            }
+            if (at === 'missing') throw new Error(`"${want}" is not among the replies`);
+            if (at === 'more') await page.evaluate(() => { const d = window.game.scene.getScene('Dialogue'); d.pick(d.rows.indexOf('more')); });
+            else if (at === 'read') await page.keyboard.press('Space');
+            await page.waitForTimeout(250);
+          }
+        }
+        // Then read the talk out to its end (the last words come before the fight).
+        const until = Date.now() + 30_000;
+        while (await page.evaluate(() => window.game.scene.isActive('Dialogue'))) {
+          if (Date.now() > until) throw new Error('the talk never ended');
+          await page.waitForTimeout(250);
+          await page.keyboard.press('Space');
+        }
+        // The fight is on, with every foe in it, drawn where the people stood; and the people are gone.
+        await page.waitForFunction(() => window.game.scene.isActive('Combat') && window.game.scene.getScene('Game').inCombat, null, { timeout: 10_000 })
+          .catch(() => { throw new Error('the fight never started'); });
+        const state = await page.evaluate((people) => {
+          const g = window.game.scene.getScene('Game');
+          const combat = window.game.scene.getScene('Combat');
+          return {
+            foes: combat.foes.map((f) => f.creature.kind),
+            unseen: combat.foes.filter((f) => !f.creature.sprite.visible || f.creature.sprite.alpha === 0).map((f) => f.creature.kind),
+            left: g.npcs.filter((n) => people.includes(n.id)).map((n) => n.id),
+          };
+        }, fight.people);
+        const missing = fight.foes.filter((k) => !state.foes.includes(k));
+        if (missing.length) throw new Error(`fight began without ${missing.join(', ')} (had ${state.foes.join(', ')})`);
+        if (state.unseen.length) throw new Error(`can't see ${state.unseen.join(', ')}`);
+        if (state.left.length) throw new Error(`${state.left.join(', ')} still standing about as well`);
+        // Over at once, to go on to the next: on the hero's turn (a foe mid-blow would carry on with it), then the
+        // card at the end closed, so the world is back to the hero before the next door.
+        await page.waitForFunction(() => !!window.game.scene.getScene('Combat').menuResolve, null, { timeout: 60_000 });
+        await page.evaluate(() => void window.game.scene.getScene('Combat').killAll());
+        const closeBy = Date.now() + 60_000;
+        while (await page.evaluate(() => window.game.scene.isActive('Combat') || window.game.scene.getScene('Game').inCombat || window.game.scene.getScene('Game').busy)) {
+          if (Date.now() > closeBy) throw new Error('the fight never ended');
+          await page.waitForTimeout(500);
+          if (await page.evaluate(() => window.game.scene.isActive('Combat') && !window.game.scene.getScene('Game').inCombat)) await page.keyboard.press('Enter');
+        }
+        await page.waitForTimeout(500);
+      } catch (e) {
+        errors.push(`${fight.name}: ${e.message.split('\n')[0]}`);
+      }
+    }
+  } catch (e) {
+    errors.push(`did not reach the game: ${e.message.split('\n')[0]}`);
+  }
+  await context.close();
+  return { area: 'talk fights', errors, warnings, seconds: ((Date.now() - started) / 1000).toFixed(1) };
+}
+
 const server = await serve();
 const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -189,6 +324,13 @@ await Promise.all(
 );
 if (process.env.SMOKE_DEBUG !== '0') {
   const r = await checkDebugPanel(browser, base);
+  results.push(r);
+  console.log(`${r.errors.length ? 'FAIL' : 'ok  '} ${r.area.padEnd(12)} ${r.seconds}s`);
+  for (const e of r.errors) console.log(`       error: ${e}`);
+  for (const w of r.warnings) console.log(`       warning: ${w}`);
+}
+if (process.env.SMOKE_TALK_FIGHTS !== '0') {
+  const r = await checkTalkFights(browser, base);
   results.push(r);
   console.log(`${r.errors.length ? 'FAIL' : 'ok  '} ${r.area.padEnd(12)} ${r.seconds}s`);
   for (const e of r.errors) console.log(`       error: ${e}`);

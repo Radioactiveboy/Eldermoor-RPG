@@ -16,6 +16,7 @@ import { Reputation } from '../../systems/Reputation';
 import type { Door } from '../../world/MapData';
 import type { GameScene } from '../GameScene';
 import { beaconPaidOff } from './whisper';
+import { fightAfterTalk } from './talkFight';
 
 /** Which brigand fights as which foe. */
 const BRIGAND_FOES: Record<string, FoeKind> = { corwin: 'brigandcaptain', garth: 'brigandbrute', teg: 'brigandcutter', linnet: 'brigandarcher' };
@@ -164,34 +165,9 @@ function hired(earnest: boolean): void {
   );
 }
 
-/**
- * "Garth. Teg. Linnet." Each of them becomes the foe they fight as, where they stand, and the fight is on.
- * (The fight's code is fetched rather than imported, so the areas' arrival hooks stay light: see areas.ts.)
- */
+/** "Garth. Teg. Linnet." Each of them becomes the foe they fight as, where they stand, and the fight is on (see talkFight.ts). */
 function fight(g: GameScene): void {
-  g.afterTalk = () => {
-    const code = Promise.all([import('../../entities/Creature'), import('./combat')]);
-    // The talk's close hands control back a beat later (GameScene.release): start the fight after that, or startCombat
-    // sees the hero still busy talking and calls it off, and the band (who never pick a fight of their own) just stand there.
-    g.time.delayedCall(150, () => void code.then(([{ Creature }, { startCombat }]) => {
-      if (g.inCombat || beaconOutcome()) return;
-      g.busy = false;
-      const stamp = Date.now();
-      const foes: Creature[] = band(g).map((npc) => {
-        const kind = BRIGAND_FOES[npc.id];
-        const id = `beacon-${npc.id}-${stamp}`;
-        // Counted as met by chance, so beating them is kept by the story's flags rather than the list of foes gone for good.
-        (g.map.data.creatures ??= []).push({ id, kind, gx: npc.gx, gy: npc.gy, respawns: true });
-        const c = new Creature(g, g.map, id, kind, npc.gx, npc.gy);
-        g.creatures.push(c);
-        c.faceTowards(g.player.gx, g.player.gy);
-        npc.destroy();
-        g.npcs = g.npcs.filter((n) => n !== npc);
-        return c;
-      });
-      if (foes.length > 0) startCombat(g, foes[0], undefined, foes);
-    }));
-  };
+  fightAfterTalk(g, { sides: BRIGAND_FOES, tag: 'beacon', stillOn: () => !beaconOutcome() });
 }
 
 /** After a fight in the hall: if Corwin's band went down, the tower is the Headman's. */
