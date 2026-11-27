@@ -135,7 +135,8 @@ function watcher(g: GameScene): void {
   QuestLog.setFlag(FEN_FLAGS.watcher);
   const key = 'folk-lizardman';
   const p = gridToScreen(FEN_WATCHER.x, FEN_WATCHER.y);
-  const scale = 1 / sheetScale(g, key);
+  // A head taller than a man, and drawn finer than the folk (art/fenroad.ts): shown larger than life, looming.
+  const scale = 1.6 / sheetScale(g, key);
   const sprite = g.add.sprite(p.x, p.y, key, 0).setOrigin(0.5, (FEET_Y + 0.5) / FRAME_H).setScale(scale).setDepth(depthAt(FEN_WATCHER.x, FEN_WATCHER.y));
   // Facing the hero.
   const dx = g.player.gx - FEN_WATCHER.x;
@@ -145,15 +146,19 @@ function watcher(g: GameScene): void {
   const dirs = ['e', 'se', 's', 'sw', 'w', 'nw', 'n', 'ne'];
   const dir = dirs[Math.round(((Math.atan2(sy, sx) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8];
   if (g.anims.exists(`${key}-idle-${dir}`)) sprite.play(`${key}-idle-${dir}`);
-  // Sunk in the water: only what's above the surface shows, rising and then going down again.
+  // Sunk in the water: the surface stays where it is, on its tile, and the figure rises through it to the
+  // waist (water.h 0 to 1) and goes down again; only what's above the surface is drawn.
   const frame = sprite.frame;
-  const fullH = frame.height;
+  const k = frame.height / FRAME_H;
+  const feetRow = (FEET_Y + 0.5) * k;
+  const waist = 19 * k;
+  const head = 40 * k;
   const water = { h: 0 };
   const show = () => {
-    const h = Math.max(0, Math.min(fullH, water.h));
-    sprite.setCrop(0, 0, frame.width, Math.max(1, (FEET_Y / FRAME_H) * fullH * 0.12 + h));
-    sprite.setY(p.y + ((fullH - h) * scale) * 0.55);
-    sprite.setVisible(h > 1);
+    const under = waist + (head - waist) * (1 - Math.max(0, Math.min(1, water.h)));
+    sprite.setY(p.y + under * scale);
+    sprite.setCrop(0, 0, frame.width, Math.max(1, feetRow - under));
+    sprite.setVisible(feetRow - under > 2 * k);
   };
   show();
   GameAudio.bubble();
@@ -161,7 +166,7 @@ function watcher(g: GameScene): void {
   g.tweens.add({ targets: ripple, scaleX: 4, scaleY: 4, alpha: 0, duration: 2200, repeat: 2 });
   g.tweens.add({
     targets: water,
-    h: fullH * 0.62,
+    h: 1,
     duration: 2600,
     ease: 'Sine.easeOut',
     onUpdate: show,

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Tones } from './character';
-import { Detail, generateFigure3D, Hit, limb, Model, Pose3D, Solid } from './figure3d';
+import { Detail, generateFigure3D, Hit, limb, Model, personSpec, Pose3D, Solid } from './figure3d';
 import { FINE_SPEC, shade } from './fine3d';
 import { sized, TownLook, townModel } from './gloomfolk3d';
 import { hovel } from './gloomhaven';
@@ -1098,7 +1098,8 @@ export function generateFenRoad(scene: Phaser.Scene): void {
   put('fr-burntwool', burntWool());
   for (let i = 0; i < 3; i++) registerModel(scene, `fr-tracks-${i}`, tracks(i));
   registerModel(scene, 'fr-scale', whiteScale());
-  for (const [id, model] of Object.entries(FEN_FOLK)) generateFigure3D(scene, `folk-${id}`, model, FINE_SPEC);
+  // The Mere-kin is drawn finer still: it's only ever seen up close, coming out of the water.
+  for (const [id, model] of Object.entries(FEN_FOLK)) generateFigure3D(scene, `folk-${id}`, model, id === 'lizardman' ? MERE_SPEC : FINE_SPEC);
   paintPortrait(scene, 'gammer', gammerPortrait);
 }
 
@@ -1161,6 +1162,9 @@ const GAMMER: TownLook = {
 };
 
 /** A scale's colour: grey-green on the back, a dull yellow on the belly, mottled, with a sheen where it's wet. */
+/** Twice as fine as the finely drawn folk (and four times the plain folk's frames): for the thing in the mere. */
+const MERE_SPEC = personSpec(4, { creases: true });
+
 const SCALE_BACK: Tones = [0x4e5a44, 0x343e2e, 0x6a7a5a];
 const SCALE_DARK: Tones = [0x3a4434, 0x262e22, 0x505c46];
 const BELLY: Tones = [0x9a9668, 0x6e6c4a, 0xb8b484];
@@ -1169,14 +1173,34 @@ const CLAW: Tones = [0x2a241e, 0x1a1612, 0x463c30];
 const SPEAR: Tones = [0x5a4a36, 0x3e3224, 0x766246];
 const BONE_TIP: Tones = [0xd8d0b8, 0xa8a08a, 0xf0e8d0];
 
+const SCALE_RIM: Tones = [0x2a3226, 0x1c221a, 0x3a4434];
+const BELLY_GROOVE: Tones = [0x7a7650, 0x56543a, 0x969266];
+
+/**
+ * The Mere-kin's hide: small overlapping scales in offset rows, each with a dark
+ * rim along its lower edge and a wet glint on some; dark chevrons banded across
+ * the back and tail; the belly in broad pale plates with grooves between.
+ */
 function scales(h: Hit): Tones {
-  if (h.nz > 0.55 && Math.abs(h.x) < 2.6) return (Math.floor(h.y * 1.4) & 1) === 0 ? BELLY : shade(BELLY);
-  const u = Math.floor(h.x * 1.1 + (Math.floor(h.y * 1.1) & 1) * 0.5);
-  const v = Math.floor(h.y * 1.1);
-  const n = Math.sin(u * 12.9898 + v * 78.233) * 43758.5453;
+  if (h.nz > 0.55 && Math.abs(h.x) < 2.6) {
+    const plate = (h.y * 1.6) % 1;
+    return plate < 0.16 ? BELLY_GROOVE : plate > 0.8 ? shade(BELLY) : BELLY;
+  }
+  const row = Math.floor(h.y * 1.9);
+  const fu = h.x * 1.9 + h.z * 0.9 + (row & 1) * 0.5;
+  const u = Math.floor(fu);
+  const fv = h.y * 1.9 - row;
+  const n = Math.sin(u * 12.9898 + row * 78.233) * 43758.5453;
   const r = n - Math.floor(n);
-  if (r > 0.86) return WET;
-  if (r < 0.22 || dusted(h, 0.1)) return SCALE_DARK;
+  // Each scale's rounded lower edge, dark.
+  const cu = fu - u - 0.5;
+  if (fv < 0.1 + cu * cu * 0.7 || Math.abs(cu) > 0.46) return SCALE_RIM;
+  // And a lighter crown on its upper half, where the light catches it.
+  if (fv > 0.72 && Math.abs(cu) < 0.22 && r > 0.35) return WET;
+  // Bands across the back: dark chevrons, pointing down the spine.
+  const band = Math.sin(h.y * 0.62 + Math.abs(h.x) * 0.45 - h.z * 0.2);
+  if (h.nz < 0.2 && band > 0.72) return r > 0.8 ? SCALE_BACK : SCALE_DARK;
+  if (r < 0.2 || dusted(h, 0.08)) return SCALE_DARK;
   return SCALE_BACK;
 }
 
@@ -1268,16 +1292,32 @@ function lizardman(pose: Pose3D): Model {
   for (const side of [-1, 1]) {
     solids.push({ cx: side * 2.2, cy: hy + 2.4, cz: hz + 2.6, rx: 1.4, ry: 0.7, rz: 1.6, material: SCALE_DARK });
     solids.push({ cx: side * 3.4, cy: hy - 1.2, cz: hz - 1.4, rx: 0.6, ry: 2.4, rz: 2.4, material: (h) => (Math.floor(h.y * 2) & 1 ? [0x8a4a3a, 0x5e3228, 0xa8604e] : SCALE_DARK) });
-    // The eye: small, gold, a black slit.
-    details.push({ x: side * 2.6, y: hy + 1.4, z: hz + 3.4, color: 0xd8a82a, size: 1 });
-    details.push({ x: side * 2.7, y: hy + 1.4, z: hz + 3.7, color: 0x101010, size: 0.4 });
-    // The nostril.
-    details.push({ x: side * 0.7, y: hy + 0.4, z: hz + 8.8, color: 0x1a1a14, size: 0.45 });
+    // The eye: gold, ringed in black, a slit pupil and a wet point of light.
+    details.push({ x: side * 2.62, y: hy + 1.4, z: hz + 3.3, color: 0x1a1410, size: 1.35 });
+    details.push({ x: side * 2.66, y: hy + 1.4, z: hz + 3.45, color: 0xd8a82a, size: 1.05 });
+    details.push({ x: side * 2.7, y: hy + 1.25, z: hz + 3.6, color: 0xf0c84a, size: 0.5 });
+    details.push({ x: side * 2.74, y: hy + 1.4, z: hz + 3.75, color: 0x0a0808, size: 0.3 });
+    details.push({ x: side * 2.72, y: hy + 1.75, z: hz + 3.7, color: 0xfff4d8, size: 0.25 });
+    // The nostril, on a little ridge.
+    details.push({ x: side * 0.7, y: hy + 0.5, z: hz + 8.7, color: 0x1a1a14, size: 0.45 });
+    solids.push({ cx: side * 0.75, cy: hy + 0.6, cz: hz + 8.2, rx: 0.45, ry: 0.35, rz: 0.7, material: SCALE_DARK });
+    // Little horns of scale back from the jaw and the crown.
+    for (let i = 0; i < 3; i++) solids.push(...limb([side * (2.4 + i * 0.3), hy + 1.6 - i * 1.1, hz - 1.6 - i * 0.3], [side * (3 + i * 0.4), hy + 1.2 - i * 1.3, hz - 4 - i * 0.4], 0.35, 0.1, i ? SCALE_DARK : BONE_TIP, 0.25));
+    // Water running off: drips down the cheek and jaw.
+    for (let i = 0; i < 3; i++) details.push({ x: side * (3 - i * 0.2), y: hy - 2 - i * 0.9, z: hz + 1.5 + i, color: 0xb8d0cc, size: 0.3 });
   }
-  // The line of the mouth, with a tooth or two showing.
-  for (let i = 0; i < 8; i++) {
-    const z = hz + 1.6 + i * 0.9;
-    for (const side of [-1, 1]) details.push({ x: side * (2.5 - i * 0.12), y: hy - 1.2, z, color: i % 3 === 2 ? 0xe8e0c8 : 0x1e1a14, size: 0.5 });
+  // The line of the mouth, long and turned up at the back, with teeth along it.
+  for (let i = 0; i < 16; i++) {
+    const z = hz + 0.6 + i * 0.48;
+    const y = hy - 1.2 + Math.max(0, 3 - i) * 0.12;
+    for (const side of [-1, 1]) {
+      details.push({ x: side * (2.55 - i * 0.07), y, z, color: 0x1a1410, size: 0.4 });
+      if (i % 2 === 1 && i > 2) details.push({ x: side * (2.5 - i * 0.07), y: y - 0.35, z: z + 0.1, color: 0xe8e0c8, size: 0.3 });
+    }
+  }
+  // Weed off the mere, hung over the shoulders and down the chest.
+  for (const [x, len] of [[-3.6, 7], [-2.2, 5], [3.8, 6], [1.6, 4]] as Array<[number, number]>) {
+    solids.push(...limb([x, by(27.6), lean + 2.6], [x * 1.05 + 0.3, by(27.6 - len), lean + 3.4 + (x > 0 ? 0.6 : 0)], 0.3, 0.18, [0x3a4a26, 0x26321a, 0x52663a], 0.3));
   }
   return { solids, details };
 }

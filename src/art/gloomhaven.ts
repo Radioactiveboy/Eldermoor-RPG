@@ -1142,17 +1142,29 @@ function gatehouse(open = false): IsoModel {
   };
   tower(0);
   // The gates, between the towers: two great leaves of black oak, studded, and the bar across them.
-  // Open (by Captain Vosk's leave), the way through shows instead: the dark under the arch, and the fen grey beyond it.
+  // Open (by Captain Vosk's leave), only the arch is left over the way through, and the road shows clear under it.
   if (open) {
-    m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => {
-      const y = v * 64;
-      if (y < 10) return Math.floor(u * 9) % 2 ? STONE : STONE_DARK;
-      if (y < 16) return 0x0c0a0a;
-      // Mist out past the arch, the dark bulk of the far trees in it, and the road's mud underfoot.
-      const far = y > 52 ? mix(MUD, MUD_WET, smoothNoise(u * 8, y * 0.2, 9)) : y > 40 - 6 * smoothNoise(u * 4, 1, 3) ? mix(0x3e4438, 0x58604e, (y - 34) / 20) : mix(0x6a7066, 0x7e8478, (y - 16) / 24);
-      const edge = Math.min(u, 1 - u);
-      return edge < 0.06 ? darken(far, 0.45) : edge < 0.12 ? darken(far, 0.7) : far;
+    m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -12 }, (u, v) => {
+      const y = v * 12;
+      // The arch's stones, coming down a little at either side.
+      if (y < 9) return Math.floor(u * 9) % 2 ? STONE : STONE_DARK;
+      if (Math.min(u, 1 - u) < 0.06) return STONE_DARK;
+      return null;
     });
+    // The two leaves, swung right back inwards against the towers' inner faces, out of the way.
+    for (const x of [1.6, 4.32]) {
+      m.box(x, 1.0, 0, 0.08, 0.9, 58, {
+        top: OAK_DARK,
+        left: TAR,
+        right: (u, v) => {
+          const y = (1 - v) * 58;
+          if (Math.abs(y - 14) < 1.2 || Math.abs(y - 48) < 1.2) return IRON;
+          if (Math.floor(y) % 6 === 0 && Math.floor(u * 20) % 4 === 0) return IRON_LIGHT;
+          const c = Math.floor(u * 6) % 2 ? TAR : mix(TAR, OAK_DARK, 0.4);
+          return y < 5 ? mix(c, SLIME, 0.5) : c;
+        },
+      });
+    }
   } else m.quad({ x: 1.6, y: 0.95, z: 64 }, { x: 2.8, y: 0, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => {
     const y = v * 64;
     // An arch of dressed stone over them.
@@ -1177,20 +1189,6 @@ function gatehouse(open = false): IsoModel {
   });
   m.quad({ x: 1.5, y: 0.2, z: 96 }, { x: 3, y: 0, z: 0 }, { x: 0, y: 1.9, z: -10 }, rotShingle(151));
   tower(4.4);
-  if (open) {
-    // The two leaves, swung back against the towers, the bar leant up beside one.
-    const leaf: Shader = (u, v) => {
-      const y = v * 64;
-      if (Math.abs(y - 18) < 1.2 || Math.abs(y - 56) < 1.2) return IRON;
-      if (Math.floor(y) % 6 === 0 && Math.floor(u * 20) % 4 === 0) return IRON_LIGHT;
-      let c = Math.floor(u * 8) % 2 ? TAR : mix(TAR, OAK_DARK, 0.4);
-      if (y > 58) c = mix(c, SLIME, 0.5);
-      return c;
-    };
-    m.quad({ x: 1.62, y: 0.95, z: 64 }, { x: 0, y: 1.05, z: 0 }, { x: 0, y: 0, z: -64 }, leaf);
-    m.quad({ x: 4.38, y: 0.95, z: 64 }, { x: 0, y: 1.05, z: 0 }, { x: 0, y: 0, z: -64 }, (u, v) => darken(leaf(u, v) ?? TAR, 0.72));
-    m.quad({ x: 4.2, y: 2.05, z: 2 }, { x: 0, y: 0, z: 46 }, { x: 0.12, y: 0, z: 0 }, (u) => (u < 0.3 ? OAK_LIGHT : OAK_DARK));
-  }
   return m;
 }
 
