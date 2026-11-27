@@ -38,6 +38,7 @@ import {
   FOES,
   isArmed,
   isGoblin,
+  isMereKin,
   isOutlaw,
   Outcome,
   RALLY_TO_HIT,
@@ -270,6 +271,36 @@ const FOE_TEXT: Record<FoeKind, { start: string; banner: string; flee: string }>
     banner: 'The Red Aprons!',
     flee: 'lumbers out of the barn door, clutching his head!',
   },
+  merespear: {
+    start: 'The lizard man lowers its bone spear and hisses, its frill flaring red.',
+    banner: 'The Mere-kin!',
+    flee: 'slides back into the water without a ripple.',
+  },
+  mereharpoon: {
+    start: 'A barbed harpoon whips out of the reeds, its line hissing after it.',
+    banner: 'The Mere-kin!',
+    flee: 'darts back into the reeds, reeling in its line.',
+  },
+  mereblade: {
+    start: 'The lizard man raises its turtle-shell shield and comes on, green bronze glinting over the rim.',
+    banner: 'The Mere-kin!',
+    flee: 'backs into the mere behind its shell, and sinks.',
+  },
+  mereaxe: {
+    start: 'The lizard man with the clay-white face swings its flint axe up, jaws wide.',
+    banner: 'The Mere-kin!',
+    flee: 'turns and wades off into the mere, hissing.',
+  },
+  merehook: {
+    start: 'The lizard man scrapes its two bronze hooks together and circles you, low and quick.',
+    banner: 'The Mere-kin!',
+    flee: 'is into the reeds and gone, quick as an eel.',
+  },
+  merechief: {
+    start: "The war-chief rises out of the water, a pike's skull on its head and a great crescent axe in its claws. It hisses, and its warband hisses back.",
+    banner: 'The Mere-kin war-chief!',
+    flee: 'hisses something to the water, and the water takes it.',
+  },
 };
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
@@ -453,6 +484,10 @@ export class CombatScene extends Phaser.Scene {
         ? FOE_TEXT.goblinbrute.start
         : this.foes.length > 1 && isGoblin(first.creature!.kind)
         ? 'Goblins swarm round you, shrieking and cackling!'
+        : this.foes.some((f) => f.creature!.kind === 'merechief')
+        ? FOE_TEXT.merechief.start
+        : this.foes.length > 1 && isMereKin(first.creature!.kind)
+        ? 'Lizard men rise out of the water all round you, frills flaring, hissing like kettles!'
         : this.foes.some((f) => f.creature!.kind === 'brigandcaptain')
         ? FOE_TEXT.brigandcaptain.start
         : this.foes.some((f) => f.creature!.kind === 'apronflay')
@@ -486,6 +521,7 @@ export class CombatScene extends Phaser.Scene {
     this.banner(
       mother ? FOE_TEXT.wolfmother.banner
         : this.foes.some((f) => f.creature!.kind === 'goblinbrute') ? FOE_TEXT.goblinbrute.banner
+        : this.foes.some((f) => f.creature!.kind === 'merechief') ? FOE_TEXT.merechief.banner
         : this.foes.length > 1 && first.creature!.kind !== 'rat' && !isArmed(first.creature!.kind) ? 'Wolves attack!'
           : FOE_TEXT[first.creature!.kind].banner,
     );
@@ -915,14 +951,20 @@ export class CombatScene extends Phaser.Scene {
   private async enrage(foe: Actor, wasDown: boolean): Promise<void> {
     this.battle.enrage(foe.c);
     if (wasDown) this.standUp(foe);
-    GameAudio.warHorn();
-    GameAudio.shriek(true);
+    const mere = !!foe.creature && isMereKin(foe.creature.kind);
+    if (mere) GameAudio.mereHiss(true);
+    else {
+      GameAudio.warHorn();
+      GameAudio.shriek(true);
+    }
     this.world.cameras.main.shake(300, 0.008);
     await this.hop(foe.offset, 0, -8);
     this.float(foe, 'Enraged!', hex(STATUSES.enraged.color), true);
     this.banner(`The ${foe.c.name} is enraged!`);
     this.log(
-      `Bleeding and bellowing, the ${foe.c.name} ${wasDown ? 'surges back up, ' : ''}tears off its helm and flings it away. It's gone berserk: ` +
+      (mere
+        ? `Bleeding and hissing, the ${foe.c.name} ${wasDown ? 'surges back up, ' : ''}tears the pike's skull off its head and flings it into the mud. Its frill flares blood-red. It's gone berserk: `
+        : `Bleeding and bellowing, the ${foe.c.name} ${wasDown ? 'surges back up, ' : ''}tears off its helm and flings it away. It's gone berserk: `) +
         `${signed(ENRAGE_TO_HIT)} to hit and harder blows for the rest of the fight, and nothing will daze it now.`,
     );
     this.drawOrder();
@@ -933,7 +975,10 @@ export class CombatScene extends Phaser.Scene {
   private async howl(leader: Actor): Promise<void> {
     const howl = this.battle.trait(leader.c, 'howl')!;
     this.battle.cooldown(leader.c, 'howl', howl.cooldown);
-    GameAudio.growl();
+    if (isMereKin(leader.creature!.kind)) {
+      GameAudio.mereHiss(true);
+      leader.creature!.taunt();
+    } else GameAudio.growl();
     await this.hop(leader.offset, 0, -6);
     const pack = this.foes.filter((f) => f !== leader && this.battle.isUp(f.c));
     for (const f of pack) {
@@ -943,6 +988,8 @@ export class CombatScene extends Phaser.Scene {
     this.log(
       isGoblin(leader.creature!.kind)
         ? `The ${leader.c.name} bangs its club on its shield and bellows. Its goblins shriek back, wild-eyed (${signed(RALLY_TO_HIT)} to hit for 2 turns).`
+        : isMereKin(leader.creature!.kind)
+        ? `The ${leader.c.name} spreads its crimson frill and gives a long, rattling hiss. Its warband hisses back, swaying (${signed(RALLY_TO_HIT)} to hit for 2 turns).`
         : `The ${leader.c.name} throws back her head and howls. Her wolves answer, eyes blazing (${signed(RALLY_TO_HIT)} to hit for 2 turns).`,
     );
     this.drawOrder();
@@ -1125,7 +1172,7 @@ export class CombatScene extends Phaser.Scene {
       // A goblin winds up before the blow comes down (see Creature.strike).
       const windup = attacker.creature.strike();
       if (windup) await this.wait(windup);
-      if (isArmed(attacker.creature.kind)) GameAudio.swing(false);
+      if (isArmed(attacker.creature.kind)) GameAudio.foeSwing(attacker.creature.kind);
       else GameAudio.bite();
     } else {
       // The hero or a companion draws back and swings (see art/fight3d.ts).
@@ -1187,6 +1234,8 @@ export class CombatScene extends Phaser.Scene {
         this.log(
           attacker.creature?.kind === 'goblintorch'
             ? `The flames catch; ${whom} ${target === this.hero ? 'are' : 'is'} burning.`
+            : attacker.creature && isMereKin(attacker.creature.kind)
+            ? `The barbs tear as they come free; ${whom} ${target === this.hero ? 'are' : 'is'} bleeding.`
             : `The bite tears; ${whom} ${target === this.hero ? 'are' : 'is'} bleeding.`,
         );
       }
@@ -1274,7 +1323,7 @@ export class CombatScene extends Phaser.Scene {
   /** "its" for a beast, "his" for a footpad, and a companion's own word. */
   private their(actor: Actor): string {
     if (actor.companion) return COMPANIONS[actor.companion.id].pronoun.their;
-    return actor.creature && isArmed(actor.creature.kind) && !isGoblin(actor.creature.kind) ? 'his' : 'its';
+    return actor.creature && isArmed(actor.creature.kind) && !isGoblin(actor.creature.kind) && !isMereKin(actor.creature.kind) ? 'his' : 'its';
   }
 
   /** Knocked off their feet: a beast sprawls (shown hurt and sunk a little). */

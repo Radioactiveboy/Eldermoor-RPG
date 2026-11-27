@@ -11,7 +11,7 @@ import { Creature } from '../../entities/Creature';
 import { Npc } from '../../entities/Npc';
 import { Bounties } from '../../systems/Bounties';
 import { COMPANIONS, Companions } from '../../systems/Companions';
-import { FoeKind, FOES, isOutlaw } from '../../systems/Combat';
+import { faction, FoeKind, FOES, isMereKin } from '../../systems/Combat';
 import { Inventory, ItemId } from '../../systems/Inventory';
 import { QuestLog } from '../../systems/Quests';
 import { Reputation } from '../../systems/Reputation';
@@ -69,6 +69,13 @@ export const SPOILS: Record<FoeKind, Array<[ItemId, number]>> = {
   // The pit's takings are counted out separately (see scenes/game/shambles.ts).
   apronflay: [['hunting-knife', 1]],
   apronknacker: [],
+  // The Mere-kin carry nothing worth the taking, to a man's eye: bone, flint and old green bronze.
+  merespear: [],
+  mereharpoon: [],
+  mereblade: [],
+  mereaxe: [],
+  merehook: [],
+  merechief: [],
 };
 
 /** Coins in a footpad's purse, when he's beaten: at least the first, up to the second. */
@@ -100,6 +107,12 @@ export const AFTER_THE_FIGHT: Record<FoeKind, { slain: string; fled: string }> =
   hookbrute: { slain: 'Orm goes over like a mast coming down, and takes a shelf of clocks with him. Every one of them starts to chime.', fled: 'He walks out of the door, slowly, and does not look back.' },
   apronflay: { slain: 'Ned Flay is down in the sawdust, groaning, still trying to make a joke of it. Nobody laughs.', fled: 'He is over the pit wall and out of the door. He will be back, with more of them.' },
   apronknacker: { slain: 'Gristle goes down like a bullock, and stays down, breathing like a bellows.', fled: 'He lumbers out into the yard, holding his head.' },
+  merespear: { slain: 'It lies on its side in the mud, its tail still twitching. Even dead, those gold eyes do not close.', fled: 'It slides into the water without a ripple and is gone.' },
+  mereharpoon: { slain: 'The harpooner is down, its quiver spilled across the mud. The barbs on those harpoons are carved from bone, and wickedly sharp.', fled: 'It slips back into the reeds. I listen for the next harpoon, but none comes.' },
+  mereblade: { slain: 'The shield-bearer goes down behind its turtle shell. The bronze of its sword is green and pitted. It is very, very old.', fled: 'It backs into the water behind its shell, and sinks out of sight.' },
+  mereaxe: { slain: 'The axeman falls like a tree into the mud. The white clay on its face is cracked across.', fled: 'It turns and wades off into the mere, hissing.' },
+  merehook: { slain: 'It lies still at last, both hooks still clenched in its claws.', fled: 'Quick as an eel, it is into the reeds and gone.' },
+  merechief: { slain: "The war-chief is down. It is bigger than any man, and the pike's skull has come off its head and lies grinning in the mud beside it.", fled: 'It hisses something to the water, and the water takes it.' },
 };
 
 /** Out on the plains: chance meetings on the road, with the people, beasts, talk and fights they need from the game. */
@@ -198,12 +211,13 @@ export function startCombat(g: GameScene, first: Creature, raid?: Creature[], ba
   const foes = raid ?? band ?? g.gateAttack?.bandFor(first) ?? g.creatures.filter(
     (c) =>
       c === first ||
-      (pack && c.active && FOES[c.kind].packs && isOutlaw(c.kind) === isOutlaw(first.kind) && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
+      (pack && c.active && FOES[c.kind].packs && faction(c.kind) === faction(first.kind) && c.distanceTo(first.gx, first.gy) < PACK_RANGE),
   );
   g.raidFight = !!raid;
   const hunted = first.huntable;
   foes.forEach((c) => c.engage());
   if (first.kind === 'rat') GameAudio.squeak();
+  else if (isMereKin(first.kind)) GameAudio.mereHiss(first.kind === 'merechief' || foes.some((c) => c.kind === 'merechief'));
   else if (raid) GameAudio.shriek(true);
   else if (!hunted) GameAudio.growl();
   GameAudio.playMusic('battle');

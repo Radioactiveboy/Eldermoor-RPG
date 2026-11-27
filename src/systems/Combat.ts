@@ -1064,7 +1064,102 @@ export const FOES = {
     stubborn: true,
     traits: [{ kind: 'smash', cooldown: 3, dc: 12 }, { kind: 'steady' }],
   },
-} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean; goblin?: boolean }>;
+  // The Mere-kin, the lizard folk of the fen past the Fen Gate (see art/merekin3d.ts): a tribe, fighting as one band, beside
+  // nobody else. Hunters, not soldiers, but strong, scaled and quick in the water: a step harder than the Hooks, about as
+  // hard as the brigands on Corbie Tor man for man. Tuned with `npm run sim -- --merekin`: at level 11 in the best kit, a
+  // hunting band of three costs the hero alone about 40% of their health (about 20% with Sigrun); the war-chief's band is
+  // as hard as Corwin Haske's, won alone about half the time, and nearly always with Sigrun beside you.
+  merespear: {
+    name: 'Mere-kin Spear-hunter',
+    maxHp: 46,
+    ac: 13,
+    toHit: 8,
+    damage: { count: 1, sides: 10, bonus: 4 },
+    quickness: 3,
+    verb: 'drives its bone spear at',
+    xp: 80,
+    packs: true,
+    merekin: true,
+    traits: [{ kind: 'trip', dc: 11 }],
+  },
+  mereharpoon: {
+    name: 'Mere-kin Harpooner',
+    maxHp: 38,
+    ac: 13,
+    toHit: 8,
+    damage: { count: 1, sides: 8, bonus: 4 },
+    quickness: 4,
+    verb: 'hurls a barbed harpoon at',
+    xp: 75,
+    packs: true,
+    merekin: true,
+    skittish: 0.05,
+    traits: [{ kind: 'charge', extra: { count: 1, sides: 8, bonus: 0 } }, { kind: 'rend', damage: 2, turns: 2 }],
+  },
+  mereblade: {
+    name: 'Mere-kin Shield-bearer',
+    maxHp: 52,
+    ac: 17,
+    toHit: 7,
+    damage: { count: 1, sides: 10, bonus: 4 },
+    quickness: 2,
+    verb: 'hacks its bronze sword at',
+    xp: 90,
+    packs: true,
+    merekin: true,
+    traits: [{ kind: 'steady' }],
+  },
+  mereaxe: {
+    name: 'Mere-kin Axeman',
+    maxHp: 56,
+    ac: 14,
+    toHit: 7,
+    damage: { count: 2, sides: 6, bonus: 4 },
+    quickness: 1,
+    verb: 'brings its flint axe down on',
+    xp: 95,
+    packs: true,
+    merekin: true,
+    stubborn: true,
+    traits: [{ kind: 'rend', damage: 2, turns: 2 }, { kind: 'smash', cooldown: 3, dc: 12 }],
+  },
+  merehook: {
+    name: 'Mere-kin Hookhand',
+    maxHp: 40,
+    ac: 15,
+    toHit: 8,
+    damage: { count: 2, sides: 4, bonus: 4 },
+    quickness: 5,
+    verb: 'rakes both hooks at',
+    xp: 80,
+    packs: true,
+    merekin: true,
+    skittish: 0.06,
+    traits: [{ kind: 'trip', dc: 12 }, { kind: 'rend', damage: 1, turns: 2 }],
+  },
+  // The war-chief: half a head taller and twice as heavy, with a crescent axe that can split a shield. It rallies its band
+  // with a hiss that carries across the water, and has it in for whoever leads the other side.
+  merechief: {
+    name: 'Mere-kin War-chief',
+    maxHp: 130,
+    ac: 16,
+    toHit: 10,
+    damage: { count: 2, sides: 8, bonus: 6 },
+    quickness: 2,
+    verb: 'swings its great bronze axe at',
+    xp: 240,
+    packs: true,
+    merekin: true,
+    stubborn: true,
+    traits: [
+      { kind: 'grudge' },
+      { kind: 'howl', cooldown: 3 },
+      { kind: 'smash', cooldown: 3, dc: 14 },
+      { kind: 'enrage', below: 0.4 },
+      { kind: 'steady' },
+    ],
+  },
+} satisfies Record<string, Omit<CombatantDef, 'id' | 'side' | 'hp'> & { xp: number; packs: boolean; outlaw?: boolean; goblin?: boolean; merekin?: boolean }>;
 
 /**
  * The Brute as he is in the raid on the Hollow (see world/GoblinRaid.ts), a
@@ -1091,12 +1186,17 @@ export function isGoblin(kind: FoeKind): boolean {
   return 'goblin' in FOES[kind];
 }
 
-/** Who fights beside whom: beasts with beasts, footpads with footpads, goblins with goblins. */
-export function faction(kind: FoeKind): 'beast' | 'outlaw' | 'goblin' {
-  return isGoblin(kind) ? 'goblin' : isOutlaw(kind) ? 'outlaw' : 'beast';
+/** The Mere-kin, the lizard folk of the fen: they fight with weapons, and only beside their own. */
+export function isMereKin(kind: FoeKind): boolean {
+  return 'merekin' in FOES[kind];
+}
+
+/** Who fights beside whom: beasts with beasts, footpads with footpads, goblins with goblins, the Mere-kin with their own. */
+export function faction(kind: FoeKind): 'beast' | 'outlaw' | 'goblin' | 'merekin' {
+  return isGoblin(kind) ? 'goblin' : isOutlaw(kind) ? 'outlaw' : isMereKin(kind) ? 'merekin' : 'beast';
 }
 
 /** Fights with a weapon in its hands (so it swings and grunts, rather than bites and yelps). */
 export function isArmed(kind: FoeKind): boolean {
-  return isOutlaw(kind) || isGoblin(kind);
+  return isOutlaw(kind) || isGoblin(kind) || isMereKin(kind);
 }

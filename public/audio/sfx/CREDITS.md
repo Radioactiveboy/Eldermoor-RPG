@@ -19,6 +19,7 @@ changes their speed a little as they play (goblins are the troll voices sped up;
 | `goblin-*` | Goblins' yells, cackles and death cries (played faster) | Troll Hurt, Troll Laugh, Troll Death | Oculus VR, LLC | **CC BY 4.0** | Meta-open-sound |
 | `brute-*` | The Goblin Brute's bellows | Ogre Hurt, Ogre Laugh, Ogre Death | Oculus VR, LLC | **CC BY 4.0** | Meta-open-sound |
 | `man1-*`, `man2-*` | The hero and the footpads crying out, and falling | Male 01 / Male 02 Hurt and Death | Oculus VR, LLC | **CC BY 4.0** | Meta-open-sound |
+| `mere-hiss-*`, `mere-hurt-*`, `mere-death-*`, `mere-chief-*`, `harpoon-*` | The Mere-kin (the fen's lizard folk): hisses, cries, death rattles, the war-chief's bellow, a harpoon thrown on its line. Built by `tools/build-merekin-sound.py`: the hisses and the line's whirr are synthesised noise; the cries are slowed and rattled | Troll Hurt, Troll Death, Giant Hurt, Giant Laugh, Giant Death, Swoosh, Whoosh Small | Oculus VR, LLC | **CC BY 4.0** | Meta-open-sound |
 | `levelup-1`, `victory-1`, `defeat-1` | Gaining a level; winning and losing a fight | Level Up Orchestral, Victory Orchestral, Loss Orchestral stingers | Oculus VR, LLC | **CC BY 4.0** | Meta-open-sound |
 | `voice-m1-*`, `voice-m2-*`, `voice-f1-*`, `voice-f2-*` | Voice barks: a short "heh" (`greet`, the start of a laugh), a laugh, and a grunt, in two men's and two women's voices | Male 01 / 02 and Female 01 / 02 Laugh and Effort | Oculus VR, LLC | **CC BY 4.0** | Meta-open-sound |
 

@@ -187,6 +187,8 @@ export class DebugScene extends Phaser.Scene {
       row('Hero', button('Heal', () => this.say(Debug.heal(this.game))), button('Kill all in fight', () => this.say(Debug.killAll(this.game)))),
       row('Companion', button('Sigrun', () => this.say(Debug.toggleCompanion(this.game, 'sigrun'))), button('Wat', () => this.say(Debug.toggleCompanion(this.game, 'wat')))),
     );
+    const band = select(Object.keys(Debug.TEST_BANDS));
+    body.append(row('Fight', band, button('Spawn', () => this.say(Debug.spawnBand(this.game, band.value)))));
     this.said = el('div', 'said');
     body.append(this.said);
 

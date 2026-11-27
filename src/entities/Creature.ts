@@ -43,6 +43,13 @@ const WAYS: Record<FoeKind, { shy: boolean; notice: number; leash: number; speed
   // The Red Aprons in the pit barn, the same (see scenes/game/shambles.ts).
   apronflay: { shy: false, notice: 0, leash: 1, speed: 1.6 },
   apronknacker: { shy: false, notice: 0, leash: 1, speed: 1.2 },
+  // The Mere-kin hunt the fen's edges: they see you coming and come for you, quick through the shallows.
+  merespear: { shy: false, notice: 3.8, leash: 3, speed: 1.6 },
+  mereharpoon: { shy: false, notice: 4.6, leash: 3, speed: 1.6 },
+  mereblade: { shy: false, notice: 3.4, leash: 2.5, speed: 1.4 },
+  mereaxe: { shy: false, notice: 3.4, leash: 2.5, speed: 1.3 },
+  merehook: { shy: false, notice: 3.8, leash: 3.5, speed: 1.9 },
+  merechief: { shy: false, notice: 4.2, leash: 2, speed: 1.3 },
 };
 /** Shy game bolts when the player sprints within this many tiles of it. */
 const STARTLE_RANGE = 6;
@@ -111,8 +118,8 @@ export class Creature implements Body {
     const scale = art.scale ?? 1;
     this.cols = art.cols ?? BEAST_COLS;
     const small = kind === 'hare' || kind === 'rat' || kind === 'wildcat';
-    const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin') || kind.startsWith('brigand') || kind.startsWith('apron') || kind.startsWith('hook');
-    const big = kind === 'goblinbrute' || kind === 'brigandbrute' || kind === 'apronknacker' || kind === 'hookbrute';
+    const upright = kind === 'footpad' || kind === 'cutpurse' || kind.startsWith('goblin') || kind.startsWith('brigand') || kind.startsWith('apron') || kind.startsWith('hook') || kind.startsWith('mere');
+    const big = kind === 'goblinbrute' || kind === 'brigandbrute' || kind === 'apronknacker' || kind === 'hookbrute' || kind === 'merechief';
     this.shadow = scene.add.image(0, 0, 'shadow').setScale((small ? 0.7 : big ? 1.5 : upright ? 1 : 1.4) * scale, (small ? 0.6 : big ? 1.3 : 1) * scale);
     // A sheet drawn finer than it's shown (the goblins') is scaled down by as much.
     this.sprite = scene.add.sprite(0, 0, `creature-${kind}`, 0).setOrigin(0.5, (art.feetY + 0.5) / art.h).setScale(scale / (art.res ?? 1));

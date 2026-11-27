@@ -138,6 +138,13 @@ export const SFX = {
   manHurt: [...numbered('man1-hurt', 3), ...numbered('man2-hurt', 3)],
   heroHurt: numbered('man1-hurt', 3),
   manDeath: ['man1-death-1', 'man2-death-1'],
+  // The Mere-kin (built by tools/build-merekin-sound.py): hisses, cries, death rattles, the war-chief's bellow, a harpoon thrown.
+  mereHiss: numbered('mere-hiss', 3),
+  mereHurt: numbered('mere-hurt', 3),
+  mereDeath: numbered('mere-death', 2),
+  mereChief: numbered('mere-chief', 2),
+  mereChiefDeath: ['mere-chief-death-1'],
+  harpoon: numbered('harpoon', 2),
   levelUp: ['levelup-1'],
   victory: ['victory-1'],
   defeat: ['defeat-1'],
@@ -240,10 +247,12 @@ export class SfxBank {
 // ---------------------------------------------------------------- voices
 
 /** Who a fighting foe sounds like, from its kind. */
-export type FoeVoice = 'wolf' | 'boar' | 'goblin' | 'brute' | 'man' | 'small';
+export type FoeVoice = 'wolf' | 'boar' | 'goblin' | 'brute' | 'man' | 'mere' | 'merechief' | 'small';
 
 export function foeVoice(kind: string): FoeVoice {
   if (kind === 'goblinbrute') return 'brute';
+  if (kind === 'merechief') return 'merechief';
+  if (kind.startsWith('mere')) return 'mere';
   if (kind.startsWith('goblin')) return 'goblin';
   if (kind.startsWith('wolf')) return 'wolf';
   if (kind === 'boar') return 'boar';
